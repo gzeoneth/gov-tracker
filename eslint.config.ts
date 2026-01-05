@@ -40,6 +40,8 @@ const config = [
         Response: "readonly",
         Request: "readonly",
         Headers: "readonly",
+        // AbortController (Node 15.4+)
+        AbortController: "readonly",
       },
     },
     plugins: {

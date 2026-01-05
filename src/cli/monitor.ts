@@ -1,0 +1,493 @@
+#!/usr/bin/env node
+/**
+ * Monitor CLI - Example SDK Usage
+ *
+ * NOTE: This is a CLI application that demonstrates SDK usage, not library code.
+ * It serves as both a reference implementation and a production-ready tool.
+ * Developers should treat this as an application of the SDK, not as part of the SDK API.
+ *
+ * Demonstrates how to use the governance tracking SDK for:
+ * - Discovering proposals and timelock operations
+ * - Tracking lifecycle stages
+ * - Preparing and executing transactions
+ *
+ * Usage: npx @gzeoneth/gov-tracker [run|track|election|status] [options]
+ */
+import * as dotenv from "dotenv";
+dotenv.config();
+
+import * as os from "os";
+import * as path from "path";
+import * as fs from "fs";
+import debug from "debug";
+import { Command, Option } from "commander";
+import {
+  createTracker,
+  ProposalStageTracker,
+  formatStageTitle,
+  TrackingProgress,
+  CHUNK_SIZES,
+  ChunkingConfig,
+} from "../index";
+import { buildDashboardState, writeDashboardState } from "./lib/json-state";
+import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
+import {
+  rpcOptions,
+  addOptions,
+  createProvidersFromOptions,
+  createSigner,
+  requirePrivateKeyForWrite,
+  executeTransaction,
+  formatDryRun,
+  formatTrackingResult,
+  formatCacheStatus,
+  runWithLoop,
+  runMonitorCycle,
+  trackAndPrepare,
+  TrackCallbackReturn,
+  DEFAULT_BLOCK_LAG,
+  MAX_CONSECUTIVE_ERRORS,
+} from "./lib/cli";
+
+/**
+ * Get the platform-specific application data directory
+ * - Windows: %APPDATA%\gov-tracker
+ * - macOS: ~/Library/Application Support/gov-tracker
+ * - Linux: ~/.config/gov-tracker (follows XDG Base Directory specification)
+ */
+function getAppDataDir(): string {
+  const homeDir = os.homedir();
+  const platform = os.platform();
+
+  let baseDir: string;
+  if (platform === "win32") {
+    // Windows: Use APPDATA or fallback to %USERPROFILE%\AppData\Roaming
+    baseDir = process.env.APPDATA || path.join(homeDir, "AppData", "Roaming");
+  } else if (platform === "darwin") {
+    // macOS: Use Application Support directory
+    baseDir = path.join(homeDir, "Library", "Application Support");
+  } else {
+    // Linux and others: Use XDG_CONFIG_HOME or fallback to ~/.config
+    baseDir = process.env.XDG_CONFIG_HOME || path.join(homeDir, ".config");
+  }
+
+  return path.join(baseDir, "gov-tracker");
+}
+
+/**
+ * Get the default cache path and ensure the directory exists
+ */
+function getDefaultCachePath(): string {
+  const appDataDir = getAppDataDir();
+
+  // Create directory if it doesn't exist (synchronously at startup)
+  try {
+    if (!fs.existsSync(appDataDir)) {
+      fs.mkdirSync(appDataDir, { recursive: true });
+    }
+  } catch (_error) {
+    // If we can't create the directory, fall back to current directory
+    console.warn(
+      `Warning: Could not create app data directory ${appDataDir}, using ./gov-tracker-cache.json`
+    );
+    return "./gov-tracker-cache.json";
+  }
+
+  return path.join(appDataDir, "gov-tracker-cache.json");
+}
+
+// Default cache path in OS-specific application data directory
+const DEFAULT_CACHE_PATH = getDefaultCachePath();
+
+function createProgressCallback() {
+  return (progress: TrackingProgress) => {
+    const { stage, currentIndex, totalStages } = progress;
+    if (stage.status === "NOT_STARTED") return;
+    console.log(
+      `  [${currentIndex + 1}/${totalStages}] ${formatStageTitle(stage.type)} (${stage.chain}): ${stage.status}`
+    );
+  };
+}
+
+const program = new Command()
+  .name("monitor")
+  .description("Monitor Arbitrum governance proposals")
+  .version("0.1.0");
+
+// ============================================================================
+// Run Command
+// ============================================================================
+
+const runCmd = program
+  .command("run")
+  .description("Discover, track, and optionally prepare/execute");
+addOptions(runCmd, rpcOptions);
+runCmd
+  .option("--cache <path>", "Cache file", DEFAULT_CACHE_PATH)
+  .option("--start-block <block>", "Start block for discovery (skips cache)")
+  .option(
+    "--block-lag <blocks>",
+    `Blocks behind tip (default: ${DEFAULT_BLOCK_LAG})`,
+    String(DEFAULT_BLOCK_LAG)
+  )
+  .option(
+    "--max-age-days <days>",
+    "Max age for re-tracking incomplete proposals (default: 60)",
+    "60"
+  )
+  .option("--prepare", "Prepare transactions for ready stages (dry-run)")
+  .option("--write", "Execute prepared transactions (requires --private-key)")
+  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
+  .option("--force", "Force prepare even for completed stages (historical validation)")
+  .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
+  .option("--loop", "Run in continuous loop")
+  .option("--interval <seconds>", "Loop interval in seconds", "60")
+  .addOption(
+    new Option("--health-check-url <url>", "Health check URL to ping").env("HEALTH_CHECK_URL")
+  )
+  .option("--json-output <path>", "Write JSON state for dashboard integration")
+  .option("--election", "Also check for Security Council elections each cycle")
+  .option("--concurrency <n>", "Number of concurrent tracking operations", "1")
+  .option(
+    "--l1-chunk-size <size>",
+    `L1 chunk size for log searches (default: ${CHUNK_SIZES.L1})`,
+    String(CHUNK_SIZES.L1)
+  )
+  .option(
+    "--l2-chunk-size <size>",
+    `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
+    String(CHUNK_SIZES.L2)
+  )
+  .option("--verbose", "Enable verbose logging")
+  .action(async (opts) => {
+    if (opts.verbose) debug.enable("gov-tracker:*");
+    requirePrivateKeyForWrite(opts);
+
+    const providers = createProvidersFromOptions(opts);
+    const l1ChunkSize = parseInt(opts.l1ChunkSize, 10);
+    const l2ChunkSize = parseInt(opts.l2ChunkSize, 10);
+    const chunkingConfig: ChunkingConfig = {
+      l1ChunkSize,
+      l2ChunkSize,
+      novaChunkSize: l2ChunkSize,
+      delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
+    };
+    const tracker = createTracker({
+      ...providers,
+      cachePath: opts.cache,
+      chunkingConfig,
+      onProgress: createProgressCallback(),
+    });
+    const signer = opts.write ? createSigner(opts.privateKey) : null;
+
+    const startBlock = opts.startBlock ? parseInt(opts.startBlock, 10) : undefined;
+    const blockLag = parseInt(opts.blockLag, 10);
+    const maxAgeDays = parseInt(opts.maxAgeDays, 10);
+    const intervalMs = parseInt(opts.interval, 10) * 1000;
+    const concurrency = parseInt(opts.concurrency, 10);
+
+    if (opts.verbose) {
+      if (startBlock !== undefined) console.log(`Starting discovery from block ${startBlock}`);
+      console.log(`Block lag: ${blockLag} blocks behind tip`);
+      console.log(`Max age for re-tracking: ${maxAgeDays} days`);
+      console.log(`Max consecutive errors before skip: ${MAX_CONSECUTIVE_ERRORS}`);
+      if (concurrency > 1) console.log(`Concurrency: ${concurrency}`);
+    }
+    if (signer) console.log(`Executing with: ${signer.address}`);
+
+    // Track whether this is the first cycle (for startBlock override)
+    let isFirstCycle = true;
+
+    async function runCycle(): Promise<void> {
+      console.log("Discovering proposals and operations...\n");
+      let electionsSkipped = 0;
+
+      // Only use startBlock on the first cycle; subsequent cycles resume from watermarks
+      const cycleStartBlock = isFirstCycle ? startBlock : undefined;
+      isFirstCycle = false;
+
+      const { result, proposals, timelockOps } = await runMonitorCycle(
+        tracker,
+        providers.l2Provider,
+        {
+          prepare: opts.prepare || opts.write || opts.force || opts.preparePending,
+          force: opts.force,
+          preparePending: opts.preparePending,
+          startBlock: cycleStartBlock,
+          blockLag,
+          maxAgeDays,
+          concurrency,
+          onTrack: async (r): Promise<TrackCallbackReturn> => {
+            // Skip showing complete elections
+            if (r.result?.isElection && r.result?.isComplete) {
+              electionsSkipped++;
+              return {};
+            }
+
+            if (r.result) {
+              console.log(`\n[${r.key}]`);
+              console.log(formatTrackingResult(r.result));
+            } else if (r.error) {
+              console.log(`\n[${r.key}] ERROR: ${r.error}`);
+            }
+
+            if (r.prepared) {
+              console.log(`\n[PREPARED] ${r.key}`);
+              console.log(formatDryRun(r.prepared));
+
+              if (signer) {
+                const execResult = await executeTransaction(r.prepared, signer, providers);
+                if (!execResult.success) {
+                  console.error(`  Execution failed: ${execResult.error}`);
+                  return {};
+                }
+                console.log(`  Executed! Re-tracking to find next stages...`);
+                return { shouldRetrack: true };
+              }
+            }
+            return {};
+          },
+        }
+      );
+
+      const stats = await tracker.getStats();
+      console.log(
+        `\nFound ${proposals.length} new proposals, ${timelockOps.length} new ops | ` +
+          `Incomplete: ${stats.proposals.active} proposals, ${stats.timelocks.active} timelocks | ` +
+          `Tracked: ${result.tracked}, Prepared: ${result.prepared}` +
+          (electionsSkipped > 0 ? ` (${electionsSkipped} elections skipped)` : "")
+      );
+
+      if (opts.jsonOutput) {
+        const checkpoints = await tracker.getAllCheckpoints();
+        writeDashboardState(buildDashboardState(checkpoints), opts.jsonOutput);
+        if (opts.verbose) console.log(`JSON state written to ${opts.jsonOutput}`);
+      }
+
+      if (opts.election) {
+        try {
+          const electionResult = await checkAndExecuteElection(providers, signer, {
+            write: opts.write,
+            verbose: opts.verbose,
+          });
+          for (const error of electionResult.errors) {
+            console.error(`[ELECTION] ${error}`);
+          }
+        } catch (error) {
+          console.error(`[ELECTION] Check failed: ${(error as Error).message}`);
+        }
+      }
+    }
+
+    if (opts.loop) {
+      console.log(`Running in loop mode, checking every ${opts.interval} seconds...`);
+      if (opts.healthCheckUrl) console.log(`Health check URL: ${opts.healthCheckUrl}`);
+      if (opts.jsonOutput) console.log(`JSON output: ${opts.jsonOutput}`);
+      if (opts.election) console.log(`Election checking: enabled`);
+    }
+
+    await runWithLoop(runCycle, {
+      loop: opts.loop,
+      intervalMs,
+      healthCheckUrl: opts.healthCheckUrl,
+    });
+  });
+
+// ============================================================================
+// Track Command
+// ============================================================================
+
+const trackCmd = program.command("track").description("Track a specific proposal or operation");
+addOptions(trackCmd, rpcOptions);
+trackCmd
+  .option("--tx <hash>", "Transaction hash")
+  .option("--prepare", "Prepare transactions for ready stages (dry-run)")
+  .option("--write", "Execute prepared transactions (requires --private-key)")
+  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
+  .option("--force", "Force prepare even for completed stages (historical validation)")
+  .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
+  .option(
+    "--l1-chunk-size <size>",
+    `L1 chunk size for log searches (default: ${CHUNK_SIZES.L1})`,
+    String(CHUNK_SIZES.L1)
+  )
+  .option(
+    "--l2-chunk-size <size>",
+    `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
+    String(CHUNK_SIZES.L2)
+  )
+  .option("--verbose", "Enable verbose logging")
+  .action(async (opts) => {
+    if (opts.verbose) debug.enable("gov-tracker:*");
+    requirePrivateKeyForWrite(opts);
+
+    if (!opts.tx) {
+      console.error("Error: --tx is required for tracking");
+      process.exit(1);
+    }
+
+    console.log(`Tracking from tx: ${opts.tx}\n`);
+
+    try {
+      const providers = createProvidersFromOptions(opts);
+      const l1ChunkSize = parseInt(opts.l1ChunkSize, 10);
+      const l2ChunkSize = parseInt(opts.l2ChunkSize, 10);
+      const chunkingConfig: ChunkingConfig = {
+        l1ChunkSize,
+        l2ChunkSize,
+        novaChunkSize: l2ChunkSize,
+        delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
+      };
+      const tracker = createTracker({
+        ...providers,
+        chunkingConfig,
+        onProgress: opts.concurrency === 1 || opts.verbose ? createProgressCallback() : undefined,
+      });
+      const shouldPrepare = opts.prepare || opts.write || opts.force || opts.preparePending;
+
+      const { results, preparations } = await trackAndPrepare(tracker, opts.tx, {
+        prepare: shouldPrepare,
+        force: opts.force,
+        preparePending: opts.preparePending,
+      });
+
+      // Format output
+      results.forEach((r, i) => {
+        const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
+        console.log(formatTrackingResult(r, label));
+      });
+      preparations.forEach((prep) => {
+        if (prep.success && prep.prepared) {
+          console.log(`\n${formatDryRun(prep.prepared)}`);
+        } else if (!prep.success) {
+          console.log(`\n[PREPARE ERROR] ${prep.error}`);
+        }
+      });
+
+      // Execute if --write
+      if (opts.write && preparations.length > 0) {
+        const signer = createSigner(opts.privateKey);
+        console.log(`\n=== Executing with ${signer.address} ===`);
+
+        let currentPreparations = preparations;
+        let chainDepth = 0;
+        const maxChainDepth = 10;
+
+        while (currentPreparations.length > 0 && chainDepth < maxChainDepth) {
+          chainDepth++;
+          let executedAny = false;
+
+          for (const prep of currentPreparations) {
+            if (prep.success && prep.prepared) {
+              const result = await executeTransaction(prep.prepared, signer, providers);
+              if (!result.success) {
+                console.error(`Execution failed: ${result.error}`);
+              } else {
+                executedAny = true;
+              }
+            }
+          }
+
+          if (!executedAny) break;
+
+          console.log(`\nRe-tracking to find next stages...`);
+          const retracked = await trackAndPrepare(tracker, opts.tx, { prepare: true });
+
+          retracked.results.forEach((r, i) => {
+            const label =
+              retracked.results.length > 1
+                ? `Operation ${i + 1}/${retracked.results.length}`
+                : undefined;
+            console.log(formatTrackingResult(r, label));
+          });
+          retracked.preparations.forEach((prep) => {
+            if (prep.success && prep.prepared) console.log(`\n${formatDryRun(prep.prepared)}`);
+            else if (!prep.success) console.log(`\n[PREPARE ERROR] ${prep.error}`);
+          });
+
+          currentPreparations = retracked.preparations;
+        }
+      }
+    } catch (e) {
+      console.error((e as Error).message);
+      process.exit(1);
+    }
+  });
+
+// ============================================================================
+// Status Command
+// ============================================================================
+
+program
+  .command("status")
+  .description("Show cached state")
+  .option("--cache <path>", "Cache file", DEFAULT_CACHE_PATH)
+  .option("--json", "Output as JSON")
+  .action(async (opts) => {
+    const { watermarks, checkpoints } = await ProposalStageTracker.readCacheStatus(opts.cache);
+
+    if (opts.json) {
+      const checkpointsObj: Record<string, unknown> = {};
+      for (const [key, checkpoint] of checkpoints) {
+        checkpointsObj[key] = checkpoint;
+      }
+      console.log(JSON.stringify({ watermarks, checkpoints: checkpointsObj }, null, 2));
+    } else {
+      console.log(formatCacheStatus(checkpoints));
+    }
+  });
+
+// ============================================================================
+// Election Command
+// ============================================================================
+
+const electionCmd = program
+  .command("election")
+  .description("Check Security Council election status");
+addOptions(electionCmd, rpcOptions);
+electionCmd
+  .option("--write", "Create election if ready (requires --private-key)")
+  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
+  .option("--verbose", "Enable verbose logging")
+  .option("--loop", "Run in continuous loop")
+  .option("--interval <seconds>", "Loop interval in seconds", "60")
+  .addOption(
+    new Option("--health-check-url <url>", "Health check URL to ping").env("HEALTH_CHECK_URL")
+  )
+  .action(async (opts) => {
+    if (opts.verbose) debug.enable("gov-tracker:*");
+    requirePrivateKeyForWrite(opts);
+
+    const providers = createProvidersFromOptions(opts);
+    const signer = opts.write ? createSigner(opts.privateKey) : null;
+
+    async function checkElection(): Promise<void> {
+      try {
+        const result = await checkAndExecuteElection(providers, signer, {
+          write: opts.write,
+          verbose: true,
+        });
+        console.log(`\n${formatElectionStatus(result.status, result.currentElectionStatus)}`);
+        for (const error of result.errors) {
+          console.error(`[ERROR] ${error}`);
+        }
+      } catch (error) {
+        console.error("Election check failed:", (error as Error).message);
+      }
+    }
+
+    const intervalMs = parseInt(opts.interval, 10) * 1000;
+
+    if (opts.loop) {
+      console.log(`Running in loop mode, checking every ${opts.interval} seconds...`);
+      if (opts.healthCheckUrl) console.log(`Health check URL: ${opts.healthCheckUrl}`);
+    }
+
+    await runWithLoop(checkElection, {
+      loop: opts.loop,
+      intervalMs,
+      healthCheckUrl: opts.healthCheckUrl,
+    });
+  });
+
+program.parse();

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn lint:*)",
+      "Bash(yarn test:*)",
+      "Bash(yarn build)",
+      "Bash(yarn format)",
+      "Bash(yarn test:all:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(npx vitest:*)",
+      "Bash(git add:*)",
+      "Bash(find:*)",
+      "Bash(yarn format:check:*)"
+    ]
+  }
+}

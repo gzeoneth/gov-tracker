@@ -372,6 +372,14 @@ async function waitWithChunks(ms: number): Promise<void> {
   }
 }
 
+/** Shared abort controller for graceful shutdown */
+let globalAbortController: AbortController | null = null;
+
+/** Check if shutdown has been requested */
+export function isShuttingDown(): boolean {
+  return globalAbortController?.signal.aborted ?? false;
+}
+
 export async function runWithLoop(
   cycleFn: () => Promise<void>,
   options: { loop: boolean; intervalMs: number; healthCheckUrl?: string }
@@ -384,8 +392,12 @@ export async function runWithLoop(
   let consecutiveErrors = 0;
   let running = true;
 
+  // Create abort controller for graceful shutdown
+  globalAbortController = new AbortController();
+
   process.on("SIGINT", () => {
     running = false;
+    globalAbortController?.abort();
     console.log("\nGracefully shutting down...");
   });
 
@@ -623,6 +635,10 @@ export async function runMonitorCycle(
     await withScope(shortScope(key), async () => {
       try {
         const trackResult = await trackFn();
+
+        // Skip callback if shutting down
+        if (isShuttingDown()) return;
+
         result.tracked++;
 
         if (trackResult.timelockLink?.operationId) {
@@ -637,6 +653,9 @@ export async function runMonitorCycle(
         );
         result.prepared += prepResult.count;
 
+        // Skip callback if shutting down
+        if (isShuttingDown()) return;
+
         const callbackResult = await options.onTrack?.({
           key,
           result: trackResult,
@@ -649,6 +668,9 @@ export async function runMonitorCycle(
           await track(key, trackFn);
         }
       } catch (error) {
+        // Skip error callback if shutting down
+        if (isShuttingDown()) return;
+
         result.errors++;
         // Wrap error callback in try-catch to prevent nested errors from propagating
         try {

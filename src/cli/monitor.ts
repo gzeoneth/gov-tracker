@@ -47,6 +47,7 @@ import {
   TrackCallbackReturn,
   DEFAULT_BLOCK_LAG,
   MAX_CONSECUTIVE_ERRORS,
+  isShuttingDown,
 } from "./lib/cli";
 
 /**
@@ -101,6 +102,7 @@ const DEFAULT_CACHE_PATH = getDefaultCachePath();
 
 function createProgressCallback() {
   return (progress: TrackingProgress) => {
+    if (isShuttingDown()) return;
     const { stage, currentIndex, totalStages } = progress;
     if (stage.status === "NOT_STARTED") return;
     console.log(
@@ -254,6 +256,9 @@ runCmd
         },
       });
 
+      // Skip output if shutting down
+      if (isShuttingDown()) return;
+
       const stats = await tracker.getStats();
       console.log(
         `\nFound ${proposals.length} new proposals, ${timelockOps.length} new ops | ` +
@@ -268,7 +273,7 @@ runCmd
         if (opts.verbose) console.log(`JSON state written to ${opts.jsonOutput}`);
       }
 
-      if (opts.election) {
+      if (opts.election && !isShuttingDown()) {
         try {
           const electionResult = await checkAndExecuteElection(providers, signer, {
             write: opts.write,

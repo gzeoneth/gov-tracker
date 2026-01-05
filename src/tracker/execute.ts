@@ -96,23 +96,29 @@ export async function prepareTransaction(
 
     case "L2_TO_L1_MESSAGE": {
       const { total, results } = await prepareL2ToL1MessageStage(stage, l2Provider, l1Provider, {
-        force: options.force,
+        prepareCompleted: options.prepareCompleted,
       });
       if (results.length === 0) {
         return failPrepare("No messages to prepare");
       }
-      // If there are multiple messages, return success but include warning about additional messages
-      if (total > 1 && results[0].success) {
-        return {
-          ...results[0],
-          prepared: {
-            ...results[0].prepared,
-            description:
-              results[0].prepared.description +
-              ` [1/${total} messages - use prepareL2ToL1MessageStage() for all]`,
-          },
-        };
+      // Find first successful result
+      const successResult = results.find((r) => r.success);
+      if (successResult) {
+        // If there are multiple messages, include warning about additional messages
+        if (total > 1) {
+          return {
+            ...successResult,
+            prepared: {
+              ...successResult.prepared,
+              description:
+                successResult.prepared.description +
+                ` [1/${total} messages - use prepareL2ToL1MessageStage() for all]`,
+            },
+          };
+        }
+        return successResult;
       }
+      // All failed, return first result
       return results[0];
     }
 
@@ -128,23 +134,29 @@ export async function prepareTransaction(
         return failPrepare("Target chain provider not available");
       }
       const { total, results } = await prepareRetryableStage(stage, l1Provider, targetProvider, {
-        force: options.force,
+        prepareCompleted: options.prepareCompleted,
       });
       if (results.length === 0) {
         return failPrepare("No tickets to prepare");
       }
-      // If there are multiple tickets, return success but include warning
-      if (total > 1 && results[0].success) {
-        return {
-          ...results[0],
-          prepared: {
-            ...results[0].prepared,
-            description:
-              results[0].prepared.description +
-              ` [1/${total} tickets - use prepareRetryableStage() for all]`,
-          },
-        };
+      // Find first successful result
+      const successResult = results.find((r) => r.success);
+      if (successResult) {
+        // If there are multiple tickets, include warning
+        if (total > 1) {
+          return {
+            ...successResult,
+            prepared: {
+              ...successResult.prepared,
+              description:
+                successResult.prepared.description +
+                ` [1/${total} tickets - use prepareRetryableStage() for all]`,
+            },
+          };
+        }
+        return successResult;
       }
+      // All failed, return first result
       return results[0];
     }
 

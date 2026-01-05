@@ -33,6 +33,9 @@ import {
   DiscoveredTimelockOp,
   DiscoveryWatermarks,
   calculateExpectedEta,
+  prepareRetryableStage,
+  prepareL2ToL1MessageStage,
+  getStageData,
 } from "../../index";
 import { withScope } from "../../utils/logger";
 
@@ -110,9 +113,6 @@ export function createSigner(privateKey: string): ethers.Wallet {
 // Transaction Execution
 // ============================================================================
 
-const RETRYABLE_MAX_RETRIES = 10;
-const RETRYABLE_RETRY_DELAY_MS = 5000;
-
 export async function executeTransaction(
   prepared: PreparedTransaction,
   signer: ethers.Wallet,
@@ -120,57 +120,47 @@ export async function executeTransaction(
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   const isRetryable = prepared.description?.toLowerCase().includes("retryable") ?? false;
 
-  for (let attempt = 1; attempt <= (isRetryable ? RETRYABLE_MAX_RETRIES : 1); attempt++) {
-    try {
-      const provider =
-        prepared.chain === "L1"
-          ? providers.l1Provider
-          : prepared.chain === "NOVA"
-            ? providers.novaProvider
-            : providers.l2Provider;
+  try {
+    const provider =
+      prepared.chain === "L1"
+        ? providers.l1Provider
+        : prepared.chain === "NOVA"
+          ? providers.novaProvider
+          : providers.l2Provider;
 
-      const connectedSigner = signer.connect(provider);
+    const connectedSigner = signer.connect(provider);
 
-      console.log(`\nExecuting on ${prepared.chain}: ${prepared.description}`);
-      console.log(`  To: ${prepared.to}`);
-      if (prepared.value !== "0") console.log(`  Value: ${prepared.value}`);
+    console.log(`\nExecuting on ${prepared.chain}: ${prepared.description}`);
+    console.log(`  To: ${prepared.to}`);
+    if (prepared.value !== "0") console.log(`  Value: ${prepared.value}`);
 
-      const tx = await connectedSigner.sendTransaction({
-        to: prepared.to,
-        data: prepared.data,
-        value: prepared.value,
-      });
+    const tx = await connectedSigner.sendTransaction({
+      to: prepared.to,
+      data: prepared.data,
+      value: prepared.value,
+    });
 
-      console.log(`  Tx sent: ${tx.hash}`);
-      const receipt = await tx.wait();
-      console.log(`  Confirmed in block ${receipt.blockNumber}`);
+    console.log(`  Tx sent: ${tx.hash}`);
+    const receipt = await tx.wait();
+    console.log(`  Confirmed in block ${receipt.blockNumber}`);
 
-      return { success: true, txHash: tx.hash };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+    return { success: true, txHash: tx.hash };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
 
-      // For retryables, check if already redeemed
-      if (
-        isRetryable &&
-        (message.includes("REDEEMED") ||
-          message.includes("already redeemed") ||
-          message.includes("NoTicketWithID"))
-      ) {
-        console.log(`  Retryable already redeemed, treating as success`);
-        return { success: true };
-      }
-
-      if (!isRetryable || attempt >= RETRYABLE_MAX_RETRIES) {
-        return { success: false, error: message };
-      }
-
-      console.log(`  Retry ${attempt}/${RETRYABLE_MAX_RETRIES} failed: ${message}`);
-      console.log(`  Retrying in ${RETRYABLE_RETRY_DELAY_MS / 1000}s...`);
-      await new Promise((resolve) => setTimeout(resolve, RETRYABLE_RETRY_DELAY_MS));
+    // For retryables, check if already redeemed
+    if (
+      isRetryable &&
+      (message.includes("REDEEMED") ||
+        message.includes("already redeemed") ||
+        message.includes("NoTicketWithID"))
+    ) {
+      console.log(`  Retryable already redeemed, treating as success`);
+      return { success: true };
     }
-  }
 
-  return { success: false, error: "Unexpected retry loop exit" };
+    return { success: false, error: message };
+  }
 }
 
 // ============================================================================
@@ -196,6 +186,36 @@ export function formatDryRun(prepared: PreparedTransaction): string {
     );
   }
 
+  return lines.join("\n");
+}
+
+/**
+ * Format multiple prepared transactions for display
+ */
+export function formatMultiplePreparedTransactions(
+  preparedTransactions: PreparedTransaction[]
+): string {
+  if (preparedTransactions.length === 0) return "";
+  if (preparedTransactions.length === 1) return formatDryRun(preparedTransactions[0]);
+
+  const lines: string[] = [];
+  for (let i = 0; i < preparedTransactions.length; i++) {
+    const prepared = preparedTransactions[i];
+    lines.push(`[DRY RUN ${i + 1}/${preparedTransactions.length}] ${prepared.description}`);
+    lines.push(`  Chain: ${prepared.chain}`);
+    lines.push(`  To: ${prepared.to}`);
+    if (prepared.operationId) lines.push(`  OperationId: ${prepared.operationId}`);
+    if (prepared.value !== "0") lines.push(`  Value: ${prepared.value}`);
+    lines.push(`  Data: ${prepared.data}`);
+    if (prepared.hashValidation) {
+      lines.push(
+        prepared.hashValidation.isValid
+          ? `  Hash Valid: YES`
+          : `  WARNING: Hash validation failed - ${prepared.hashValidation.error}`
+      );
+    }
+    if (i < preparedTransactions.length - 1) lines.push(""); // Blank line between transactions
+  }
   return lines.join("\n");
 }
 
@@ -414,7 +434,8 @@ export async function runWithLoop(
 export interface TrackCallbackResult {
   key: string;
   result: TrackingResult | null;
-  prepared?: PreparedTransaction;
+  prepared?: PreparedTransaction; // Legacy: first prepared transaction (deprecated)
+  preparedTransactions?: PreparedTransaction[]; // All prepared transactions
   error?: string;
 }
 
@@ -424,7 +445,7 @@ export interface TrackCallbackReturn {
 
 export interface MonitorRunOptions {
   prepare?: boolean;
-  force?: boolean;
+  prepareCompleted?: boolean;
   preparePending?: boolean;
   onTrack?: (result: TrackCallbackResult) => Promise<TrackCallbackReturn | void> | void;
   startBlock?: number;
@@ -456,24 +477,85 @@ const PREPARABLE_STAGE_TYPES = [
 async function prepareStagesForResult(
   tracker: ProposalStageTracker,
   stages: TrackedStage[],
-  options: { prepare?: boolean; force?: boolean; preparePending?: boolean }
-): Promise<{ prepared?: PreparedTransaction; preparations: PrepareResult[]; count: number }> {
+  options: { prepare?: boolean; prepareCompleted?: boolean; preparePending?: boolean },
+  providers: ProviderBundle
+): Promise<{
+  prepared?: PreparedTransaction;
+  preparedTransactions: PreparedTransaction[];
+  preparations: PrepareResult[];
+  count: number;
+}> {
   const preparations: PrepareResult[] = [];
+  const preparedTransactions: PreparedTransaction[] = [];
   let prepared: PreparedTransaction | undefined;
   let count = 0;
 
-  if (!options.prepare) return { preparations, count };
+  if (!options.prepare) return { preparations, preparedTransactions, count };
 
-  if (options.force) {
+  /**
+   * Helper to prepare a stage and handle bulk results for RETRYABLE_EXECUTED and L2_TO_L1_MESSAGE
+   */
+  async function prepareSingleStage(stage: TrackedStage, prepOpts: { prepareCompleted?: boolean }) {
+    // For retryable and L2→L1 message stages, use bulk prepare to get all transactions
+    if (stage.type === "RETRYABLE_EXECUTED") {
+      const retryableData = getStageData(stage, "RETRYABLE_EXECUTED");
+      const targetChains = retryableData?.targetChains;
+      if (!targetChains || targetChains.length === 0) {
+        preparations.push({ success: false, error: "No target chains found" });
+        return;
+      }
+
+      // Prepare retryables for each target chain (can be both Arb1 and Nova)
+      for (const targetChain of targetChains) {
+        const targetProvider =
+          targetChain === "Nova" ? providers.novaProvider : providers.l2Provider;
+        const { results } = await prepareRetryableStage(
+          stage,
+          providers.l1Provider,
+          targetProvider,
+          prepOpts
+        );
+        preparations.push(...results);
+        for (const result of results) {
+          if (result.success) {
+            count++;
+            preparedTransactions.push(result.prepared);
+            if (!prepared) prepared = result.prepared;
+          }
+        }
+      }
+    } else if (stage.type === "L2_TO_L1_MESSAGE") {
+      const { results } = await prepareL2ToL1MessageStage(
+        stage,
+        providers.l2Provider,
+        providers.l1Provider,
+        prepOpts
+      );
+      preparations.push(...results);
+      for (const result of results) {
+        if (result.success) {
+          count++;
+          preparedTransactions.push(result.prepared);
+          if (!prepared) prepared = result.prepared;
+        }
+      }
+    } else {
+      // For other stages, use the tracker's prepareTransaction
+      const prepResult = await tracker.prepareTransaction(stage, prepOpts);
+      preparations.push(prepResult);
+      if (prepResult.success) {
+        count++;
+        preparedTransactions.push(prepResult.prepared);
+        prepared = prepResult.prepared;
+      }
+    }
+  }
+
+  if (options.prepareCompleted) {
     // Historical validation: prepare COMPLETED timelock stages
     for (const stage of stages) {
       if (stage.status === "COMPLETED" && isTimelockStage(stage.type)) {
-        const prepResult = await tracker.prepareTransaction(stage, { force: true });
-        preparations.push(prepResult);
-        if (prepResult.success) {
-          count++;
-          prepared = prepResult.prepared;
-        }
+        await prepareSingleStage(stage, { prepareCompleted: true });
       }
     }
   } else if (options.preparePending) {
@@ -481,28 +563,18 @@ async function prepareStagesForResult(
     for (const stage of stages) {
       const isPreparable = (PREPARABLE_STAGE_TYPES as readonly string[]).includes(stage.type);
       if (isPreparable && stage.status === "PENDING") {
-        const prepResult = await tracker.prepareTransaction(stage, { force: true });
-        preparations.push(prepResult);
-        if (prepResult.success) {
-          count++;
-          prepared = prepResult.prepared;
-        }
+        await prepareSingleStage(stage, { prepareCompleted: true });
       }
     }
   } else {
     // Normal: prepare only READY stages
     const ready = findExecutableStage(stages);
     if (ready) {
-      const prepResult = await tracker.prepareTransaction(ready, {});
-      preparations.push(prepResult);
-      if (prepResult.success) {
-        count++;
-        prepared = prepResult.prepared;
-      }
+      await prepareSingleStage(ready, {});
     }
   }
 
-  return { prepared, preparations, count };
+  return { prepared, preparedTransactions, preparations, count };
 }
 
 // ============================================================================
@@ -521,7 +593,7 @@ function shortScope(key: string): string {
 
 export async function runMonitorCycle(
   tracker: ProposalStageTracker,
-  l2Provider: ethers.providers.Provider,
+  providers: ProviderBundle,
   options: MonitorRunOptions = {}
 ): Promise<{
   result: MonitorRunResult;
@@ -529,6 +601,7 @@ export async function runMonitorCycle(
   timelockOps: DiscoveredTimelockOp[];
   watermarks: DiscoveryWatermarks;
 }> {
+  const l2Provider = providers.l2Provider;
   const tipBlock = await l2Provider.getBlockNumber();
   const blockLag = options.blockLag ?? DEFAULT_BLOCK_LAG;
   const currentBlock = Math.max(0, tipBlock - blockLag);
@@ -572,7 +645,12 @@ export async function runMonitorCycle(
           trackedOperationIds.add(trackResult.timelockLink.operationId.toLowerCase());
         }
 
-        const prepResult = await prepareStagesForResult(tracker, trackResult.stages, options);
+        const prepResult = await prepareStagesForResult(
+          tracker,
+          trackResult.stages,
+          options,
+          providers
+        );
         result.prepared += prepResult.count;
 
         // Skip callback if shutting down
@@ -582,6 +660,7 @@ export async function runMonitorCycle(
           key,
           result: trackResult,
           prepared: prepResult.prepared,
+          preparedTransactions: prepResult.preparedTransactions,
         });
 
         if (callbackResult?.shouldRetrack) {
@@ -727,15 +806,22 @@ export async function runMonitorCycle(
 export async function trackAndPrepare(
   tracker: ProposalStageTracker,
   txHash: string,
-  options: { prepare?: boolean; force?: boolean; preparePending?: boolean } = {}
-): Promise<{ results: TrackingResult[]; preparations: PrepareResult[] }> {
+  options: { prepare?: boolean; prepareCompleted?: boolean; preparePending?: boolean } = {},
+  providers: ProviderBundle
+): Promise<{
+  results: TrackingResult[];
+  preparations: PrepareResult[];
+  preparedTransactions: PreparedTransaction[];
+}> {
   const results = await tracker.trackByTxHash(txHash);
   const preparations: PrepareResult[] = [];
+  const preparedTransactions: PreparedTransaction[] = [];
 
   for (const result of results) {
-    const prepResult = await prepareStagesForResult(tracker, result.stages, options);
+    const prepResult = await prepareStagesForResult(tracker, result.stages, options, providers);
     preparations.push(...prepResult.preparations);
+    preparedTransactions.push(...prepResult.preparedTransactions);
   }
 
-  return { results, preparations };
+  return { results, preparations, preparedTransactions };
 }

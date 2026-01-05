@@ -487,10 +487,10 @@ describe("validateStageForPrepare", () => {
     expect(result?.error).toContain("not ready");
   });
 
-  it("should allow non-READY with force=true", () => {
+  it("should allow non-READY with prepareCompleted=true", () => {
     const stage = new StageBuilder("L2_TIMELOCK", "L2").status("PENDING").build();
 
-    const result = validateStageForPrepare(stage, { force: true });
+    const result = validateStageForPrepare(stage, { prepareCompleted: true });
 
     expect(result).toBeNull();
   });

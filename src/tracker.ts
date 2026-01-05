@@ -14,6 +14,7 @@
 
 import { ethers } from "ethers";
 import { loggers } from "./utils/logger";
+import { isGasEstimationError } from "./utils/error-classification";
 import {
   TrackerOptions,
   TrackingResult,
@@ -361,6 +362,7 @@ export class ProposalStageTracker {
       return await this.trackByTxHashInternal(txHash, cacheKey, checkpoint);
     } catch (error) {
       // Save checkpoint on error with incremented error count
+      // Gas estimation errors don't count against consecutive errors
       if (this.cache) {
         const input: GovernorTrackingInput = {
           type: "governor",
@@ -369,6 +371,9 @@ export class ProposalStageTracker {
           creationTxHash: txHash,
         };
         const prevErrorCount = checkpoint?.metadata?.errorCount ?? 0;
+        const isGasError = isGasEstimationError(error);
+        const newErrorCount = isGasError ? prevErrorCount : prevErrorCount + 1;
+
         const errorCheckpoint: TrackingCheckpoint = checkpoint ?? {
           version: 1,
           createdAt: Date.now(),
@@ -377,9 +382,14 @@ export class ProposalStageTracker {
           lastProcessedBlock: { l1: 0, l2: 0 },
           cachedData: {},
         };
-        errorCheckpoint.metadata = { errorCount: prevErrorCount + 1, lastTrackedAt: Date.now() };
+        errorCheckpoint.metadata = { errorCount: newErrorCount, lastTrackedAt: Date.now() };
         await this.cache.set(cacheKey, errorCheckpoint);
-        logTracker("saved checkpoint on error: %s (errorCount=%d)", cacheKey, prevErrorCount + 1);
+        logTracker(
+          "saved checkpoint on error: %s (errorCount=%d%s)",
+          cacheKey,
+          newErrorCount,
+          isGasError ? " - gas error, not incrementing" : ""
+        );
       }
       throw error;
     }

@@ -130,7 +130,7 @@ export function buildExecutionPayloadData(
 // ============================================================================
 
 export interface PrepareValidationOptions {
-  force?: boolean;
+  prepareCompleted?: boolean;
   expectedTypes?: StageType[];
 }
 
@@ -139,7 +139,7 @@ export function validateStageForPrepare(
   stage: TrackedStage,
   options: PrepareValidationOptions = {}
 ): PrepareResult | null {
-  if (!options.force && stage.status !== "READY") {
+  if (!options.prepareCompleted && stage.status !== "READY") {
     return failPrepare(`Stage is not ready. Current status: ${stage.status}`);
   }
   if (options.expectedTypes?.length && !options.expectedTypes.includes(stage.type)) {

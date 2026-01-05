@@ -246,6 +246,9 @@ export type { StageMetadata } from "./utils/stage-metadata";
 // Address utilities
 export { addressEquals, isAddressIn, getChainType } from "./utils/chain";
 
+// Error classification
+export { isGasEstimationError } from "./utils/error-classification";
+
 // ============================================================================
 // TIER 5: Election Tracking
 // ============================================================================

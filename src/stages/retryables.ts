@@ -342,8 +342,8 @@ export async function trackRetryables(
  * Options for preparing retryable tickets
  */
 export interface RetryablePrepareOptions {
-  /** Force preparation even if stage is completed (for historical validation) */
-  force?: boolean;
+  /** Prepare completed stages (for historical validation) */
+  prepareCompleted?: boolean;
 }
 
 /**
@@ -360,8 +360,8 @@ export async function prepareRetryableRedemption(
   const status = await queryWithRetry(() => message.status());
   log("Retryable status: %s", ParentToChildMessageStatus[status]);
 
-  // Skip status check if force=true for historical validation
-  if (!options.force) {
+  // Skip status check if prepareCompleted=true for historical validation
+  if (!options.prepareCompleted) {
     if (status === ParentToChildMessageStatus.REDEEMED) {
       return failPrepare("Retryable already redeemed");
     }
@@ -424,7 +424,9 @@ export async function prepareRetryableStage(
   l2Provider: ethers.providers.Provider,
   options: RetryablePrepareOptions = {}
 ): Promise<BulkPrepareResult> {
-  const validationError = validateStageForBulkPrepare(stage, "L2", { force: options.force });
+  const validationError = validateStageForBulkPrepare(stage, "L2", {
+    prepareCompleted: options.prepareCompleted,
+  });
   if (validationError) return validationError;
 
   const l1TxHash = stage.transactions[0]?.hash;

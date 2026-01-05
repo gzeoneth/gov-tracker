@@ -341,7 +341,7 @@ trackCmd
       const tracker = createTracker({
         ...providers,
         chunkingConfig,
-        onProgress: opts.concurrency === 1 || opts.verbose ? createProgressCallback() : undefined,
+        onProgress: opts.concurrency === "1" || opts.verbose ? createProgressCallback() : undefined,
       });
       const shouldPrepare = opts.prepare || opts.write || opts.force || opts.preparePending;
 

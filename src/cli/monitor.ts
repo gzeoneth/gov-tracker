@@ -38,7 +38,7 @@ import {
   createSigner,
   requirePrivateKeyForWrite,
   executeTransaction,
-  formatDryRun,
+  formatMultiplePreparedTransactions,
   formatTrackingResult,
   formatCacheStatus,
   runWithLoop,
@@ -138,7 +138,7 @@ runCmd
   .option("--prepare", "Prepare transactions for ready stages (dry-run)")
   .option("--write", "Execute prepared transactions (requires --private-key)")
   .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
-  .option("--force", "Force prepare even for completed stages (historical validation)")
+  .option("--prepare-completed", "Prepare completed stages (for historical validation)")
   .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
   .option("--loop", "Run in continuous loop")
   .option("--interval <seconds>", "Loop interval in seconds", "60")
@@ -206,49 +206,53 @@ runCmd
       const cycleStartBlock = isFirstCycle ? startBlock : undefined;
       isFirstCycle = false;
 
-      const { result, proposals, timelockOps } = await runMonitorCycle(
-        tracker,
-        providers.l2Provider,
-        {
-          prepare: opts.prepare || opts.write || opts.force || opts.preparePending,
-          force: opts.force,
-          preparePending: opts.preparePending,
-          startBlock: cycleStartBlock,
-          blockLag,
-          maxAgeDays,
-          concurrency,
-          onTrack: async (r): Promise<TrackCallbackReturn> => {
-            // Skip showing complete elections
-            if (r.result?.isElection && r.result?.isComplete) {
-              electionsSkipped++;
-              return {};
-            }
+      const { result, proposals, timelockOps } = await runMonitorCycle(tracker, providers, {
+        prepare: opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending,
+        prepareCompleted: opts.prepareCompleted,
+        preparePending: opts.preparePending,
+        startBlock: cycleStartBlock,
+        blockLag,
+        maxAgeDays,
+        concurrency,
+        onTrack: async (r): Promise<TrackCallbackReturn> => {
+          // Skip showing complete elections
+          if (r.result?.isElection && r.result?.isComplete) {
+            electionsSkipped++;
+            return {};
+          }
 
-            if (r.result) {
-              console.log(`\n[${r.key}]`);
-              console.log(formatTrackingResult(r.result));
-            } else if (r.error) {
-              console.log(`\n[${r.key}] ERROR: ${r.error}`);
-            }
+          if (r.result) {
+            console.log(`\n[${r.key}]`);
+            console.log(formatTrackingResult(r.result));
+          } else if (r.error) {
+            console.log(`\n[${r.key}] ERROR: ${r.error}`);
+          }
 
-            if (r.prepared) {
-              console.log(`\n[PREPARED] ${r.key}`);
-              console.log(formatDryRun(r.prepared));
+          // Use preparedTransactions if available, otherwise fall back to prepared (legacy)
+          const txsToDisplay = r.preparedTransactions ?? (r.prepared ? [r.prepared] : []);
+          if (txsToDisplay.length > 0) {
+            console.log(`\n[PREPARED] ${r.key}`);
+            console.log(formatMultiplePreparedTransactions(txsToDisplay));
 
-              if (signer) {
-                const execResult = await executeTransaction(r.prepared, signer, providers);
+            if (signer) {
+              let executedAny = false;
+              for (const prepared of txsToDisplay) {
+                const execResult = await executeTransaction(prepared, signer, providers);
                 if (!execResult.success) {
                   console.error(`  Execution failed: ${execResult.error}`);
-                  return {};
+                } else {
+                  executedAny = true;
                 }
+              }
+              if (executedAny) {
                 console.log(`  Executed! Re-tracking to find next stages...`);
                 return { shouldRetrack: true };
               }
             }
-            return {};
-          },
-        }
-      );
+          }
+          return {};
+        },
+      });
 
       const stats = await tracker.getStats();
       console.log(
@@ -304,7 +308,7 @@ trackCmd
   .option("--prepare", "Prepare transactions for ready stages (dry-run)")
   .option("--write", "Execute prepared transactions (requires --private-key)")
   .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
-  .option("--force", "Force prepare even for completed stages (historical validation)")
+  .option("--prepare-completed", "Prepare completed stages (for historical validation)")
   .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
   .option(
     "--l1-chunk-size <size>",
@@ -343,55 +347,63 @@ trackCmd
         chunkingConfig,
         onProgress: opts.concurrency === "1" || opts.verbose ? createProgressCallback() : undefined,
       });
-      const shouldPrepare = opts.prepare || opts.write || opts.force || opts.preparePending;
+      const shouldPrepare =
+        opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-      const { results, preparations } = await trackAndPrepare(tracker, opts.tx, {
-        prepare: shouldPrepare,
-        force: opts.force,
-        preparePending: opts.preparePending,
-      });
+      const { results, preparations, preparedTransactions } = await trackAndPrepare(
+        tracker,
+        opts.tx,
+        {
+          prepare: shouldPrepare,
+          prepareCompleted: opts.prepareCompleted,
+          preparePending: opts.preparePending,
+        },
+        providers
+      );
 
       // Format output
       results.forEach((r, i) => {
         const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
         console.log(formatTrackingResult(r, label));
       });
-      preparations.forEach((prep) => {
-        if (prep.success && prep.prepared) {
-          console.log(`\n${formatDryRun(prep.prepared)}`);
-        } else if (!prep.success) {
-          console.log(`\n[PREPARE ERROR] ${prep.error}`);
-        }
+
+      // Show all prepared transactions
+      if (preparedTransactions.length > 0) {
+        console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
+      }
+
+      // Show preparation errors
+      const failedPreparations = preparations.filter((p) => !p.success);
+      failedPreparations.forEach((prep) => {
+        console.log(`\n[PREPARE ERROR] ${prep.error}`);
       });
 
       // Execute if --write
-      if (opts.write && preparations.length > 0) {
+      if (opts.write && preparedTransactions.length > 0) {
         const signer = createSigner(opts.privateKey);
         console.log(`\n=== Executing with ${signer.address} ===`);
 
-        let currentPreparations = preparations;
+        let currentPreparedTxs = preparedTransactions;
         let chainDepth = 0;
         const maxChainDepth = 10;
 
-        while (currentPreparations.length > 0 && chainDepth < maxChainDepth) {
+        while (currentPreparedTxs.length > 0 && chainDepth < maxChainDepth) {
           chainDepth++;
           let executedAny = false;
 
-          for (const prep of currentPreparations) {
-            if (prep.success && prep.prepared) {
-              const result = await executeTransaction(prep.prepared, signer, providers);
-              if (!result.success) {
-                console.error(`Execution failed: ${result.error}`);
-              } else {
-                executedAny = true;
-              }
+          for (const prepared of currentPreparedTxs) {
+            const result = await executeTransaction(prepared, signer, providers);
+            if (!result.success) {
+              console.error(`Execution failed: ${result.error}`);
+            } else {
+              executedAny = true;
             }
           }
 
           if (!executedAny) break;
 
           console.log(`\nRe-tracking to find next stages...`);
-          const retracked = await trackAndPrepare(tracker, opts.tx, { prepare: true });
+          const retracked = await trackAndPrepare(tracker, opts.tx, { prepare: true }, providers);
 
           retracked.results.forEach((r, i) => {
             const label =
@@ -400,12 +412,17 @@ trackCmd
                 : undefined;
             console.log(formatTrackingResult(r, label));
           });
-          retracked.preparations.forEach((prep) => {
-            if (prep.success && prep.prepared) console.log(`\n${formatDryRun(prep.prepared)}`);
-            else if (!prep.success) console.log(`\n[PREPARE ERROR] ${prep.error}`);
+
+          if (retracked.preparedTransactions.length > 0) {
+            console.log(`\n${formatMultiplePreparedTransactions(retracked.preparedTransactions)}`);
+          }
+
+          const retrackedFailed = retracked.preparations.filter((p) => !p.success);
+          retrackedFailed.forEach((prep) => {
+            console.log(`\n[PREPARE ERROR] ${prep.error}`);
           });
 
-          currentPreparations = retracked.preparations;
+          currentPreparedTxs = retracked.preparedTransactions;
         }
       }
     } catch (e) {

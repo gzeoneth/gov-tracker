@@ -16,7 +16,8 @@ export interface PrepareOptions {
   predecessor?: string;
   skipSaltValidation?: boolean;
   skipRetryableValueCalculation?: boolean;
-  force?: boolean;
+  /** Prepare completed stages (for historical validation) */
+  prepareCompleted?: boolean;
   /** Proposal description (needed for salt derivation if not in stage data) */
   description?: string;
 }

@@ -638,7 +638,7 @@ export async function prepareTimelockOperation(
   const salt = getSalt(stageData, options);
   const predecessor = getPredecessor(stageData, options);
 
-  if (!options.force) {
+  if (!options.prepareCompleted) {
     const stateError = await checkOperationReady(timelockAddress, operationId, provider);
     if (stateError) return stateError;
   }
@@ -715,7 +715,7 @@ export async function prepareTimelockBatch(
   const salt = getSalt(stageData, options);
   const predecessor = getPredecessor(stageData, options);
 
-  if (!options.force) {
+  if (!options.prepareCompleted) {
     const stateError = await checkOperationReady(timelockAddress, operationId, provider);
     if (stateError) return stateError;
   }
@@ -791,7 +791,9 @@ export async function prepareTimelockStage(
   provider: ethers.providers.Provider,
   options: PrepareOptions = {}
 ): Promise<PrepareResult> {
-  const validationError = validateStageForPrepare(stage, { force: options.force });
+  const validationError = validateStageForPrepare(stage, {
+    prepareCompleted: options.prepareCompleted,
+  });
   if (validationError) return validationError;
 
   const stageData = createTimelockStageData(stage);

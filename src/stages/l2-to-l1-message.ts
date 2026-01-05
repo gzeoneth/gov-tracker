@@ -441,8 +441,8 @@ export async function trackL2ToL1Message(
  * Options for preparing L2→L1 messages
  */
 export interface OutboxPrepareOptions {
-  /** Force preparation even if stage is completed (for historical validation) */
-  force?: boolean;
+  /** Prepare completed stages (for historical validation) */
+  prepareCompleted?: boolean;
   /** Outbox contract address (resolved automatically if not provided) */
   outboxAddress?: string;
 }
@@ -463,8 +463,8 @@ export async function prepareL2ToL1Message(
   const status = await queryWithRetry(() => reader.status(l2Provider));
   logExecution("Message status: %s", ChildToParentMessageStatus[status]);
 
-  // Skip state check if force=true for historical validation
-  if (!options.force) {
+  // Skip state check if prepareCompleted=true for historical validation
+  if (!options.prepareCompleted) {
     if (status === ChildToParentMessageStatus.EXECUTED) {
       return failPrepare("Message already executed");
     }
@@ -543,7 +543,9 @@ export async function prepareL2ToL1MessageStage(
   l1Provider: ethers.providers.Provider,
   options: OutboxPrepareOptions = {}
 ): Promise<SimpleBulkResult> {
-  const validationError = validateStageForSimpleBulk(stage, { force: options.force });
+  const validationError = validateStageForSimpleBulk(stage, {
+    prepareCompleted: options.prepareCompleted,
+  });
   if (validationError) return validationError;
 
   const stageData = getStageData(stage, "L2_TO_L1_MESSAGE");

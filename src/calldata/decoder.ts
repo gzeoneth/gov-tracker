@@ -41,7 +41,7 @@ const SEND_TX_TO_L1_SELECTOR = "0x928c169a";
  */
 export async function decodeCalldata(
   calldata: string,
-  _targetAddress?: string,
+  targetAddress?: string,
   depth = 0,
   chainContext: ChainContext = "arb1"
 ): Promise<DecodedCalldata> {
@@ -123,7 +123,7 @@ export async function decodeCalldata(
     parameters: params,
     raw: calldata,
     decodingSource: source,
-    decodingTarget: _targetAddress,
+    decodingTarget: targetAddress,
     chainContext,
   };
 }

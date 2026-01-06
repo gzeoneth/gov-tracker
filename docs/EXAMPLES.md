@@ -282,3 +282,167 @@ async function safeTrack(txHash: string) {
   }
 }
 ```
+
+---
+
+## Calldata Decoding & Simulation
+
+### Decode Proposal Calldata
+
+```typescript
+import { decodeCalldata } from "@gzeoneth/gov-tracker";
+
+// Get proposal calldata from tracking result
+const results = await tracker.trackByTxHash(txHash);
+const stage = results[0].stages[0]; // PROPOSAL_CREATED
+const { calldatas, targets } = stage.data;
+
+// Decode each action in the proposal
+for (let i = 0; i < calldatas.length; i++) {
+  const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
+
+  console.log(`Action ${i + 1}: ${decoded.functionName}`);
+  console.log(`Target: ${decoded.targetLabel || decoded.targetAddress}`);
+
+  for (const param of decoded.parameters) {
+    console.log(`  ${param.name} (${param.type}): ${param.displayValue}`);
+
+    // Nested calls (e.g., timelock → upgradeExecutor → target)
+    if (param.nestedCalldata) {
+      console.log(`    → ${param.nestedCalldata.functionName}`);
+    }
+  }
+}
+```
+
+### Tenderly Simulation Integration
+
+Simulate governance proposal execution using Tenderly API.
+
+```typescript
+import axios from "axios";
+import {
+  decodeCalldata,
+  extractAllSimulationsFromDecoded,
+} from "@gzeoneth/gov-tracker";
+
+async function simulateWithTenderly(txHash: string) {
+  // 1. Get proposal calldata
+  const results = await tracker.trackByTxHash(txHash);
+  const stage = results[0].stages[0];
+  const { calldatas, targets } = stage.data;
+
+  // 2. Decode and extract simulation data
+  const allSimulations = [];
+  for (let i = 0; i < calldatas.length; i++) {
+    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
+    const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
+    allSimulations.push(...sims);
+  }
+
+  // 3. Simulate each action with Tenderly
+  for (const sim of allSimulations) {
+    const simulation = sim.simulation;
+
+    // Prepare Tenderly simulation request
+    const tenderlyPayload = {
+      network_id: simulation.networkId,
+      from: simulation.from,
+      to: simulation.to,
+      input: simulation.data,
+      value: simulation.value || "0",
+      save: true,
+      save_if_fails: true,
+      simulation_type: "quick", // or "full" for traces
+    };
+
+    console.log(`Simulating: [${simulation.type}] ${sim.label}`);
+
+    try {
+      const response = await axios.post(
+        `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/simulate`,
+        tenderlyPayload,
+        {
+          headers: {
+            "X-Access-Key": TENDERLY_API_KEY,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = response.data.transaction;
+      console.log(`  Status: ${result.status ? "✅ Success" : "❌ Failed"}`);
+      console.log(`  Gas Used: ${result.gas_used}`);
+      console.log(`  Simulation: https://dashboard.tenderly.co/simulator/${result.id}`);
+
+      // Check state changes
+      if (result.state_diff && result.state_diff.length > 0) {
+        console.log(`  State Changes: ${result.state_diff.length} contracts affected`);
+      }
+
+    } catch (error) {
+      console.error(`  Simulation failed:`, error.response?.data || error.message);
+    }
+  }
+}
+
+// Usage
+await simulateWithTenderly("0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068");
+```
+
+### Foundry CLI Integration
+
+Prepare simulation data for Foundry's `cast` command.
+
+```typescript
+import { decodeCalldata, extractAllSimulationsFromDecoded } from "@gzeoneth/gov-tracker";
+
+async function prepareFoundrySimulation(txHash: string) {
+  const results = await tracker.trackByTxHash(txHash);
+  const stage = results[0].stages[0];
+  const { calldatas, targets } = stage.data;
+
+  for (let i = 0; i < calldatas.length; i++) {
+    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
+    const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+    for (const sim of sims) {
+      const { from, to, data, value, networkId } = sim.simulation;
+      const rpc = networkId === "1" ? process.env.ETH_RPC : process.env.ARB1_RPC;
+
+      console.log(`# Simulate: ${sim.label}`);
+      console.log(`cast call ${to} \\`);
+      console.log(`  ${data} \\`);
+      console.log(`  --from ${from} \\`);
+      console.log(`  --value ${value || 0} \\`);
+      console.log(`  --rpc-url ${rpc}`);
+      console.log();
+    }
+  }
+}
+```
+
+### Address Aliasing for L1→L2 Messages
+
+When simulating L1→L2 messages, use address aliasing to match on-chain behavior.
+
+```typescript
+import { calculateAddressAlias, getL1TimelockAlias } from "@gzeoneth/gov-tracker";
+
+// Calculate alias for any L1 address
+const l1Address = "0xE6841D92B0C345144506576eC13ECf5103aC7f49"; // L1 Timelock
+const aliasedAddress = calculateAddressAlias(l1Address);
+console.log(aliasedAddress); // 0xf6951Cd6...
+
+// Get L1 Timelock alias (commonly used)
+const timelockAlias = getL1TimelockAlias();
+
+// Use in simulation
+const simulation = {
+  networkId: "42161", // Arb1
+  from: timelockAlias, // Aliased address as msg.sender
+  to: upgradeExecutorAddress,
+  data: executeCalldata,
+  value: "0",
+};
+```

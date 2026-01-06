@@ -266,3 +266,178 @@ interface PrepareResult =
   | { success: true; prepared: PreparedTransaction }
   | { success: false; error: string };
 ```
+
+---
+
+## Calldata Decoding
+
+Decode and inspect governance proposal calldata with function signature lookup and parameter parsing.
+
+### `decodeCalldata(calldata, target, depth, chain)`
+
+Recursively decode calldata with nested call detection and retryable ticket parsing.
+
+```typescript
+import { decodeCalldata } from "@gzeoneth/gov-tracker";
+
+const decoded = await decodeCalldata(
+  "0x...", // calldata
+  "0x...", // target address
+  0,       // recursion depth
+  "arb1"   // chain context
+);
+
+console.log(decoded.functionName);     // "execute(address,uint256,bytes,bytes32,bytes32)"
+console.log(decoded.functionSignature); // "0x134008d3"
+
+for (const param of decoded.parameters) {
+  console.log(`${param.name}: ${param.displayValue}`);
+  if (param.nestedCalldata) {
+    console.log("  → Nested call:", param.nestedCalldata.functionName);
+  }
+}
+```
+
+**Decoded structure:**
+```typescript
+interface DecodedCalldata {
+  functionSignature: string;       // 4-byte selector
+  functionName?: string;            // Human-readable name
+  parameters: DecodedParameter[];
+  rawCalldata: string;
+  depth: number;
+  targetAddress?: string;
+  targetLabel?: string;            // Known contract label
+  targetExplorerUrl?: string;
+  retryableTicketData?: {          // If contains retryable ticket
+    chain: string;
+    delayedInbox: string;
+    l2Calldata: string;
+    // ...
+  };
+}
+```
+
+### Signature Lookup
+
+Function signatures are resolved via:
+1. **Local registry** - Common governance functions
+2. **4byte.directory** - Public signature database with caching
+
+```typescript
+import { lookupSignature, clearSignatureCache } from "@gzeoneth/gov-tracker";
+
+const sig = await lookupSignature("0x134008d3");
+// Returns: "execute(address,uint256,bytes,bytes32,bytes32)"
+
+// Clear cache (in-memory)
+clearSignatureCache();
+```
+
+### Address Utilities
+
+```typescript
+import {
+  getAddressLabel,
+  getKnownAddresses,
+  getAddressExplorerUrl,
+  getChainLabel
+} from "@gzeoneth/gov-tracker";
+
+// Get human-readable label for known governance contracts
+const label = getAddressLabel("0xf07DeD...", "arb1");
+// Returns: "Core Governor"
+
+// Get all known addresses for a chain
+const addresses = getKnownAddresses("arb1");
+// [{ address, label, chain }, ...]
+
+// Generate explorer URLs
+const url = getAddressExplorerUrl("0x...", "ethereum");
+// "https://etherscan.io/address/0x..."
+
+// Chain labels
+getChainLabel("arb1");    // "Arb1"
+getChainLabel("nova");    // "Nova"
+getChainLabel("ethereum"); // "L1"
+```
+
+---
+
+## Simulation Data Preparation
+
+Extract simulation-ready data from decoded calldata for integration with simulation tools (Tenderly, Foundry, etc).
+
+### `extractAllSimulationsFromDecoded(decoded, chain)`
+
+Extract all simulatable calls from decoded calldata.
+
+```typescript
+import {
+  extractAllSimulationsFromDecoded,
+  prepareTimelockSimulation,
+  prepareRetryableSimulation
+} from "@gzeoneth/gov-tracker";
+
+const decoded = await decodeCalldata(calldata, target, 0, "arb1");
+const simulations = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+for (const sim of simulations) {
+  console.log(`[${sim.simulation.type}] ${sim.label}`);
+  console.log(`  Network: ${sim.simulation.networkId}`);
+  console.log(`  To: ${sim.simulation.to}`);
+  console.log(`  Data: ${sim.simulation.data}`);
+}
+```
+
+**Simulation types:**
+- `timelock` - Timelock execution (L1 or L2)
+- `retryable` - Retryable ticket redemption
+- `call` - Direct contract call
+
+```typescript
+interface ExtractedSimulation {
+  simulation: TimelockSimulationData | RetryableSimulationData | CallSimulationData;
+  label: string;
+  batchIndex?: number;
+}
+
+interface TimelockSimulationData {
+  type: "timelock";
+  networkId: string;              // "1" (L1) or "42161" (Arb1)
+  from: string;                   // Aliased address for L1→L2
+  to: string;                     // Timelock address
+  value: string;
+  data: string;                   // Full calldata
+  timelockAddress: string;
+  operationId: string;
+  executeCalldata: string;
+}
+
+interface RetryableSimulationData {
+  type: "retryable";
+  networkId: string;              // "42161" (Arb1) or "42170" (Nova)
+  from: string;                   // Aliased address
+  to: string;                     // L2 target
+  value: string;
+  data: string;
+  l2Target: string;
+  l2Calldata: string;
+  l2Chain: string;                // "arb1" or "nova"
+}
+```
+
+---
+
+## CLI Options
+
+```bash
+# Track and decode calldata
+npx gov-tracker track --tx 0x... --inspect-only
+
+# Show simulation data
+npx gov-tracker track --tx 0x... --show-simulation
+
+# Execute ready stages
+npx gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+```

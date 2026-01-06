@@ -11,7 +11,7 @@
  * - Tracking lifecycle stages
  * - Preparing and executing transactions
  *
- * Usage: npx @gzeoneth/gov-tracker [run|track|election|status] [options]
+ * Usage: npx @gzeoneth/gov-tracker [run|track <tx-hash>|election|status] [options]
  */
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -309,7 +309,10 @@ runCmd
 // Track Command
 // ============================================================================
 
-const trackCmd = program.command("track").description("Track a specific proposal or operation");
+const trackCmd = program
+  .command("track")
+  .description("Track a specific proposal or operation")
+  .argument("<tx-hash>", "Transaction hash to track");
 addOptions(trackCmd, rpcOptions);
 addOptions(trackCmd, executionOptions);
 addOptions(trackCmd, chunkingOptions(CHUNK_SIZES.L1, CHUNK_SIZES.L2));
@@ -318,17 +321,11 @@ trackCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
   .addOption(verboseOption)
-  .option("--tx <hash>", "Transaction hash")
-  .action(async (opts) => {
+  .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
 
-    if (!opts.tx) {
-      console.error("Error: --tx is required for tracking");
-      process.exit(1);
-    }
-
-    console.log(`Tracking from tx: ${opts.tx}\n`);
+    console.log(`Tracking from tx: ${txHash}\n`);
 
     try {
       const providers = createProvidersFromOptions(opts);
@@ -355,7 +352,7 @@ trackCmd
 
       const { results, preparations, preparedTransactions } = await trackAndPrepare(
         tracker,
-        opts.tx,
+        txHash,
         {
           prepare: shouldPrepare,
           prepareCompleted: opts.prepareCompleted,
@@ -406,7 +403,7 @@ trackCmd
           if (!executedAny) break;
 
           console.log(`\nRe-tracking to find next stages...`);
-          const retracked = await trackAndPrepare(tracker, opts.tx, { prepare: true }, providers);
+          const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
 
           retracked.results.forEach((r, i) => {
             const label =

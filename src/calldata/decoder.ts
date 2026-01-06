@@ -16,7 +16,6 @@ import {
   retryableChainToContext,
 } from "./retryable-ticket";
 import { getAddressLabel } from "./address-utils";
-import { getAddressExplorerUrl, getChainLabel } from "../utils/urls";
 
 const debug = Debug("gov-tracker:calldata");
 
@@ -105,8 +104,6 @@ export async function decodeCalldata(
   // For sendTxToL1, fix first param (target address) to use L1 context
   if (isSendTxToL1 && params[0]?.type === "address") {
     const addr = String(rawDecoded[0]);
-    params[0].link = getAddressExplorerUrl(addr, "ethereum");
-    params[0].chainLabel = getChainLabel("ethereum");
     const label = getAddressLabel(addr, "ethereum");
     if (label) params[0].addressLabel = label;
   }
@@ -197,8 +194,6 @@ async function processNestedParams(
                   type: "address",
                   value: retryable.targetInbox,
                   isNested: false,
-                  link: getAddressExplorerUrl(retryable.targetInbox, "ethereum"),
-                  chainLabel: "L1",
                   addressLabel: getAddressLabel(retryable.targetInbox, "ethereum"),
                 },
                 {
@@ -206,8 +201,6 @@ async function processNestedParams(
                   type: "address",
                   value: retryable.l2Target,
                   isNested: false,
-                  link: getAddressExplorerUrl(retryable.l2Target, l2Chain),
-                  chainLabel: getChainLabel(l2Chain),
                   addressLabel: getAddressLabel(retryable.l2Target, l2Chain),
                 },
                 {

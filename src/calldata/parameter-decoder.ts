@@ -8,7 +8,6 @@
 import { ethers } from "ethers";
 import type { ChainContext, DecodedParameter } from "../types/calldata";
 import { getAddressLabel } from "./address-utils";
-import { getAddressExplorerUrl, getChainLabel } from "../utils/urls";
 
 /**
  * Parse parameter types from function signature
@@ -142,19 +141,11 @@ export function decodeParameters(
         isNested: false,
       };
 
-      // Handle address type - add explorer link and label
+      // Handle address type - add label
       if (type === "address") {
         const addr = String(rawValue);
-        param.link = getAddressExplorerUrl(addr, chainContext);
-        param.chainLabel = getChainLabel(chainContext);
         const label = getAddressLabel(addr, chainContext);
         if (label) param.addressLabel = label;
-      }
-
-      // Handle address[] - add labels for each
-      if (type === "address[]" && Array.isArray(rawValue)) {
-        // Labels will be shown in the formatted value
-        param.chainLabel = getChainLabel(chainContext);
       }
 
       // Handle bytes type - check if nested calldata

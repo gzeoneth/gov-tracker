@@ -66,12 +66,6 @@ export interface DecodedParameter {
   /** Decoded elements for bytes[] arrays */
   nestedArray?: DecodedCalldata[];
 
-  /** Block explorer link for address parameters */
-  link?: string;
-
-  /** Chain label for display (Arb1, Nova, L1) */
-  chainLabel?: string;
-
   /** Known address label (e.g., "Core Governor", "L1 Timelock") */
   addressLabel?: string;
 

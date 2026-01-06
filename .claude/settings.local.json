@@ -1,17 +1,24 @@
 {
   "permissions": {
     "allow": [
+      "Bash(yarn install:*)",
+      "Bash(yarn coverage:*)",
+      "Bash(yarn build)",
+      "Bash(yarn clean)",
       "Bash(yarn lint:*)",
       "Bash(yarn test:*)",
-      "Bash(yarn build)",
-      "Bash(yarn format)",
       "Bash(yarn test:all:*)",
+      "Bash(yarn format)",
+      "Bash(yarn format:check:*)",
+      "Bash(yarn monitor:*)",
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(npx vitest:*)",
+      "Bash(npx vitest:coverage)",
+      "Bash(npx vitest:coverage:report)",
       "Bash(git add:*)",
-      "Bash(find:*)",
-      "Bash(yarn format:check:*)"
+      "Bash(git commit:*)",
+      "Bash(find:*)"
     ]
   }
 }

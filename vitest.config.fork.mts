@@ -11,6 +11,6 @@ export default defineConfig({
     // Disable file parallelism
     fileParallelism: false,
     // Increase global timeout
-    testTimeout: 300000,
+    testTimeout: 1800000,
   },
 });

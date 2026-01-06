@@ -28,8 +28,9 @@ import {
   TrackingProgress,
   CHUNK_SIZES,
   ChunkingConfig,
-  TrackedStage,
+  extractAllSimulationsFromDecoded,
 } from "../index";
+import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
 import {
@@ -61,9 +62,7 @@ import {
   parseChunkingConfig,
 } from "./lib/cli";
 import { decodeCalldata } from "../calldata";
-import { extractAllSimulationsFromDecoded } from "../simulation";
 import type { DecodedCalldata, ChainContext } from "../types/calldata";
-import type { ExtractedSimulation } from "../types/simulation";
 
 // ============================================================================
 // Helper Functions for Calldata Decoding and Display
@@ -407,7 +406,6 @@ trackCmd
   .addOption(verboseOption)
   .option("--inspect-only", "Decode and inspect calldata without tracking")
   .option("--show-simulation", "Show simulation data for each call")
-  .option("--validate", "Validate prediction against cached tracking data")
   .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
@@ -468,8 +466,7 @@ trackCmd
         const shouldPrepare =
           opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-        // If validating, always track to populate cache
-        const shouldTrack = !opts.inspectOnly || opts.validate;
+        const shouldTrack = !opts.inspectOnly;
 
         const { results, preparations, preparedTransactions } = shouldTrack
           ? await trackAndPrepare(
@@ -503,7 +500,7 @@ trackCmd
           });
         }
 
-        // Extract calldata for decoding/validation
+        // Extract calldata for decoding
         if (results.length > 0 && results[0].stages.length > 0 && results[0].stages[0].data) {
           const stage = results[0].stages[0];
           const data = stage.data as { calldatas?: string[]; targets?: string[] };
@@ -565,7 +562,7 @@ trackCmd
       }
 
       // Decode and display calldata if requested
-      if (opts.showSimulation || opts.validate || opts.inspectOnly) {
+      if (opts.showSimulation || opts.inspectOnly) {
         if (calldatas.length === 0) {
           console.error("No calldata available for decoding");
           process.exit(1);
@@ -587,7 +584,7 @@ trackCmd
           console.log(formatDecodedCalldata(decoded));
           console.log("");
 
-          if (opts.showSimulation || opts.validate) {
+          if (opts.showSimulation) {
             const sims = extractAllSimulationsFromDecoded(decoded, chainContext);
             allSimulations.push(...sims);
           }
@@ -596,302 +593,6 @@ trackCmd
         if (opts.showSimulation) {
           console.log("=== Simulation Data ===\n");
           console.log(formatSimulations(allSimulations));
-        }
-
-        if (opts.validate) {
-          console.log("=== Validation (Predicted vs Cached) ===\n");
-
-          // Load cache
-          const checkpoints = await tracker.getAllCheckpoints();
-          let matchesFound = 0;
-          let mismatchesFound = 0;
-
-          for (const sim of allSimulations) {
-            const type = sim.simulation.type;
-            let status = "UNKNOWN";
-            let details = "";
-
-            // Skip Call simulations - they're validated as part of the timelock executeBatch
-            // Only validate timelock and retryable simulations
-            if (type === "call") {
-              continue;
-            }
-
-            if (type === "timelock") {
-              const opId = sim.simulation.operationId;
-              const executeCalldata = sim.simulation.executeCalldata;
-              const timelockAddress = sim.simulation.timelockAddress;
-              const networkId = sim.simulation.networkId;
-
-              let foundStage: TrackedStage | undefined;
-              for (const cp of checkpoints.values()) {
-                const stages = cp.cachedData.completedStages || [];
-                const matchedStage = stages.find((s: TrackedStage) => s.data?.operationId === opId);
-
-                if (matchedStage) {
-                  // Check for both L2 and L1 timelock based on network ID
-                  if (networkId === "1") {
-                    foundStage = stages.find((s: TrackedStage) => s.type === "L1_TIMELOCK");
-                  } else {
-                    foundStage = stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
-                  }
-                  if (foundStage) break;
-                }
-              }
-
-              if (foundStage) {
-                const executedTx = foundStage.transactions.find(
-                  (tx) => tx.description === "executed"
-                );
-                if (executedTx) {
-                  try {
-                    // Use correct provider based on network ID
-                    const provider =
-                      networkId === "1" ? providers.l1Provider : providers.l2Provider;
-                    const tx = await provider.getTransaction(executedTx.hash);
-                    if (tx) {
-                      const toMatch =
-                        tx.to && tx.to.toLowerCase() === timelockAddress.toLowerCase();
-                      const dataMatch = tx.data.toLowerCase() === executeCalldata.toLowerCase();
-
-                      if (toMatch && dataMatch) {
-                        status = "MATCH ✅";
-                        matchesFound++;
-                      } else {
-                        status = "MISMATCH ❌";
-                        mismatchesFound++;
-                        if (!toMatch)
-                          details += `\n    Expected To: ${timelockAddress}\n    Actual To:   ${tx.to}`;
-                        if (!dataMatch)
-                          details += `\n    Calldata mismatch (length: ${executeCalldata.length} vs ${tx.data.length})`;
-                      }
-                    } else {
-                      status = "TX_NOT_FOUND ⚠️";
-                      details = ` (Could not fetch tx ${executedTx.hash})`;
-                      mismatchesFound++;
-                    }
-                  } catch (e) {
-                    status = "RPC_ERROR ⚠️";
-                    details = ` (Error fetching tx: ${(e as Error).message})`;
-                    mismatchesFound++;
-                  }
-                } else {
-                  status = "PENDING_EXECUTION ⏳";
-                  details = " (Operation tracked but not yet executed)";
-                }
-              } else {
-                status = "MISSING ⚠️";
-                details = ` (Operation ID not found in cache for network ${networkId})`;
-                mismatchesFound++;
-              }
-            } else if (type === "retryable") {
-              const retData =
-                sim.simulation as import("../types/simulation").RetryableSimulationData;
-              const targetChainLower =
-                retData.l2Chain === "arb1" ? "arb1" : retData.l2Chain === "nova" ? "nova" : "arb1";
-              const targetChain = targetChainLower === "arb1" ? "Arb1" : "Nova";
-              const expectedL2Target = retData.l2Target.toLowerCase();
-              const expectedL2Calldata = retData.l2Calldata.toLowerCase();
-
-              let foundRetryable = false;
-              let foundPending = false;
-
-              for (const cp of checkpoints.values()) {
-                const stages = cp.cachedData.completedStages || [];
-                const retryableStage = stages.find(
-                  (s: TrackedStage) => s.type === "RETRYABLE_EXECUTED"
-                );
-
-                if (retryableStage) {
-                  // Check if there's a matching redemption by target and calldata
-                  if (retryableStage.data.redemptionDetails) {
-                    for (const redemption of retryableStage.data.redemptionDetails) {
-                      // Match by target chain first
-                      if (redemption.targetChain !== targetChain) continue;
-
-                      if (redemption.status === "REDEEMED" && redemption.l2TxHash) {
-                        const provider =
-                          targetChainLower === "nova"
-                            ? providers.novaProvider
-                            : providers.l2Provider;
-                        const tx = await provider.getTransaction(redemption.l2TxHash);
-
-                        if (tx) {
-                          const toMatch = tx.to && tx.to.toLowerCase() === expectedL2Target;
-                          const dataMatch = tx.data.toLowerCase() === expectedL2Calldata;
-
-                          if (toMatch && dataMatch) {
-                            foundRetryable = true;
-                            status = "MATCH ✅";
-                            matchesFound++;
-                            break;
-                          }
-                          // Don't mark as mismatch yet, keep searching
-                        }
-                      } else if (redemption.status !== "REDEEMED") {
-                        // Check if this pending retryable might match by checking creation details
-                        const creationDetail = retryableStage.data.creationDetails?.find(
-                          (c) => c.index === redemption.index && c.targetChain === targetChain
-                        );
-                        if (creationDetail) {
-                          // We found a pending retryable on the same chain
-                          // We'll mark as pending only if no redeemed match is found
-                          foundPending = true;
-                        }
-                      }
-                    }
-                  }
-
-                  if (foundRetryable) break;
-                }
-              }
-
-              if (!foundRetryable && !foundPending) {
-                status = "MISSING ⚠️";
-                details = " (No matching retryable found in cache)";
-                mismatchesFound++;
-              } else if (!foundRetryable && foundPending) {
-                status = "PENDING_REDEMPTION ⏳";
-                details = " (Retryable created but not yet redeemed)";
-                // Not a mismatch, just incomplete
-              }
-            } else if (type === "call") {
-              const callData = sim.simulation as import("../types/simulation").CallSimulationData;
-              const expectedTarget = callData.target.toLowerCase();
-              const expectedCalldata = callData.calldata.toLowerCase();
-              const batchIndex = sim.batchIndex;
-
-              let foundCall = false;
-              for (const cp of checkpoints.values()) {
-                const stages = cp.cachedData.completedStages || [];
-
-                const timelockStage = stages.find(
-                  (s: TrackedStage) => s.type === "L2_TIMELOCK" || s.type === "L1_TIMELOCK"
-                );
-                if (timelockStage && timelockStage.data.operationId) {
-                  const execTx = timelockStage.transactions.find(
-                    (tx) => tx.description === "executed"
-                  );
-
-                  if (execTx) {
-                    try {
-                      const provider =
-                        timelockStage.type === "L1_TIMELOCK"
-                          ? providers.l1Provider
-                          : providers.l2Provider;
-                      const tx = await provider.getTransaction(execTx.hash);
-
-                      if (tx && tx.data) {
-                        const selector = tx.data.slice(0, 10).toLowerCase();
-                        const isExecuteBatch = selector === "0xe38335e5";
-                        const isExecute = selector === "0x134008d3";
-
-                        if (isExecuteBatch) {
-                          const abiCoder = new (await import("ethers")).ethers.utils.AbiCoder();
-                          const decoded = abiCoder.decode(
-                            ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
-                            "0x" + tx.data.slice(10)
-                          );
-
-                          const targets = decoded[0] as string[];
-                          const calldatas = decoded[2] as string[];
-
-                          if (
-                            batchIndex !== undefined &&
-                            batchIndex < targets.length &&
-                            batchIndex < calldatas.length
-                          ) {
-                            const actualTarget = targets[batchIndex].toLowerCase();
-                            const actualCalldata = calldatas[batchIndex].toLowerCase();
-
-                            if (
-                              actualTarget === expectedTarget &&
-                              actualCalldata === expectedCalldata
-                            ) {
-                              foundCall = true;
-                              status = "MATCH ✅";
-                              matchesFound++;
-                              break;
-                            } else {
-                              foundCall = true;
-                              status = "MISMATCH ❌";
-                              if (actualTarget !== expectedTarget) {
-                                details += `\n    Expected Target: ${expectedTarget}\n    Actual Target:   ${actualTarget}`;
-                              }
-                              if (actualCalldata !== expectedCalldata) {
-                                details += `\n    Calldata mismatch (length: ${expectedCalldata.length} vs ${actualCalldata.length})`;
-                              }
-                              mismatchesFound++;
-                              break;
-                            }
-                          }
-                        } else if (isExecute && batchIndex === 0) {
-                          const abiCoder = new (await import("ethers")).ethers.utils.AbiCoder();
-                          const decoded = abiCoder.decode(
-                            ["address", "uint256", "bytes", "bytes32", "bytes32"],
-                            "0x" + tx.data.slice(10)
-                          );
-
-                          const actualTarget = (decoded[0] as string).toLowerCase();
-                          const actualCalldata = (decoded[2] as string).toLowerCase();
-
-                          if (
-                            actualTarget === expectedTarget &&
-                            actualCalldata === expectedCalldata
-                          ) {
-                            foundCall = true;
-                            status = "MATCH ✅";
-                            matchesFound++;
-                            break;
-                          } else {
-                            foundCall = true;
-                            status = "MISMATCH ❌";
-                            if (actualTarget !== expectedTarget) {
-                              details += `\n    Expected Target: ${expectedTarget}\n    Actual Target:   ${actualTarget}`;
-                            }
-                            if (actualCalldata !== expectedCalldata) {
-                              details += `\n    Calldata mismatch (length: ${expectedCalldata.length} vs ${actualCalldata.length})`;
-                            }
-                            mismatchesFound++;
-                            break;
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      status = "RPC_ERROR ⚠️";
-                      details = ` (Error decoding execution: ${(e as Error).message})`;
-                      mismatchesFound++;
-                      foundCall = true;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              if (!foundCall) {
-                status = "MISSING ⚠️";
-                details = " (No matching execution found in cache)";
-                mismatchesFound++;
-              }
-            }
-
-            console.log(`  [${type.toUpperCase()}] ${sim.label}: ${status}${details}`);
-          }
-
-          console.log(
-            `\nValidation Complete: ${matchesFound} matches, ${mismatchesFound} mismatches`
-          );
-          console.log("");
-
-          // Exit with error if there were any mismatches
-          if (mismatchesFound > 0) {
-            console.error(
-              `\n❌ Validation failed with ${mismatchesFound} mismatch${mismatchesFound > 1 ? "es" : ""}`
-            );
-            process.exit(1);
-          } else if (matchesFound > 0) {
-            console.log(`\n✅ All validations passed!`);
-          }
         }
       }
     } catch (e) {

@@ -7,7 +7,8 @@
 
 import { ethers } from "ethers";
 import type { ChainContext, DecodedParameter } from "../types/calldata";
-import { getAddressExplorerUrl, getAddressLabel, getChainLabel } from "./address-utils";
+import { getAddressLabel } from "./address-utils";
+import { getAddressExplorerUrl, getChainLabel } from "../utils/urls";
 
 /**
  * Parse parameter types from function signature

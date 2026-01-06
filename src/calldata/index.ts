@@ -26,13 +26,10 @@ export {
 } from "./parameter-decoder";
 
 // Address utilities
-export {
-  getAddressLabel,
-  getAddressExplorerUrl,
-  getTxExplorerUrl,
-  getChainLabel,
-  getKnownAddresses,
-} from "./address-utils";
+export { getAddressLabel, getKnownAddresses } from "./address-utils";
+
+// URL utilities
+export { getAddressExplorerUrl, getTxExplorerUrl, getChainLabel } from "../utils/urls";
 
 // Retryable ticket
 export {

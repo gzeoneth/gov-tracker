@@ -1,5 +1,5 @@
 import { CHAIN_IDS } from "../constants";
-import type { ChainType, StageTransaction } from "../types";
+import type { ChainType, StageTransaction, ChainContext } from "../types";
 
 /**
  * Map ChainType to numeric chain ID
@@ -14,6 +14,24 @@ export function chainTypeToId(chain: ChainType): number {
       return CHAIN_IDS.NOVA;
   }
 }
+
+/**
+ * Explorer base URLs by chain
+ */
+const EXPLORER_URLS: Record<ChainContext, string> = {
+  arb1: "https://arbiscan.io",
+  nova: "https://nova.arbiscan.io",
+  ethereum: "https://etherscan.io",
+};
+
+/**
+ * Human-readable chain labels
+ */
+const CHAIN_LABELS: Record<ChainContext, string> = {
+  arb1: "Arb1",
+  nova: "Nova",
+  ethereum: "L1",
+};
 
 export function getExplorerUrl(chainId: number, type: "tx" | "address", hash: string): string {
   switch (chainId) {
@@ -46,4 +64,38 @@ export function getTxUrl(chainId: number, txHash: string): string {
 export function getStageTransactionUrl(tx: StageTransaction): string {
   const chainId = chainTypeToId(tx.chain);
   return getTxUrl(chainId, tx.hash);
+}
+
+/**
+ * Get human-readable chain label
+ *
+ * @param chain - Chain context
+ * @returns Chain label (e.g., "Arb1", "Nova", "L1")
+ */
+export function getChainLabel(chain: ChainContext): string {
+  return CHAIN_LABELS[chain] ?? chain;
+}
+
+/**
+ * Get block explorer URL for an address
+ *
+ * @param address - Contract address
+ * @param chain - Chain context
+ * @returns Full explorer URL
+ */
+export function getAddressExplorerUrl(address: string, chain: ChainContext): string {
+  const baseUrl = EXPLORER_URLS[chain] ?? EXPLORER_URLS.ethereum;
+  return `${baseUrl}/address/${address}`;
+}
+
+/**
+ * Get block explorer URL for a transaction
+ *
+ * @param txHash - Transaction hash
+ * @param chain - Chain context
+ * @returns Full explorer URL
+ */
+export function getTxExplorerUrl(txHash: string, chain: ChainContext): string {
+  const baseUrl = EXPLORER_URLS[chain] ?? EXPLORER_URLS.ethereum;
+  return `${baseUrl}/tx/${txHash}`;
 }

@@ -15,7 +15,8 @@ import {
   getRetryableChainName,
   retryableChainToContext,
 } from "./retryable-ticket";
-import { getAddressExplorerUrl, getAddressLabel, getChainLabel } from "./address-utils";
+import { getAddressLabel } from "./address-utils";
+import { getAddressExplorerUrl, getChainLabel } from "../utils/urls";
 
 const debug = Debug("gov-tracker:calldata");
 

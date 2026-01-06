@@ -2,7 +2,6 @@
  * Address Utilities
  *
  * Chain-aware address labeling for known governance contracts.
- * Provides explorer links and human-readable labels.
  */
 
 import type { ChainContext, KnownAddress } from "../types/calldata";
@@ -55,34 +54,6 @@ const KNOWN_ADDRESSES: Record<ChainContext, Record<string, string>> = {
 };
 
 /**
- * Explorer base URLs by chain
- */
-const EXPLORER_URLS: Record<ChainContext, string> = {
-  arb1: "https://arbiscan.io",
-  nova: "https://nova.arbiscan.io",
-  ethereum: "https://etherscan.io",
-};
-
-/**
- * Human-readable chain labels
- */
-const CHAIN_LABELS: Record<ChainContext, string> = {
-  arb1: "Arb1",
-  nova: "Nova",
-  ethereum: "L1",
-};
-
-/**
- * Get human-readable chain label
- *
- * @param chain - Chain context
- * @returns Chain label (e.g., "Arb1", "Nova", "L1")
- */
-export function getChainLabel(chain: ChainContext): string {
-  return CHAIN_LABELS[chain] ?? chain;
-}
-
-/**
  * Get known address label
  *
  * @param address - Contract address
@@ -102,30 +73,6 @@ export function getAddressLabel(address: string, chain: ChainContext): string | 
   }
 
   return undefined;
-}
-
-/**
- * Get block explorer URL for an address
- *
- * @param address - Contract address
- * @param chain - Chain context
- * @returns Full explorer URL
- */
-export function getAddressExplorerUrl(address: string, chain: ChainContext): string {
-  const baseUrl = EXPLORER_URLS[chain] ?? EXPLORER_URLS.ethereum;
-  return `${baseUrl}/address/${address}`;
-}
-
-/**
- * Get block explorer URL for a transaction
- *
- * @param txHash - Transaction hash
- * @param chain - Chain context
- * @returns Full explorer URL
- */
-export function getTxExplorerUrl(txHash: string, chain: ChainContext): string {
-  const baseUrl = EXPLORER_URLS[chain] ?? EXPLORER_URLS.ethereum;
-  return `${baseUrl}/tx/${txHash}`;
 }
 
 /**

@@ -103,6 +103,23 @@ export type {
   ElectionStatus,
   GovernorProposalState,
   ElectionCheckResult,
+  // Calldata decoding types
+  ChainContext,
+  DecodingSource,
+  DecodedCalldata,
+  DecodedParameter,
+  RetryableTicketData,
+  KnownAddress,
+  SignatureEntry,
+  // Simulation data types
+  SimulationType,
+  SimulationChainType,
+  BaseSimulationData,
+  RetryableSimulationData,
+  TimelockSimulationData,
+  CallSimulationData,
+  SimulationData,
+  ExtractedSimulation,
 } from "./types";
 
 // Type guards

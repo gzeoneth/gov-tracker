@@ -42,6 +42,9 @@ export interface DecodedCalldata {
 
   /** Chain context for this calldata (for simulation extraction) */
   chainContext?: ChainContext;
+
+  /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
+  targetChain?: "arb1" | "nova" | "unknown";
 }
 
 /**

@@ -238,6 +238,7 @@ async function processNestedParams(
               raw: bytesItem,
               decodingSource: "local",
               chainContext: "ethereum", // Retryable tickets are created on L1
+              targetChain: retryable.chain, // Explicit target L2 chain field
             };
 
             nestedArray.push(retryableDecoded);

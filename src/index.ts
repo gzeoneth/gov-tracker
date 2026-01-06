@@ -128,6 +128,7 @@ export {
   areAllStagesComplete,
   extractOperationId,
   isTimelockStage,
+  findStage,
 } from "./stages/base";
 
 // ============================================================================
@@ -265,7 +266,53 @@ export {
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 
 // ============================================================================
-// TIER 6: Internal Utilities (for testing)
+// TIER 6: Calldata Decoding
+// ============================================================================
+
+export {
+  // Main decoder
+  decodeCalldata,
+  decodeCalldataArray,
+  // Signature lookup
+  lookupSignature,
+  lookupLocalSignature,
+  extractFunctionName,
+  // Parameter utilities
+  parseParamTypes,
+  isLikelyCalldata,
+  formatDecodedValue,
+  // Address utilities
+  getAddressLabel,
+  getAddressExplorerUrl,
+  getChainLabel,
+  // Retryable ticket
+  isRetryableTicketMagic,
+  decodeRetryableTicket,
+  getRetryableChainName,
+  RETRYABLE_TICKET_MAGIC,
+} from "./calldata";
+
+// ============================================================================
+// TIER 7: Simulation Data Preparation
+// ============================================================================
+
+export {
+  // Address aliasing
+  calculateAddressAlias,
+  getL1TimelockAlias,
+  ADDRESS_ALIAS_OFFSET,
+  L1_TIMELOCK_ADDRESS,
+  // Simulation data
+  prepareRetryableSimulation,
+  prepareTimelockSimulation,
+  prepareCallSimulation,
+  extractAllSimulationsFromDecoded,
+  NETWORK_IDS,
+  TIMELOCK_SELECTORS,
+} from "./simulation";
+
+// ============================================================================
+// TIER 8: Internal Utilities (for testing)
 // ============================================================================
 
 export { createCheckpoint, createTrackingContext } from "./tracker/context";

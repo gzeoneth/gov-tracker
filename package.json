@@ -37,7 +37,8 @@
     "monitor": "ts-node src/cli/monitor.ts",
     "monitor:run": "ts-node src/cli/monitor.ts run",
     "monitor:status": "ts-node src/cli/monitor.ts status",
-    "monitor:track": "ts-node src/cli/monitor.ts track"
+    "monitor:track": "ts-node src/cli/monitor.ts track",
+    "monitor:inspect": "ts-node src/cli/monitor.ts inspect"
   },
   "lint-staged": {
     "*.ts": [

@@ -28,6 +28,7 @@ import {
   TrackingProgress,
   CHUNK_SIZES,
   ChunkingConfig,
+  TrackedStage,
 } from "../index";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
@@ -59,6 +60,89 @@ import {
   parseGasSettings,
   parseChunkingConfig,
 } from "./lib/cli";
+import { decodeCalldata } from "../calldata";
+import { extractAllSimulationsFromDecoded } from "../simulation";
+import type { DecodedCalldata, ChainContext } from "../types/calldata";
+import type { ExtractedSimulation } from "../types/simulation";
+
+// ============================================================================
+// Helper Functions for Calldata Decoding and Display
+// ============================================================================
+
+/**
+ * Format decoded calldata as an indented tree
+ */
+function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
+  const prefix = "  ".repeat(indent);
+  const lines: string[] = [];
+
+  if (decoded.functionName) {
+    lines.push(`${prefix}${decoded.functionName}`);
+    if (decoded.signature) {
+      lines.push(`${prefix}  Signature: ${decoded.signature}`);
+    }
+  } else {
+    lines.push(`${prefix}Unknown function (${decoded.selector})`);
+  }
+
+  if (decoded.parameters) {
+    for (const param of decoded.parameters) {
+      let paramLine = `${prefix}  ${param.name} (${param.type}): `;
+
+      // For addresses, show label if available
+      if (param.addressLabel) {
+        paramLine += `${param.value} [${param.addressLabel}]`;
+        if (param.chainLabel) paramLine += ` (${param.chainLabel})`;
+      } else {
+        paramLine += param.value;
+      }
+
+      lines.push(paramLine);
+
+      // Show nested calldata
+      if (param.nested) {
+        lines.push(`${prefix}    └─ [NESTED]`);
+        lines.push(formatDecodedCalldata(param.nested, indent + 3));
+      }
+
+      // Show nested array
+      if (param.nestedArray && param.nestedArray.length > 0) {
+        for (let i = 0; i < param.nestedArray.length; i++) {
+          lines.push(`${prefix}    [${i}]:`);
+          lines.push(formatDecodedCalldata(param.nestedArray[i], indent + 3));
+        }
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Format simulation data for display
+ */
+function formatSimulations(simulations: ExtractedSimulation[]): string {
+  if (simulations.length === 0) return "  No simulatable calls found.";
+
+  const lines: string[] = [];
+  for (const sim of simulations) {
+    lines.push(`  [${sim.simulation.type.toUpperCase()}] ${sim.label}`);
+    lines.push(`    Network: ${sim.simulation.networkId}`);
+    lines.push(`    From: ${sim.simulation.from}`);
+    lines.push(`    To: ${sim.simulation.to}`);
+    lines.push(`    Value: ${sim.simulation.value}`);
+
+    if (sim.simulation.type === "timelock") {
+      lines.push(`    Operation ID: ${sim.simulation.operationId}`);
+    }
+
+    if (sim.batchIndex !== undefined) {
+      lines.push(`    Batch Index: ${sim.batchIndex}`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
 
 /**
  * Get the platform-specific application data directory
@@ -321,16 +405,18 @@ trackCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
   .addOption(verboseOption)
+  .option("--inspect-only", "Decode and inspect calldata without tracking")
+  .option("--show-simulation", "Show simulation data for each call")
+  .option("--validate", "Validate prediction against cached tracking data")
   .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
-
-    console.log(`Tracking from tx: ${txHash}\n`);
 
     try {
       const providers = createProvidersFromOptions(opts);
       const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
       const gasSettings: GasSettings = parseGasSettings(opts);
+      const chainContext: ChainContext = "arb1";
 
       if (opts.verbose) {
         console.log(
@@ -347,82 +433,465 @@ trackCmd
         chunkingConfig,
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });
-      const shouldPrepare =
-        opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-      const { results, preparations, preparedTransactions } = await trackAndPrepare(
-        tracker,
-        txHash,
-        {
-          prepare: shouldPrepare,
-          prepareCompleted: opts.prepareCompleted,
-          preparePending: opts.preparePending,
-        },
-        providers
-      );
+      let calldatas: string[] = [];
+      let targets: string[] = [];
 
-      // Format output
-      results.forEach((r, i) => {
-        const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-        console.log(formatTrackingResult(r, label));
-      });
+      // If --inspect-only, skip tracking and just decode
+      if (opts.inspectOnly) {
+        console.log(`Fetching proposal from tx: ${txHash}...\n`);
 
-      // Show all prepared transactions
-      if (preparedTransactions.length > 0) {
-        console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
-      }
+        const results = await tracker.trackByTxHash(txHash);
+        if (results.length === 0) {
+          console.error("No proposal found in transaction");
+          process.exit(1);
+        }
 
-      // Show preparation errors
-      const failedPreparations = preparations.filter((p) => !p.success);
-      failedPreparations.forEach((prep) => {
-        console.log(`\n[PREPARE ERROR] ${prep.error}`);
-      });
-
-      // Execute if --write
-      if (opts.write && preparedTransactions.length > 0) {
-        const signer = createSigner(opts.privateKey);
-        console.log(`\n=== Executing with ${signer.address} ===`);
-
-        let currentPreparedTxs = preparedTransactions;
-        let chainDepth = 0;
-        const maxChainDepth = 10;
-
-        while (currentPreparedTxs.length > 0 && chainDepth < maxChainDepth) {
-          chainDepth++;
-          let executedAny = false;
-
-          for (const prepared of currentPreparedTxs) {
-            const result = await executeTransaction(prepared, signer, providers, gasSettings);
-            if (!result.success) {
-              console.error(`Execution failed: ${result.error}`);
-            } else {
-              executedAny = true;
-            }
+        const result = results[0];
+        if (result.stages.length > 0 && result.stages[0].data) {
+          const stage = result.stages[0];
+          const data = stage.data as { calldatas?: string[]; targets?: string[] };
+          if (data.calldatas) {
+            calldatas = data.calldatas;
+            targets = data.targets || [];
           }
+        }
 
-          if (!executedAny) break;
+        if (calldatas.length === 0) {
+          console.error("No calldata found in proposal");
+          process.exit(1);
+        }
+      } else {
+        // Normal tracking flow
+        console.log(`Tracking from tx: ${txHash}\n`);
 
-          console.log(`\nRe-tracking to find next stages...`);
-          const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
+        const shouldPrepare =
+          opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-          retracked.results.forEach((r, i) => {
-            const label =
-              retracked.results.length > 1
-                ? `Operation ${i + 1}/${retracked.results.length}`
-                : undefined;
+        // If validating, always track to populate cache
+        const shouldTrack = !opts.inspectOnly || opts.validate;
+
+        const { results, preparations, preparedTransactions } = shouldTrack
+          ? await trackAndPrepare(
+              tracker,
+              txHash,
+              {
+                prepare: shouldPrepare,
+                prepareCompleted: opts.prepareCompleted,
+                preparePending: opts.preparePending,
+              },
+              providers
+            )
+          : { results: [], preparations: [], preparedTransactions: [] };
+
+        // Format tracking output
+        if (!opts.inspectOnly) {
+          results.forEach((r, i) => {
+            const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
             console.log(formatTrackingResult(r, label));
           });
 
-          if (retracked.preparedTransactions.length > 0) {
-            console.log(`\n${formatMultiplePreparedTransactions(retracked.preparedTransactions)}`);
+          // Show all prepared transactions
+          if (preparedTransactions.length > 0) {
+            console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
           }
 
-          const retrackedFailed = retracked.preparations.filter((p) => !p.success);
-          retrackedFailed.forEach((prep) => {
+          // Show preparation errors
+          const failedPreparations = preparations.filter((p) => !p.success);
+          failedPreparations.forEach((prep) => {
             console.log(`\n[PREPARE ERROR] ${prep.error}`);
           });
+        }
 
-          currentPreparedTxs = retracked.preparedTransactions;
+        // Extract calldata for decoding/validation
+        if (results.length > 0 && results[0].stages.length > 0 && results[0].stages[0].data) {
+          const stage = results[0].stages[0];
+          const data = stage.data as { calldatas?: string[]; targets?: string[] };
+          if (data.calldatas) {
+            calldatas = data.calldatas;
+            targets = data.targets || [];
+          }
+        }
+
+        // Execute if --write (only when not in inspect-only mode)
+        if (opts.write && preparedTransactions.length > 0 && !opts.inspectOnly) {
+          const signer = createSigner(opts.privateKey);
+          console.log(`\n=== Executing with ${signer.address} ===`);
+
+          let currentPreparedTxs = preparedTransactions;
+          let chainDepth = 0;
+          const maxChainDepth = 10;
+
+          while (currentPreparedTxs.length > 0 && chainDepth < maxChainDepth) {
+            chainDepth++;
+            let executedAny = false;
+
+            for (const prepared of currentPreparedTxs) {
+              const result = await executeTransaction(prepared, signer, providers, gasSettings);
+              if (!result.success) {
+                console.error(`Execution failed: ${result.error}`);
+              } else {
+                executedAny = true;
+              }
+            }
+
+            if (!executedAny) break;
+
+            console.log(`\nRe-tracking to find next stages...`);
+            const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
+
+            retracked.results.forEach((r, i) => {
+              const label =
+                retracked.results.length > 1
+                  ? `Operation ${i + 1}/${retracked.results.length}`
+                  : undefined;
+              console.log(formatTrackingResult(r, label));
+            });
+
+            if (retracked.preparedTransactions.length > 0) {
+              console.log(
+                `\n${formatMultiplePreparedTransactions(retracked.preparedTransactions)}`
+              );
+            }
+
+            const retrackedFailed = retracked.preparations.filter((p) => !p.success);
+            retrackedFailed.forEach((prep) => {
+              console.log(`\n[PREPARE ERROR] ${prep.error}`);
+            });
+
+            currentPreparedTxs = retracked.preparedTransactions;
+          }
+        }
+      }
+
+      // Decode and display calldata if requested
+      if (opts.showSimulation || opts.validate || opts.inspectOnly) {
+        if (calldatas.length === 0) {
+          console.error("No calldata available for decoding");
+          process.exit(1);
+        }
+
+        console.log("\n=== Decoded Calldata ===\n");
+
+        const allDecoded: DecodedCalldata[] = [];
+        const allSimulations: ExtractedSimulation[] = [];
+
+        for (let i = 0; i < calldatas.length; i++) {
+          const decoded = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
+          allDecoded.push(decoded);
+
+          if (calldatas.length > 1) {
+            console.log(`--- Action ${i + 1}/${calldatas.length} ---`);
+            if (targets[i]) console.log(`Target: ${targets[i]}`);
+          }
+          console.log(formatDecodedCalldata(decoded));
+          console.log("");
+
+          if (opts.showSimulation || opts.validate) {
+            const sims = extractAllSimulationsFromDecoded(decoded, chainContext);
+            allSimulations.push(...sims);
+          }
+        }
+
+        if (opts.showSimulation) {
+          console.log("=== Simulation Data ===\n");
+          console.log(formatSimulations(allSimulations));
+        }
+
+        if (opts.validate) {
+          console.log("=== Validation (Predicted vs Cached) ===\n");
+
+          // Load cache
+          const checkpoints = await tracker.getAllCheckpoints();
+          let matchesFound = 0;
+          let mismatchesFound = 0;
+
+          for (const sim of allSimulations) {
+            const type = sim.simulation.type;
+            let status = "UNKNOWN";
+            let details = "";
+
+            // Skip Call simulations - they're validated as part of the timelock executeBatch
+            // Only validate timelock and retryable simulations
+            if (type === "call") {
+              continue;
+            }
+
+            if (type === "timelock") {
+              const opId = sim.simulation.operationId;
+              const executeCalldata = sim.simulation.executeCalldata;
+              const timelockAddress = sim.simulation.timelockAddress;
+              const networkId = sim.simulation.networkId;
+
+              let foundStage: TrackedStage | undefined;
+              for (const cp of checkpoints.values()) {
+                const stages = cp.cachedData.completedStages || [];
+                const matchedStage = stages.find((s: TrackedStage) => s.data?.operationId === opId);
+
+                if (matchedStage) {
+                  // Check for both L2 and L1 timelock based on network ID
+                  if (networkId === "1") {
+                    foundStage = stages.find((s: TrackedStage) => s.type === "L1_TIMELOCK");
+                  } else {
+                    foundStage = stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
+                  }
+                  if (foundStage) break;
+                }
+              }
+
+              if (foundStage) {
+                const executedTx = foundStage.transactions.find(
+                  (tx) => tx.description === "executed"
+                );
+                if (executedTx) {
+                  try {
+                    // Use correct provider based on network ID
+                    const provider =
+                      networkId === "1" ? providers.l1Provider : providers.l2Provider;
+                    const tx = await provider.getTransaction(executedTx.hash);
+                    if (tx) {
+                      const toMatch =
+                        tx.to && tx.to.toLowerCase() === timelockAddress.toLowerCase();
+                      const dataMatch = tx.data.toLowerCase() === executeCalldata.toLowerCase();
+
+                      if (toMatch && dataMatch) {
+                        status = "MATCH ✅";
+                        matchesFound++;
+                      } else {
+                        status = "MISMATCH ❌";
+                        mismatchesFound++;
+                        if (!toMatch)
+                          details += `\n    Expected To: ${timelockAddress}\n    Actual To:   ${tx.to}`;
+                        if (!dataMatch)
+                          details += `\n    Calldata mismatch (length: ${executeCalldata.length} vs ${tx.data.length})`;
+                      }
+                    } else {
+                      status = "TX_NOT_FOUND ⚠️";
+                      details = ` (Could not fetch tx ${executedTx.hash})`;
+                      mismatchesFound++;
+                    }
+                  } catch (e) {
+                    status = "RPC_ERROR ⚠️";
+                    details = ` (Error fetching tx: ${(e as Error).message})`;
+                    mismatchesFound++;
+                  }
+                } else {
+                  status = "PENDING_EXECUTION ⏳";
+                  details = " (Operation tracked but not yet executed)";
+                }
+              } else {
+                status = "MISSING ⚠️";
+                details = ` (Operation ID not found in cache for network ${networkId})`;
+                mismatchesFound++;
+              }
+            } else if (type === "retryable") {
+              const retData =
+                sim.simulation as import("../types/simulation").RetryableSimulationData;
+              const targetChainLower =
+                retData.l2Chain === "arb1" ? "arb1" : retData.l2Chain === "nova" ? "nova" : "arb1";
+              const targetChain = targetChainLower === "arb1" ? "Arb1" : "Nova";
+              const expectedL2Target = retData.l2Target.toLowerCase();
+              const expectedL2Calldata = retData.l2Calldata.toLowerCase();
+
+              let foundRetryable = false;
+              let foundPending = false;
+
+              for (const cp of checkpoints.values()) {
+                const stages = cp.cachedData.completedStages || [];
+                const retryableStage = stages.find(
+                  (s: TrackedStage) => s.type === "RETRYABLE_EXECUTED"
+                );
+
+                if (retryableStage) {
+                  // Check if there's a matching redemption by target and calldata
+                  if (retryableStage.data.redemptionDetails) {
+                    for (const redemption of retryableStage.data.redemptionDetails) {
+                      // Match by target chain first
+                      if (redemption.targetChain !== targetChain) continue;
+
+                      if (redemption.status === "REDEEMED" && redemption.l2TxHash) {
+                        const provider =
+                          targetChainLower === "nova"
+                            ? providers.novaProvider
+                            : providers.l2Provider;
+                        const tx = await provider.getTransaction(redemption.l2TxHash);
+
+                        if (tx) {
+                          const toMatch = tx.to && tx.to.toLowerCase() === expectedL2Target;
+                          const dataMatch = tx.data.toLowerCase() === expectedL2Calldata;
+
+                          if (toMatch && dataMatch) {
+                            foundRetryable = true;
+                            status = "MATCH ✅";
+                            matchesFound++;
+                            break;
+                          }
+                          // Don't mark as mismatch yet, keep searching
+                        }
+                      } else if (redemption.status !== "REDEEMED") {
+                        // Check if this pending retryable might match by checking creation details
+                        const creationDetail = retryableStage.data.creationDetails?.find(
+                          (c) => c.index === redemption.index && c.targetChain === targetChain
+                        );
+                        if (creationDetail) {
+                          // We found a pending retryable on the same chain
+                          // We'll mark as pending only if no redeemed match is found
+                          foundPending = true;
+                        }
+                      }
+                    }
+                  }
+
+                  if (foundRetryable) break;
+                }
+              }
+
+              if (!foundRetryable && !foundPending) {
+                status = "MISSING ⚠️";
+                details = " (No matching retryable found in cache)";
+                mismatchesFound++;
+              } else if (!foundRetryable && foundPending) {
+                status = "PENDING_REDEMPTION ⏳";
+                details = " (Retryable created but not yet redeemed)";
+                // Not a mismatch, just incomplete
+              }
+            } else if (type === "call") {
+              const callData = sim.simulation as import("../types/simulation").CallSimulationData;
+              const expectedTarget = callData.target.toLowerCase();
+              const expectedCalldata = callData.calldata.toLowerCase();
+              const batchIndex = sim.batchIndex;
+
+              let foundCall = false;
+              for (const cp of checkpoints.values()) {
+                const stages = cp.cachedData.completedStages || [];
+
+                const timelockStage = stages.find(
+                  (s: TrackedStage) => s.type === "L2_TIMELOCK" || s.type === "L1_TIMELOCK"
+                );
+                if (timelockStage && timelockStage.data.operationId) {
+                  const execTx = timelockStage.transactions.find(
+                    (tx) => tx.description === "executed"
+                  );
+
+                  if (execTx) {
+                    try {
+                      const provider =
+                        timelockStage.type === "L1_TIMELOCK"
+                          ? providers.l1Provider
+                          : providers.l2Provider;
+                      const tx = await provider.getTransaction(execTx.hash);
+
+                      if (tx && tx.data) {
+                        const selector = tx.data.slice(0, 10).toLowerCase();
+                        const isExecuteBatch = selector === "0xe38335e5";
+                        const isExecute = selector === "0x134008d3";
+
+                        if (isExecuteBatch) {
+                          const abiCoder = new (await import("ethers")).ethers.utils.AbiCoder();
+                          const decoded = abiCoder.decode(
+                            ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
+                            "0x" + tx.data.slice(10)
+                          );
+
+                          const targets = decoded[0] as string[];
+                          const calldatas = decoded[2] as string[];
+
+                          if (
+                            batchIndex !== undefined &&
+                            batchIndex < targets.length &&
+                            batchIndex < calldatas.length
+                          ) {
+                            const actualTarget = targets[batchIndex].toLowerCase();
+                            const actualCalldata = calldatas[batchIndex].toLowerCase();
+
+                            if (
+                              actualTarget === expectedTarget &&
+                              actualCalldata === expectedCalldata
+                            ) {
+                              foundCall = true;
+                              status = "MATCH ✅";
+                              matchesFound++;
+                              break;
+                            } else {
+                              foundCall = true;
+                              status = "MISMATCH ❌";
+                              if (actualTarget !== expectedTarget) {
+                                details += `\n    Expected Target: ${expectedTarget}\n    Actual Target:   ${actualTarget}`;
+                              }
+                              if (actualCalldata !== expectedCalldata) {
+                                details += `\n    Calldata mismatch (length: ${expectedCalldata.length} vs ${actualCalldata.length})`;
+                              }
+                              mismatchesFound++;
+                              break;
+                            }
+                          }
+                        } else if (isExecute && batchIndex === 0) {
+                          const abiCoder = new (await import("ethers")).ethers.utils.AbiCoder();
+                          const decoded = abiCoder.decode(
+                            ["address", "uint256", "bytes", "bytes32", "bytes32"],
+                            "0x" + tx.data.slice(10)
+                          );
+
+                          const actualTarget = (decoded[0] as string).toLowerCase();
+                          const actualCalldata = (decoded[2] as string).toLowerCase();
+
+                          if (
+                            actualTarget === expectedTarget &&
+                            actualCalldata === expectedCalldata
+                          ) {
+                            foundCall = true;
+                            status = "MATCH ✅";
+                            matchesFound++;
+                            break;
+                          } else {
+                            foundCall = true;
+                            status = "MISMATCH ❌";
+                            if (actualTarget !== expectedTarget) {
+                              details += `\n    Expected Target: ${expectedTarget}\n    Actual Target:   ${actualTarget}`;
+                            }
+                            if (actualCalldata !== expectedCalldata) {
+                              details += `\n    Calldata mismatch (length: ${expectedCalldata.length} vs ${actualCalldata.length})`;
+                            }
+                            mismatchesFound++;
+                            break;
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      status = "RPC_ERROR ⚠️";
+                      details = ` (Error decoding execution: ${(e as Error).message})`;
+                      mismatchesFound++;
+                      foundCall = true;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (!foundCall) {
+                status = "MISSING ⚠️";
+                details = " (No matching execution found in cache)";
+                mismatchesFound++;
+              }
+            }
+
+            console.log(`  [${type.toUpperCase()}] ${sim.label}: ${status}${details}`);
+          }
+
+          console.log(
+            `\nValidation Complete: ${matchesFound} matches, ${mismatchesFound} mismatches`
+          );
+          console.log("");
+
+          // Exit with error if there were any mismatches
+          if (mismatchesFound > 0) {
+            console.error(
+              `\n❌ Validation failed with ${mismatchesFound} mismatch${mismatchesFound > 1 ? "es" : ""}`
+            );
+            process.exit(1);
+          } else if (matchesFound > 0) {
+            console.log(`\n✅ All validations passed!`);
+          }
         }
       }
     } catch (e) {

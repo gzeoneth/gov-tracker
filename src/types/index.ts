@@ -123,3 +123,26 @@ export {
   ElectionStatus,
   ElectionCheckResult,
 } from "./election";
+
+// Calldata decoding types
+export {
+  ChainContext,
+  DecodingSource,
+  DecodedCalldata,
+  DecodedParameter,
+  RetryableTicketData,
+  KnownAddress,
+  SignatureEntry,
+} from "./calldata";
+
+// Simulation data types
+export {
+  SimulationType,
+  SimulationChainType,
+  BaseSimulationData,
+  RetryableSimulationData,
+  TimelockSimulationData,
+  CallSimulationData,
+  SimulationData,
+  ExtractedSimulation,
+} from "./simulation";

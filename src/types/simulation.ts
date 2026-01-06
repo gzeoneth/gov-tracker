@@ -86,12 +86,11 @@ export interface TimelockSimulationData extends BaseSimulationData {
     salt: string;
   };
 
-  /** Pre-computed state overrides for simulation */
-  stateOverrides: {
-    /** Calculated storage slot for _timestamps[operationId] */
-    timestampSlot: string;
-    /** Timestamp value (1 = ready to execute) */
-    timestampValue: string;
+  /** Storage override requirements */
+  storageOverride: {
+    /** Symbolic storage mapping for Tenderly encoding API */
+    symbolic: Record<string, string>;
+    /** Example: { "_timestamps[0x123...]": "1234567890" } */
   };
 }
 

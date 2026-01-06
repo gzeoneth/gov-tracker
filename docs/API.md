@@ -420,9 +420,9 @@ interface TimelockSimulationData {
     predecessor: string;
     salt: string;
   };
-  stateOverrides: {               // Pre-computed state overrides
-    timestampSlot: string;        // Storage slot for _timestamps[operationId]
-    timestampValue: string;       // "0x0...01" = ready to execute
+  storageOverride: {              // Storage override for simulation
+    symbolic: Record<string, string>; // Symbolic format for Tenderly API
+    // Example: { "_timestamps[0x123...]": "1" }
   };
 }
 

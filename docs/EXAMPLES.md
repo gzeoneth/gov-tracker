@@ -349,7 +349,7 @@ async function simulateWithTenderly(txHash: string) {
       network_id: simulation.networkId,
       from: simulation.from,
       to: simulation.to,
-      input: simulation.data,
+      input: simulation.input,
       value: simulation.value || "0",
       save: true,
       save_if_fails: true,
@@ -392,11 +392,7 @@ await simulateWithTenderly("0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec
 
 ### Tenderly State Overrides for Timelock Simulations
 
-Timelock simulations require state overrides to mark operations as ready to execute. The SDK provides pre-computed storage slots, or you can use Tenderly's State API for symbolic encoding.
-
-#### Option 1: Using Pre-Computed Storage Slots (Recommended)
-
-The SDK pre-calculates storage slots using the same algorithm as OpenZeppelin TimelockController.
+Timelock simulations require state overrides to mark operations as ready to execute. The SDK provides symbolic storage format that can be fed directly into Tenderly's State Encoding API.
 
 ```typescript
 import axios from "axios";
@@ -405,63 +401,6 @@ import {
   extractAllSimulationsFromDecoded,
 } from "@gzeoneth/gov-tracker";
 
-async function simulateTimelockWithStateOverride(txHash: string) {
-  const results = await tracker.trackByTxHash(txHash);
-  const stage = results[0].stages[0];
-  const { calldatas, targets } = stage.data;
-
-  for (let i = 0; i < calldatas.length; i++) {
-    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
-    const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
-
-    for (const sim of sims) {
-      // Check if this is a timelock simulation
-      if (sim.simulation.type === "timelock") {
-        const { timelockAddress, operationId, stateOverrides } = sim.simulation;
-
-        console.log(`Simulating timelock execution: ${operationId}`);
-
-        // Use pre-computed storage slot from SDK
-        const stateObjects = {
-          [timelockAddress]: {
-            storage: {
-              [stateOverrides.timestampSlot]: stateOverrides.timestampValue,
-            },
-          },
-        };
-
-        const response = await axios.post(
-          `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/simulate`,
-          {
-            network_id: sim.simulation.networkId,
-            from: sim.simulation.from,
-            to: sim.simulation.to,
-            input: sim.simulation.input,
-            value: sim.simulation.value || "0",
-            state_objects: stateObjects, // Apply state override
-            save: true,
-          },
-          {
-            headers: {
-              "X-Access-Key": TENDERLY_API_KEY,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        console.log(`  Status: ${response.data.transaction.status ? "✅" : "❌"}`);
-        console.log(`  Simulation: https://dashboard.tenderly.co/simulator/${response.data.transaction.id}`);
-      }
-    }
-  }
-}
-```
-
-#### Option 2: Using Tenderly State Encoding API
-
-For complex state overrides or when you need Tenderly's symbolic state encoding.
-
-```typescript
 async function simulateWithTenderlyStateAPI(txHash: string) {
   const results = await tracker.trackByTxHash(txHash);
   const stage = results[0].stages[0];
@@ -473,19 +412,17 @@ async function simulateWithTenderlyStateAPI(txHash: string) {
 
     for (const sim of sims) {
       if (sim.simulation.type === "timelock") {
-        const { timelockAddress, operationId } = sim.simulation;
+        const { timelockAddress, storageOverride } = sim.simulation;
 
         // Step 1: Encode state using Tenderly State API
+        // SDK provides symbolic format ready to use
         const encodeResponse = await axios.post(
           `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/contracts/encode-states`,
           {
             networkID: sim.simulation.networkId,
             stateOverrides: {
               [timelockAddress]: {
-                value: {
-                  // Symbolic format: mapping[key] = value
-                  [`_timestamps[${operationId}]`]: "1", // 1 = ready to execute
-                },
+                value: storageOverride.symbolic, // Use SDK's symbolic format
               },
             },
           },
@@ -523,7 +460,7 @@ async function simulateWithTenderlyStateAPI(txHash: string) {
           }
         );
 
-        console.log(`Operation: ${operationId}`);
+        console.log(`Operation: ${sim.simulation.operationId}`);
         console.log(`Status: ${simResponse.data.transaction.status ? "✅" : "❌"}`);
         console.log(`Simulation: https://dashboard.tenderly.co/simulator/${simResponse.data.transaction.id}`);
       }
@@ -532,9 +469,12 @@ async function simulateWithTenderlyStateAPI(txHash: string) {
 }
 ```
 
-**When to use each approach:**
-- **Pre-computed slots (Option 1)**: Faster, no extra API calls, works for standard OpenZeppelin TimelockController
-- **State API (Option 2)**: Required for custom storage layouts or complex state modifications beyond simple mapping updates
+**What the SDK provides:**
+- `storageOverride.symbolic`: Ready-to-use symbolic format like `{ "_timestamps[0x123...]": "1" }`
+- `operationId`: Timelock operation ID for reference
+- `timelockAddress`: Target contract for state override
+
+The SDK handles the symbolic format construction, and Tenderly's encode-states API converts it to actual storage slots
 
 ### Foundry CLI Integration
 
@@ -553,12 +493,12 @@ async function prepareFoundrySimulation(txHash: string) {
     const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
 
     for (const sim of sims) {
-      const { from, to, data, value, networkId } = sim.simulation;
+      const { from, to, input, value, networkId } = sim.simulation;
       const rpc = networkId === "1" ? process.env.ETH_RPC : process.env.ARB1_RPC;
 
       console.log(`# Simulate: ${sim.label}`);
       console.log(`cast call ${to} \\`);
-      console.log(`  ${data} \\`);
+      console.log(`  ${input} \\`);
       console.log(`  --from ${from} \\`);
       console.log(`  --value ${value || 0} \\`);
       console.log(`  --rpc-url ${rpc}`);
@@ -588,7 +528,7 @@ const simulation = {
   networkId: "42161", // Arb1
   from: timelockAlias, // Aliased address as msg.sender
   to: upgradeExecutorAddress,
-  data: executeCalldata,
+  input: executeCalldata,
   value: "0",
 };
 ```

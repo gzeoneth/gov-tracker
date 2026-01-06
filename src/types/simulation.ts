@@ -85,6 +85,14 @@ export interface TimelockSimulationData extends BaseSimulationData {
     predecessor: string;
     salt: string;
   };
+
+  /** Pre-computed state overrides for simulation */
+  stateOverrides: {
+    /** Calculated storage slot for _timestamps[operationId] */
+    timestampSlot: string;
+    /** Timestamp value (1 = ready to execute) */
+    timestampValue: string;
+  };
 }
 
 /**

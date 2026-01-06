@@ -407,11 +407,23 @@ interface TimelockSimulationData {
   networkId: string;              // "1" (L1) or "42161" (Arb1)
   from: string;                   // Aliased address for L1→L2
   to: string;                     // Timelock address
-  value: string;
-  data: string;                   // Full calldata
+  input: string;                  // Full calldata (executeBatch)
+  value: string;                  // Usually "0"
   timelockAddress: string;
-  operationId: string;
-  executeCalldata: string;
+  originalCalldata: string;       // Original scheduleBatch calldata
+  executeCalldata: string;        // Converted executeBatch calldata
+  operationId: string;            // Computed operation ID
+  batchParams: {                  // Decoded batch parameters
+    targets: string[];
+    values: string[];
+    calldatas: string[];
+    predecessor: string;
+    salt: string;
+  };
+  stateOverrides: {               // Pre-computed state overrides
+    timestampSlot: string;        // Storage slot for _timestamps[operationId]
+    timestampValue: string;       // "0x0...01" = ready to execute
+  };
 }
 
 interface RetryableSimulationData {

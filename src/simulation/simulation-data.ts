@@ -188,6 +188,28 @@ function convertScheduleToExecute(calldata: string): string {
 }
 
 /**
+ * Calculate storage slot for timelock operation timestamp
+ *
+ * For OpenZeppelin TimelockController, _timestamps mapping is at slot 0.
+ * Storage slot = keccak256(abi.encode(operationId, mappingSlot))
+ *
+ * @param operationId - Timelock operation ID
+ * @param timestampMappingSlot - Storage slot of _timestamps mapping (default: 0)
+ * @returns Storage slot as hex string
+ */
+export function calculateTimelockTimestampSlot(
+  operationId: string,
+  timestampMappingSlot = "0x0"
+): string {
+  // Encode: operationId (bytes32) + mappingSlot (uint256)
+  const encoded = ethers.utils.solidityKeccak256(
+    ["bytes32", "uint256"],
+    [operationId, timestampMappingSlot]
+  );
+  return encoded;
+}
+
+/**
  * Prepare timelock batch simulation data
  *
  * @param timelockAddress - Timelock contract address
@@ -214,6 +236,9 @@ export function prepareTimelockSimulation(
   const executeCalldata = convertScheduleToExecute(scheduleBatchCalldata);
   const networkId = getNetworkId(chain);
 
+  // Calculate storage slot for state override
+  const timestampSlot = calculateTimelockTimestampSlot(operationId);
+
   return {
     type: "timelock",
     networkId,
@@ -226,6 +251,10 @@ export function prepareTimelockSimulation(
     executeCalldata,
     operationId,
     batchParams,
+    stateOverrides: {
+      timestampSlot,
+      timestampValue: "0x0000000000000000000000000000000000000000000000000000000000000001",
+    },
   };
 }
 

@@ -97,7 +97,7 @@ describe("Election Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
 
     it("should detect election ready to be created (poke scenario)", async () => {
       // Fork at block just before election creation tx 0x82a0baf3...
@@ -124,7 +124,7 @@ describe("Election Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 });
 
@@ -182,7 +182,7 @@ describe("Election Proposal Tracking with Forks", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 });
 
@@ -223,5 +223,5 @@ describe("Fork Infrastructure Tests", () => {
 
     // Clean up
     await forks.stopAll();
-  }, 120000);
+  });
 });

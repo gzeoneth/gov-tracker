@@ -104,7 +104,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
 
     // Cleanup
     fs.unlinkSync(TEST_CACHE_PATH);
-  }, 120000); // 2 minute timeout for RPC calls
+  });
 
   it("should use unified cache format for all checkpoint types", async () => {
     // Create a mock cache with checkpoints (using tx: key format)

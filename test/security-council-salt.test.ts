@@ -126,7 +126,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
       );
       expect(validation.isValid).toBe(true);
     }
-  }, 30000);
+  });
 });
 
 describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking", () => {
@@ -150,7 +150,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking"
   it("should detect SC update in transaction receipt", async () => {
     const receipt = await queryWithRetry(() => l2Provider.getTransactionReceipt(TX_HASH));
     expect(isSecurityCouncilOperation(receipt)).toBe(true);
-  }, 30000);
+  });
 
   it("should track SC rotation operation from tx hash", async () => {
     const tracker = createTracker({
@@ -172,5 +172,5 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking"
     // L2 timelock should be present
     const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
     expect(l2TimelockStage).toBeDefined();
-  }, 90000);
+  });
 });

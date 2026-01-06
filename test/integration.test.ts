@@ -57,7 +57,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
 
       expect(result).not.toBeNull();
       expect(result!.proposalId).toBe(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.proposalId);
-    }, 30000);
+    });
 
     it("should get proposal state", async () => {
       const state = await getProposalState(
@@ -68,7 +68,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
 
       // This is a completed proposal, state should be "Executed"
       expect(state).toBe("Executed");
-    }, 30000);
+    });
   });
 
   describe("Timelock Discovery", () => {
@@ -84,7 +84,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
       expect(results![0].operationId.toLowerCase()).toBe(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.operationId.toLowerCase()
       );
-    }, 30000);
+    });
     // Note: isL1Timelock unit tests are in utils.test.ts
 
     it("should get L2 timelock operation state (completed)", async () => {
@@ -98,7 +98,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
       expect(state.isDone).toBe(true);
       expect(state.isReady).toBe(false);
       expect(state.isPending).toBe(false);
-    }, 30000);
+    });
   });
 
   describe("Utilities", () => {

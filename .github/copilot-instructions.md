@@ -99,11 +99,20 @@ src/
 // Context creation
 const context = await createTrackingContext(input, options);
 
-// Pipeline execution
-const stages = await trackAllStages(context, checkpoint);
+// Pipeline execution (two main pipelines)
+const finalState = await trackGovernorPipeline(context);  // For governor-based tracking
+const finalState = await trackTimelockPipeline(context);  // For timelock-based tracking
 
-// Each stage tracker is a pure function
-async function trackProposalCreated(context: TrackingContext): Promise<TrackedStage>
+// Each stage tracker is a pure function with specific signatures
+// Example from proposal-created.ts:
+async function trackProposalCreated(
+  governorAddress: string,
+  proposalId: string,
+  provider: ethers.providers.Provider,
+  options?: { creationTxHash?: string; fromBlock?: number }
+): Promise<{ stage: TrackedStage; proposalData: ProposalData | null }> {
+  // Implementation
+}
 ```
 
 #### Transaction Preparation Pattern

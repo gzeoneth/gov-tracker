@@ -78,8 +78,104 @@ export const rpcOptions = [
   new Option("--nova-rpc <url>", "Nova RPC URL").env("NOVA_RPC"),
 ];
 
+// ============================================================================
+// Common Options (shared across multiple commands)
+// ============================================================================
+
+/**
+ * Verbose logging option - enables debug output
+ */
+export const verboseOption = new Option("--verbose", "Enable verbose logging");
+
+/**
+ * Cache-related options for commands that use the tracker cache
+ */
+export const cacheOptions = {
+  /** Cache file path option (default is set in monitor.ts) */
+  cache: (defaultPath: string) => new Option("--cache <path>", "Cache file").default(defaultPath),
+  /** Force flag to bypass cache and re-track from scratch */
+  force: new Option("--force", "Force refresh, ignoring cached data"),
+};
+
+/**
+ * Execution-related options for commands that can prepare/execute transactions
+ */
+export const executionOptions = [
+  new Option("--prepare", "Prepare transactions for ready stages (dry-run)"),
+  new Option("--write", "Execute prepared transactions (requires --private-key)"),
+  new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"),
+  new Option("--prepare-completed", "Prepare completed stages (for historical validation)"),
+  new Option("--prepare-pending", "Prepare pending stages (waiting for delays)"),
+];
+
+/**
+ * Chunking options for log search performance tuning
+ */
+export const chunkingOptions = (l1Default: number, l2Default: number) => [
+  new Option(
+    "--l1-chunk-size <size>",
+    `L1 chunk size for log searches (default: ${l1Default})`
+  ).default(String(l1Default)),
+  new Option(
+    "--l2-chunk-size <size>",
+    `L2 chunk size for log searches (default: ${l2Default})`
+  ).default(String(l2Default)),
+];
+
+/**
+ * Gas options for L2 transaction execution
+ */
+export const gasOptions = [
+  new Option(
+    "--l2-max-fee <gwei>",
+    `Max fee per gas for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxFeePerGas})`
+  ),
+  new Option(
+    "--l2-priority-fee <gwei>",
+    `Max priority fee for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas})`
+  ),
+];
+
+/**
+ * Loop-related options for commands that can run continuously
+ */
+export const loopOptions = [
+  new Option("--loop", "Run in continuous loop"),
+  new Option("--interval <seconds>", "Loop interval in seconds").default("60"),
+  new Option("--health-check-url <url>", "Health check URL to ping").env("HEALTH_CHECK_URL"),
+];
+
 export function addOptions(cmd: Command, opts: Option[]): void {
   opts.forEach((o) => cmd.addOption(o));
+}
+
+/**
+ * Parse gas settings from CLI options
+ */
+export function parseGasSettings(opts: { l2MaxFee?: string; l2PriorityFee?: string }): GasSettings {
+  return {
+    maxFeePerGas: opts.l2MaxFee ? parseFloat(opts.l2MaxFee) : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
+    maxPriorityFeePerGas: opts.l2PriorityFee
+      ? parseFloat(opts.l2PriorityFee)
+      : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
+  };
+}
+
+/**
+ * Parse chunking config from CLI options
+ */
+export function parseChunkingConfig(
+  opts: { l1ChunkSize?: string; l2ChunkSize?: string },
+  delayMs: number
+): { l1ChunkSize: number; l2ChunkSize: number; novaChunkSize: number; delayBetweenChunks: number } {
+  const l1ChunkSize = parseInt(opts.l1ChunkSize || "0", 10);
+  const l2ChunkSize = parseInt(opts.l2ChunkSize || "0", 10);
+  return {
+    l1ChunkSize,
+    l2ChunkSize,
+    novaChunkSize: l2ChunkSize,
+    delayBetweenChunks: delayMs,
+  };
 }
 
 export interface ProviderBundle {

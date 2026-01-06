@@ -465,9 +465,7 @@ trackCmd
         const shouldPrepare =
           opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-        const shouldTrack = !opts.inspectOnly;
-
-        const { results, preparations, preparedTransactions } = shouldTrack
+        const { results, preparations, preparedTransactions } = !opts.inspectOnly
           ? await trackAndPrepare(
               tracker,
               txHash,

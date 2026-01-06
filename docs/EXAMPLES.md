@@ -302,14 +302,14 @@ for (let i = 0; i < calldatas.length; i++) {
   const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
 
   console.log(`Action ${i + 1}: ${decoded.functionName}`);
-  console.log(`Target: ${decoded.targetLabel || decoded.targetAddress}`);
+  console.log(`Target: ${decoded.decodingTarget}`);
 
   for (const param of decoded.parameters) {
     console.log(`  ${param.name} (${param.type}): ${param.displayValue}`);
 
     // Nested calls (e.g., timelock → upgradeExecutor → target)
-    if (param.nestedCalldata) {
-      console.log(`    → ${param.nestedCalldata.functionName}`);
+    if (param.nested) {
+      console.log(`    → ${param.nested.functionName}`);
     }
   }
 }

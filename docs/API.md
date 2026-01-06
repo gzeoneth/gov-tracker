@@ -291,9 +291,9 @@ console.log(decoded.functionName);     // "execute(address,uint256,bytes,bytes32
 console.log(decoded.functionSignature); // "0x134008d3"
 
 for (const param of decoded.parameters) {
-  console.log(`${param.name}: ${param.displayValue}`);
-  if (param.nestedCalldata) {
-    console.log("  → Nested call:", param.nestedCalldata.functionName);
+  console.log(`${param.name}: ${param.value}`);
+  if (param.nested) {
+    console.log("  → Nested call:", param.nested.functionName);
   }
 }
 ```
@@ -304,7 +304,7 @@ interface DecodedCalldata {
   functionSignature: string;       // 4-byte selector
   functionName?: string;            // Human-readable name
   parameters: DecodedParameter[];
-  rawCalldata: string;
+  raw: string;
   depth: number;
   targetAddress?: string;
   targetLabel?: string;            // Known contract label

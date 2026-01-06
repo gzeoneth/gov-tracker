@@ -11,7 +11,7 @@
  * - Tracking lifecycle stages
  * - Preparing and executing transactions
  *
- * Usage: npx @gzeoneth/gov-tracker [run|track|election|status] [options]
+ * Usage: npx @gzeoneth/gov-tracker [run|track <tx-hash>|election|status] [options]
  */
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -49,7 +49,15 @@ import {
   MAX_CONSECUTIVE_ERRORS,
   isShuttingDown,
   GasSettings,
-  DEFAULT_L2_GAS_SETTINGS,
+  // Common options
+  verboseOption,
+  cacheOptions,
+  executionOptions,
+  chunkingOptions,
+  gasOptions,
+  loopOptions,
+  parseGasSettings,
+  parseChunkingConfig,
 } from "./lib/cli";
 
 /**
@@ -126,8 +134,14 @@ const runCmd = program
   .command("run")
   .description("Discover, track, and optionally prepare/execute");
 addOptions(runCmd, rpcOptions);
+addOptions(runCmd, executionOptions);
+addOptions(runCmd, chunkingOptions(CHUNK_SIZES.L1, CHUNK_SIZES.L2));
+addOptions(runCmd, gasOptions);
+addOptions(runCmd, loopOptions);
 runCmd
-  .option("--cache <path>", "Cache file", DEFAULT_CACHE_PATH)
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
+  .addOption(cacheOptions.force)
+  .addOption(verboseOption)
   .option("--start-block <block>", "Start block for discovery (skips cache)")
   .option(
     "--block-lag <blocks>",
@@ -139,51 +153,15 @@ runCmd
     "Max age for re-tracking incomplete proposals (default: 60)",
     "60"
   )
-  .option("--prepare", "Prepare transactions for ready stages (dry-run)")
-  .option("--write", "Execute prepared transactions (requires --private-key)")
-  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
-  .option("--prepare-completed", "Prepare completed stages (for historical validation)")
-  .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
-  .option("--loop", "Run in continuous loop")
-  .option("--interval <seconds>", "Loop interval in seconds", "60")
-  .addOption(
-    new Option("--health-check-url <url>", "Health check URL to ping").env("HEALTH_CHECK_URL")
-  )
   .option("--json-output <path>", "Write JSON state for dashboard integration")
   .option("--election", "Also check for Security Council elections each cycle")
   .option("--concurrency <n>", "Number of concurrent tracking operations", "1")
-  .option(
-    "--l1-chunk-size <size>",
-    `L1 chunk size for log searches (default: ${CHUNK_SIZES.L1})`,
-    String(CHUNK_SIZES.L1)
-  )
-  .option(
-    "--l2-chunk-size <size>",
-    `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
-    String(CHUNK_SIZES.L2)
-  )
-  .option(
-    "--l2-max-fee <gwei>",
-    `Max fee per gas for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxFeePerGas})`
-  )
-  .option(
-    "--l2-priority-fee <gwei>",
-    `Max priority fee for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas})`
-  )
-  .option("--verbose", "Enable verbose logging")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
 
     const providers = createProvidersFromOptions(opts);
-    const l1ChunkSize = parseInt(opts.l1ChunkSize, 10);
-    const l2ChunkSize = parseInt(opts.l2ChunkSize, 10);
-    const chunkingConfig: ChunkingConfig = {
-      l1ChunkSize,
-      l2ChunkSize,
-      novaChunkSize: l2ChunkSize,
-      delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
-    };
+    const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
     const tracker = createTracker({
       ...providers,
       cachePath: opts.cache,
@@ -192,21 +170,18 @@ runCmd
     });
     const signer = opts.write ? createSigner(opts.privateKey) : null;
 
-    const startBlock = opts.startBlock ? parseInt(opts.startBlock, 10) : undefined;
+    // If --force is specified, clear cache for this run by using a fresh start block
+    const startBlock = opts.force
+      ? 0 // Force re-discovery from the beginning
+      : opts.startBlock
+        ? parseInt(opts.startBlock, 10)
+        : undefined;
     const blockLag = parseInt(opts.blockLag, 10);
     const maxAgeDays = parseInt(opts.maxAgeDays, 10);
     const intervalMs = parseInt(opts.interval, 10) * 1000;
     const concurrency = parseInt(opts.concurrency, 10);
 
-    // Parse L2 gas settings (use defaults if not specified)
-    const gasSettings: GasSettings = {
-      maxFeePerGas: opts.l2MaxFee
-        ? parseFloat(opts.l2MaxFee)
-        : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
-      maxPriorityFeePerGas: opts.l2PriorityFee
-        ? parseFloat(opts.l2PriorityFee)
-        : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
-    };
+    const gasSettings: GasSettings = parseGasSettings(opts);
 
     if (opts.verbose) {
       if (startBlock !== undefined) console.log(`Starting discovery from block ${startBlock}`);
@@ -334,83 +309,50 @@ runCmd
 // Track Command
 // ============================================================================
 
-const trackCmd = program.command("track").description("Track a specific proposal or operation");
+const trackCmd = program
+  .command("track")
+  .description("Track a specific proposal or operation")
+  .argument("<tx-hash>", "Transaction hash to track");
 addOptions(trackCmd, rpcOptions);
+addOptions(trackCmd, executionOptions);
+addOptions(trackCmd, chunkingOptions(CHUNK_SIZES.L1, CHUNK_SIZES.L2));
+addOptions(trackCmd, gasOptions);
 trackCmd
-  .option("--tx <hash>", "Transaction hash")
-  .option("--prepare", "Prepare transactions for ready stages (dry-run)")
-  .option("--write", "Execute prepared transactions (requires --private-key)")
-  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
-  .option("--prepare-completed", "Prepare completed stages (for historical validation)")
-  .option("--prepare-pending", "Prepare pending stages (waiting for delays)")
-  .option(
-    "--l1-chunk-size <size>",
-    `L1 chunk size for log searches (default: ${CHUNK_SIZES.L1})`,
-    String(CHUNK_SIZES.L1)
-  )
-  .option(
-    "--l2-chunk-size <size>",
-    `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
-    String(CHUNK_SIZES.L2)
-  )
-  .option(
-    "--l2-max-fee <gwei>",
-    `Max fee per gas for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxFeePerGas})`
-  )
-  .option(
-    "--l2-priority-fee <gwei>",
-    `Max priority fee for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas})`
-  )
-  .option("--verbose", "Enable verbose logging")
-  .action(async (opts) => {
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
+  .addOption(cacheOptions.force)
+  .addOption(verboseOption)
+  .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
 
-    if (!opts.tx) {
-      console.error("Error: --tx is required for tracking");
-      process.exit(1);
-    }
-
-    console.log(`Tracking from tx: ${opts.tx}\n`);
+    console.log(`Tracking from tx: ${txHash}\n`);
 
     try {
       const providers = createProvidersFromOptions(opts);
-      const l1ChunkSize = parseInt(opts.l1ChunkSize, 10);
-      const l2ChunkSize = parseInt(opts.l2ChunkSize, 10);
-      const chunkingConfig: ChunkingConfig = {
-        l1ChunkSize,
-        l2ChunkSize,
-        novaChunkSize: l2ChunkSize,
-        delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
-      };
-
-      // Parse L2 gas settings (use defaults if not specified)
-      const gasSettings: GasSettings = {
-        maxFeePerGas: opts.l2MaxFee
-          ? parseFloat(opts.l2MaxFee)
-          : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
-        maxPriorityFeePerGas: opts.l2PriorityFee
-          ? parseFloat(opts.l2PriorityFee)
-          : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
-      };
+      const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
+      const gasSettings: GasSettings = parseGasSettings(opts);
 
       if (opts.verbose) {
         console.log(
           `L2 gas: ${gasSettings.maxFeePerGas} gwei maxFee, ${gasSettings.maxPriorityFeePerGas} gwei priority`
         );
+        if (opts.cache) console.log(`Cache: ${opts.cache}`);
+        if (opts.force) console.log(`Force: ignoring cached data`);
       }
 
+      // Use cache unless --force is specified
       const tracker = createTracker({
         ...providers,
+        cachePath: opts.force ? undefined : opts.cache,
         chunkingConfig,
-        onProgress: opts.concurrency === "1" || opts.verbose ? createProgressCallback() : undefined,
+        onProgress: opts.verbose ? createProgressCallback() : undefined,
       });
       const shouldPrepare =
         opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
       const { results, preparations, preparedTransactions } = await trackAndPrepare(
         tracker,
-        opts.tx,
+        txHash,
         {
           prepare: shouldPrepare,
           prepareCompleted: opts.prepareCompleted,
@@ -461,7 +403,7 @@ trackCmd
           if (!executedAny) break;
 
           console.log(`\nRe-tracking to find next stages...`);
-          const retracked = await trackAndPrepare(tracker, opts.tx, { prepare: true }, providers);
+          const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
 
           retracked.results.forEach((r, i) => {
             const label =
@@ -496,7 +438,7 @@ trackCmd
 program
   .command("status")
   .description("Show cached state")
-  .option("--cache <path>", "Cache file", DEFAULT_CACHE_PATH)
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .option("--json", "Output as JSON")
   .action(async (opts) => {
     const { watermarks, checkpoints } = await ProposalStageTracker.readCacheStatus(opts.cache);
@@ -520,15 +462,11 @@ const electionCmd = program
   .command("election")
   .description("Check Security Council election status");
 addOptions(electionCmd, rpcOptions);
+addOptions(electionCmd, loopOptions);
 electionCmd
+  .addOption(verboseOption)
   .option("--write", "Create election if ready (requires --private-key)")
   .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
-  .option("--verbose", "Enable verbose logging")
-  .option("--loop", "Run in continuous loop")
-  .option("--interval <seconds>", "Loop interval in seconds", "60")
-  .addOption(
-    new Option("--health-check-url <url>", "Health check URL to ping").env("HEALTH_CHECK_URL")
-  )
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);

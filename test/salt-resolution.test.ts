@@ -47,7 +47,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
 
     const scResults = await tracker.trackByTxHash(SC_ROTATION_TX);
     scStages = scResults[0].stages;
-  }, 120000);
+  }, 180000); // 3 minute timeout for setup
 
   describe("Deterministic Salt Computation", () => {
     it("should compute and cache L1 timelock salt from L2→L1 message", async () => {
@@ -66,7 +66,9 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       expect(l1TimelockStage!.data.predecessor).toMatch(/^0x[a-fA-F0-9]{64}$/);
 
       // Should successfully prepare with cached salt
-      const prepResult = await tracker.prepareTransaction(l1TimelockStage!, { force: true });
+      const prepResult = await tracker.prepareTransaction(l1TimelockStage!, {
+        prepareCompleted: true,
+      });
       expect(prepResult.success).toBe(true);
 
       console.log("✓ L1 timelock salt cached from L2→L1 message:", l1TimelockStage!.data.salt);
@@ -86,7 +88,9 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       expect(l2TimelockStage!.data.salt).toBe(expectedSalt);
 
       // Should successfully prepare with cached salt
-      const prepResult = await tracker.prepareTransaction(l2TimelockStage!, { force: true });
+      const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
+        prepareCompleted: true,
+      });
 
       if (!prepResult.success) {
         console.error("Preparation failed:", prepResult.error);
@@ -116,7 +120,9 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       expect(cachedSalt).not.toBe(ethers.constants.HashZero);
 
       // Should successfully prepare with cached SC salt
-      const prepResult = await tracker.prepareTransaction(l2TimelockStage!, { force: true });
+      const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
+        prepareCompleted: true,
+      });
       expect(prepResult.success).toBe(true);
 
       console.log("✓ Security Council salt cached from on-chain:", cachedSalt.slice(0, 10) + "...");
@@ -132,7 +138,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       const prepResult = await tracker.prepareTransaction(l1TimelockStage!, {
         salt: customSalt,
         skipSaltValidation: true,
-        force: true,
+        prepareCompleted: true,
       });
 
       expect(prepResult.success).toBe(true);

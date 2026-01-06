@@ -138,6 +138,7 @@ export function decodeParameters(
         name: `arg${index}`,
         type,
         value: formatDecodedValue(rawValue, type),
+        rawValue: rawValue,
         isNested: false,
       };
 

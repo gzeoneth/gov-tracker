@@ -54,8 +54,11 @@ export interface DecodedParameter {
   /** Solidity type (e.g., "address", "uint256", "bytes") */
   type: string;
 
-  /** Decoded value as string */
+  /** Decoded value as string (formatted for display) */
   value: string;
+
+  /** Original decoded value before formatting (array, BigNumber, etc.) */
+  rawValue: unknown;
 
   /** Whether this parameter contains nested calldata */
   isNested: boolean;

@@ -287,13 +287,16 @@ const decoded = await decodeCalldata(
   "arb1"   // chain context
 );
 
-console.log(decoded.functionName);     // "execute(address,uint256,bytes,bytes32,bytes32)"
-console.log(decoded.functionSignature); // "0x134008d3"
+console.log(decoded.signature);     // "execute(address,uint256,bytes,bytes32,bytes32)"
+console.log(decoded.selector);      // "0x134008d3"
+console.log(decoded.functionName);  // "execute" (or null if unknown)
 
-for (const param of decoded.parameters) {
-  console.log(`${param.name}: ${param.value}`);
-  if (param.nested) {
-    console.log("  → Nested call:", param.nested.functionName);
+if (decoded.parameters) {
+  for (const param of decoded.parameters) {
+    console.log(`${param.name}: ${param.value}`);
+    if (param.nested) {
+      console.log("  → Nested call:", param.nested.functionName);
+    }
   }
 }
 ```
@@ -301,20 +304,14 @@ for (const param of decoded.parameters) {
 **Decoded structure:**
 ```typescript
 interface DecodedCalldata {
-  functionSignature: string;       // 4-byte selector
-  functionName?: string;            // Human-readable name
-  parameters: DecodedParameter[];
-  raw: string;
-  depth: number;
-  targetAddress?: string;
-  targetLabel?: string;            // Known contract label
-  targetExplorerUrl?: string;
-  retryableTicketData?: {          // If contains retryable ticket
-    chain: string;
-    delayedInbox: string;
-    l2Calldata: string;
-    // ...
-  };
+  selector: string;                 // 4-byte selector
+  functionName: string | null;      // Human-readable name (null if unknown)
+  signature: string | null;         // Full function signature (null if unknown)
+  parameters: DecodedParameter[] | null;  // Decoded parameters (null if decoding failed)
+  raw: string;                      // Raw calldata hex string
+  decodingSource: DecodingSource;   // Source of decoding ("local" | "api" | "failed")
+  decodingTarget?: string;          // Target contract address (if known)
+  chainContext?: ChainContext;      // Chain context ("arb1" | "nova" | "ethereum")
 }
 ```
 
@@ -386,7 +383,7 @@ for (const sim of simulations) {
   console.log(`[${sim.simulation.type}] ${sim.label}`);
   console.log(`  Network: ${sim.simulation.networkId}`);
   console.log(`  To: ${sim.simulation.to}`);
-  console.log(`  Data: ${sim.simulation.data}`);
+  console.log(`  Input: ${sim.simulation.input}`);
 }
 ```
 

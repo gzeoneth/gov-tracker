@@ -301,15 +301,19 @@ const { calldatas, targets } = stage.data;
 for (let i = 0; i < calldatas.length; i++) {
   const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
 
-  console.log(`Action ${i + 1}: ${decoded.functionName}`);
-  console.log(`Target: ${decoded.decodingTarget}`);
+  console.log(`Action ${i + 1}: ${decoded.functionName || "Unknown"}`);
+  if (decoded.decodingTarget) {
+    console.log(`Target: ${decoded.decodingTarget}`);
+  }
 
-  for (const param of decoded.parameters) {
-    console.log(`  ${param.name} (${param.type}): ${param.displayValue}`);
+  if (decoded.parameters) {
+    for (const param of decoded.parameters) {
+      console.log(`  ${param.name} (${param.type}): ${param.value}`);
 
-    // Nested calls (e.g., timelock → upgradeExecutor → target)
-    if (param.nested) {
-      console.log(`    → ${param.nested.functionName}`);
+      // Nested calls (e.g., timelock → upgradeExecutor → target)
+      if (param.nested) {
+        console.log(`    → ${param.nested.functionName || "Unknown"}`);
+      }
     }
   }
 }

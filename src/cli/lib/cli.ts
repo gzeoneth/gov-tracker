@@ -54,6 +54,20 @@ export const DEFAULT_MAX_AGE_DAYS = 60;
 /** Maximum consecutive errors before skipping an item */
 export const MAX_CONSECUTIVE_ERRORS = 5;
 
+/** Default gas settings for L2 chains (Arb1 and Nova) */
+export const DEFAULT_L2_GAS_SETTINGS = {
+  /** Max fee per gas in gwei (0.10 gwei = 100000000 wei) */
+  maxFeePerGas: 0.1,
+  /** Max priority fee per gas in gwei */
+  maxPriorityFeePerGas: 0,
+};
+
+/** Gas settings interface */
+export interface GasSettings {
+  maxFeePerGas: number; // in gwei
+  maxPriorityFeePerGas: number; // in gwei
+}
+
 // ============================================================================
 // RPC Configuration
 // ============================================================================
@@ -116,7 +130,8 @@ export function createSigner(privateKey: string): ethers.Wallet {
 export async function executeTransaction(
   prepared: PreparedTransaction,
   signer: ethers.Wallet,
-  providers: ProviderBundle
+  providers: ProviderBundle,
+  gasSettings?: GasSettings
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   const isRetryable = prepared.description?.toLowerCase().includes("retryable") ?? false;
 
@@ -134,11 +149,32 @@ export async function executeTransaction(
     console.log(`  To: ${prepared.to}`);
     if (prepared.value !== "0") console.log(`  Value: ${prepared.value}`);
 
-    const tx = await connectedSigner.sendTransaction({
+    // Use custom gas settings for L2 chains (Arb1 and Nova)
+    const isL2Chain = prepared.chain === "L2" || prepared.chain === "NOVA";
+    const effectiveGasSettings = isL2Chain ? (gasSettings ?? DEFAULT_L2_GAS_SETTINGS) : undefined;
+
+    const txRequest: ethers.providers.TransactionRequest = {
       to: prepared.to,
       data: prepared.data,
       value: prepared.value,
-    });
+    };
+
+    if (effectiveGasSettings) {
+      // Convert gwei to wei
+      txRequest.maxFeePerGas = ethers.utils.parseUnits(
+        effectiveGasSettings.maxFeePerGas.toString(),
+        "gwei"
+      );
+      txRequest.maxPriorityFeePerGas = ethers.utils.parseUnits(
+        effectiveGasSettings.maxPriorityFeePerGas.toString(),
+        "gwei"
+      );
+      console.log(
+        `  Gas: ${effectiveGasSettings.maxFeePerGas} gwei maxFee, ${effectiveGasSettings.maxPriorityFeePerGas} gwei priority`
+      );
+    }
+
+    const tx = await connectedSigner.sendTransaction(txRequest);
 
     console.log(`  Tx sent: ${tx.hash}`);
     const receipt = await tx.wait();

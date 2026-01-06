@@ -48,6 +48,8 @@ import {
   DEFAULT_BLOCK_LAG,
   MAX_CONSECUTIVE_ERRORS,
   isShuttingDown,
+  GasSettings,
+  DEFAULT_L2_GAS_SETTINGS,
 } from "./lib/cli";
 
 /**
@@ -160,6 +162,14 @@ runCmd
     `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
     String(CHUNK_SIZES.L2)
   )
+  .option(
+    "--l2-max-fee <gwei>",
+    `Max fee per gas for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxFeePerGas})`
+  )
+  .option(
+    "--l2-priority-fee <gwei>",
+    `Max priority fee for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas})`
+  )
   .option("--verbose", "Enable verbose logging")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
@@ -188,12 +198,25 @@ runCmd
     const intervalMs = parseInt(opts.interval, 10) * 1000;
     const concurrency = parseInt(opts.concurrency, 10);
 
+    // Parse L2 gas settings (use defaults if not specified)
+    const gasSettings: GasSettings = {
+      maxFeePerGas: opts.l2MaxFee
+        ? parseFloat(opts.l2MaxFee)
+        : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
+      maxPriorityFeePerGas: opts.l2PriorityFee
+        ? parseFloat(opts.l2PriorityFee)
+        : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
+    };
+
     if (opts.verbose) {
       if (startBlock !== undefined) console.log(`Starting discovery from block ${startBlock}`);
       console.log(`Block lag: ${blockLag} blocks behind tip`);
       console.log(`Max age for re-tracking: ${maxAgeDays} days`);
       console.log(`Max consecutive errors before skip: ${MAX_CONSECUTIVE_ERRORS}`);
       if (concurrency > 1) console.log(`Concurrency: ${concurrency}`);
+      console.log(
+        `L2 gas: ${gasSettings.maxFeePerGas} gwei maxFee, ${gasSettings.maxPriorityFeePerGas} gwei priority`
+      );
     }
     if (signer) console.log(`Executing with: ${signer.address}`);
 
@@ -239,7 +262,12 @@ runCmd
             if (signer) {
               let executedAny = false;
               for (const prepared of txsToDisplay) {
-                const execResult = await executeTransaction(prepared, signer, providers);
+                const execResult = await executeTransaction(
+                  prepared,
+                  signer,
+                  providers,
+                  gasSettings
+                );
                 if (!execResult.success) {
                   console.error(`  Execution failed: ${execResult.error}`);
                 } else {
@@ -325,6 +353,14 @@ trackCmd
     `L2 chunk size for log searches (default: ${CHUNK_SIZES.L2})`,
     String(CHUNK_SIZES.L2)
   )
+  .option(
+    "--l2-max-fee <gwei>",
+    `Max fee per gas for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxFeePerGas})`
+  )
+  .option(
+    "--l2-priority-fee <gwei>",
+    `Max priority fee for L2 chains in gwei (default: ${DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas})`
+  )
   .option("--verbose", "Enable verbose logging")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
@@ -347,6 +383,23 @@ trackCmd
         novaChunkSize: l2ChunkSize,
         delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
       };
+
+      // Parse L2 gas settings (use defaults if not specified)
+      const gasSettings: GasSettings = {
+        maxFeePerGas: opts.l2MaxFee
+          ? parseFloat(opts.l2MaxFee)
+          : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
+        maxPriorityFeePerGas: opts.l2PriorityFee
+          ? parseFloat(opts.l2PriorityFee)
+          : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
+      };
+
+      if (opts.verbose) {
+        console.log(
+          `L2 gas: ${gasSettings.maxFeePerGas} gwei maxFee, ${gasSettings.maxPriorityFeePerGas} gwei priority`
+        );
+      }
+
       const tracker = createTracker({
         ...providers,
         chunkingConfig,
@@ -397,7 +450,7 @@ trackCmd
           let executedAny = false;
 
           for (const prepared of currentPreparedTxs) {
-            const result = await executeTransaction(prepared, signer, providers);
+            const result = await executeTransaction(prepared, signer, providers, gasSettings);
             if (!result.success) {
               console.error(`Execution failed: ${result.error}`);
             } else {

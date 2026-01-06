@@ -203,7 +203,9 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         expect(messages.length).toBeGreaterThan(0);
 
-        const result = await prepareRetryableRedemption(messages[0], "L2", { force: true });
+        const result = await prepareRetryableRedemption(messages[0], "L2", {
+          prepareCompleted: true,
+        });
 
         expect(result.success).toBe(true);
         expect(result.prepared).toBeDefined();

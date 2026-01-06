@@ -10,6 +10,10 @@
  * 3. Preparation functions for manual redemption
  * 4. Missing provider handling (Nova graceful degradation)
  * 5. L2-only proposals (no retryables - SKIPPED status)
+ *
+ * PERFORMANCE OPTIMIZATION:
+ * Retryables are tracked once in beforeAll and reused across tests.
+ * This reduces test time from ~2.3 minutes to ~30 seconds.
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
@@ -27,9 +31,16 @@ import {
   trackRetryables,
   prepareRetryableRedemption,
   prepareAllRetryables,
+  RetryableTrackingResult,
 } from "../src/stages/retryables";
 
-import { createTracker, ProposalStageTracker, ADDRESSES, DEFAULT_RPC_URLS } from "../src";
+import {
+  createTracker,
+  ProposalStageTracker,
+  ADDRESSES,
+  DEFAULT_RPC_URLS,
+  TrackedProposal,
+} from "../src";
 
 dotenv.config({ quiet: true });
 
@@ -46,7 +57,12 @@ describe.skipIf(process.env.NO_RPC === "1")(
     let l2Provider: ethers.providers.JsonRpcProvider;
     let tracker: ProposalStageTracker;
 
-    beforeAll(() => {
+    // Cached tracking results (tracked once, reused across all tests)
+    let retryableResult: RetryableTrackingResult;
+    let fullProposalResult: TrackedProposal;
+    let l2OnlyProposalResult: TrackedProposal;
+
+    beforeAll(async () => {
       const ethRpc = process.env.ETH_RPC;
       if (!ethRpc) {
         throw new Error("RPC URLs required: Set ETH_RPC environment variables");
@@ -60,7 +76,20 @@ describe.skipIf(process.env.NO_RPC === "1")(
         l1Provider,
         l2Provider,
       });
-    });
+
+      // Track retryables and proposals once
+      console.log("Tracking retryables and proposals for test suite...");
+      const [retryResult, fullResults, l2Results] = await Promise.all([
+        trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider }),
+        tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
+        tracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash),
+      ]);
+
+      retryableResult = retryResult;
+      fullProposalResult = fullResults[0];
+      l2OnlyProposalResult = l2Results[0];
+      console.log("✓ All retryables and proposals tracked and cached");
+    }, 180000); // 3 minute timeout for initial tracking
 
     describe("detectAllRetryableTargetChains", () => {
       it("should detect Arb1 as target chain for known retryable", async () => {
@@ -97,7 +126,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
     describe("trackRetryables", () => {
       it("should track retryables with creation and redemption data", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider });
+        const result = retryableResult;
 
         expect(result.stage.type).toBe("RETRYABLE_EXECUTED");
         expect(result.stage.chain).toBe("L2");
@@ -120,7 +149,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       });
 
       it("should include L2 transaction hash in creation details", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider });
+        const result = retryableResult;
 
         const creationDetails = result.stage.data.creationDetails as Array<{
           index: number;
@@ -170,7 +199,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       });
 
       it("should include redemption transaction details for completed retryables", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider });
+        const result = retryableResult;
 
         // Find L2 redemption transactions (not the L1 tx or creation txs)
         const l2RedemptionTxs = result.stage.transactions.filter(
@@ -184,9 +213,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
     describe("Retryable preparation functions", () => {
       it("should reject preparation for already redeemed ticket", async () => {
-        const { messages } = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-        });
+        const { messages } = retryableResult;
 
         expect(messages.length).toBeGreaterThan(0);
 
@@ -197,9 +224,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       });
 
       it("should allow forced preparation for historical validation", async () => {
-        const { messages } = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-        });
+        const { messages } = retryableResult;
 
         expect(messages.length).toBeGreaterThan(0);
 
@@ -248,10 +273,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
     describe("Full lifecycle integration", () => {
       it("should track full proposal with retryable stages", async () => {
-        const results = await tracker.trackByTxHash(
-          CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-        );
-        const result = results[0];
+        const result = fullProposalResult;
 
         // Find retryable stage
         const retryableStage = result.stages.find((s) => s.type === "RETRYABLE_EXECUTED");
@@ -267,10 +289,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       });
 
       it("should skip or not include retryable stages for L2-only proposal", async () => {
-        const results = await tracker.trackByTxHash(
-          NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash
-        );
-        const result = results[0];
+        const result = l2OnlyProposalResult;
 
         // Retryable stage should be skipped or not present for L2-only proposals
         const retryableStage = result.stages.find((s) => s.type === "RETRYABLE_EXECUTED");
@@ -287,18 +306,14 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
     describe("Retryable data accuracy", () => {
       it("should have correct ticket count in stage", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-        });
+        const result = retryableResult;
 
         const ticketCount = result.stage.data.ticketCount as number;
         expect(ticketCount).toBeGreaterThan(0);
       });
 
       it("should have matching creation and redemption details", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-        });
+        const result = retryableResult;
 
         const creationDetails = result.stage.data.creationDetails as Array<{
           index: number;
@@ -329,9 +344,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       });
 
       it("should have valid timing data", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-        });
+        const result = retryableResult;
 
         expect(result.stage.timing).toBeDefined();
         if (result.stage.timing) {

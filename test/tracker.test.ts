@@ -6,6 +6,10 @@
  * - trackByTxHash: Full roundtrip, L2-only, in-progress scenarios
  * - trackByTxHash: Universal entry from any tx (proposal creation or CallScheduled)
  * - Error handling and edge cases
+ *
+ * PERFORMANCE OPTIMIZATION:
+ * All proposals are tracked once in beforeAll and reused across tests.
+ * This reduces test time from ~12 minutes to ~3 minutes.
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
@@ -28,6 +32,7 @@ import {
   TimelockParams,
   TimelockBatchParams,
   DEFAULT_RPC_URLS,
+  TrackedProposal,
 } from "../src";
 
 dotenv.config({ quiet: true });
@@ -38,7 +43,13 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let novaProvider: ethers.providers.JsonRpcProvider;
   let tracker: ProposalStageTracker;
 
-  beforeAll(() => {
+  // Cached tracking results (tracked once, reused across all tests)
+  let fullRoundtripResult: TrackedProposal;
+  let l2OnlyResult: TrackedProposal;
+  let inProgressResult: TrackedProposal;
+  let timelockResult: TrackedProposal;
+
+  beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
     if (!ethRpc) {
       throw new Error("RPC URLs required: Set ETH_RPC environment variables");
@@ -54,7 +65,22 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       l2Provider,
       novaProvider,
     });
-  });
+
+    // Track all proposals once
+    console.log("Tracking proposals for test suite...");
+    const [fullResults, l2Results, inProgressResults, timelockResults] = await Promise.all([
+      tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
+      tracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash),
+      tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_IN_PROGRESS.creationTxHash),
+      tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash),
+    ]);
+
+    fullRoundtripResult = fullResults[0];
+    l2OnlyResult = l2Results[0];
+    inProgressResult = inProgressResults[0];
+    timelockResult = timelockResults[0];
+    console.log("✓ All proposals tracked and cached");
+  }, 180000); // 3 minute timeout for initial tracking
 
   describe("createTracker factory", () => {
     it("should create tracker instance", () => {
@@ -75,10 +101,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("trackByTxHash - Core Governor Full Roundtrip", () => {
     it("should track completed proposal through all stages", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       expect(result).toBeDefined();
       expect(result.input.type).toBe("governor");
@@ -100,10 +123,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should return correct proposal data", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       expect(result.proposalData).toBeDefined();
       expect(result.proposalData?.proposalId).toBe(
@@ -113,10 +133,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should have COMPLETED status for all stages in completed proposal", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const nonSkippedStages = result.stages.filter((s) => s.status !== "SKIPPED");
       for (const stage of nonSkippedStages) {
@@ -125,10 +142,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should include transaction hashes for completed stages", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const l2TimelockExecuted = result.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(l2TimelockExecuted).toBeDefined();
@@ -143,10 +157,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should generate valid checkpoint", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       expect(result.checkpoint).toBeDefined();
       expect(result.checkpoint.version).toBe(1);
@@ -164,10 +175,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("trackByTxHash - Treasury Governor L2 Only", () => {
     it("should track L2-only proposal without L1 stages", async () => {
-      const results = await tracker.trackByTxHash(
-        NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash
-      );
-      const result = results[0];
+      const result = l2OnlyResult;
 
       expect(result).toBeDefined();
       expect(result.isComplete).toBe(true);
@@ -185,19 +193,13 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should correctly identify treasury governor type", async () => {
-      const results = await tracker.trackByTxHash(
-        NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash
-      );
-      const result = results[0];
+      const result = l2OnlyResult;
 
       expect(result.proposalType).toBe("NON_CONSTITUTIONAL");
     });
 
     it("should match expected L2 timelock execution hash", async () => {
-      const results = await tracker.trackByTxHash(
-        NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash
-      );
-      const result = results[0];
+      const result = l2OnlyResult;
 
       const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
       // Find the execution transaction (has description "executed" or is the last tx)
@@ -212,10 +214,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("trackByTxHash - In Progress Proposal", () => {
     it("should track partial progress with pending stages", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_IN_PROGRESS.creationTxHash
-      );
-      const result = results[0];
+      const result = inProgressResult;
 
       expect(result).toBeDefined();
       // May or may not be complete depending on current blockchain state
@@ -223,10 +222,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should show L2 timelock as completed", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_IN_PROGRESS.creationTxHash
-      );
-      const result = results[0];
+      const result = inProgressResult;
 
       const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
@@ -236,12 +232,9 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("trackByTxHash - Timelock Entry", () => {
     it("should track from timelock scheduled tx hash", async () => {
-      const results = await tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash);
+      const result = timelockResult;
 
-      expect(results).toBeDefined();
-      expect(results.length).toBeGreaterThan(0);
-
-      const result = results[0];
+      expect(result).toBeDefined();
       expect(result.input.type).toBe("timelock");
 
       // Should not have governor stages (timelock entry skips them)
@@ -254,10 +247,8 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should extract correct operation ID from tx", async () => {
-      const results = await tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash);
+      const result = timelockResult;
 
-      expect(results.length).toBeGreaterThan(0);
-      const result = results[0];
       expect(result.input.type).toBe("timelock");
 
       // operationId is now in completedStages (single source of truth)
@@ -277,17 +268,12 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should match governor tracking results for same operation", async () => {
-      const [governorResults, timelockResults] = await Promise.all([
-        tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
-        tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash),
-      ]);
-
-      const governorResult = governorResults[0];
-      const timelockResult = timelockResults[0];
+      const governorResult = fullRoundtripResult;
+      const timelockResult2 = timelockResult;
 
       // L2 timelock execution should be the same
       const govL2Executed = governorResult.stages.find((s) => s.type === "L2_TIMELOCK");
-      const tlL2Executed = timelockResult.stages.find((s) => s.type === "L2_TIMELOCK");
+      const tlL2Executed = timelockResult2.stages.find((s) => s.type === "L2_TIMELOCK");
 
       expect(govL2Executed!.transactions[0].hash.toLowerCase()).toBe(
         tlL2Executed!.transactions[0].hash.toLowerCase()
@@ -297,10 +283,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("validateSalt (standalone function)", () => {
     it("should validate correct salt for timelock stage", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const timelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
       if (
@@ -345,10 +328,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     });
 
     it("should reject invalid salt", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const timelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
       const invalidSalt = "0x0000000000000000000000000000000000000000000000000000000000000001";
@@ -392,10 +372,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("Stage chain classification", () => {
     it("should correctly classify L1 and L2 stages", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const l2Stages: StageType[] = [
         "PROPOSAL_CREATED",
@@ -422,10 +399,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
   describe("Stage ordering", () => {
     it("should return stages in correct order", async () => {
-      const results = await tracker.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-      const result = results[0];
+      const result = fullRoundtripResult;
 
       const expectedOrder: StageType[] = [
         "PROPOSAL_CREATED",

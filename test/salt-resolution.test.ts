@@ -47,7 +47,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
 
     const scResults = await tracker.trackByTxHash(SC_ROTATION_TX);
     scStages = scResults[0].stages;
-  }, 120000); // 2 minute timeout for setup
+  }, 180000); // 3 minute timeout for setup
 
   describe("Deterministic Salt Computation", () => {
     it("should compute and cache L1 timelock salt from L2→L1 message", async () => {

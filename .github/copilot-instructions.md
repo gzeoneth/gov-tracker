@@ -83,7 +83,7 @@ src/
 ### Naming Conventions
 - **Constants**: `SCREAMING_SNAKE_CASE` (e.g., `ADDRESSES`, `TIMING`)
 - **Types/Interfaces**: `PascalCase` (e.g., `TrackingContext`, `TrackedStage`)
-- **Functions**: `camelCase` (e.g., `createTrackingContext`, `trackAllStages`)
+- **Functions**: `camelCase` (e.g., `createTrackingContext`, `trackGovernorPipeline`, `trackTimelockPipeline`)
 - **Variables**: `camelCase` (e.g., `proposalId`, `timelockAddress`)
 - **Private/Unused Parameters**: Prefix with underscore `_paramName`
 
@@ -109,7 +109,7 @@ async function trackProposalCreated(
   governorAddress: string,
   proposalId: string,
   provider: ethers.providers.Provider,
-  options?: { creationTxHash?: string; fromBlock?: number }
+  options: { creationTxHash?: string; fromBlock?: number } = {}
 ): Promise<{ stage: TrackedStage; proposalData: ProposalData | null }> {
   // Implementation
 }

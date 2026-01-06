@@ -10,7 +10,7 @@ export default defineConfig({
     maxWorkers: 1,
     // Disable file parallelism
     fileParallelism: false,
-    // Increase global timeout
+    // Fork tests need longer timeout for network setup
     testTimeout: 120000,
   },
 });

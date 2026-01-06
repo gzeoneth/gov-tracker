@@ -108,12 +108,12 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
     it("should detect nominee election governor has vetting", async () => {
       const hasVetting = await hasVettingPeriod(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, l2Provider);
       expect(hasVetting).toBe(true);
-    }, 30000);
+    });
 
     it("should detect core governor does not have vetting", async () => {
       const hasVetting = await hasVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, l2Provider);
       expect(hasVetting).toBe(false);
-    }, 30000);
+    });
   });
 
   describe("checkVettingPeriod", () => {
@@ -128,7 +128,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       expect(result.hasVettingPeriod).toBe(false);
       expect(result.vettingDeadline).toBeNull();
       expect(result.isVettingActive).toBe(false);
-    }, 30000);
+    });
   });
 
   describe("getVettingDeadline", () => {
@@ -141,7 +141,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       );
 
       expect(deadline).toBeUndefined();
-    }, 30000);
+    });
 
     it("should return a value for nominee election governor (vetting period check succeeds)", async () => {
       // Nominee election governor has proposalVettingDeadline function
@@ -156,7 +156,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       // Should return a BigNumber - the function call succeeds on nominee governors
       expect(deadline).toBeDefined();
       expect(deadline?.toNumber()).toBeGreaterThanOrEqual(0);
-    }, 30000);
+    });
   });
 
   describe("getElectionProposalId", () => {
@@ -179,7 +179,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
         }
         expect(foundProposalId).toBe(true);
       }
-    }, 30000);
+    });
   });
 
   describe("Election Proposal Params", () => {
@@ -208,12 +208,12 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
         }
         expect(foundParams).toBe(true);
       }
-    }, 120000);
+    });
 
     it("should return null for non-existent election", async () => {
       const params = await getElectionProposalParams(999, l2Provider);
       expect(params).toBeNull();
-    }, 30000);
+    });
   });
 
   describe("Member Election Trigger", () => {
@@ -238,7 +238,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
           expect(tx).toBeNull();
         }
       }
-    }, 120000);
+    });
   });
 
   describe("Election Phase Tracking", () => {
@@ -267,7 +267,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
           expect(electionStatus.canProceedToMemberPhase).toBe(false);
         }
       }
-    }, 90000);
+    });
 
     it("should track cohort alternation across elections", async () => {
       const status = await checkElectionStatus(
@@ -283,6 +283,6 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
         // Cohorts should alternate
         expect(election0.cohort).not.toBe(election1.cohort);
       }
-    }, 120000);
+    });
   });
 });

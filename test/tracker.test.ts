@@ -97,7 +97,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(stageTypes).toContain("L1_TIMELOCK");
       expect(stageTypes).toContain("L1_TIMELOCK");
       expect(stageTypes).toContain("RETRYABLE_EXECUTED");
-    }, 180000);
+    });
 
     it("should return correct proposal data", async () => {
       const results = await tracker.trackByTxHash(
@@ -110,7 +110,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.proposalId
       );
       expect(result.proposalData?.creationBlock).toBeGreaterThan(0);
-    }, 60000);
+    });
 
     it("should have COMPLETED status for all stages in completed proposal", async () => {
       const results = await tracker.trackByTxHash(
@@ -122,7 +122,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       for (const stage of nonSkippedStages) {
         expect(stage.status).toBe("COMPLETED");
       }
-    }, 180000);
+    });
 
     it("should include transaction hashes for completed stages", async () => {
       const results = await tracker.trackByTxHash(
@@ -140,7 +140,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(executionTx.hash.toLowerCase()).toBe(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.expectedStages.L2_TIMELOCK.hash.toLowerCase()
       );
-    }, 180000);
+    });
 
     it("should generate valid checkpoint", async () => {
       const results = await tracker.trackByTxHash(
@@ -159,7 +159,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect((l2PendingStage?.data as { operationId?: string })?.operationId).toBe(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.operationId.toLowerCase()
       );
-    }, 60000);
+    });
   });
 
   describe("trackByTxHash - Treasury Governor L2 Only", () => {
@@ -182,7 +182,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       for (const stage of l1Stages) {
         expect(stage.status).toBe("SKIPPED");
       }
-    }, 180000);
+    });
 
     it("should correctly identify treasury governor type", async () => {
       const results = await tracker.trackByTxHash(
@@ -191,7 +191,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       const result = results[0];
 
       expect(result.proposalType).toBe("NON_CONSTITUTIONAL");
-    }, 60000);
+    });
 
     it("should match expected L2 timelock execution hash", async () => {
       const results = await tracker.trackByTxHash(
@@ -207,7 +207,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(executionTx.hash.toLowerCase()).toBe(
         NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash.toLowerCase()
       );
-    }, 180000);
+    });
   });
 
   describe("trackByTxHash - In Progress Proposal", () => {
@@ -220,7 +220,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(result).toBeDefined();
       // May or may not be complete depending on current blockchain state
       // The important thing is that it tracks the stages correctly
-    }, 180000);
+    });
 
     it("should show L2 timelock as completed", async () => {
       const results = await tracker.trackByTxHash(
@@ -231,7 +231,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
       expect(l2Executed!.status).toBe("COMPLETED");
-    }, 180000);
+    });
   });
 
   describe("trackByTxHash - Timelock Entry", () => {
@@ -251,7 +251,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       // Should have timelock stages
       const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
-    }, 180000);
+    });
 
     it("should extract correct operation ID from tx", async () => {
       const results = await tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash);
@@ -267,14 +267,14 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect((l2PendingStage?.data as { operationId?: string })?.operationId).toBe(
         DIRECT_TIMELOCK_OPERATION.operationId.toLowerCase()
       );
-    }, 180000);
+    });
 
     it("should return empty array for invalid tx hash", async () => {
       const results = await tracker.trackByTxHash(
         "0x0000000000000000000000000000000000000000000000000000000000000001"
       );
       expect(results).toEqual([]);
-    }, 30000);
+    });
 
     it("should match governor tracking results for same operation", async () => {
       const [governorResults, timelockResults] = await Promise.all([
@@ -292,7 +292,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(govL2Executed!.transactions[0].hash.toLowerCase()).toBe(
         tlL2Executed!.transactions[0].hash.toLowerCase()
       );
-    }, 300000);
+    });
   });
 
   describe("validateSalt (standalone function)", () => {
@@ -342,7 +342,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
           expect(isValid).toBe(true);
         }
       }
-    }, 60000);
+    });
 
     it("should reject invalid salt", async () => {
       const results = await tracker.trackByTxHash(
@@ -387,7 +387,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
           expect(isValid).toBe(false);
         }
       }
-    }, 60000);
+    });
   });
 
   describe("Stage chain classification", () => {
@@ -417,7 +417,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
           expect(stage.chain).toBe("L1");
         }
       }
-    }, 180000);
+    });
   });
 
   describe("Stage ordering", () => {
@@ -450,7 +450,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
           expect(actualIndex).toBeGreaterThanOrEqual(0);
         }
       }
-    }, 180000);
+    });
   });
 });
 

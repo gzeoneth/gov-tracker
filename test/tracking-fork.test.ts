@@ -117,7 +117,7 @@ describe("Historical Tracking Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 
   describe("L2 Executed, L1 Pending State", () => {
@@ -152,7 +152,7 @@ describe("Historical Tracking Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 
   describe("Treasury Proposal Completed State", () => {
@@ -190,7 +190,7 @@ describe("Historical Tracking Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 
   describe("Timelock Entry Point at Historical Block", () => {
@@ -228,6 +228,6 @@ describe("Historical Tracking Fork Tests", () => {
 
       await forks.stopAll();
       forks = null;
-    }, 120000);
+    });
   });
 });

@@ -98,14 +98,28 @@ for (const { checkpoint } of incomplete) {
 
 Production (after `yarn build`):
 ```bash
-npx gov-tracker track --tx 0x...
-npx gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+# Track a proposal by transaction hash
+npx gov-tracker track 0x...
+
+# Execute ready stages
+npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY
+
+# Discover and track all proposals with concurrency
 npx gov-tracker run --concurrency 4
+
+# Track with cache and force refresh
+npx gov-tracker track 0x... --cache ./cache.json --force
+
+# Custom gas settings for L2 chains
+npx gov-tracker track 0x... --l2-max-fee 0.1 --l2-priority-fee 0
 ```
 
 Development (using ts-node):
 ```bash
-yarn monitor:track --tx 0x...
+# Track specific transaction
+yarn monitor:track 0x...
+
+# Run discovery and tracking
 yarn monitor:run --concurrency 4
 ```
 

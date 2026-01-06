@@ -48,9 +48,12 @@ console.log(result.stages, result.isComplete, result.proposalType);
 
 ```typescript
 const prep = await tracker.prepareTransaction(stage, {
-  salt: "0x...",              // Optional: override salt
-  predecessor: "0x...",       // Optional: override predecessor
-  force: false,               // Force even if not READY
+  salt: "0x...",                  // Optional: override salt
+  predecessor: "0x...",           // Optional: override predecessor
+  prepareCompleted: false,        // Optional: prepare completed stages (for historical validation)
+  description: "...",             // Optional: proposal description (for salt derivation)
+  skipSaltValidation: false,      // Optional: skip salt validation
+  skipRetryableValueCalculation: false, // Optional: skip retryable value calculation
 });
 
 if (prep.success) {

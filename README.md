@@ -67,13 +67,19 @@ if (readyStage) {
 
 ```bash
 # Track a proposal by transaction hash
-npx @gzeoneth/gov-tracker track --tx 0x...
+npx @gzeoneth/gov-tracker track 0x...
 
 # Execute ready stages
-npx @gzeoneth/gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+npx @gzeoneth/gov-tracker track 0x... --write --private-key $PRIVATE_KEY
 
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
+
+# Track with cache support
+npx @gzeoneth/gov-tracker track 0x... --cache ./my-cache.json
+
+# Force refresh (ignore cache)
+npx @gzeoneth/gov-tracker track 0x... --force
 ```
 
 ## Environment

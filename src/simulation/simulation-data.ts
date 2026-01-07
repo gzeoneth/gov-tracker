@@ -17,6 +17,7 @@ import type {
   SimulationChainType,
 } from "../types/simulation";
 import { ADDRESSES } from "../constants";
+import { hashOperationBatch } from "../utils/operation-id";
 
 /**
  * Network IDs for supported chains
@@ -102,43 +103,22 @@ function decodeScheduleBatchParams(calldata: string): {
   predecessor: string;
   salt: string;
 } | null {
-  try {
-    // Remove selector
-    const data = calldata.slice(10);
+  // Remove selector
+  const data = calldata.slice(10);
 
-    const abiCoder = new ethers.utils.AbiCoder();
-    const decoded = abiCoder.decode(
-      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
-      "0x" + data
-    );
-
-    return {
-      targets: (decoded[0] as string[]).map((a) => String(a)),
-      values: (decoded[1] as ethers.BigNumber[]).map((v) => v.toString()),
-      calldatas: decoded[2] as string[],
-      predecessor: decoded[3] as string,
-      salt: decoded[4] as string,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Compute operation ID for timelock batch
- */
-function hashOperationBatch(
-  targets: string[],
-  values: string[],
-  calldatas: string[],
-  predecessor: string,
-  salt: string
-): string {
-  const encoded = ethers.utils.defaultAbiCoder.encode(
-    ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
-    [targets, values.map((v) => ethers.BigNumber.from(v)), calldatas, predecessor, salt]
+  const abiCoder = new ethers.utils.AbiCoder();
+  const decoded = abiCoder.decode(
+    ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+    "0x" + data
   );
-  return ethers.utils.keccak256(encoded);
+
+  return {
+    targets: (decoded[0] as string[]).map((a) => String(a)),
+    values: (decoded[1] as ethers.BigNumber[]).map((v) => v.toString()),
+    calldatas: decoded[2] as string[],
+    predecessor: decoded[3] as string,
+    salt: decoded[4] as string,
+  };
 }
 
 /**
@@ -205,13 +185,13 @@ export function prepareTimelockSimulation(
   const batchParams = decodeScheduleBatchParams(scheduleBatchCalldata);
   if (!batchParams) return null;
 
-  const operationId = hashOperationBatch(
-    batchParams.targets,
-    batchParams.values,
-    batchParams.calldatas,
-    batchParams.predecessor,
-    batchParams.salt
-  );
+  const operationId = hashOperationBatch({
+    targets: batchParams.targets,
+    values: batchParams.values.map((v) => ethers.BigNumber.from(v)),
+    payloads: batchParams.calldatas,
+    predecessor: batchParams.predecessor,
+    salt: batchParams.salt,
+  });
 
   const executeCalldata = convertScheduleToExecute(scheduleBatchCalldata);
   const networkId = getNetworkId(chain);

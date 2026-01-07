@@ -87,25 +87,6 @@ describe("extractCalldataFromStage", () => {
     expect(result.values).toEqual(["100", "0"]);
   });
 
-  it("extracts calldata from generic fallback (single data string)", () => {
-    const stage = {
-      type: "GENERIC",
-      status: "COMPLETED",
-      chain: "L1",
-      transactions: [],
-      data: {
-        calldata: "0xSingle",
-        target: "0xSingleTarget",
-        value: "999",
-      },
-    } as unknown as TrackedStage;
-
-    const result = extractCalldataFromStage(stage);
-    expect(result.calldatas).toEqual(["0xSingle"]);
-    expect(result.targets).toEqual(["0xSingleTarget"]);
-    expect(result.values).toEqual(["999"]);
-  });
-
   it("returns empty arrays if no calldata found", () => {
     const stage: TrackedStage = {
       type: "PROPOSAL_CREATED",

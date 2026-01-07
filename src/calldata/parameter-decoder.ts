@@ -18,24 +18,9 @@ import { getAddressLabel } from "./address-utils";
  * @returns Array of individual type strings
  */
 export function parseParamTypes(typesStr: string): string[] {
-  const types: string[] = [];
-  let depth = 0;
-  let current = "";
-
-  for (const char of typesStr) {
-    if (char === "(" || char === "[") depth++;
-    if (char === ")" || char === "]") depth--;
-
-    if (char === "," && depth === 0) {
-      if (current.trim()) types.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  if (current.trim()) types.push(current.trim());
-  return types;
+  // Use ethers to parse the types string by wrapping it in a dummy function signature
+  const fragment = ethers.utils.FunctionFragment.from(`func(${typesStr})`);
+  return fragment.inputs.map((p) => p.format());
 }
 
 /**
@@ -71,15 +56,11 @@ export function formatDecodedValue(value: unknown, type: string): string {
 
     // For uint256 that might be ETH amounts, show conversion
     if (type.includes("uint256") && bn.gt(0)) {
-      try {
-        const ethValue = ethers.utils.formatEther(bn);
-        const ethNum = parseFloat(ethValue);
-        // Only show ETH conversion for values >= 0.001 ETH
-        if (ethNum >= 0.001) {
-          return `${strValue} (${ethValue} ETH)`;
-        }
-      } catch {
-        // Ignore formatting errors
+      const ethValue = ethers.utils.formatEther(bn);
+      const ethNum = parseFloat(ethValue);
+      // Only show ETH conversion for values >= 0.001 ETH
+      if (ethNum >= 0.001) {
+        return `${strValue} (${ethValue} ETH)`;
       }
     }
 
@@ -117,59 +98,52 @@ export function decodeParameters(
   signature: string,
   chainContext: ChainContext
 ): { params: DecodedParameter[]; decoded: ethers.utils.Result } | null {
-  try {
-    // Extract parameter types from signature
-    const match = signature.match(/\((.*)\)$/);
-    if (!match) return null;
+  // Use ethers Interface for robust decoding
+  const iface = new ethers.utils.Interface([signature]);
+  const fragment = iface.getFunction(signature);
+  const inputs = fragment.inputs;
 
-    const typesStr = match[1];
-    const paramTypes = parseParamTypes(typesStr);
+  // Decode using Interface - handles selector automatically
+  const decoded = iface.decodeFunctionData(fragment, calldata);
 
-    // Remove selector (first 4 bytes = 10 chars including 0x)
-    const encodedParams = "0x" + calldata.slice(10);
+  // Format into DecodedParameter array
+  const params: DecodedParameter[] = inputs.map((paramType, index) => {
+    const rawValue = decoded[index];
+    const type = paramType.format();
+    const name = paramType.name || `arg${index}`;
 
-    // Decode using ethers
-    const abiCoder = new ethers.utils.AbiCoder();
-    const decoded = abiCoder.decode(paramTypes, encodedParams);
+    const param: DecodedParameter = {
+      name,
+      type,
+      value: formatDecodedValue(rawValue, type),
+      rawValue: rawValue,
+      isNested: false,
+    };
 
-    // Format into DecodedParameter array
-    const params: DecodedParameter[] = paramTypes.map((type, index) => {
-      const rawValue = decoded[index];
-      const param: DecodedParameter = {
-        name: `arg${index}`,
-        type,
-        value: formatDecodedValue(rawValue, type),
-        rawValue: rawValue,
-        isNested: false,
-      };
+    // Handle address type - add label
+    if (type === "address") {
+      const addr = String(rawValue);
+      const label = getAddressLabel(addr, chainContext);
+      if (label) param.addressLabel = label;
+    }
 
-      // Handle address type - add label
-      if (type === "address") {
-        const addr = String(rawValue);
-        const label = getAddressLabel(addr, chainContext);
-        if (label) param.addressLabel = label;
-      }
-
-      // Handle bytes type - check if nested calldata
-      if (type === "bytes") {
-        const bytesValue = String(rawValue);
-        if (isLikelyCalldata(bytesValue)) {
-          param.isNested = true;
-        }
-        param.value = bytesValue;
-      }
-
-      // Handle bytes[] - store raw array for nested processing
-      if (type === "bytes[]" && Array.isArray(rawValue)) {
-        param._rawBytesArray = rawValue.map((b) => String(b));
+    // Handle bytes type - check if nested calldata
+    if (type === "bytes") {
+      const bytesValue = String(rawValue);
+      if (isLikelyCalldata(bytesValue)) {
         param.isNested = true;
       }
+      param.value = bytesValue;
+    }
 
-      return param;
-    });
+    // Handle bytes[] - store raw array for nested processing
+    if (type === "bytes[]" && Array.isArray(rawValue)) {
+      param._rawBytesArray = rawValue.map((b) => String(b));
+      param.isNested = true;
+    }
 
-    return { params, decoded };
-  } catch (_error) {
-    return null;
-  }
+    return param;
+  });
+
+  return { params, decoded };
 }

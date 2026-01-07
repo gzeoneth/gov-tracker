@@ -323,7 +323,17 @@ function processRetryableTicket(
     if (l2TargetParam && l2CalldataParam) {
       // Get chain from targetChain field and convert to ChainContext
       const chain = nestedCall.targetChain;
-      const l2Chain: ChainContext = chain === "nova" ? "nova" : "arb1";
+
+      // Explicit handling for each chain case
+      let l2Chain: ChainContext;
+      if (chain === "nova") {
+        l2Chain = "nova";
+      } else if (chain === "arb1") {
+        l2Chain = "arb1";
+      } else {
+        // unknown chain - default to arb1
+        l2Chain = "arb1";
+      }
 
       const sim = prepareRetryableSimulation(
         l2TargetParam.value,

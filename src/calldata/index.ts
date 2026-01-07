@@ -8,6 +8,9 @@
 // Main decoder
 export { decodeCalldata, decodeCalldataArray } from "./decoder";
 
+// Extraction
+export { extractCalldataFromStage } from "./extraction";
+
 // Signature lookup
 export {
   lookupSignature,

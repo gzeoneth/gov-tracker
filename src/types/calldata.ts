@@ -49,7 +49,7 @@ export type DecodedCalldata =
       isRetryable?: false;
 
       /** Target L2 chain - not applicable for regular calldata */
-      targetChain?: never;
+      targetChain?: undefined;
     }
   | {
       /** No selector for retryable tickets */
@@ -64,8 +64,8 @@ export type DecodedCalldata =
       /** Raw calldata hex string */
       raw: string;
 
-      /** Source is always "local" for retryable tickets */
-      decodingSource: "local";
+      /** Source of decoding (typically "local" for retryable tickets) */
+      decodingSource: DecodingSource;
 
       /** Target contract address (if known during decoding) */
       decodingTarget?: string;

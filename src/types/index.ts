@@ -133,6 +133,7 @@ export {
   RetryableTicketData,
   KnownAddress,
   SignatureEntry,
+  ExtractedCalldata,
 } from "./calldata";
 
 // Simulation data types

@@ -8,7 +8,8 @@
 /**
  * Chain context for address resolution and explorer links
  */
-export type ChainContext = "arb1" | "nova" | "ethereum";
+import { ChainContext } from "./core";
+export { ChainContext } from "./core";
 
 /**
  * Source of function signature decoding

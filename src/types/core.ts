@@ -2,6 +2,16 @@
  * Core primitive types for Arbitrum Governance Stage Tracking SDK
  */
 
+/**
+ * Standard chain context type to be used across the application.
+ * Unifies previous ChainType, TargetChainType, and SimulationChainType.
+ *
+ * - ethereum: L1
+ * - arb1: L2 (Arbitrum One)
+ * - nova: L2 (Arbitrum Nova)
+ */
+export type ChainContext = "ethereum" | "arb1" | "nova";
+
 // Stage Types
 
 export type StageType =
@@ -14,15 +24,20 @@ export type StageType =
   | "RETRYABLE_EXECUTED";
 
 export type StageStatus = "NOT_STARTED" | "PENDING" | "READY" | "COMPLETED" | "FAILED" | "SKIPPED";
+
+/** @deprecated Use ChainContext instead */
 export type ChainType = "L1" | "L2" | "NOVA";
+/** @deprecated Use ChainContext instead */
 export type TargetChainType = "Arb1" | "Nova";
 
 export interface StageTransaction {
   hash: string;
   blockNumber: number;
   timestamp?: number;
+  // TODO: Migrate to ChainContext
   chain: ChainType;
   logIndex?: number;
+  // TODO: Migrate to ChainContext
   targetChain?: TargetChainType;
   /** Human-readable description for display (e.g., "queued", "executed") */
   description?: string;

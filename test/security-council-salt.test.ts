@@ -112,18 +112,13 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
         extracted!.nonce,
         provider
       );
-      const validation = await computeAndValidateOperationHash(
-        parsed.timelockAddress,
-        parsed.operationId,
-        {
-          target: parsed.target,
-          value: parsed.value,
-          data: parsed.data,
-          predecessor: parsed.predecessor,
-          salt: computedSalt,
-        },
-        provider
-      );
+      const validation = await computeAndValidateOperationHash(parsed.operationId, {
+        target: parsed.target,
+        value: parsed.value,
+        data: parsed.data,
+        predecessor: parsed.predecessor,
+        salt: computedSalt,
+      });
       expect(validation.isValid).toBe(true);
     }
   });

@@ -118,7 +118,7 @@ export function decodeParameters(
 ): { params: DecodedParameter[]; decoded: ethers.utils.Result } | null {
   try {
     // Extract parameter types from signature
-    const match = signature.match(/\((.+)\)$/);
+    const match = signature.match(/\((.*)\)$/);
     if (!match) return null;
 
     const typesStr = match[1];

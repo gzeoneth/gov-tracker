@@ -98,14 +98,14 @@ for (const { checkpoint } of incomplete) {
 
 Production (after `yarn build`):
 ```bash
-npx gov-tracker track --tx 0x...
-npx gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+npx gov-tracker track 0x...
+npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY
 npx gov-tracker run --concurrency 4
 ```
 
 Development (using ts-node):
 ```bash
-yarn monitor:track --tx 0x...
+yarn monitor:track 0x...
 yarn monitor:run --concurrency 4
 ```
 

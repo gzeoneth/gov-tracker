@@ -100,16 +100,16 @@ See [Examples](./docs/EXAMPLES.md#calldata-decoding--simulation) for Tenderly an
 
 ```bash
 # Track a proposal by transaction hash
-npx @gzeoneth/gov-tracker track --tx 0x...
+npx @gzeoneth/gov-tracker track 0x...
 
 # Decode and inspect calldata
-npx @gzeoneth/gov-tracker track --tx 0x... --inspect-only
+npx @gzeoneth/gov-tracker track 0x... --inspect-only
 
 # Show simulation data for Tenderly/Foundry integration
-npx @gzeoneth/gov-tracker track --tx 0x... --show-simulation
+npx @gzeoneth/gov-tracker track 0x... --show-simulation
 
 # Execute ready stages
-npx @gzeoneth/gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+npx @gzeoneth/gov-tracker track 0x... --write --private-key $PRIVATE_KEY
 
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run

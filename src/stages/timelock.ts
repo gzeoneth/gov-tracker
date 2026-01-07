@@ -552,10 +552,19 @@ export async function calculateRetryableExecutionValue(
     return null;
   }
 
-  const decoded = ethers.utils.defaultAbiCoder.decode(
-    ["address", "address", "uint256", "uint256", "uint256", "bytes"],
-    data
-  );
+  let decoded: ethers.utils.Result;
+  try {
+    decoded = ethers.utils.defaultAbiCoder.decode(
+      ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+      data
+    );
+  } catch (error) {
+    // If decoding fails, return null to preserve previous error-handling behavior.
+    log.debug?.("Failed to decode retryable ticket calldata for execution value calculation", {
+      error,
+    });
+    return null;
+  }
 
   const inboxAddress = decoded[0] as string;
   const innerValue = decoded[2] as BigNumber;

@@ -293,15 +293,12 @@ export {
   // Signature lookup
   lookupSignature,
   lookupLocalSignature,
-  extractFunctionName,
   // Parameter utilities
   parseParamTypes,
   isLikelyCalldata,
   formatDecodedValue,
   // Address utilities
   getAddressLabel,
-  getAddressExplorerUrl,
-  getChainLabel,
   // Retryable ticket
   isRetryableTicketMagic,
   decodeRetryableTicket,
@@ -314,11 +311,6 @@ export {
 // ============================================================================
 
 export {
-  // Address aliasing
-  calculateAddressAlias,
-  getL1TimelockAlias,
-  ADDRESS_ALIAS_OFFSET,
-  L1_TIMELOCK_ADDRESS,
   // Simulation data
   prepareRetryableSimulation,
   prepareTimelockSimulation,

@@ -5,14 +5,6 @@
  * to call Tenderly API themselves.
  */
 
-// Address aliasing
-export {
-  ADDRESS_ALIAS_OFFSET,
-  L1_TIMELOCK_ADDRESS,
-  calculateAddressAlias,
-  getL1TimelockAlias,
-} from "./address-alias";
-
 // Simulation data preparation
 export {
   NETWORK_IDS,

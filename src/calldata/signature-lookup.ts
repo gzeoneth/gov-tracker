@@ -160,17 +160,6 @@ export async function lookupSignature(
 }
 
 /**
- * Extract function name from signature
- *
- * @param signature - Full function signature (e.g., "transfer(address,uint256)")
- * @returns Function name (e.g., "transfer")
- */
-export function extractFunctionName(signature: string): string {
-  const parenIndex = signature.indexOf("(");
-  return parenIndex > 0 ? signature.slice(0, parenIndex) : signature;
-}
-
-/**
  * Clear the signature cache (useful for testing)
  */
 export function clearSignatureCache(): void {

@@ -6,7 +6,8 @@
  */
 
 import Debug from "debug";
-import type { ChainContext, DecodedCalldata, DecodedParameter } from "../types/calldata";
+import type { DecodedCalldata, DecodedParameter } from "../types/calldata";
+import { ChainContext } from "../types";
 import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
 import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";

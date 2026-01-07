@@ -6,7 +6,8 @@
  */
 
 import { ethers } from "ethers";
-import type { ChainContext, DecodedParameter } from "../types/calldata";
+import type { DecodedParameter } from "../types/calldata";
+import type { ChainContext } from "../types";
 import { getAddressLabel } from "./address-utils";
 
 /**

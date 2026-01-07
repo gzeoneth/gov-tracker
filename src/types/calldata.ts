@@ -9,7 +9,6 @@
  * Chain context for address resolution and explorer links
  */
 import { ChainContext } from "./core";
-export { ChainContext } from "./core";
 
 /**
  * Source of function signature decoding

@@ -4,7 +4,8 @@
  * Chain-aware address labeling for known governance contracts.
  */
 
-import type { ChainContext, KnownAddress } from "../types/calldata";
+import type { KnownAddress } from "../types/calldata";
+import { ChainContext } from "../types";
 
 /**
  * Known addresses registry organized by chain

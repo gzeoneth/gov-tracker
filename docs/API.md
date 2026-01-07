@@ -305,7 +305,7 @@ if (decoded.parameters) {
 ```typescript
 interface DecodedCalldata {
   selector: string;                 // 4-byte selector
-  functionName: string | null;      // Human-readable name (null if unknown)
+  functionName: string | null;      // Full function signature (null if unknown)
   signature: string | null;         // Full function signature (null if unknown)
   parameters: DecodedParameter[] | null;  // Decoded parameters (null if decoding failed)
   raw: string;                      // Raw calldata hex string

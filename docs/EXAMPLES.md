@@ -312,7 +312,11 @@ for (let i = 0; i < calldatas.length; i++) {
 
       // Nested calls (e.g., timelock → upgradeExecutor → target)
       if (param.nested) {
-        console.log(`    → ${param.nested.signature || "Unknown"}`);
+        if (param.nested.isRetryable) {
+          console.log(`    → Retryable Ticket to ${param.nested.targetChain}`);
+        } else {
+          console.log(`    → ${param.nested.signature || "Unknown"}`);
+        }
       }
     }
   }

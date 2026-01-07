@@ -321,33 +321,25 @@ function processRetryableTicket(
     const l2ValueParam = nestedCall.parameters?.find((p) => p.name === "l2Value");
 
     if (l2TargetParam && l2CalldataParam) {
-      // Get chain from targetChain field and convert to ChainContext
+      // Get chain from targetChain field
       const chain = nestedCall.targetChain;
 
-      // Explicit handling for each chain case
-      let l2Chain: ChainContext;
-      if (chain === "nova") {
-        l2Chain = "nova";
-      } else if (chain === "arb1") {
-        l2Chain = "arb1";
-      } else {
-        // unknown chain - default to arb1
-        l2Chain = "arb1";
+      // Only create simulation if chain is known (arb1 or nova)
+      if (chain === "arb1" || chain === "nova") {
+        const sim = prepareRetryableSimulation(
+          l2TargetParam.value,
+          l2CalldataParam.value,
+          l2ValueParam?.value || "0",
+          chain
+        );
+
+        // Generate label from targetChain (use raw identifier)
+        return {
+          simulation: sim,
+          label: `Retryable Ticket → ${chain}`,
+          batchIndex: index,
+        };
       }
-
-      const sim = prepareRetryableSimulation(
-        l2TargetParam.value,
-        l2CalldataParam.value,
-        l2ValueParam?.value || "0",
-        l2Chain
-      );
-
-      // Generate label from targetChain (use raw identifier)
-      return {
-        simulation: sim,
-        label: `Retryable Ticket → ${chain}`,
-        batchIndex: index,
-      };
     }
   }
   return null;

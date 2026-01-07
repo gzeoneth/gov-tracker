@@ -158,25 +158,18 @@ async function processNestedParams(
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
           if (retryable) {
-            // Convert chain to ChainContext - explicit handling for each case
-            let l2Chain: ChainContext;
-            if (retryable.chain === "nova") {
-              l2Chain = "nova";
-            } else if (retryable.chain === "arb1") {
-              l2Chain = "arb1";
-            } else {
-              // unknown chain - default to arb1
-              l2Chain = "arb1";
-            }
+            // Determine L2 chain context for address labeling and nested decoding
+            const l2ChainContext: ChainContext | undefined =
+              retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
 
-            // Decode l2Calldata with L2 chain context
+            // Decode l2Calldata with L2 chain context only if chain is known
             let nestedL2Call: DecodedCalldata | undefined;
-            if (isLikelyCalldata(retryable.l2Calldata)) {
+            if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
               nestedL2Call = await decodeCalldata(
                 retryable.l2Calldata,
                 retryable.l2Target,
                 depth + 1,
-                l2Chain
+                l2ChainContext
               );
             }
 
@@ -200,7 +193,10 @@ async function processNestedParams(
                   value: retryable.l2Target,
                   rawValue: retryable.l2Target,
                   isNested: false,
-                  addressLabel: getAddressLabel(retryable.l2Target, l2Chain),
+                  // Only add address label if we know the chain
+                  ...(l2ChainContext && {
+                    addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
+                  }),
                 },
                 {
                   name: "l2Value",

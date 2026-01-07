@@ -289,7 +289,7 @@ const decoded = await decodeCalldata(
 
 console.log(decoded.signature);     // "execute(address,uint256,bytes,bytes32,bytes32)"
 console.log(decoded.selector);      // "0x134008d3"
-console.log(decoded.functionName);  // "execute" (or null if unknown)
+console.log(decoded.functionName);  // "execute(address,uint256,bytes,bytes32,bytes32)" (or null if unknown)
 
 if (decoded.parameters) {
   for (const param of decoded.parameters) {

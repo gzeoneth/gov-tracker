@@ -289,7 +289,7 @@ const decoded = await decodeCalldata(
 
 console.log(decoded.signature);     // "execute(address,uint256,bytes,bytes32,bytes32)"
 console.log(decoded.selector);      // "0x134008d3"
-console.log(decoded.functionName);  // "execute" (or null if unknown)
+console.log(decoded.functionName);  // "execute(address,uint256,bytes,bytes32,bytes32)" (or null if unknown)
 
 if (decoded.parameters) {
   for (const param of decoded.parameters) {
@@ -305,7 +305,7 @@ if (decoded.parameters) {
 ```typescript
 interface DecodedCalldata {
   selector: string;                 // 4-byte selector
-  functionName: string | null;      // Human-readable name (null if unknown)
+  functionName: string | null;      // Full function signature (null if unknown)
   signature: string | null;         // Full function signature (null if unknown)
   parameters: DecodedParameter[] | null;  // Decoded parameters (null if decoding failed)
   raw: string;                      // Raw calldata hex string
@@ -336,9 +336,7 @@ clearSignatureCache();
 ```typescript
 import {
   getAddressLabel,
-  getKnownAddresses,
-  getAddressExplorerUrl,
-  getChainLabel
+  getKnownAddresses
 } from "@gzeoneth/gov-tracker";
 
 // Get human-readable label for known governance contracts
@@ -348,15 +346,6 @@ const label = getAddressLabel("0xf07DeD...", "arb1");
 // Get all known addresses for a chain
 const addresses = getKnownAddresses("arb1");
 // [{ address, label, chain }, ...]
-
-// Generate explorer URLs
-const url = getAddressExplorerUrl("0x...", "ethereum");
-// "https://etherscan.io/address/0x..."
-
-// Chain labels
-getChainLabel("arb1");    // "Arb1"
-getChainLabel("nova");    // "Nova"
-getChainLabel("ethereum"); // "L1"
 ```
 
 ---

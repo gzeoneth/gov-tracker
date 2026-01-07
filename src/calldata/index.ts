@@ -13,7 +13,6 @@ export {
   lookupSignature,
   lookupLocalSignature,
   lookup4byteDirectory,
-  extractFunctionName,
   clearSignatureCache,
 } from "./signature-lookup";
 
@@ -29,7 +28,7 @@ export {
 export { getAddressLabel, getKnownAddresses } from "./address-utils";
 
 // URL utilities
-export { getAddressExplorerUrl, getTxExplorerUrl, getChainLabel } from "../utils/urls";
+export { getTxExplorerUrl } from "../utils/urls";
 
 // Retryable ticket
 export {

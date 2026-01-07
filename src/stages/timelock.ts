@@ -558,11 +558,7 @@ export async function calculateRetryableExecutionValue(
       ["address", "address", "uint256", "uint256", "uint256", "bytes"],
       data
     );
-  } catch (error) {
-    // If decoding fails, return null to preserve previous error-handling behavior.
-    log.debug?.("Failed to decode retryable ticket calldata for execution value calculation", {
-      error,
-    });
+  } catch {
     return null;
   }
 

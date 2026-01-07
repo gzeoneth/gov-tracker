@@ -24,22 +24,10 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
   if (data.calldatas && Array.isArray(data.calldatas) && data.calldatas.length > 0) {
     const count = data.calldatas.length;
 
-    // Ensure targets alignment
-    let targets: string[] = [];
-    if (data.targets && Array.isArray(data.targets)) {
-      targets = data.targets;
-    } else if ((data as any).target && typeof (data as any).target === "string") {
-      // Legacy/fallback: single target for multiple calldatas? Unlikely but safe to handle
-      targets = Array(count).fill((data as any).target);
-    }
+    const targets = data.targets && Array.isArray(data.targets) ? data.targets : [];
+    const values = data.values && Array.isArray(data.values) ? data.values : [];
 
-    // Ensure values alignment
-    let values: string[] = [];
-    if (data.values && Array.isArray(data.values)) {
-      values = data.values;
-    }
-
-    // Strict length check
+    // Strict length checks - these are part of the logic to ensure data integrity
     if (targets.length !== count) {
       throw new Error(`Mismatch in targets length: expected ${count}, got ${targets.length}`);
     }
@@ -70,15 +58,6 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
     if (result.calldatas.length > 0) {
       return result;
     }
-  }
-
-  // 3. Fallback: check for single `data` field in stage data (Generic/Legacy)
-  // Some stages might store a single calldata string in `data` or `calldata` field
-  if (typeof (data as any).calldata === "string") {
-    result.calldatas.push((data as any).calldata);
-    result.targets.push((data as any).target || "0x0000000000000000000000000000000000000000");
-    result.values.push((data as any).value || "0");
-    return result;
   }
 
   return result;

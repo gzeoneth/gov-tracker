@@ -31,6 +31,7 @@ import {
   extractAllSimulationsFromDecoded,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
+import { getRetryableChainLabel } from "../calldata/retryable-ticket";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
 import {
@@ -77,8 +78,8 @@ function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
 
   if (decoded.isRetryable) {
     // Format retryable ticket label
-    const chainLabel =
-      decoded.targetChain === "arb1" ? "Arb1" : decoded.targetChain === "nova" ? "Nova" : "Unknown";
+    const chain = decoded.targetChain || "unknown";
+    const chainLabel = getRetryableChainLabel(chain);
     lines.push(`${prefix}Retryable Ticket → ${chainLabel}`);
   } else if (decoded.signature) {
     lines.push(`${prefix}${decoded.signature}`);

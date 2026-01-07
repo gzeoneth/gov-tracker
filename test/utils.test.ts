@@ -494,14 +494,14 @@ describe("Stage Metadata Utilities", () => {
 
       expect(meta.title).toBe("Proposal Created");
       expect(meta.description).toBeDefined();
-      expect(meta.chain).toBe("L2");
+      expect(meta.chain).toBe("arb1");
       expect(typeof meta.estimatedDays).toBe("number");
     });
 
     it("should return metadata for L1 stages", () => {
       const meta = getStageMetadata("L1_TIMELOCK");
 
-      expect(meta.chain).toBe("L1");
+      expect(meta.chain).toBe("ethereum");
       expect(meta.title).toBeDefined();
     });
 
@@ -523,7 +523,7 @@ describe("Stage Metadata Utilities", () => {
         const meta = getStageMetadata(stageType);
         expect(meta.title).toBeDefined();
         expect(meta.description).toBeDefined();
-        expect(["L1", "L2", "NOVA", "CROSS_CHAIN"]).toContain(meta.chain);
+        expect(["ethereum", "arb1", "nova", "CROSS_CHAIN"]).toContain(meta.chain);
       }
     });
   });
@@ -540,8 +540,8 @@ describe("Stage Metadata Utilities", () => {
     it("should include correct chain types", () => {
       const allMeta = getAllStageMetadata();
 
-      expect(allMeta.VOTING_ACTIVE.chain).toBe("L2");
-      expect(allMeta.L1_TIMELOCK.chain).toBe("L1");
+      expect(allMeta.VOTING_ACTIVE.chain).toBe("arb1");
+      expect(allMeta.L1_TIMELOCK.chain).toBe("ethereum");
     });
   });
 
@@ -621,24 +621,9 @@ describe("Tracker Creation (Unit Tests)", () => {
 import type { StageType, StageTransaction } from "../src/types";
 
 // URL utility tests
-import { chainTypeToId, getExplorerUrl, getTxUrl, getStageTransactionUrl } from "../src/utils/urls";
-import { CHAIN_IDS } from "../src/constants";
+import { getExplorerUrl, getTxUrl, getStageTransactionUrl, CHAIN_IDS } from "../src/constants";
 
 describe("URL Utilities", () => {
-  describe("chainTypeToId", () => {
-    it("should return Ethereum chain ID for L1", () => {
-      expect(chainTypeToId("L1")).toBe(CHAIN_IDS.ETHEREUM);
-    });
-
-    it("should return Arbitrum One chain ID for L2", () => {
-      expect(chainTypeToId("L2")).toBe(CHAIN_IDS.ARB_ONE);
-    });
-
-    it("should return Nova chain ID for NOVA", () => {
-      expect(chainTypeToId("NOVA")).toBe(CHAIN_IDS.NOVA);
-    });
-  });
-
   describe("getExplorerUrl", () => {
     it("should return Etherscan URL for Ethereum", () => {
       const url = getExplorerUrl(1, "tx", "0x123");
@@ -673,7 +658,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x123",
         blockNumber: 100,
-        chain: "L1",
+        chain: "ethereum",
+        chainId: 1,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://etherscan.io/tx/0x123");
@@ -683,7 +669,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x456",
         blockNumber: 200,
-        chain: "L2",
+        chain: "arb1",
+        chainId: 42161,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://arbiscan.io/tx/0x456");
@@ -693,7 +680,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x789",
         blockNumber: 300,
-        chain: "NOVA",
+        chain: "nova",
+        chainId: 42170,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://nova.arbiscan.io/tx/0x789");

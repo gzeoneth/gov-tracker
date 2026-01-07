@@ -7,7 +7,8 @@
 import { BigNumber, ethers } from "ethers";
 import {
   CallScheduledData,
-  ChainType,
+  Chain,
+  chainToChainId,
   PrepareResult,
   SerializedCallScheduledData,
   StageStatus,
@@ -76,13 +77,15 @@ export const deserializeCallScheduledDataArray = (data: SerializedCallScheduledD
  */
 function createStage(
   type: StageType,
-  chain: ChainType,
+  chain: Chain,
   status: StageStatus = "NOT_STARTED"
 ): TrackedStage {
+  const chainId = chainToChainId(chain) ?? 0; // Default to 0 for unknown chains
   return {
     type,
     status,
     chain,
+    chainId,
     transactions: [],
     data: {},
     executable: false,
@@ -161,7 +164,8 @@ export function initializeStagesForPath(
   return stageTypes.map((type) => {
     // L1_TIMELOCK and RETRYABLE_EXECUTED are L1 stages
     // L2_TO_L1_MESSAGE is cross-chain but logically completes on L1
-    const chain: ChainType = type === "L1_TIMELOCK" || type === "RETRYABLE_EXECUTED" ? "L1" : "L2";
+    const chain: Chain =
+      type === "L1_TIMELOCK" || type === "RETRYABLE_EXECUTED" ? "ethereum" : "arb1";
 
     return createStage(type, chain, "NOT_STARTED");
   });

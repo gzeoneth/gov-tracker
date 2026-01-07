@@ -2,7 +2,7 @@
  * Type definitions for Arbitrum Governance Stage Tracking SDK
  *
  * Organized by domain:
- * - core: Primitives (StageType, ChainType, timing/ETA types)
+ * - core: Primitives (StageType, Chain, timing/ETA types)
  * - governor: Governor, proposal, voting types
  * - timelock: Timelock operations and state
  * - cross-chain: L2→L1 messages and retryables
@@ -16,9 +16,12 @@
 export {
   StageType,
   StageStatus,
-  ChainContext,
-  ChainType,
-  TargetChainType,
+  Chain,
+  KnownChain,
+  L2Chain,
+  ChainId,
+  chainIdToChain,
+  chainToChainId,
   StageTransaction,
   StageTiming,
   SearchHint,
@@ -72,8 +75,6 @@ export {
   ProposalQueuedData,
   BaseTimelockData,
   TimelockStageData,
-  L2TimelockData,
-  L1TimelockData,
   L2ToL1MessageStageData,
   RetryableStageData,
   StageDataMap,
@@ -119,7 +120,6 @@ export {
 export {
   CohortType,
   ElectionPhase,
-  GovernorProposalState,
   ElectionProposalStatus,
   ElectionStatus,
   ElectionCheckResult,
@@ -139,7 +139,6 @@ export {
 // Simulation data types
 export {
   SimulationType,
-  SimulationChainType,
   BaseSimulationData,
   RetryableSimulationData,
   TimelockSimulationData,

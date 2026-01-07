@@ -139,7 +139,8 @@ describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
             {
               type: "PROPOSAL_CREATED",
               status: "COMPLETED",
-              chain: "L2",
+              chain: "arb1",
+              chainId: 42161,
               transactions: [],
               data: {},
             },
@@ -184,12 +185,14 @@ describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
     const pendingStage: TrackedStage = {
       type: "L2_TIMELOCK",
       status: "PENDING",
-      chain: "L2",
+      chain: "arb1",
+      chainId: 42161,
       transactions: [
         {
           hash: "0xtest-queued-hash",
           blockNumber: 1000,
-          chain: "L2",
+          chain: "arb1",
+          chainId: 42161,
           timestamp: 1700000000,
           description: "queued",
         },

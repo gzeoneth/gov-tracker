@@ -5,7 +5,14 @@
  */
 
 import { ethers } from "ethers";
-import type { ChunkingConfig, RetryConfig, ProposalState, DiscoveryTargets } from "./types";
+import type {
+  ChunkingConfig,
+  RetryConfig,
+  ProposalState,
+  DiscoveryTargets,
+  Chain,
+  StageTransaction,
+} from "./types";
 
 // Contract Addresses
 
@@ -113,11 +120,14 @@ export function buildDefaultTargets(options?: {
 
 /**
  * Chain IDs for supported networks
+ *
+ * Uses CHAIN_ID_MAP from types/core for single source of truth
  */
+import { CHAIN_ID_MAP } from "./types/core";
 export const CHAIN_IDS = {
-  ETHEREUM: 1,
-  ARB_ONE: 42161,
-  NOVA: 42170,
+  ETHEREUM: CHAIN_ID_MAP.ethereum,
+  ARB_ONE: CHAIN_ID_MAP.arb1,
+  NOVA: CHAIN_ID_MAP.nova,
 } as const;
 
 /**
@@ -349,3 +359,64 @@ export const PROPOSAL_STATE = {
   EXPIRED: 6,
   EXECUTED: 7,
 } as const;
+
+// Explorer URLs
+
+/**
+ * Explorer base URLs by chain
+ */
+export const EXPLORER_URLS: Record<Exclude<Chain, "unknown">, string> = {
+  arb1: "https://arbiscan.io",
+  nova: "https://nova.arbiscan.io",
+  ethereum: "https://etherscan.io",
+};
+
+/**
+ * Get explorer URL for a transaction or address
+ */
+export function getExplorerUrl(chainId: number, type: "tx" | "address", hash: string): string {
+  switch (chainId) {
+    case 1: // Ethereum
+      return `https://etherscan.io/${type}/${hash}`;
+    case CHAIN_IDS.ARB_ONE:
+      return `https://arbiscan.io/${type}/${hash}`;
+    case CHAIN_IDS.NOVA:
+      return `https://nova.arbiscan.io/${type}/${hash}`;
+    default:
+      return `https://etherscan.io/${type}/${hash}`;
+  }
+}
+
+/**
+ * Get transaction URL by chain ID
+ */
+export function getTxUrl(chainId: number, txHash: string): string {
+  return getExplorerUrl(chainId, "tx", txHash);
+}
+
+/**
+ * Get block explorer URL for a stage transaction
+ *
+ * @example
+ * ```typescript
+ * const stage = result.stages[0];
+ * for (const tx of stage.transactions) {
+ *   console.log(`${tx.hash}: ${getStageTransactionUrl(tx)}`);
+ * }
+ * ```
+ */
+export function getStageTransactionUrl(tx: StageTransaction): string {
+  return getTxUrl(tx.chainId, tx.hash);
+}
+
+/**
+ * Get block explorer URL for a transaction
+ *
+ * @param txHash - Transaction hash
+ * @param chain - Chain context
+ * @returns Full explorer URL
+ */
+export function getTxExplorerUrl(txHash: string, chain: Chain): string {
+  const baseUrl = EXPLORER_URLS[chain as Exclude<Chain, "unknown">] ?? EXPLORER_URLS.ethereum;
+  return `${baseUrl}/tx/${txHash}`;
+}

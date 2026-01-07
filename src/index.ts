@@ -37,7 +37,8 @@ export type {
   // Core stage types
   StageType,
   StageStatus,
-  ChainType,
+  Chain,
+  ChainId,
   TrackedStage,
   StageTransaction,
   StageTiming,
@@ -92,8 +93,6 @@ export type {
   VotingActiveData,
   ProposalQueuedData,
   TimelockStageData,
-  L2TimelockData,
-  L1TimelockData,
   L2ToL1MessageStageData,
   RetryableStageData,
   // Election types
@@ -101,10 +100,8 @@ export type {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
-  GovernorProposalState,
   ElectionCheckResult,
   // Calldata decoding types
-  ChainContext,
   DecodingSource,
   DecodedCalldata,
   DecodedParameter,
@@ -113,7 +110,6 @@ export type {
   SignatureEntry,
   // Simulation data types
   SimulationType,
-  SimulationChainType,
   BaseSimulationData,
   RetryableSimulationData,
   TimelockSimulationData,
@@ -249,7 +245,7 @@ export type { GovernorProposalParams } from "./stages/proposal-queued";
 // ============================================================================
 
 // URL generation
-export { getTxUrl, getStageTransactionUrl, chainTypeToId } from "./utils/urls";
+export { getTxUrl, getStageTransactionUrl } from "./constants";
 
 // Stage metadata
 export {
@@ -262,10 +258,11 @@ export {
 export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
-export { addressEquals, isAddressIn, getChainType } from "./utils/chain";
+export { addressEquals, isAddressIn, getChain } from "./utils/chain";
+export { chainIdToChain, chainToChainId } from "./types";
 
 // Error classification
-export { isGasEstimationError } from "./utils/error-classification";
+export { isGasEstimationError } from "./utils/rpc-utils";
 
 // ============================================================================
 // TIER 5: Election Tracking
@@ -318,7 +315,7 @@ export {
   extractAllSimulationsFromDecoded,
   NETWORK_IDS,
   TIMELOCK_SELECTORS,
-} from "./simulation";
+} from "./simulation/simulation-data";
 
 // ============================================================================
 // TIER 8: Internal Utilities (for testing)

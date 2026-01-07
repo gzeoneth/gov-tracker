@@ -30,9 +30,6 @@ export {
 // Address utilities
 export { getAddressLabel, getKnownAddresses } from "./address-utils";
 
-// URL utilities
-export { getTxExplorerUrl } from "../utils/urls";
-
 // Retryable ticket
 export {
   RETRYABLE_TICKET_MAGIC,

@@ -16,7 +16,7 @@ import {
   ADDRESSES,
   ElectionStatus,
   ElectionProposalStatus,
-  ElectionCheckResult as SDKElectionCheckResult,
+  ElectionCheckResult,
 } from "../../index";
 import { executeTransaction, formatDryRun, ProviderBundle } from "./cli";
 
@@ -33,7 +33,7 @@ export interface ElectionCheckOptions {
   nomineeGovernor?: string;
 }
 
-export interface ElectionCheckResult {
+export interface CliElectionCheckResult {
   status: ElectionStatus;
   electionCreated?: boolean;
   memberElectionTriggered?: boolean;
@@ -60,18 +60,18 @@ export async function checkAndExecuteElection(
   providers: ProviderBundle,
   signer: ethers.Wallet | null,
   options: ElectionCheckOptions = {}
-): Promise<ElectionCheckResult> {
+): Promise<CliElectionCheckResult> {
   const nomineeGovernor = options.nomineeGovernor ?? ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
   const errors: string[] = [];
 
   // Create tracker and use unified election check
   const tracker = createTracker(providers);
 
-  const sdkResult: SDKElectionCheckResult = await tracker.checkElection({
+  const sdkResult: ElectionCheckResult = await tracker.checkElection({
     nomineeGovernorAddress: nomineeGovernor,
   });
 
-  const result: ElectionCheckResult = {
+  const result: CliElectionCheckResult = {
     status: sdkResult.status,
     currentElectionStatus: sdkResult.currentElection,
     errors,

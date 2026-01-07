@@ -8,7 +8,7 @@
 /**
  * Chain context for address resolution and explorer links
  */
-import { ChainContext } from "./core";
+import { Chain, L2Chain } from "./core";
 
 /**
  * Source of function signature decoding
@@ -30,9 +30,6 @@ interface DecodedCalldataBase {
 
   /** Target contract address (if known during decoding) */
   decodingTarget?: string;
-
-  /** Chain context for this calldata (for simulation extraction) */
-  chainContext?: ChainContext;
 }
 
 /**
@@ -66,7 +63,7 @@ interface RetryableCalldata extends DecodedCalldataBase {
   isRetryable: true;
 
   /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
-  targetChain: "arb1" | "nova" | "unknown";
+  targetChain: L2Chain | "unknown";
 }
 
 /**
@@ -133,7 +130,7 @@ export interface RetryableTicketData {
   l2Calldata: string;
 
   /** Target L2 chain (arb1, nova, or unknown) */
-  chain: "arb1" | "nova" | "unknown";
+  chain: L2Chain | "unknown";
 }
 
 /**
@@ -142,7 +139,7 @@ export interface RetryableTicketData {
 export interface KnownAddress {
   address: string;
   label: string;
-  chain: ChainContext;
+  chain: Chain;
 }
 
 /**

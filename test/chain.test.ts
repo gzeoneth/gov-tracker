@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { ethers } from "ethers";
-import { getChainType, addressEquals, isAddressIn } from "../src/utils/chain";
+import { getChain, addressEquals, isAddressIn } from "../src/utils/chain";
 import { CHAIN_IDS } from "../src/constants";
 
 describe("Chain Utilities", () => {
@@ -67,7 +67,7 @@ describe("Chain Utilities", () => {
     });
   });
 
-  describe("getChainType", () => {
+  describe("getChain", () => {
     function createMockProvider(chainId: number): ethers.providers.Provider {
       return {
         getNetwork: vi.fn().mockResolvedValue({ chainId }),
@@ -76,26 +76,26 @@ describe("Chain Utilities", () => {
 
     it("should return L1 for Ethereum mainnet", async () => {
       const provider = createMockProvider(1);
-      const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      const result = await getChain(provider);
+      expect(result).toBe("ethereum");
     });
 
     it("should return L2 for Arbitrum One", async () => {
       const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
-      const result = await getChainType(provider);
-      expect(result).toBe("L2");
+      const result = await getChain(provider);
+      expect(result).toBe("arb1");
     });
 
     it("should return NOVA for Arbitrum Nova", async () => {
       const provider = createMockProvider(CHAIN_IDS.NOVA);
-      const result = await getChainType(provider);
-      expect(result).toBe("NOVA");
+      const result = await getChain(provider);
+      expect(result).toBe("nova");
     });
 
-    it("should return L1 for unknown chains", async () => {
+    it("should return unknown for unknown chains", async () => {
       const provider = createMockProvider(999);
-      const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      const result = await getChain(provider);
+      expect(result).toBe("unknown");
     });
   });
 });

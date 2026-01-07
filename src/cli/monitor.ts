@@ -62,7 +62,7 @@ import {
   parseChunkingConfig,
 } from "./lib/cli";
 import { decodeCalldata, extractCalldataFromStage } from "../calldata";
-import { ChainContext } from "../types";
+import { Chain } from "../types";
 import type { DecodedCalldata } from "../types/calldata";
 
 // ============================================================================
@@ -312,8 +312,7 @@ runCmd
             console.log(`\n[${r.key}] ERROR: ${r.error}`);
           }
 
-          // Use preparedTransactions if available, otherwise fall back to prepared (legacy)
-          const txsToDisplay = r.preparedTransactions ?? (r.prepared ? [r.prepared] : []);
+          const txsToDisplay = r.preparedTransactions ?? [];
           if (txsToDisplay.length > 0) {
             console.log(`\n[PREPARED] ${r.key}`);
             console.log(formatMultiplePreparedTransactions(txsToDisplay));
@@ -415,7 +414,7 @@ trackCmd
       const providers = createProvidersFromOptions(opts);
       const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
       const gasSettings: GasSettings = parseGasSettings(opts);
-      const chainContext: ChainContext = "arb1";
+      const chainContext: Chain = "arb1";
 
       if (opts.verbose) {
         console.log(

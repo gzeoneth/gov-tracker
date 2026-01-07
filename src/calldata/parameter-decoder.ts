@@ -7,7 +7,7 @@
 
 import { ethers } from "ethers";
 import type { DecodedParameter } from "../types/calldata";
-import type { ChainContext } from "../types";
+import type { Chain } from "../types";
 import { getAddressLabel } from "./address-utils";
 
 /**
@@ -96,7 +96,7 @@ export function formatDecodedValue(value: unknown, type: string): string {
 export function decodeParameters(
   calldata: string,
   signature: string,
-  chainContext: ChainContext
+  chainContext: Chain
 ): { params: DecodedParameter[]; decoded: ethers.utils.Result } | null {
   // Use ethers Interface for robust decoding
   const iface = new ethers.utils.Interface([`function ${signature}`]);

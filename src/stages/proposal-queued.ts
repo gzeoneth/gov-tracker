@@ -23,7 +23,7 @@ import {
   findCallScheduledByTxHash,
   getL2TimelockForGovernor,
 } from "../discovery/timelock-discovery";
-import { serializeCallScheduledDataArray } from "../utils/stage-helpers";
+import { serializeCallScheduledDataArray } from "../stages/base";
 import { getBlockTimestamp, failPrepare } from "./base";
 import { StageBuilder } from "./stage-builder";
 
@@ -49,7 +49,7 @@ export async function trackProposalQueued(
   operationId?: string;
   callScheduledData?: CallScheduledData[];
 }> {
-  const builder = new StageBuilder("PROPOSAL_QUEUED", "L2");
+  const builder = new StageBuilder("PROPOSAL_QUEUED", "arb1");
 
   // Check proposal state
   const proposalState = await getProposalState(governorAddress, proposalId, provider);
@@ -104,7 +104,7 @@ export async function trackProposalQueued(
   // Stage is complete - proposal is queued
   builder
     .status("COMPLETED")
-    .tx(queueEvent.txHash, queueEvent.blockNumber, "L2", { timestamp })
+    .tx(queueEvent.txHash, queueEvent.blockNumber, "arb1", 42161, { timestamp })
     .timing({ startedAt: timestamp, eta })
     .data({
       proposalState,
@@ -180,7 +180,8 @@ export async function prepareGovernorQueue(
       to: governorAddress,
       data: calldata,
       value: "0",
-      chain: "L2",
+      chain: "arb1",
+      chainId: 42161,
       description: `queue() on Governor (proposal ${proposalId})`,
       operationId: proposalId,
     },

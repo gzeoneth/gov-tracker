@@ -233,9 +233,9 @@ export async function executeTransaction(
 
   try {
     const provider =
-      prepared.chain === "L1"
+      prepared.chain === "ethereum"
         ? providers.l1Provider
-        : prepared.chain === "NOVA"
+        : prepared.chain === "nova"
           ? providers.novaProvider
           : providers.l2Provider;
 
@@ -246,7 +246,7 @@ export async function executeTransaction(
     if (prepared.value !== "0") console.log(`  Value: ${prepared.value}`);
 
     // Use custom gas settings for L2 chains (Arb1 and Nova)
-    const isL2Chain = prepared.chain === "L2" || prepared.chain === "NOVA";
+    const isL2Chain = prepared.chain === "arb1" || prepared.chain === "nova";
     const effectiveGasSettings = isL2Chain ? (gasSettings ?? DEFAULT_L2_GAS_SETTINGS) : undefined;
 
     const txRequest: ethers.providers.TransactionRequest = {
@@ -401,8 +401,8 @@ export function formatTrackingResult(result: TrackingResult, label?: string): st
       const pendingCount = stage.data.pendingCount as number | undefined;
 
       if (ticketCount && ticketCount > 0) {
-        const arb1Count = creationDetails?.filter((d) => d.targetChain === "Arb1").length ?? 0;
-        const novaCount = creationDetails?.filter((d) => d.targetChain === "Nova").length ?? 0;
+        const arb1Count = creationDetails?.filter((d) => d.targetChain === "arb1").length ?? 0;
+        const novaCount = creationDetails?.filter((d) => d.targetChain === "nova").length ?? 0;
         const chains = [arb1Count > 0 && `${arb1Count} Arb1`, novaCount > 0 && `${novaCount} Nova`]
           .filter(Boolean)
           .join(", ");
@@ -566,8 +566,7 @@ export async function runWithLoop(
 export interface TrackCallbackResult {
   key: string;
   result: TrackingResult | null;
-  prepared?: PreparedTransaction; // Legacy: first prepared transaction (deprecated)
-  preparedTransactions?: PreparedTransaction[]; // All prepared transactions
+  preparedTransactions?: PreparedTransaction[];
   error?: string;
 }
 
@@ -612,14 +611,12 @@ async function prepareStagesForResult(
   options: { prepare?: boolean; prepareCompleted?: boolean; preparePending?: boolean },
   providers: ProviderBundle
 ): Promise<{
-  prepared?: PreparedTransaction;
   preparedTransactions: PreparedTransaction[];
   preparations: PrepareResult[];
   count: number;
 }> {
   const preparations: PrepareResult[] = [];
   const preparedTransactions: PreparedTransaction[] = [];
-  let prepared: PreparedTransaction | undefined;
   let count = 0;
 
   if (!options.prepare) return { preparations, preparedTransactions, count };
@@ -640,7 +637,7 @@ async function prepareStagesForResult(
       // Prepare retryables for each target chain (can be both Arb1 and Nova)
       for (const targetChain of targetChains) {
         const targetProvider =
-          targetChain === "Nova" ? providers.novaProvider : providers.l2Provider;
+          targetChain === "nova" ? providers.novaProvider : providers.l2Provider;
         const { results } = await prepareRetryableStage(
           stage,
           providers.l1Provider,
@@ -652,7 +649,6 @@ async function prepareStagesForResult(
           if (result.success) {
             count++;
             preparedTransactions.push(result.prepared);
-            if (!prepared) prepared = result.prepared;
           }
         }
       }
@@ -668,7 +664,6 @@ async function prepareStagesForResult(
         if (result.success) {
           count++;
           preparedTransactions.push(result.prepared);
-          if (!prepared) prepared = result.prepared;
         }
       }
     } else {
@@ -678,7 +673,6 @@ async function prepareStagesForResult(
       if (prepResult.success) {
         count++;
         preparedTransactions.push(prepResult.prepared);
-        prepared = prepResult.prepared;
       }
     }
   }
@@ -706,7 +700,7 @@ async function prepareStagesForResult(
     }
   }
 
-  return { prepared, preparedTransactions, preparations, count };
+  return { preparedTransactions, preparations, count };
 }
 
 // ============================================================================
@@ -791,7 +785,6 @@ export async function runMonitorCycle(
         const callbackResult = await options.onTrack?.({
           key,
           result: trackResult,
-          prepared: prepResult.prepared,
           preparedTransactions: prepResult.preparedTransactions,
         });
 

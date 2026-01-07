@@ -5,12 +5,12 @@
  */
 
 import type { KnownAddress } from "../types/calldata";
-import { ChainContext } from "../types";
+import { Chain } from "../types";
 
 /**
  * Known addresses registry organized by chain
  */
-const KNOWN_ADDRESSES: Record<ChainContext, Record<string, string>> = {
+const KNOWN_ADDRESSES: Record<Exclude<Chain, "unknown">, Record<string, string>> = {
   arb1: {
     // Governors
     "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9": "Core Governor",
@@ -61,11 +61,8 @@ const KNOWN_ADDRESSES: Record<ChainContext, Record<string, string>> = {
  * @param chain - Chain context (or undefined for unknown chains)
  * @returns Label if known, undefined otherwise
  */
-export function getAddressLabel(
-  address: string,
-  chain: ChainContext | undefined
-): string | undefined {
-  if (!chain) return undefined;
+export function getAddressLabel(address: string, chain: Chain | undefined): string | undefined {
+  if (!chain || chain === "unknown") return undefined;
 
   const chainAddresses = KNOWN_ADDRESSES[chain];
 
@@ -86,7 +83,9 @@ export function getAddressLabel(
  * @param chain - Chain context
  * @returns Array of known address entries
  */
-export function getKnownAddresses(chain: ChainContext): KnownAddress[] {
+export function getKnownAddresses(chain: Chain): KnownAddress[] {
+  if (chain === "unknown") return [];
+
   const chainAddresses = KNOWN_ADDRESSES[chain];
   if (!chainAddresses) return [];
 

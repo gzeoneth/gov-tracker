@@ -13,9 +13,9 @@ import { queryWithRetry } from "./utils/rpc-utils";
 import {
   PreparedTransaction,
   ProposalCreatedEventArgs,
+  ProposalState,
   CohortType,
   ElectionPhase,
-  GovernorProposalState,
   ElectionProposalStatus,
   ElectionStatus,
 } from "./types";
@@ -186,7 +186,8 @@ export function prepareElectionCreation(
       to: nomineeGovernorAddress,
       data: calldata,
       value: "0",
-      chain: "L2",
+      chain: "arb1",
+      chainId: 42161,
       description: `createElection() on SecurityCouncilNomineeElectionGovernor for election #${electionStatus.electionCount}`,
     },
     electionIndex: electionStatus.electionCount,
@@ -241,8 +242,8 @@ function formatDuration(seconds: number): string {
 /**
  * Convert numeric proposal state to string
  */
-function stateToString(state: number): GovernorProposalState {
-  const states: GovernorProposalState[] = [
+function stateToString(state: number): ProposalState {
+  const states: ProposalState[] = [
     "Pending",
     "Active",
     "Canceled",
@@ -364,7 +365,7 @@ export async function trackElectionProposal(
 
   // Check for member proposal
   let memberProposalId: string | null = null;
-  let memberProposalState: GovernorProposalState | null = null;
+  let memberProposalState: ProposalState | null = null;
 
   try {
     const memberPropId = await queryWithRetry<BigNumber>(() =>
@@ -608,7 +609,8 @@ export async function prepareMemberElectionTrigger(
     to: nomineeGovernorAddress,
     data: calldata,
     value: "0",
-    chain: "L2",
+    chain: "arb1",
+    chainId: 42161,
     description: `execute() on NomineeElectionGovernor to trigger member election #${electionStatus.electionIndex}`,
   };
 }

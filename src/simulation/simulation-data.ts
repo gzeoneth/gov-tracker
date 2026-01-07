@@ -8,13 +8,12 @@
 import { ethers } from "ethers";
 import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
 import type { DecodedCalldata } from "../types/calldata";
-import { ChainContext } from "../types";
+import { Chain, chainToChainId } from "../types";
 import type {
   RetryableSimulationData,
   TimelockSimulationData,
   CallSimulationData,
   ExtractedSimulation,
-  SimulationChainType,
 } from "../types/simulation";
 import { ADDRESSES } from "../constants";
 import { hashOperationBatch } from "../utils/operation-id";
@@ -39,25 +38,10 @@ export const TIMELOCK_SELECTORS = {
 } as const;
 
 /**
- * Convert ChainContext to SimulationChainType
- */
-export function chainContextToSimType(chain: ChainContext): SimulationChainType {
-  switch (chain) {
-    case "ethereum":
-      return "L1";
-    case "arb1":
-      return "Arb1";
-    case "nova":
-      return "Nova";
-    default:
-      return "unknown";
-  }
-}
-
-/**
  * Get network ID for chain
  */
-export function getNetworkId(chain: ChainContext): string {
+export function getNetworkId(chain: Chain): string {
+  if (chain === "unknown") return NETWORK_IDS.ethereum;
   return NETWORK_IDS[chain] ?? NETWORK_IDS.ethereum;
 }
 
@@ -74,9 +58,10 @@ export function prepareRetryableSimulation(
   l2Target: string,
   l2Calldata: string,
   l2Value: string,
-  l2Chain: ChainContext
+  l2Chain: Chain
 ): RetryableSimulationData {
   const networkId = getNetworkId(l2Chain);
+  const l2ChainId = chainToChainId(l2Chain) ?? 42161;
   const fromAddress = new Address(ADDRESSES.L1_TIMELOCK).applyAlias().value;
 
   return {
@@ -87,6 +72,7 @@ export function prepareRetryableSimulation(
     input: l2Calldata,
     value: l2Value || "0",
     l2Chain,
+    l2ChainId,
     l2Target,
     l2Calldata,
     l2Value: l2Value || "0",
@@ -180,7 +166,7 @@ function convertScheduleToExecute(calldata: string): string {
 export function prepareTimelockSimulation(
   timelockAddress: string,
   scheduleBatchCalldata: string,
-  chain: ChainContext = "ethereum"
+  chain: Chain = "ethereum"
 ): TimelockSimulationData | null {
   const batchParams = decodeScheduleBatchParams(scheduleBatchCalldata);
   if (!batchParams) return null;
@@ -230,10 +216,11 @@ export function prepareCallSimulation(
   target: string,
   calldata: string,
   value: string,
-  chain: ChainContext,
+  chain: Chain,
   from?: string
 ): CallSimulationData {
   const networkId = getNetworkId(chain);
+  const chainId = chainToChainId(chain) ?? 1;
 
   // Default sender based on chain
   let fromAddress = from;
@@ -252,7 +239,8 @@ export function prepareCallSimulation(
     to: target,
     input: calldata,
     value: value || "0",
-    chain: chainContextToSimType(chain),
+    chain,
+    chainId,
     target,
     calldata,
   };
@@ -263,7 +251,7 @@ export function prepareCallSimulation(
  */
 function processTimelockBatch(
   decoded: DecodedCalldata,
-  chainContext: ChainContext
+  chainContext: Chain
 ): ExtractedSimulation | null {
   if (decoded.signature?.match(/^schedule(Batch)?\(/)) {
     const isScheduleBatch = decoded.signature?.startsWith("scheduleBatch(");
@@ -341,7 +329,7 @@ function processGenericCall(
   nestedCall: DecodedCalldata,
   decoded: DecodedCalldata,
   index: number,
-  chainContext: ChainContext
+  chainContext: Chain
 ): ExtractedSimulation | null {
   if (nestedCall.signature && !nestedCall.isRetryable) {
     const addressArrayParam = decoded.parameters?.find((p) => p.type === "address[]");
@@ -374,15 +362,12 @@ function processGenericCall(
  */
 export function extractAllSimulationsFromDecoded(
   decoded: DecodedCalldata,
-  chainContext: ChainContext = "arb1"
+  chainContext: Chain = "arb1"
 ): ExtractedSimulation[] {
   const simulations: ExtractedSimulation[] = [];
 
-  // Use decoded chain context if available, otherwise use parameter
-  const effectiveChainContext = decoded.chainContext ?? chainContext;
-
   // 1. Check for Timelock Batch
-  const timelockSim = processTimelockBatch(decoded, effectiveChainContext);
+  const timelockSim = processTimelockBatch(decoded, chainContext);
   if (timelockSim) {
     simulations.push(timelockSim);
   }
@@ -401,20 +386,20 @@ export function extractAllSimulationsFromDecoded(
             simulations.push(retryableSim);
           } else {
             // Otherwise try as Generic Call
-            const callSim = processGenericCall(nestedCall, decoded, i, effectiveChainContext);
+            const callSim = processGenericCall(nestedCall, decoded, i, chainContext);
             if (callSim) {
               simulations.push(callSim);
             }
           }
 
-          // Recursively check deeper (nestedCall has its own chainContext)
-          simulations.push(...extractAllSimulationsFromDecoded(nestedCall, effectiveChainContext));
+          // Recursively check deeper
+          simulations.push(...extractAllSimulationsFromDecoded(nestedCall, chainContext));
         }
       }
 
-      // Check single nested call (bytes) (nested has its own chainContext)
+      // Check single nested call (bytes)
       if (param.nested) {
-        simulations.push(...extractAllSimulationsFromDecoded(param.nested, effectiveChainContext));
+        simulations.push(...extractAllSimulationsFromDecoded(param.nested, chainContext));
       }
     }
   }

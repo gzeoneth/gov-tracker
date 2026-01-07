@@ -4,7 +4,7 @@
  * Provides titles, descriptions, and timing info for governance stages.
  */
 
-import type { StageType, ProposalType } from "../types";
+import type { StageType, ProposalType, Chain } from "../types";
 import { GOVERNANCE_STAGE_DURATION_DAYS } from "../constants";
 
 /**
@@ -16,7 +16,7 @@ export interface StageMetadata {
   /** Longer description of what happens in this stage */
   description: string;
   /** Which chain this stage occurs on */
-  chain: "L1" | "L2" | "NOVA" | "CROSS_CHAIN";
+  chain: Chain | "CROSS_CHAIN";
   /** Estimated duration in days (may vary by governor type) */
   estimatedDays: number;
   /** Whether this stage requires user action to proceed */
@@ -27,26 +27,26 @@ const BASE_METADATA: Record<StageType, Omit<StageMetadata, "estimatedDays">> = {
   PROPOSAL_CREATED: {
     title: "Proposal Created",
     description: "Proposal submitted on-chain and awaiting voting period to begin",
-    chain: "L2",
+    chain: "arb1",
     requiresAction: false,
   },
   VOTING_ACTIVE: {
     title: "Voting Active",
     description: "Token holders are voting on the proposal",
-    chain: "L2",
+    chain: "arb1",
     requiresAction: false,
   },
   PROPOSAL_QUEUED: {
     title: "Proposal Queued",
     description: "Voting succeeded, proposal queued in L2 timelock",
-    chain: "L2",
+    chain: "arb1",
     requiresAction: false,
   },
   L2_TIMELOCK: {
     title: "L2 Timelock",
     description:
       "L2 timelock delay and execution. Status: PENDING (waiting for delay), READY (can execute), COMPLETED (executed)",
-    chain: "L2",
+    chain: "arb1",
     requiresAction: true,
   },
   L2_TO_L1_MESSAGE: {
@@ -60,7 +60,7 @@ const BASE_METADATA: Record<StageType, Omit<StageMetadata, "estimatedDays">> = {
     title: "L1 Timelock",
     description:
       "L1 timelock delay and execution. Status: PENDING (waiting for delay), READY (can execute), COMPLETED (executed)",
-    chain: "L1",
+    chain: "ethereum",
     requiresAction: true,
   },
   RETRYABLE_EXECUTED: {

@@ -3,12 +3,13 @@
  */
 
 import {
-  ChainType,
+  Chain,
+  ChainId,
+  L2Chain,
   StageType,
   StageStatus,
   StageTransaction,
   StageTiming,
-  TargetChainType,
 } from "./core";
 import { SerializedCallScheduledData } from "./timelock";
 import {
@@ -116,12 +117,6 @@ export interface TimelockStageData extends BaseTimelockData {
   isBatchOperation?: boolean;
 }
 
-/** Data for L2 timelock stages */
-export type L2TimelockData = TimelockStageData;
-
-/** Data for L1 timelock stages */
-export type L1TimelockData = TimelockStageData;
-
 /**
  * Data for L2_TO_L1_MESSAGE stage
  */
@@ -136,6 +131,7 @@ export interface L2ToL1MessageStageData extends BaseStageData {
   messageDetails?: Array<{ index: number; status: string }>;
   hasMultipleMessages?: boolean;
   /** L2ToL1Tx event from Arbitrum SDK (contains message data for salt decoding) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   l2ToL1TxEvent?: any;
 }
 
@@ -144,8 +140,9 @@ export interface L2ToL1MessageStageData extends BaseStageData {
  */
 export interface RetryableStageData extends BaseStageData {
   ticketCount?: number;
-  /** All target chains for retryables (can be both Arb1 and Nova) */
-  targetChains?: TargetChainType[];
+  /** All target chains for retryables (can be both arb1 and nova) */
+  targetChains?: L2Chain[];
+  targetChainIds?: ChainId[];
   l2TxHash?: string;
   l1Block?: number;
   tickets?: RetryableTicketInfo[];
@@ -169,9 +166,9 @@ export interface StageDataMap {
   PROPOSAL_CREATED: ProposalCreatedData;
   VOTING_ACTIVE: VotingActiveData;
   PROPOSAL_QUEUED: ProposalQueuedData;
-  L2_TIMELOCK: L2TimelockData;
+  L2_TIMELOCK: TimelockStageData;
   L2_TO_L1_MESSAGE: L2ToL1MessageStageData;
-  L1_TIMELOCK: L1TimelockData;
+  L1_TIMELOCK: TimelockStageData;
   RETRYABLE_EXECUTED: RetryableStageData;
 }
 
@@ -182,7 +179,7 @@ export type TrackedStageData = Partial<
   ProposalCreatedData &
     VotingActiveData &
     ProposalQueuedData &
-    L2TimelockData &
+    TimelockStageData &
     L2ToL1MessageStageData &
     RetryableStageData
 > &
@@ -199,7 +196,8 @@ export type TrackedStageData = Partial<
 export interface TrackedStage {
   type: StageType;
   status: StageStatus;
-  chain: ChainType;
+  chain: Chain;
+  chainId: ChainId;
   transactions: StageTransaction[];
   data: TrackedStageData;
   timing?: StageTiming;

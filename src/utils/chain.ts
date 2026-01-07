@@ -3,7 +3,24 @@
  */
 
 import { ethers } from "ethers";
+import { CHAIN_IDS } from "../constants";
 import { Chain, ChainId, chainIdToChain } from "../types";
+
+/**
+ * Map Chain to numeric chain ID
+ */
+export function chainToId(chain: Chain): ChainId | undefined {
+  switch (chain) {
+    case "ethereum":
+      return CHAIN_IDS.ETHEREUM;
+    case "arb1":
+      return CHAIN_IDS.ARB_ONE;
+    case "nova":
+      return CHAIN_IDS.NOVA;
+    case "unknown":
+      return undefined;
+  }
+}
 
 /**
  * Get chain type from provider network.

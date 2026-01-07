@@ -659,7 +659,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x123",
         blockNumber: 100,
-        chain: "L1",
+        chain: "ethereum",
+        chainId: 1,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://etherscan.io/tx/0x123");

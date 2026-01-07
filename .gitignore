@@ -4,6 +4,12 @@ node_modules/
 # Build output
 dist/
 
+# Test compilation artifacts
+test/**/*.d.ts
+test/**/*.d.ts.map
+test/**/*.js
+test/**/*.js.map
+
 # Reference files - keep PLAN.md, COMPARE.md, ISSUE*.md
 # (per CLAUDE.md: write important research to ./ref/)
 

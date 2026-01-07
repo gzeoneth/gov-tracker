@@ -12,7 +12,6 @@ import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
 import {
   isRetryableTicketMagic,
   decodeRetryableTicket,
-  getRetryableChainName,
   retryableChainToContext,
 } from "./retryable-ticket";
 import { getAddressLabel } from "./address-utils";
@@ -164,7 +163,6 @@ async function processNestedParams(
           const retryable = decodeRetryableTicket(bytesItem);
           if (retryable) {
             const l2Chain = retryableChainToContext(retryable.chain);
-            const chainName = getRetryableChainName(retryable.chain);
 
             // Decode l2Calldata with L2 chain context
             let nestedL2Call: DecodedCalldata | undefined;
@@ -180,7 +178,8 @@ async function processNestedParams(
             // Create retryable structure with decoded L2 call
             const retryableDecoded: DecodedCalldata = {
               selector: "",
-              signature: `Retryable Ticket → ${chainName}`,
+              signature: null,
+              isRetryable: true,
               parameters: [
                 {
                   name: "inbox",

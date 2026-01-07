@@ -42,6 +42,9 @@ export interface DecodedCalldata {
 
   /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
   targetChain?: "arb1" | "nova" | "unknown";
+
+  /** Whether this decoded calldata represents a retryable ticket */
+  isRetryable?: boolean;
 }
 
 /**

@@ -75,7 +75,12 @@ function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
   const prefix = "  ".repeat(indent);
   const lines: string[] = [];
 
-  if (decoded.signature) {
+  if (decoded.isRetryable) {
+    // Format retryable ticket label
+    const chainLabel =
+      decoded.targetChain === "arb1" ? "Arb1" : decoded.targetChain === "nova" ? "Nova" : "Unknown";
+    lines.push(`${prefix}Retryable Ticket → ${chainLabel}`);
+  } else if (decoded.signature) {
     lines.push(`${prefix}${decoded.signature}`);
   } else {
     lines.push(`${prefix}Unknown function (${decoded.selector})`);

@@ -284,7 +284,7 @@ function processTimelockBatch(
   decoded: DecodedCalldata,
   chainContext: ChainContext
 ): ExtractedSimulation | null {
-  if (decoded.functionName?.match(/^schedule(Batch)?$/)) {
+  if (decoded.signature?.match(/^schedule(Batch)?\(/)) {
     // Ideally we use the contract address we are decoding on as the timelock address
     const targetAddress = decoded.decodingTarget;
 
@@ -300,7 +300,7 @@ function processTimelockBatch(
       if (sim) {
         return {
           simulation: sim,
-          label: `Timelock: ${decoded.functionName}`,
+          label: `Timelock: ${decoded.signature}`,
         };
       }
     }
@@ -315,27 +315,31 @@ function processRetryableTicket(
   nestedCall: DecodedCalldata,
   index: number
 ): ExtractedSimulation | null {
-  if (nestedCall.functionName?.startsWith("Retryable Ticket")) {
+  if (nestedCall.isRetryable) {
     const l2TargetParam = nestedCall.parameters?.find((p) => p.name === "l2Target");
     const l2CalldataParam = nestedCall.parameters?.find((p) => p.name === "l2Calldata");
     const l2ValueParam = nestedCall.parameters?.find((p) => p.name === "l2Value");
 
     if (l2TargetParam && l2CalldataParam) {
-      const isNova = nestedCall.functionName.includes("Nova");
-      const l2Chain: ChainContext = isNova ? "nova" : "arb1";
+      // Get chain from targetChain field
+      const chain = nestedCall.targetChain;
 
-      const sim = prepareRetryableSimulation(
-        l2TargetParam.value,
-        l2CalldataParam.value,
-        l2ValueParam?.value || "0",
-        l2Chain
-      );
+      // Only create simulation if chain is known (arb1 or nova)
+      if (chain === "arb1" || chain === "nova") {
+        const sim = prepareRetryableSimulation(
+          l2TargetParam.value,
+          l2CalldataParam.value,
+          l2ValueParam?.value || "0",
+          chain
+        );
 
-      return {
-        simulation: sim,
-        label: nestedCall.functionName,
-        batchIndex: index,
-      };
+        // Generate label from targetChain (use raw identifier)
+        return {
+          simulation: sim,
+          label: `Retryable Ticket → ${chain}`,
+          batchIndex: index,
+        };
+      }
     }
   }
   return null;
@@ -350,7 +354,7 @@ function processGenericCall(
   index: number,
   chainContext: ChainContext
 ): ExtractedSimulation | null {
-  if (nestedCall.functionName && !nestedCall.functionName.startsWith("Retryable Ticket")) {
+  if (nestedCall.signature && !nestedCall.isRetryable) {
     const addressArrayParam = decoded.parameters?.find((p) => p.type === "address[]");
     if (addressArrayParam) {
       const match = addressArrayParam.value.match(/\[(.*)\]/);
@@ -361,7 +365,7 @@ function processGenericCall(
           const sim = prepareCallSimulation(target, nestedCall.raw, "0", chainContext);
           return {
             simulation: sim,
-            label: `Call: ${nestedCall.functionName}`,
+            label: `Call: ${nestedCall.signature}`,
             batchIndex: index,
           };
         }

@@ -9,12 +9,7 @@ import Debug from "debug";
 import type { ChainContext, DecodedCalldata, DecodedParameter } from "../types/calldata";
 import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
-import {
-  isRetryableTicketMagic,
-  decodeRetryableTicket,
-  getRetryableChainName,
-  retryableChainToContext,
-} from "./retryable-ticket";
+import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
 import { getAddressLabel } from "./address-utils";
 
 const debug = Debug("gov-tracker:calldata");
@@ -48,7 +43,6 @@ export async function decodeCalldata(
   if (!calldata || calldata === "0x" || calldata.length < 10) {
     return {
       selector: "",
-      functionName: null,
       signature: null,
       parameters: null,
       raw: calldata || "0x",
@@ -67,7 +61,6 @@ export async function decodeCalldata(
     debug("Unknown signature for selector: %s", selector);
     return {
       selector,
-      functionName: null,
       signature: null,
       parameters: null,
       raw: calldata,
@@ -75,9 +68,6 @@ export async function decodeCalldata(
       chainContext,
     };
   }
-
-  // Use full signature as function name
-  const functionName = signature;
 
   // Determine chain context for nested content
   // sendTxToL1 means nested content is on L1
@@ -91,7 +81,6 @@ export async function decodeCalldata(
     debug("Failed to decode parameters for: %s", signature);
     return {
       selector,
-      functionName,
       signature,
       parameters: null,
       raw: calldata,
@@ -116,7 +105,6 @@ export async function decodeCalldata(
 
   return {
     selector,
-    functionName,
     signature,
     parameters: params,
     raw: calldata,
@@ -170,25 +158,26 @@ async function processNestedParams(
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
           if (retryable) {
-            const l2Chain = retryableChainToContext(retryable.chain);
-            const chainName = getRetryableChainName(retryable.chain);
+            // Determine L2 chain context for address labeling and nested decoding
+            const l2ChainContext: ChainContext | undefined =
+              retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
 
-            // Decode l2Calldata with L2 chain context
+            // Decode l2Calldata with L2 chain context only if chain is known
             let nestedL2Call: DecodedCalldata | undefined;
-            if (isLikelyCalldata(retryable.l2Calldata)) {
+            if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
               nestedL2Call = await decodeCalldata(
                 retryable.l2Calldata,
                 retryable.l2Target,
                 depth + 1,
-                l2Chain
+                l2ChainContext
               );
             }
 
             // Create retryable structure with decoded L2 call
             const retryableDecoded: DecodedCalldata = {
               selector: "",
-              functionName: `Retryable Ticket → ${chainName}`,
               signature: null,
+              isRetryable: true,
               parameters: [
                 {
                   name: "inbox",
@@ -204,7 +193,7 @@ async function processNestedParams(
                   value: retryable.l2Target,
                   rawValue: retryable.l2Target,
                   isNested: false,
-                  addressLabel: getAddressLabel(retryable.l2Target, l2Chain),
+                  addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
                 },
                 {
                   name: "l2Value",

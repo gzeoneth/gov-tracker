@@ -81,7 +81,7 @@ const { calldatas, targets } = stage.data;
 for (let i = 0; i < calldatas.length; i++) {
   const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
 
-  console.log(`${decoded.functionName}`);
+  console.log(`${decoded.signature}`);
   console.log(`Target: ${getAddressLabel(targets[i], "arb1")}`);
 
   // Extract simulation data

@@ -57,10 +57,15 @@ const KNOWN_ADDRESSES: Record<ChainContext, Record<string, string>> = {
  * Get known address label
  *
  * @param address - Contract address
- * @param chain - Chain context
+ * @param chain - Chain context (or undefined for unknown chains)
  * @returns Label if known, undefined otherwise
  */
-export function getAddressLabel(address: string, chain: ChainContext): string | undefined {
+export function getAddressLabel(
+  address: string,
+  chain: ChainContext | undefined
+): string | undefined {
+  if (!chain) return undefined;
+
   const chainAddresses = KNOWN_ADDRESSES[chain];
   if (!chainAddresses) return undefined;
 

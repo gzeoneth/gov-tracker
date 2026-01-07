@@ -289,13 +289,12 @@ const decoded = await decodeCalldata(
 
 console.log(decoded.signature);     // "execute(address,uint256,bytes,bytes32,bytes32)"
 console.log(decoded.selector);      // "0x134008d3"
-console.log(decoded.functionName);  // "execute(address,uint256,bytes,bytes32,bytes32)" (or null if unknown)
 
 if (decoded.parameters) {
   for (const param of decoded.parameters) {
     console.log(`${param.name}: ${param.value}`);
     if (param.nested) {
-      console.log("  → Nested call:", param.nested.functionName);
+      console.log("  → Nested call:", param.nested.signature);
     }
   }
 }
@@ -305,7 +304,6 @@ if (decoded.parameters) {
 ```typescript
 interface DecodedCalldata {
   selector: string;                 // 4-byte selector
-  functionName: string | null;      // Full function signature (null if unknown)
   signature: string | null;         // Full function signature (null if unknown)
   parameters: DecodedParameter[] | null;  // Decoded parameters (null if decoding failed)
   raw: string;                      // Raw calldata hex string

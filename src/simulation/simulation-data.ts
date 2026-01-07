@@ -266,14 +266,22 @@ function processTimelockBatch(
   chainContext: ChainContext
 ): ExtractedSimulation | null {
   if (decoded.signature?.match(/^schedule(Batch)?\(/)) {
-    // Ideally we use the contract address we are decoding on as the timelock address
+    const isScheduleBatch = decoded.signature?.startsWith("scheduleBatch(");
+
+    // Prefer the contract address we are decoding on as the timelock address whenever available.
+    // For scheduleBatch, there is no single timelock "target" argument, so decodingTarget is required.
     const targetAddress = decoded.decodingTarget;
 
-    // Fallback: Check for 'target' parameter if it's a simple schedule() call
-    const targetParam = decoded.parameters?.find((p) => p.type === "address");
+    // Fallback: for simple schedule() (non-batch) calls only, derive the timelock address
+    // from the first address-typed parameter (typically the "target" of the scheduled call).
+    // We deliberately DO NOT apply this heuristic to scheduleBatch(), where multiple targets
+    // are involved and there is no single canonical address.
+    const targetParam = !isScheduleBatch
+      ? decoded.parameters?.find((p) => p.type === "address")
+      : undefined;
 
-    // Use explicit target or first address arg
-    // Note: For scheduleBatch, there is no single address arg, so decodingTarget is essential
+    // Use explicit decodingTarget when present, otherwise fall back to the first address arg
+    // for non-batch schedule() calls as described above.
     const timelockAddress = targetAddress || targetParam?.value;
 
     if (timelockAddress && decoded.raw) {

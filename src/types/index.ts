@@ -16,6 +16,7 @@
 export {
   StageType,
   StageStatus,
+  ChainContext,
   ChainType,
   TargetChainType,
   StageTransaction,
@@ -123,3 +124,26 @@ export {
   ElectionStatus,
   ElectionCheckResult,
 } from "./election";
+
+// Calldata decoding types
+export {
+  DecodingSource,
+  DecodedCalldata,
+  DecodedParameter,
+  RetryableTicketData,
+  KnownAddress,
+  SignatureEntry,
+  ExtractedCalldata,
+} from "./calldata";
+
+// Simulation data types
+export {
+  SimulationType,
+  SimulationChainType,
+  BaseSimulationData,
+  RetryableSimulationData,
+  TimelockSimulationData,
+  CallSimulationData,
+  SimulationData,
+  ExtractedSimulation,
+} from "./simulation";

@@ -51,9 +51,13 @@ export interface ProposalCreatedData extends BaseStageData {
  */
 export interface VotingActiveData extends BaseStageData {
   forVotes: string;
+  forVotesRaw: string;
   againstVotes: string;
+  againstVotesRaw: string;
   abstainVotes: string;
+  abstainVotesRaw: string;
   quorum: string;
+  quorumRaw: string;
   quorumReached: boolean;
   deadline: string;
   extendedDeadline?: string;

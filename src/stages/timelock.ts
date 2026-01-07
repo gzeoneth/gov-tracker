@@ -284,30 +284,26 @@ async function trackTimelock(
     const values = allData.map((d) => d.value);
     const payloads = allData.map((d) => d.data);
 
-    const isBatch = await validateSaltBatch(
-      timelockAddress,
-      operationId,
-      { targets, values, payloads, predecessor, salt },
-      provider
-    );
+    const isBatch = validateSaltBatch(operationId, {
+      targets,
+      values,
+      payloads,
+      predecessor,
+      salt,
+    });
 
     if (isBatch) {
       builder.data({ isBatchOperation: true });
       log("%s: Operation uses scheduleBatch", config.logPrefix);
     } else {
       // Try single validation
-      const isSingle = await validateSalt(
-        timelockAddress,
-        operationId,
-        {
-          target: allData[0].target,
-          value: allData[0].value,
-          data: allData[0].data,
-          predecessor,
-          salt,
-        },
-        provider
-      );
+      const isSingle = validateSalt(operationId, {
+        target: allData[0].target,
+        value: allData[0].value,
+        data: allData[0].data,
+        predecessor,
+        salt,
+      });
 
       if (isSingle) {
         builder.data({ isBatchOperation: false });
@@ -556,7 +552,7 @@ export async function calculateRetryableExecutionValue(
     return null;
   }
 
-  let decoded;
+  let decoded: ethers.utils.Result;
   try {
     decoded = ethers.utils.defaultAbiCoder.decode(
       ["address", "address", "uint256", "uint256", "uint256", "bytes"],
@@ -645,12 +641,13 @@ export async function prepareTimelockOperation(
 
   // Validate the cached salt (unless skipped)
   if (!options.skipSaltValidation) {
-    const isValid = await validateSalt(
-      timelockAddress,
-      operationId,
-      { target: params.target, value: params.value, data: params.data, predecessor, salt },
-      provider
-    );
+    const isValid = validateSalt(operationId, {
+      target: params.target,
+      value: params.value,
+      data: params.data,
+      predecessor,
+      salt,
+    });
 
     if (!isValid) {
       return failPrepare(
@@ -722,18 +719,13 @@ export async function prepareTimelockBatch(
 
   // Validate the cached salt (unless skipped)
   if (!options.skipSaltValidation) {
-    const isValid = await validateSaltBatch(
-      timelockAddress,
-      operationId,
-      {
-        targets: params.targets,
-        values: params.values,
-        payloads: params.payloads,
-        predecessor,
-        salt,
-      },
-      provider
-    );
+    const isValid = validateSaltBatch(operationId, {
+      targets: params.targets,
+      values: params.values,
+      payloads: params.payloads,
+      predecessor,
+      salt,
+    });
 
     if (!isValid) {
       return failPrepare(

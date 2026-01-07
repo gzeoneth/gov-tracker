@@ -29,98 +29,9 @@ import { hashOperation, hashOperationBatch } from "../src/utils/operation-id";
 import { isValidOperationId } from "./helpers/discovery-helpers";
 import { queryWithRetry, delay, isRetryableError } from "../src/utils/rpc-utils";
 
-/**
- * Local implementation of hashOperation for testing
- * This mirrors the contract's pure function: keccak256(abi.encode(target, value, data, predecessor, salt))
- */
-function localHashOperation(params: {
-  target: string;
-  value: BigNumber;
-  data: string;
-  predecessor: string;
-  salt: string;
-}): string {
-  return ethers.utils.keccak256(
-    ethers.utils.defaultAbiCoder.encode(
-      ["address", "uint256", "bytes", "bytes32", "bytes32"],
-      [params.target, params.value, params.data, params.predecessor, params.salt]
-    )
-  );
-}
-
-/**
- * Local implementation of hashOperationBatch for testing
- */
-function localHashOperationBatch(params: {
-  targets: string[];
-  values: BigNumber[];
-  payloads: string[];
-  predecessor: string;
-  salt: string;
-}): string {
-  return ethers.utils.keccak256(
-    ethers.utils.defaultAbiCoder.encode(
-      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
-      [params.targets, params.values, params.payloads, params.predecessor, params.salt]
-    )
-  );
-}
-
-/**
- * Create a mock provider that returns computed hash values
- */
-function createMockProvider(): ethers.providers.Provider {
-  const mockProvider = {
-    call: vi.fn().mockImplementation(async (tx) => {
-      const iface = new ethers.utils.Interface([
-        "function hashOperation(address target, uint256 value, bytes calldata data, bytes32 predecessor, bytes32 salt) public pure returns (bytes32)",
-        "function hashOperationBatch(address[] calldata targets, uint256[] calldata values, bytes[] calldata payloads, bytes32 predecessor, bytes32 salt) public pure returns (bytes32)",
-      ]);
-
-      // Decode the call data
-      try {
-        const parsed = iface.parseTransaction({ data: tx.data });
-
-        if (parsed.name === "hashOperation") {
-          const [target, value, data, predecessor, salt] = parsed.args;
-          const result = localHashOperation({
-            target,
-            value,
-            data,
-            predecessor,
-            salt,
-          });
-          return result;
-        }
-
-        if (parsed.name === "hashOperationBatch") {
-          const [targets, values, payloads, predecessor, salt] = parsed.args;
-          const result = localHashOperationBatch({
-            targets,
-            values,
-            payloads,
-            predecessor,
-            salt,
-          });
-          return result;
-        }
-      } catch {
-        throw new Error("Unknown function call");
-      }
-    }),
-    _isProvider: true,
-  } as unknown as ethers.providers.Provider;
-
-  return mockProvider;
-}
-
-const MOCK_TIMELOCK_ADDRESS = "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0";
-
 describe("Operation ID Utilities", () => {
-  let mockProvider: ethers.providers.Provider;
-
   beforeEach(() => {
-    mockProvider = createMockProvider();
+    // No-op
   });
 
   afterEach(() => {
@@ -137,8 +48,8 @@ describe("Operation ID Utilities", () => {
         salt: ethers.utils.id("test proposal description"),
       };
 
-      const id1 = await hashOperation(MOCK_TIMELOCK_ADDRESS, params, mockProvider);
-      const id2 = await hashOperation(MOCK_TIMELOCK_ADDRESS, params, mockProvider);
+      const id1 = hashOperation(params);
+      const id2 = hashOperation(params);
 
       expect(id1).toBe(id2);
       expect(id1).toMatch(/^0x[a-fA-F0-9]{64}$/);
@@ -152,16 +63,8 @@ describe("Operation ID Utilities", () => {
         predecessor: ethers.constants.HashZero,
       };
 
-      const id1 = await hashOperation(
-        MOCK_TIMELOCK_ADDRESS,
-        { ...baseParams, salt: ethers.constants.HashZero },
-        mockProvider
-      );
-      const id2 = await hashOperation(
-        MOCK_TIMELOCK_ADDRESS,
-        { ...baseParams, salt: ethers.utils.id("description") },
-        mockProvider
-      );
+      const id1 = hashOperation({ ...baseParams, salt: ethers.constants.HashZero });
+      const id2 = hashOperation({ ...baseParams, salt: ethers.utils.id("description") });
 
       expect(id1).not.toBe(id2);
     });
@@ -174,22 +77,14 @@ describe("Operation ID Utilities", () => {
         salt: ethers.constants.HashZero,
       };
 
-      const id1 = await hashOperation(
-        MOCK_TIMELOCK_ADDRESS,
-        {
-          ...baseParams,
-          target: "0x1234567890123456789012345678901234567890",
-        },
-        mockProvider
-      );
-      const id2 = await hashOperation(
-        MOCK_TIMELOCK_ADDRESS,
-        {
-          ...baseParams,
-          target: "0x0987654321098765432109876543210987654321",
-        },
-        mockProvider
-      );
+      const id1 = hashOperation({
+        ...baseParams,
+        target: "0x1234567890123456789012345678901234567890",
+      });
+      const id2 = hashOperation({
+        ...baseParams,
+        target: "0x0987654321098765432109876543210987654321",
+      });
 
       expect(id1).not.toBe(id2);
     });
@@ -208,8 +103,8 @@ describe("Operation ID Utilities", () => {
         salt: ethers.constants.HashZero,
       };
 
-      const id1 = await hashOperationBatch(MOCK_TIMELOCK_ADDRESS, params, mockProvider);
-      const id2 = await hashOperationBatch(MOCK_TIMELOCK_ADDRESS, params, mockProvider);
+      const id1 = hashOperationBatch(params);
+      const id2 = hashOperationBatch(params);
 
       expect(id1).toBe(id2);
       expect(id1).toMatch(/^0x[a-fA-F0-9]{64}$/);
@@ -237,8 +132,8 @@ describe("Operation ID Utilities", () => {
         salt: ethers.constants.HashZero,
       };
 
-      const id1 = await hashOperationBatch(MOCK_TIMELOCK_ADDRESS, params1, mockProvider);
-      const id2 = await hashOperationBatch(MOCK_TIMELOCK_ADDRESS, params2, mockProvider);
+      const id1 = hashOperationBatch(params1);
+      const id2 = hashOperationBatch(params2);
 
       expect(id1).not.toBe(id2);
     });
@@ -269,11 +164,9 @@ describe("Operation ID Utilities", () => {
         salt: ethers.constants.HashZero,
       };
 
-      const operationId = await hashOperation(MOCK_TIMELOCK_ADDRESS, params, mockProvider);
+      const operationId = hashOperation(params);
 
-      expect(await validateSalt(MOCK_TIMELOCK_ADDRESS, operationId, params, mockProvider)).toBe(
-        true
-      );
+      expect(validateSalt(operationId, params)).toBe(true);
     });
 
     it("should return false for non-matching salt", async () => {
@@ -287,9 +180,7 @@ describe("Operation ID Utilities", () => {
 
       const wrongOperationId = "0x0000000000000000000000000000000000000000000000000000000000000001";
 
-      expect(
-        await validateSalt(MOCK_TIMELOCK_ADDRESS, wrongOperationId, params, mockProvider)
-      ).toBe(false);
+      expect(validateSalt(wrongOperationId, params)).toBe(false);
     });
   });
 
@@ -351,7 +242,12 @@ describe("RPC Utilities", () => {
     it("should return result on first try success", async () => {
       const fn = vi.fn().mockResolvedValue("success");
 
-      const result = await queryWithRetry(fn, { maxRetries: 3 });
+      const result = await queryWithRetry(fn, {
+        maxRetries: 3,
+        initialDelay: 0,
+        maxDelay: 0,
+        backoffMultiplier: 1,
+      });
 
       expect(result).toBe("success");
       expect(fn).toHaveBeenCalledTimes(1);
@@ -363,7 +259,12 @@ describe("RPC Utilities", () => {
         .mockRejectedValueOnce(new Error("rate limit"))
         .mockResolvedValue("success");
 
-      const result = await queryWithRetry(fn, { maxRetries: 3, initialDelay: 10 });
+      const result = await queryWithRetry(fn, {
+        maxRetries: 3,
+        initialDelay: 10,
+        maxDelay: 100,
+        backoffMultiplier: 2,
+      });
 
       expect(result).toBe("success");
       expect(fn).toHaveBeenCalledTimes(2);

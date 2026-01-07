@@ -63,11 +63,50 @@ if (readyStage) {
 }
 ```
 
+## Calldata Decoding & Simulation
+
+Decode proposal calldata and prepare simulation data for Tenderly, Foundry, or other tools.
+
+```typescript
+import {
+  decodeCalldata,
+  extractAllSimulationsFromDecoded,
+  getAddressLabel
+} from "@gzeoneth/gov-tracker";
+
+// Decode proposal actions
+const stage = result.stages[0]; // PROPOSAL_CREATED
+const { calldatas, targets } = stage.data;
+
+for (let i = 0; i < calldatas.length; i++) {
+  const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
+
+  console.log(`${decoded.signature}`);
+  console.log(`Target: ${getAddressLabel(targets[i], "arb1")}`);
+
+  // Extract simulation data
+  const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
+  for (const sim of sims) {
+    console.log(`Network: ${sim.simulation.networkId}`);
+    console.log(`From: ${sim.simulation.from}`);
+    console.log(`To: ${sim.simulation.to}`);
+  }
+}
+```
+
+See [Examples](./docs/EXAMPLES.md#calldata-decoding--simulation) for Tenderly and Foundry integration.
+
 ## CLI
 
 ```bash
 # Track a proposal by transaction hash
 npx @gzeoneth/gov-tracker track --tx 0x...
+
+# Decode and inspect calldata
+npx @gzeoneth/gov-tracker track --tx 0x... --inspect-only
+
+# Show simulation data for Tenderly/Foundry integration
+npx @gzeoneth/gov-tracker track --tx 0x... --show-simulation
 
 # Execute ready stages
 npx @gzeoneth/gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY

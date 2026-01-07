@@ -62,7 +62,7 @@ import {
   parseChunkingConfig,
 } from "./lib/cli";
 import { decodeCalldata, extractCalldataFromStage } from "../calldata";
-import { ChainContext } from "../types";
+import { Chain } from "../types";
 import type { DecodedCalldata } from "../types/calldata";
 
 // ============================================================================
@@ -415,7 +415,7 @@ trackCmd
       const providers = createProvidersFromOptions(opts);
       const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
       const gasSettings: GasSettings = parseGasSettings(opts);
-      const chainContext: ChainContext = "arb1";
+      const chainContext: Chain = "arb1";
 
       if (opts.verbose) {
         console.log(

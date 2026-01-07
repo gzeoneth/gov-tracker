@@ -44,10 +44,6 @@ export type {
   StageTiming,
   StageDataMap,
   TypedTrackedStage,
-  // Legacy types (deprecated)
-  ChainType,
-  TargetChainType,
-  ChainContext,
   // Tracking types
   StageTrackingContext,
   NextStageHints,
@@ -252,7 +248,7 @@ export type { GovernorProposalParams } from "./stages/proposal-queued";
 // ============================================================================
 
 // URL generation
-export { getTxUrl, getStageTransactionUrl, chainTypeToId } from "./utils/urls";
+export { getTxUrl, getStageTransactionUrl } from "./utils/urls";
 
 // Stage metadata
 export {

@@ -53,69 +53,6 @@ export function chainToChainId(chain: Chain): ChainId | undefined {
   return CHAIN_ID_MAP[chain];
 }
 
-/**
- * Convert legacy ChainType to new Chain type
- * @deprecated For migration only
- */
-export function legacyChainTypeToChain(chainType: "L1" | "L2" | "NOVA"): Chain {
-  switch (chainType) {
-    case "L1":
-      return "ethereum";
-    case "L2":
-      return "arb1";
-    case "NOVA":
-      return "nova";
-  }
-}
-
-/**
- * Convert new Chain type to legacy ChainType
- * @deprecated For migration only
- */
-export function chainToLegacyChainType(chain: Chain): "L1" | "L2" | "NOVA" {
-  switch (chain) {
-    case "ethereum":
-      return "L1";
-    case "arb1":
-      return "L2";
-    case "nova":
-      return "NOVA";
-    case "unknown":
-      return "L2"; // Default to L2 for unknown
-  }
-}
-
-/**
- * Convert legacy TargetChainType to new Chain type
- * @deprecated For migration only
- */
-export function legacyTargetChainToChain(targetChain: "Arb1" | "Nova"): Chain {
-  return targetChain === "Arb1" ? "arb1" : "nova";
-}
-
-/**
- * Convert new Chain type to legacy TargetChainType
- * @deprecated For migration only
- */
-export function chainToLegacyTargetChain(chain: Chain): "Arb1" | "Nova" | undefined {
-  switch (chain) {
-    case "arb1":
-      return "Arb1";
-    case "nova":
-      return "Nova";
-    default:
-      return undefined;
-  }
-}
-
-// Legacy type aliases (deprecated - use Chain instead)
-/** @deprecated Use Chain instead */
-export type ChainType = "L1" | "L2" | "NOVA";
-/** @deprecated Use Chain instead */
-export type TargetChainType = "Arb1" | "Nova";
-/** @deprecated Use Chain instead */
-export type ChainContext = Chain;
-
 // Stage Types
 
 export type StageType =

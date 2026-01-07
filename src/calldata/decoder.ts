@@ -7,7 +7,7 @@
 
 import Debug from "debug";
 import type { DecodedCalldata, DecodedParameter } from "../types/calldata";
-import { ChainContext } from "../types";
+import { Chain } from "../types";
 import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
 import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
@@ -38,7 +38,7 @@ export async function decodeCalldata(
   calldata: string,
   targetAddress?: string,
   depth = 0,
-  chainContext: ChainContext = "arb1"
+  chainContext: Chain = "arb1"
 ): Promise<DecodedCalldata> {
   // Handle empty or invalid calldata
   if (!calldata || calldata === "0x" || calldata.length < 10) {
@@ -48,7 +48,6 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata || "0x",
       decodingSource: "failed",
-      chainContext,
     };
   }
 
@@ -66,14 +65,13 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata,
       decodingSource: "failed",
-      chainContext,
     };
   }
 
   // Determine chain context for nested content
   // sendTxToL1 means nested content is on L1
   const isSendTxToL1 = selector === SEND_TX_TO_L1_SELECTOR;
-  const nestedContext: ChainContext = isSendTxToL1 ? "ethereum" : chainContext;
+  const nestedContext: Chain = isSendTxToL1 ? "ethereum" : chainContext;
 
   // Decode parameters
   const decoded = decodeParameters(calldata, signature, chainContext);
@@ -86,7 +84,6 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata,
       decodingSource: source,
-      chainContext,
     };
   }
 
@@ -111,7 +108,6 @@ export async function decodeCalldata(
     raw: calldata,
     decodingSource: source,
     decodingTarget: targetAddress,
-    chainContext,
   };
 }
 
@@ -121,7 +117,7 @@ export async function decodeCalldata(
 async function processNestedParams(
   params: DecodedParameter[],
   rawDecoded: unknown[],
-  chainContext: ChainContext,
+  chainContext: Chain,
   depth: number
 ): Promise<void> {
   // Find address[] parameter (for batch operations, provides targets)
@@ -159,7 +155,7 @@ async function processNestedParams(
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
           // Determine L2 chain context for address labeling and nested decoding
-          const l2ChainContext: ChainContext | undefined =
+          const l2ChainContext: Chain | undefined =
             retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
 
           // Decode l2Calldata with L2 chain context only if chain is known
@@ -227,7 +223,6 @@ async function processNestedParams(
             ],
             raw: bytesItem,
             decodingSource: "local",
-            chainContext: "ethereum", // Retryable tickets are created on L1
             targetChain: retryable.chain, // Explicit target L2 chain field
           };
 
@@ -269,7 +264,7 @@ async function processNestedParams(
 export async function decodeCalldataArray(
   calldatas: string[],
   targets: string[],
-  chainContext: ChainContext = "arb1"
+  chainContext: Chain = "arb1"
 ): Promise<DecodedCalldata[]> {
   const results: DecodedCalldata[] = [];
 

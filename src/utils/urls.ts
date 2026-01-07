@@ -18,21 +18,6 @@ export function chainToId(chain: Chain): ChainId | undefined {
 }
 
 /**
- * @deprecated Use chainToId instead
- * Map legacy ChainType to numeric chain ID
- */
-export function chainTypeToId(chain: "L1" | "L2" | "NOVA"): number {
-  switch (chain) {
-    case "L1":
-      return CHAIN_IDS.ETHEREUM;
-    case "L2":
-      return CHAIN_IDS.ARB_ONE;
-    case "NOVA":
-      return CHAIN_IDS.NOVA;
-  }
-}
-
-/**
  * Explorer base URLs by chain
  */
 const EXPLORER_URLS: Record<Exclude<Chain, "unknown">, string> = {

@@ -38,14 +38,6 @@ export const TIMELOCK_SELECTORS = {
 } as const;
 
 /**
- * Convert ChainContext to SimulationChainType - DEPRECATED
- * @deprecated Chain is now used directly
- */
-export function chainContextToSimType(chain: Chain): Chain {
-  return chain;
-}
-
-/**
  * Get network ID for chain
  */
 export function getNetworkId(chain: Chain): string {
@@ -374,11 +366,8 @@ export function extractAllSimulationsFromDecoded(
 ): ExtractedSimulation[] {
   const simulations: ExtractedSimulation[] = [];
 
-  // Use decoded chain context if available, otherwise use parameter
-  const effectiveChainContext = decoded.chainContext ?? chainContext;
-
   // 1. Check for Timelock Batch
-  const timelockSim = processTimelockBatch(decoded, effectiveChainContext);
+  const timelockSim = processTimelockBatch(decoded, chainContext);
   if (timelockSim) {
     simulations.push(timelockSim);
   }
@@ -397,20 +386,20 @@ export function extractAllSimulationsFromDecoded(
             simulations.push(retryableSim);
           } else {
             // Otherwise try as Generic Call
-            const callSim = processGenericCall(nestedCall, decoded, i, effectiveChainContext);
+            const callSim = processGenericCall(nestedCall, decoded, i, chainContext);
             if (callSim) {
               simulations.push(callSim);
             }
           }
 
-          // Recursively check deeper (nestedCall has its own chainContext)
-          simulations.push(...extractAllSimulationsFromDecoded(nestedCall, effectiveChainContext));
+          // Recursively check deeper
+          simulations.push(...extractAllSimulationsFromDecoded(nestedCall, chainContext));
         }
       }
 
-      // Check single nested call (bytes) (nested has its own chainContext)
+      // Check single nested call (bytes)
       if (param.nested) {
-        simulations.push(...extractAllSimulationsFromDecoded(param.nested, effectiveChainContext));
+        simulations.push(...extractAllSimulationsFromDecoded(param.nested, chainContext));
       }
     }
   }

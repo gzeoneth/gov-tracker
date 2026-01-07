@@ -621,24 +621,10 @@ describe("Tracker Creation (Unit Tests)", () => {
 import type { StageType, StageTransaction } from "../src/types";
 
 // URL utility tests
-import { chainTypeToId, getExplorerUrl, getTxUrl, getStageTransactionUrl } from "../src/utils/urls";
+import { getExplorerUrl, getTxUrl, getStageTransactionUrl } from "../src/utils/urls";
 import { CHAIN_IDS } from "../src/constants";
 
 describe("URL Utilities", () => {
-  describe("chainTypeToId", () => {
-    it("should return Ethereum chain ID for L1", () => {
-      expect(chainTypeToId("L1")).toBe(CHAIN_IDS.ETHEREUM);
-    });
-
-    it("should return Arbitrum One chain ID for L2", () => {
-      expect(chainTypeToId("L2")).toBe(CHAIN_IDS.ARB_ONE);
-    });
-
-    it("should return Nova chain ID for NOVA", () => {
-      expect(chainTypeToId("NOVA")).toBe(CHAIN_IDS.NOVA);
-    });
-  });
-
   describe("getExplorerUrl", () => {
     it("should return Etherscan URL for Ethereum", () => {
       const url = getExplorerUrl(1, "tx", "0x123");

@@ -9,7 +9,6 @@
 export {
   NETWORK_IDS,
   TIMELOCK_SELECTORS,
-  chainContextToSimType,
   getNetworkId,
   prepareRetryableSimulation,
   prepareTimelockSimulation,

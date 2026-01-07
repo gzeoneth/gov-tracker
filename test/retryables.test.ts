@@ -98,7 +98,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         expect(targets.length).toBeGreaterThan(0);
 
         // Should include Arb1 (L2 chain type)
-        const arb1Target = targets.find((t) => t.chain === "L2");
+        const arb1Target = targets.find((t) => t.chain === "arb1");
         expect(arb1Target).toBeDefined();
         if (arb1Target) {
           expect(arb1Target.inboxAddress.toLowerCase()).toBe(
@@ -129,14 +129,14 @@ describe.skipIf(process.env.NO_RPC === "1")(
         const result = retryableResult;
 
         expect(result.stage.type).toBe("RETRYABLE_EXECUTED");
-        expect(result.stage.chain).toBe("L2");
+        expect(result.stage.chain).toBe("arb1");
         // Stage may be READY if there are Nova retryables without Nova provider
         expect(["COMPLETED", "READY"]).toContain(result.stage.status);
         expect(result.messages.length).toBeGreaterThan(0);
 
         // Verify transaction data
         expect(result.stage.transactions.length).toBeGreaterThan(0);
-        expect(result.stage.transactions[0].chain).toBe("L1");
+        expect(result.stage.transactions[0].chain).toBe("ethereum");
         expect(result.stage.transactions[0].hash.toLowerCase()).toBe(
           L1_TX_WITH_RETRYABLE.toLowerCase()
         );
@@ -158,7 +158,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         }>;
 
         expect(creationDetails.length).toBeGreaterThan(0);
-        const arb1Details = creationDetails.filter((d) => d.targetChain === "Arb1");
+        const arb1Details = creationDetails.filter((d) => d.targetChain === "arb1");
         expect(arb1Details.length).toBeGreaterThan(0);
         expect(arb1Details[0].l2TxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
       });
@@ -187,8 +187,8 @@ describe.skipIf(process.env.NO_RPC === "1")(
           targetChain: string;
           status: string;
         }>;
-        const arb1Tickets = redemptionDetails.filter((d) => d.targetChain === "Arb1");
-        const novaTickets = redemptionDetails.filter((d) => d.targetChain === "Nova");
+        const arb1Tickets = redemptionDetails.filter((d) => d.targetChain === "arb1");
+        const novaTickets = redemptionDetails.filter((d) => d.targetChain === "nova");
 
         for (const ticket of arb1Tickets) {
           expect(ticket.status).toBe("REDEEMED");
@@ -203,7 +203,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         // Find L2 redemption transactions (not the L1 tx or creation txs)
         const l2RedemptionTxs = result.stage.transactions.filter(
-          (tx) => tx.chain === "L2" && tx.blockNumber > 0
+          (tx) => tx.chain === "arb1" && tx.blockNumber > 0
         );
 
         expect(l2RedemptionTxs.length).toBeGreaterThan(0);
@@ -217,7 +217,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         expect(messages.length).toBeGreaterThan(0);
 
-        const result = await prepareRetryableRedemption(messages[0], "L2");
+        const result = await prepareRetryableRedemption(messages[0], l2Provider);
 
         expect(result.success).toBe(false);
         expect(result.error).toContain("already redeemed");
@@ -228,7 +228,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         expect(messages.length).toBeGreaterThan(0);
 
-        const result = await prepareRetryableRedemption(messages[0], "L2", {
+        const result = await prepareRetryableRedemption(messages[0], l2Provider, {
           prepareCompleted: true,
         });
 
@@ -250,7 +250,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         expect(total).toBeGreaterThan(0);
         expect(results.length).toBe(total);
-        expect(targetChain).toBe("L2");
+        expect(targetChain).toBe("arb1");
 
         // All should fail since already redeemed
         for (const result of results) {
@@ -284,7 +284,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
           expect(["COMPLETED", "READY"]).toContain(retryableStage.status);
 
           // Verify chain classification
-          expect(retryableStage.chain).toBe("L2"); // Retryables execute on L2 chains (Arb1/Nova)
+          expect(retryableStage.chain).toBe("arb1"); // Retryables execute on L2 chains (Arb1/Nova)
         }
       });
 
@@ -334,7 +334,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         // Arb1 tickets should be REDEEMED, Nova tickets may be NOT_TRACKED (no Nova provider)
         for (let i = 0; i < creationDetails.length; i++) {
           expect(creationDetails[i].targetChain).toBe(redemptionDetails[i].targetChain);
-          if (redemptionDetails[i].targetChain === "Arb1") {
+          if (redemptionDetails[i].targetChain === "arb1") {
             expect(redemptionDetails[i].status).toBe("REDEEMED");
           } else {
             // Nova tickets without provider are PROVIDER_NOT_AVAILABLE

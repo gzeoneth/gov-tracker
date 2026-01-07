@@ -7,7 +7,7 @@ describe("extractCalldataFromStage", () => {
     const stage: TrackedStage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
-      chain: "L1",
+      chain: "ethereum",
       transactions: [],
       data: {
         calldatas: ["0x1234"],
@@ -26,7 +26,7 @@ describe("extractCalldataFromStage", () => {
     const stage: TrackedStage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
-      chain: "L1",
+      chain: "ethereum",
       transactions: [],
       data: {
         calldatas: ["0x1", "0x2"],
@@ -45,7 +45,7 @@ describe("extractCalldataFromStage", () => {
     const stage: TrackedStage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
-      chain: "L1",
+      chain: "ethereum",
       transactions: [],
       data: {
         calldatas: ["0x1", "0x2", "0x3"],
@@ -61,7 +61,7 @@ describe("extractCalldataFromStage", () => {
     const stage: TrackedStage = {
       type: "L2_TIMELOCK",
       status: "READY",
-      chain: "L2",
+      chain: "arb1",
       transactions: [],
       data: {
         operationId: "0xop",
@@ -91,7 +91,7 @@ describe("extractCalldataFromStage", () => {
     const stage: TrackedStage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
-      chain: "L1",
+      chain: "ethereum",
       transactions: [],
       data: {},
     };

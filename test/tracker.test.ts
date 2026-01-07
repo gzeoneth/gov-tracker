@@ -186,7 +186,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(l2Executed!.status).toBe("COMPLETED");
 
       // L1 stages should be skipped
-      const l1Stages = result.stages.filter((s) => s.chain === "L1");
+      const l1Stages = result.stages.filter((s) => s.chain === "ethereum");
       for (const stage of l1Stages) {
         expect(stage.status).toBe("SKIPPED");
       }
@@ -389,9 +389,9 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
       for (const stage of result.stages) {
         if (l2Stages.includes(stage.type)) {
-          expect(stage.chain).toBe("L2");
+          expect(stage.chain).toBe("arb1");
         } else if (l1Stages.includes(stage.type)) {
-          expect(stage.chain).toBe("L1");
+          expect(stage.chain).toBe("ethereum");
         }
       }
     });

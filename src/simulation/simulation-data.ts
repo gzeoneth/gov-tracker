@@ -337,20 +337,16 @@ function processGenericCall(
 ): ExtractedSimulation | null {
   if (nestedCall.signature && !nestedCall.isRetryable) {
     const addressArrayParam = decoded.parameters?.find((p) => p.type === "address[]");
-    if (addressArrayParam) {
-      const match = addressArrayParam.value.match(/\[(.*)\]/);
-      if (match) {
-        const addresses = match[1].split(",").map((a) => a.trim());
-        const target = addresses[index];
-        if (target && nestedCall.raw) {
-          const sim = prepareCallSimulation(target, nestedCall.raw, "0", chainContext);
-          return {
-            simulation: sim,
-            label: `Call: ${nestedCall.signature}`,
-            batchIndex: index,
-          };
-        }
-      }
+    const addresses = addressArrayParam?.rawValue as string[];
+    const target = addresses?.[index];
+
+    if (target && nestedCall.raw) {
+      const sim = prepareCallSimulation(target, nestedCall.raw, "0", chainContext);
+      return {
+        simulation: sim,
+        label: `Call: ${nestedCall.signature}`,
+        batchIndex: index,
+      };
     }
   }
   return null;

@@ -68,7 +68,6 @@ export function getAddressLabel(
   if (!chain) return undefined;
 
   const chainAddresses = KNOWN_ADDRESSES[chain];
-  if (!chainAddresses) return undefined;
 
   const lowerAddress = address.toLowerCase();
 

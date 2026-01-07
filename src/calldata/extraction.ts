@@ -21,11 +21,11 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
 
   // 1. Check for explicit calldatas array (Proposals)
   // ProposalCreatedData and ProposalQueuedData use plural 'calldatas', 'targets', 'values'
-  if (data.calldatas && Array.isArray(data.calldatas) && data.calldatas.length > 0) {
+  if (data.calldatas && data.calldatas.length > 0) {
     const count = data.calldatas.length;
 
-    const targets = data.targets && Array.isArray(data.targets) ? data.targets : [];
-    const values = data.values && Array.isArray(data.values) ? data.values : [];
+    const targets = data.targets || [];
+    const values = data.values || [];
 
     // Strict length checks - these are part of the logic to ensure data integrity
     if (targets.length !== count) {
@@ -46,14 +46,12 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
 
   // 2. Check for Timelock scheduled data (L1/L2 Timelock)
   // Timelock stages usually have `callScheduledData` array containing the operations
-  if (data.callScheduledData && Array.isArray(data.callScheduledData)) {
+  if (data.callScheduledData) {
     for (const scheduled of data.callScheduledData) {
       // scheduled.data and scheduled.target are strictly typed in CallScheduledData
-      if (scheduled.data && scheduled.target) {
-        result.calldatas.push(scheduled.data);
-        result.targets.push(scheduled.target);
-        result.values.push(scheduled.value || "0");
-      }
+      result.calldatas.push(scheduled.data);
+      result.targets.push(scheduled.target);
+      result.values.push(scheduled.value || "0");
     }
     if (result.calldatas.length > 0) {
       return result;

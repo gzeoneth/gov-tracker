@@ -29,7 +29,7 @@ import {
 import { StageBuilder } from "../stages/stage-builder";
 import { findCallExecutedEvent } from "../discovery/timelock-discovery";
 
-// Re-export serialization from base for backwards compatibility
+// Re-export serialization functions from base (used by timelock.ts and tests)
 export {
   serialize,
   deserialize,

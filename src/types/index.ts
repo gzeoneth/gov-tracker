@@ -18,8 +18,6 @@ export {
   StageStatus,
   Chain,
   ChainId,
-  CHAIN_ID_MAP,
-  CHAIN_NAME_MAP,
   chainIdToChain,
   chainToChainId,
   StageTransaction,

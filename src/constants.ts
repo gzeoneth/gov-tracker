@@ -113,11 +113,14 @@ export function buildDefaultTargets(options?: {
 
 /**
  * Chain IDs for supported networks
+ *
+ * Uses CHAIN_ID_MAP from types/core for single source of truth
  */
+import { CHAIN_ID_MAP } from "./types/core";
 export const CHAIN_IDS = {
-  ETHEREUM: 1,
-  ARB_ONE: 42161,
-  NOVA: 42170,
+  ETHEREUM: CHAIN_ID_MAP.ethereum,
+  ARB_ONE: CHAIN_ID_MAP.arb1,
+  NOVA: CHAIN_ID_MAP.nova,
 } as const;
 
 /**

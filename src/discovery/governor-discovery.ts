@@ -156,7 +156,7 @@ export function parseProposalCreatedEvent(log: ethers.providers.Log): ProposalDa
       proposalId: args.proposalId.toString(),
       proposer: args.proposer,
       targets: args.targets,
-      values: args.values,
+      values: parsed.args[3], // `values` collides with ethers.js internals
       signatures: args.signatures,
       calldatas: args.calldatas,
       startBlock: args.startBlock,

@@ -99,7 +99,7 @@ export function decodeParameters(
   chainContext: ChainContext
 ): { params: DecodedParameter[]; decoded: ethers.utils.Result } | null {
   // Use ethers Interface for robust decoding
-  const iface = new ethers.utils.Interface([signature]);
+  const iface = new ethers.utils.Interface([`function ${signature}`]);
   const fragment = iface.getFunction(signature);
   const inputs = fragment.inputs;
 

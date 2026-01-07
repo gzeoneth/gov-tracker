@@ -55,7 +55,7 @@ export async function trackProposalCreated(
 
   if (proposalData) {
     // Stage completed - proposal was created
-    const valuesArray = Array.from(proposalData.values);
+    const valuesArray = proposalData.values;
     const timestamp = await getBlockTimestamp(proposalData.creationBlock, provider);
 
     builder

@@ -193,10 +193,7 @@ async function processNestedParams(
                   value: retryable.l2Target,
                   rawValue: retryable.l2Target,
                   isNested: false,
-                  // Only add address label if we know the chain
-                  ...(l2ChainContext && {
-                    addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
-                  }),
+                  addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
                 },
                 {
                   name: "l2Value",

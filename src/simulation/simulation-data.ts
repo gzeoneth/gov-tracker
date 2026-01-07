@@ -15,11 +15,7 @@ import type {
   ExtractedSimulation,
   SimulationChainType,
 } from "../types/simulation";
-
-/**
- * L1 Timelock address
- */
-const L1_TIMELOCK_ADDRESS = "0xE6841D92B0C345144506576eC13ECf5103aC7f49";
+import { ADDRESSES } from "../constants";
 
 /**
  * Network IDs for supported chains
@@ -79,7 +75,7 @@ export function prepareRetryableSimulation(
   l2Chain: ChainContext
 ): RetryableSimulationData {
   const networkId = getNetworkId(l2Chain);
-  const fromAddress = new Address(L1_TIMELOCK_ADDRESS).applyAlias().value;
+  const fromAddress = new Address(ADDRESSES.L1_TIMELOCK).applyAlias().value;
 
   return {
     type: "retryable",
@@ -262,9 +258,9 @@ export function prepareCallSimulation(
   let fromAddress = from;
   if (!fromAddress) {
     if (chain === "ethereum") {
-      fromAddress = L1_TIMELOCK_ADDRESS;
+      fromAddress = ADDRESSES.L1_TIMELOCK;
     } else {
-      fromAddress = new Address(L1_TIMELOCK_ADDRESS).applyAlias().value;
+      fromAddress = new Address(ADDRESSES.L1_TIMELOCK).applyAlias().value;
     }
   }
 

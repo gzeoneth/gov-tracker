@@ -301,7 +301,7 @@ const { calldatas, targets } = stage.data;
 for (let i = 0; i < calldatas.length; i++) {
   const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
 
-  console.log(`Action ${i + 1}: ${decoded.functionName ?? "Unknown"}`);
+  console.log(`Action ${i + 1}: ${decoded.signature ?? "Unknown"}`);
   if (decoded.decodingTarget) {
     console.log(`Target: ${decoded.decodingTarget}`);
   }
@@ -312,7 +312,7 @@ for (let i = 0; i < calldatas.length; i++) {
 
       // Nested calls (e.g., timelock → upgradeExecutor → target)
       if (param.nested) {
-        console.log(`    → ${param.nested.functionName || "Unknown"}`);
+        console.log(`    → ${param.nested.signature || "Unknown"}`);
       }
     }
   }

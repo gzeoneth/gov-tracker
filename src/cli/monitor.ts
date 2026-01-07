@@ -75,11 +75,8 @@ function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
   const prefix = "  ".repeat(indent);
   const lines: string[] = [];
 
-  if (decoded.functionName) {
-    lines.push(`${prefix}${decoded.functionName}`);
-    if (decoded.signature) {
-      lines.push(`${prefix}  Signature: ${decoded.signature}`);
-    }
+  if (decoded.signature) {
+    lines.push(`${prefix}${decoded.signature}`);
   } else {
     lines.push(`${prefix}Unknown function (${decoded.selector})`);
   }

@@ -48,7 +48,6 @@ export async function decodeCalldata(
   if (!calldata || calldata === "0x" || calldata.length < 10) {
     return {
       selector: "",
-      functionName: null,
       signature: null,
       parameters: null,
       raw: calldata || "0x",
@@ -67,7 +66,6 @@ export async function decodeCalldata(
     debug("Unknown signature for selector: %s", selector);
     return {
       selector,
-      functionName: null,
       signature: null,
       parameters: null,
       raw: calldata,
@@ -75,9 +73,6 @@ export async function decodeCalldata(
       chainContext,
     };
   }
-
-  // Use full signature as function name
-  const functionName = signature;
 
   // Determine chain context for nested content
   // sendTxToL1 means nested content is on L1
@@ -91,7 +86,6 @@ export async function decodeCalldata(
     debug("Failed to decode parameters for: %s", signature);
     return {
       selector,
-      functionName,
       signature,
       parameters: null,
       raw: calldata,
@@ -116,7 +110,6 @@ export async function decodeCalldata(
 
   return {
     selector,
-    functionName,
     signature,
     parameters: params,
     raw: calldata,
@@ -187,8 +180,7 @@ async function processNestedParams(
             // Create retryable structure with decoded L2 call
             const retryableDecoded: DecodedCalldata = {
               selector: "",
-              functionName: `Retryable Ticket → ${chainName}`,
-              signature: null,
+              signature: `Retryable Ticket → ${chainName}`,
               parameters: [
                 {
                   name: "inbox",

@@ -22,10 +22,7 @@ export interface DecodedCalldata {
   /** 4-byte function selector (0x prefix) */
   selector: string;
 
-  /** Full function signature (null if unknown). Same as signature field. */
-  functionName: string | null;
-
-  /** Full function signature (null if unknown). Same as functionName field. */
+  /** Full function signature (null if unknown) */
   signature: string | null;
 
   /** Decoded parameters (null if decoding failed) */

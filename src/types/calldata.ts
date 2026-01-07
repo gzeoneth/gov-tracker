@@ -17,35 +17,68 @@ export type DecodingSource = "local" | "api" | "failed";
 
 /**
  * Decoded calldata result
+ *
+ * This is a discriminated union:
+ * - Regular calldata: has selector, signature, and isRetryable is false/undefined
+ * - Retryable ticket: has no selector, no signature, and isRetryable is true
  */
-export interface DecodedCalldata {
-  /** 4-byte function selector (0x prefix) */
-  selector: string;
+export type DecodedCalldata =
+  | {
+      /** 4-byte function selector (0x prefix) */
+      selector: string;
 
-  /** Full function signature (null if unknown) */
-  signature: string | null;
+      /** Full function signature (null if unknown) */
+      signature: string | null;
 
-  /** Decoded parameters (null if decoding failed) */
-  parameters: DecodedParameter[] | null;
+      /** Decoded parameters (null if decoding failed) */
+      parameters: DecodedParameter[] | null;
 
-  /** Raw calldata hex string */
-  raw: string;
+      /** Raw calldata hex string */
+      raw: string;
 
-  /** Source of decoding (local ABI, API lookup, or failed) */
-  decodingSource: DecodingSource;
+      /** Source of decoding (local ABI, API lookup, or failed) */
+      decodingSource: DecodingSource;
 
-  /** Target contract address (if known during decoding) */
-  decodingTarget?: string;
+      /** Target contract address (if known during decoding) */
+      decodingTarget?: string;
 
-  /** Chain context for this calldata (for simulation extraction) */
-  chainContext?: ChainContext;
+      /** Chain context for this calldata (for simulation extraction) */
+      chainContext?: ChainContext;
 
-  /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
-  targetChain?: "arb1" | "nova" | "unknown";
+      /** This is regular calldata, not a retryable ticket */
+      isRetryable?: false;
 
-  /** Whether this decoded calldata represents a retryable ticket */
-  isRetryable?: boolean;
-}
+      /** Target L2 chain - not applicable for regular calldata */
+      targetChain?: never;
+    }
+  | {
+      /** No selector for retryable tickets */
+      selector: "";
+
+      /** No signature for retryable tickets */
+      signature: null;
+
+      /** Decoded parameters showing retryable ticket structure */
+      parameters: DecodedParameter[] | null;
+
+      /** Raw calldata hex string */
+      raw: string;
+
+      /** Source is always "local" for retryable tickets */
+      decodingSource: "local";
+
+      /** Target contract address (if known during decoding) */
+      decodingTarget?: string;
+
+      /** Chain context for this calldata (always "ethereum" for retryables) */
+      chainContext?: ChainContext;
+
+      /** This is a retryable ticket */
+      isRetryable: true;
+
+      /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
+      targetChain: "arb1" | "nova" | "unknown";
+    };
 
 /**
  * Decoded parameter with optional nested calldata

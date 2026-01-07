@@ -16,18 +16,9 @@ export type ChainContext = "arb1" | "nova" | "ethereum";
 export type DecodingSource = "local" | "api" | "failed";
 
 /**
- * Decoded calldata result
+ * Base type for decoded calldata with shared properties
  */
-export interface DecodedCalldata {
-  /** 4-byte function selector (0x prefix) */
-  selector: string;
-
-  /** Full function signature (null if unknown). Same as signature field. */
-  functionName: string | null;
-
-  /** Full function signature (null if unknown). Same as functionName field. */
-  signature: string | null;
-
+interface DecodedCalldataBase {
   /** Decoded parameters (null if decoding failed) */
   parameters: DecodedParameter[] | null;
 
@@ -42,10 +33,50 @@ export interface DecodedCalldata {
 
   /** Chain context for this calldata (for simulation extraction) */
   chainContext?: ChainContext;
+}
+
+/**
+ * Regular calldata with function selector and signature
+ */
+interface RegularCalldata extends DecodedCalldataBase {
+  /** 4-byte function selector (0x prefix) */
+  selector: string;
+
+  /** Full function signature (null if unknown) */
+  signature: string | null;
+
+  /** This is regular calldata, not a retryable ticket */
+  isRetryable?: false;
+
+  /** Target L2 chain - not applicable for regular calldata */
+  targetChain?: undefined;
+}
+
+/**
+ * Retryable ticket decoded structure
+ */
+interface RetryableCalldata extends DecodedCalldataBase {
+  /** No selector for retryable tickets */
+  selector: "";
+
+  /** No signature for retryable tickets */
+  signature: null;
+
+  /** This is a retryable ticket */
+  isRetryable: true;
 
   /** Target L2 chain for retryable tickets ("arb1", "nova", or "unknown") */
-  targetChain?: "arb1" | "nova" | "unknown";
+  targetChain: "arb1" | "nova" | "unknown";
 }
+
+/**
+ * Decoded calldata result
+ *
+ * This is a discriminated union:
+ * - Regular calldata: has selector, signature, and isRetryable is false/undefined
+ * - Retryable ticket: has no selector, no signature, and isRetryable is true
+ */
+export type DecodedCalldata = RegularCalldata | RetryableCalldata;
 
 /**
  * Decoded parameter with optional nested calldata

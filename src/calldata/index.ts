@@ -39,5 +39,4 @@ export {
   detectChainFromInbox,
   decodeRetryableTicket,
   getRetryableChainName,
-  retryableChainToContext,
 } from "./retryable-ticket";

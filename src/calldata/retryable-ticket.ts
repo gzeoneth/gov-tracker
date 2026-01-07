@@ -5,7 +5,7 @@
  */
 
 import { ethers } from "ethers";
-import type { RetryableTicketData, ChainContext } from "../types/calldata";
+import type { RetryableTicketData } from "../types/calldata";
 
 /**
  * Magic address that indicates a retryable ticket in timelock operations
@@ -91,16 +91,4 @@ export function decodeRetryableTicket(bytes: string): RetryableTicketData | null
   } catch (_error) {
     return null;
   }
-}
-
-/**
- * Get ChainContext from retryable chain
- *
- * @param chain - Retryable chain identifier
- * @returns ChainContext for address resolution
- */
-export function retryableChainToContext(chain: "arb1" | "nova" | "unknown"): ChainContext {
-  if (chain === "nova") return "nova";
-  // Default to arb1 for unknown
-  return "arb1";
 }

@@ -186,6 +186,10 @@ if (prepResult.success) {
 
 ## Important Patterns
 
+### Event arg name collision
+
+Event arg name `values` collides with ethers.js internals. Access by index instead of `args.values`.
+
 ### Proposal Types
 
 Three main governor types tracked:

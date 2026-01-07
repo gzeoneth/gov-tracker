@@ -16,7 +16,7 @@ import { isElectionGovernor } from "../constants";
 export async function listCheckpointKeys(cache: CacheAdapter | undefined): Promise<string[]> {
   if (!cache) return [];
   const allKeys = await cache.keys();
-  const keys = Array.isArray(allKeys) ? allKeys : Array.from(allKeys);
+  const keys = Array.from(allKeys as Iterable<string>);
   // All tracking checkpoints use tx: prefix
   return keys.filter((k) => k.startsWith("tx:"));
 }

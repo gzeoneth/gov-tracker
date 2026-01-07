@@ -158,83 +158,81 @@ async function processNestedParams(
         // Check for retryable ticket magic
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
-          if (retryable) {
-            // Determine L2 chain context for address labeling and nested decoding
-            const l2ChainContext: ChainContext | undefined =
-              retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
+          // Determine L2 chain context for address labeling and nested decoding
+          const l2ChainContext: ChainContext | undefined =
+            retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
 
-            // Decode l2Calldata with L2 chain context only if chain is known
-            let nestedL2Call: DecodedCalldata | undefined;
-            if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
-              nestedL2Call = await decodeCalldata(
-                retryable.l2Calldata,
-                retryable.l2Target,
-                depth + 1,
-                l2ChainContext
-              );
-            }
-
-            // Create retryable structure with decoded L2 call
-            const retryableDecoded: DecodedCalldata = {
-              selector: "",
-              signature: null,
-              isRetryable: true,
-              parameters: [
-                {
-                  name: "inbox",
-                  type: "address",
-                  value: retryable.targetInbox,
-                  rawValue: retryable.targetInbox,
-                  isNested: false,
-                  addressLabel: getAddressLabel(retryable.targetInbox, "ethereum"),
-                },
-                {
-                  name: "l2Target",
-                  type: "address",
-                  value: retryable.l2Target,
-                  rawValue: retryable.l2Target,
-                  isNested: false,
-                  addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
-                },
-                {
-                  name: "l2Value",
-                  type: "uint256",
-                  value: retryable.l2Value,
-                  rawValue: retryable.l2Value,
-                  isNested: false,
-                },
-                {
-                  name: "gasLimit",
-                  type: "uint256",
-                  value: retryable.gasLimit,
-                  rawValue: retryable.gasLimit,
-                  isNested: false,
-                },
-                {
-                  name: "maxFeePerGas",
-                  type: "uint256",
-                  value: retryable.maxFeePerGas,
-                  rawValue: retryable.maxFeePerGas,
-                  isNested: false,
-                },
-                {
-                  name: "l2Calldata",
-                  type: "bytes",
-                  value: retryable.l2Calldata,
-                  rawValue: retryable.l2Calldata,
-                  isNested: !!nestedL2Call,
-                  nested: nestedL2Call,
-                },
-              ],
-              raw: bytesItem,
-              decodingSource: "local",
-              chainContext: "ethereum", // Retryable tickets are created on L1
-              targetChain: retryable.chain, // Explicit target L2 chain field
-            };
-
-            nestedArray.push(retryableDecoded);
-            continue;
+          // Decode l2Calldata with L2 chain context only if chain is known
+          let nestedL2Call: DecodedCalldata | undefined;
+          if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
+            nestedL2Call = await decodeCalldata(
+              retryable.l2Calldata,
+              retryable.l2Target,
+              depth + 1,
+              l2ChainContext
+            );
           }
+
+          // Create retryable structure with decoded L2 call
+          const retryableDecoded: DecodedCalldata = {
+            selector: "",
+            signature: null,
+            isRetryable: true,
+            parameters: [
+              {
+                name: "inbox",
+                type: "address",
+                value: retryable.targetInbox,
+                rawValue: retryable.targetInbox,
+                isNested: false,
+                addressLabel: getAddressLabel(retryable.targetInbox, "ethereum"),
+              },
+              {
+                name: "l2Target",
+                type: "address",
+                value: retryable.l2Target,
+                rawValue: retryable.l2Target,
+                isNested: false,
+                addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
+              },
+              {
+                name: "l2Value",
+                type: "uint256",
+                value: retryable.l2Value,
+                rawValue: retryable.l2Value,
+                isNested: false,
+              },
+              {
+                name: "gasLimit",
+                type: "uint256",
+                value: retryable.gasLimit,
+                rawValue: retryable.gasLimit,
+                isNested: false,
+              },
+              {
+                name: "maxFeePerGas",
+                type: "uint256",
+                value: retryable.maxFeePerGas,
+                rawValue: retryable.maxFeePerGas,
+                isNested: false,
+              },
+              {
+                name: "l2Calldata",
+                type: "bytes",
+                value: retryable.l2Calldata,
+                rawValue: retryable.l2Calldata,
+                isNested: !!nestedL2Call,
+                nested: nestedL2Call,
+              },
+            ],
+            raw: bytesItem,
+            decodingSource: "local",
+            chainContext: "ethereum", // Retryable tickets are created on L1
+            targetChain: retryable.chain, // Explicit target L2 chain field
+          };
+
+          nestedArray.push(retryableDecoded);
+          continue;
         }
 
         // Normal calldata decoding

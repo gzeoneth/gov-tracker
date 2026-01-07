@@ -5,7 +5,7 @@
  * to call Tenderly API themselves.
  */
 
-import type { ChainContext } from "./calldata";
+import type { ChainContext } from "./core";
 
 /**
  * Type of simulation

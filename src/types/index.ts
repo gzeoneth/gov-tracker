@@ -16,6 +16,7 @@
 export {
   StageType,
   StageStatus,
+  ChainContext,
   ChainType,
   TargetChainType,
   StageTransaction,
@@ -126,7 +127,6 @@ export {
 
 // Calldata decoding types
 export {
-  ChainContext,
   DecodingSource,
   DecodedCalldata,
   DecodedParameter,

@@ -62,7 +62,8 @@ import {
   parseChunkingConfig,
 } from "./lib/cli";
 import { decodeCalldata, extractCalldataFromStage } from "../calldata";
-import type { DecodedCalldata, ChainContext } from "../types/calldata";
+import { ChainContext } from "../types";
+import type { DecodedCalldata } from "../types/calldata";
 
 // ============================================================================
 // Helper Functions for Calldata Decoding and Display

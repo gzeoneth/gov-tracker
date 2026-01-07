@@ -7,7 +7,8 @@
 
 import { ethers } from "ethers";
 import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
-import type { ChainContext, DecodedCalldata } from "../types/calldata";
+import type { DecodedCalldata } from "../types/calldata";
+import { ChainContext } from "../types";
 import type {
   RetryableSimulationData,
   TimelockSimulationData,

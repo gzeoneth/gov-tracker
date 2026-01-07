@@ -16,7 +16,6 @@ import type {
   SimulationChainType,
 } from "../types/simulation";
 import { ADDRESSES } from "../constants";
-import { retryableChainToContext, getRetryableChainLabel } from "../calldata/retryable-ticket";
 
 /**
  * Network IDs for supported chains
@@ -323,8 +322,8 @@ function processRetryableTicket(
 
     if (l2TargetParam && l2CalldataParam) {
       // Get chain from targetChain field and convert to ChainContext
-      const chain = nestedCall.targetChain || "unknown";
-      const l2Chain = retryableChainToContext(chain);
+      const chain = nestedCall.targetChain;
+      const l2Chain: ChainContext = chain === "nova" ? "nova" : "arb1";
 
       const sim = prepareRetryableSimulation(
         l2TargetParam.value,
@@ -333,12 +332,10 @@ function processRetryableTicket(
         l2Chain
       );
 
-      // Generate label from targetChain
-      const chainLabel = getRetryableChainLabel(chain);
-
+      // Generate label from targetChain (use raw identifier)
       return {
         simulation: sim,
-        label: `Retryable Ticket → ${chainLabel}`,
+        label: `Retryable Ticket → ${chain}`,
         batchIndex: index,
       };
     }

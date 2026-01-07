@@ -9,11 +9,7 @@ import Debug from "debug";
 import type { ChainContext, DecodedCalldata, DecodedParameter } from "../types/calldata";
 import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
-import {
-  isRetryableTicketMagic,
-  decodeRetryableTicket,
-  retryableChainToContext,
-} from "./retryable-ticket";
+import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
 import { getAddressLabel } from "./address-utils";
 
 const debug = Debug("gov-tracker:calldata");
@@ -162,7 +158,8 @@ async function processNestedParams(
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
           if (retryable) {
-            const l2Chain = retryableChainToContext(retryable.chain);
+            // Convert chain to ChainContext - default to arb1 for unknown
+            const l2Chain: ChainContext = retryable.chain === "nova" ? "nova" : "arb1";
 
             // Decode l2Calldata with L2 chain context
             let nestedL2Call: DecodedCalldata | undefined;

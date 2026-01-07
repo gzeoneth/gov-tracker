@@ -303,7 +303,6 @@ export {
   isRetryableTicketMagic,
   decodeRetryableTicket,
   getRetryableChainName,
-  getRetryableChainLabel,
   RETRYABLE_TICKET_MAGIC,
 } from "./calldata";
 

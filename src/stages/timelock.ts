@@ -9,6 +9,7 @@
 import { ethers, BigNumber } from "ethers";
 import {
   Chain,
+  chainToChainId,
   TrackedStage,
   TrackedStageData,
   TimelockStageData,
@@ -328,10 +329,12 @@ async function trackTimelock(
     timelockState.scheduledData.blockNumber !== undefined
   ) {
     queueTimestamp = await getBlockTimestamp(timelockState.scheduledData.blockNumber, provider);
+    const chainId = chainToChainId(config.chain) ?? 0;
     builder.tx(
       timelockState.scheduledData.txHash,
       timelockState.scheduledData.blockNumber,
       config.chain,
+      chainId,
       { timestamp: queueTimestamp, description: "queued" }
     );
   }
@@ -358,9 +361,10 @@ async function trackTimelock(
       const receipt = await provider.getTransactionReceipt(options.cachedExecutionTxHash);
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
+        const chainId = chainToChainId(config.chain) ?? 0;
         builder
           .status("COMPLETED")
-          .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, {
+          .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, chainId, {
             timestamp: execTimestamp,
             description: "executed",
           })
@@ -673,6 +677,8 @@ export async function prepareTimelockOperation(
     salt,
   ]);
 
+  const chainId = chainToChainId(chain) ?? 0;
+
   return {
     success: true,
     prepared: {
@@ -680,6 +686,7 @@ export async function prepareTimelockOperation(
       data: calldata,
       value: executionValue.toString(),
       chain,
+      chainId,
       description: `execute() on ${chain} timelock`,
       operationId,
     },
@@ -758,6 +765,8 @@ export async function prepareTimelockBatch(
     salt,
   ]);
 
+  const chainId = chainToChainId(chain) ?? 0;
+
   return {
     success: true,
     prepared: {
@@ -765,6 +774,7 @@ export async function prepareTimelockBatch(
       data: calldata,
       value: totalValue.toString(),
       chain,
+      chainId,
       description: `executeBatch() on ${chain} timelock`,
       operationId,
     },

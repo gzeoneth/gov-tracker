@@ -21,7 +21,7 @@ export function chainToId(chain: Chain): ChainId | undefined {
  * @deprecated Use chainToId instead
  * Map legacy ChainType to numeric chain ID
  */
-export function chainTypeToId(chain: "ethereum" | "L2" | "NOVA"): number {
+export function chainTypeToId(chain: "L1" | "L2" | "NOVA"): number {
   switch (chain) {
     case "L1":
       return CHAIN_IDS.ETHEREUM;

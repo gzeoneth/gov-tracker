@@ -11,6 +11,7 @@ import {
   getStageData,
   StageType,
   Chain,
+  chainToChainId,
   L2TimelockData,
   L1TimelockData,
   CallScheduledData,
@@ -217,9 +218,10 @@ export async function searchAndCompleteTimelockExecution(
 
   if (event) {
     const execTimestamp = await getBlockTimestamp(event.blockNumber, provider);
+    const chainId = chainToChainId(chain) ?? 0;
     builder
       .status("COMPLETED")
-      .tx(event.txHash, event.blockNumber, chain, {
+      .tx(event.txHash, event.blockNumber, chain, chainId, {
         timestamp: execTimestamp,
         description: "executed",
       })

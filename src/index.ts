@@ -46,7 +46,7 @@ export type {
   TypedTrackedStage,
   // Legacy types (deprecated)
   ChainType,
-  Chain,
+  TargetChainType,
   ChainContext,
   // Tracking types
   StageTrackingContext,

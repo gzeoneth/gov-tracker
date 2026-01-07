@@ -181,6 +181,7 @@ export async function prepareGovernorQueue(
       data: calldata,
       value: "0",
       chain: "arb1",
+      chainId: 42161,
       description: `queue() on Governor (proposal ${proposalId})`,
       operationId: proposalId,
     },

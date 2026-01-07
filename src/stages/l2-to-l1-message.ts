@@ -22,7 +22,7 @@ import {
   getArbitrumNetwork,
 } from "@arbitrum/sdk";
 import { ChildToParentMessageReaderNitro } from "@arbitrum/sdk/dist/lib/message/ChildToParentMessageNitro";
-import { TrackedStage, ChainType, PrepareResult, getStageData } from "../types";
+import { TrackedStage, PrepareResult, getStageData } from "../types";
 import { ADDRESSES, BLOCK_TIMES, TIMING } from "../constants";
 import { loggers } from "../utils/logger";
 
@@ -508,7 +508,8 @@ export async function prepareL2ToL1Message(
       to: outboxAddress,
       data: calldata,
       value: "0",
-      chain: "ethereum" as ChainType,
+      chain: "ethereum",
+      chainId: 1,
       description: `Execute L2→L1 message #${event.position.toString()} via Outbox`,
     },
   };

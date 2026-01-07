@@ -95,7 +95,7 @@ export async function detectAllRetryableTargetChains(
 
   if (novaCount > 0) {
     targets.push({
-      chain: "nova",
+      chain: "NOVA",
       inboxAddress: ADDRESSES.NOVA_DELAYED_INBOX,
       messageCount: novaCount,
     });
@@ -133,8 +133,8 @@ export async function trackRetryables(
   stage: TrackedStage;
   messages: ParentToChildMessageReader[];
   isComplete: boolean;
-  /** All target chains for retryables (can be both Arb1 and Nova) */
-  targetChains: ("Arb1" | "Nova")[];
+  /** All target chains for retryables (can be both arb1 and nova) */
+  targetChains: Chain[];
 }> {
   const { l2Provider, novaProvider } = options;
 
@@ -186,9 +186,9 @@ export async function trackRetryables(
   let anyFailed = false;
 
   for (const { chain: targetChain, messageCount } of targetInfos) {
-    const provider = targetChain === "nova" ? novaProvider : l2Provider;
-    const chainName: Chain = targetChain === "nova" ? "nova" : "arb1";
-    const chainId = targetChain === "nova" ? 42170 : 42161;
+    const provider = targetChain === "NOVA" ? novaProvider : l2Provider;
+    const chainName: Chain = targetChain === "NOVA" ? "nova" : "arb1";
+    const chainId = targetChain === "NOVA" ? 42170 : 42161;
 
     // Handle missing provider
     if (!provider) {
@@ -314,9 +314,9 @@ export async function trackRetryables(
 
   // Collect unique target chains
   const targetChains = [
-    ...new Set(targetInfos.map((t) => (t.chain === "arb1" ? "arb1" : "nova") as Chain)),
+    ...new Set(targetInfos.map((t) => (t.chain === "NOVA" ? "nova" : "arb1") as Chain)),
   ];
-  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "arb1" ? 42161 : 42170)))];
+  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "NOVA" ? 42170 : 42161)))];
 
   // Determine overall status and build stage using StageBuilder
   // Note: chain is "arb1" because retryable redemption executes on L2 chains (Arb1/Nova)
@@ -424,13 +424,13 @@ export async function prepareAllRetryables(
   const messages = await parentReceipt.getParentToChildMessages(l2Provider);
   if (messages.length === 0) return bulkPrepareError("No retryable tickets found", "arb1");
 
-  const targetChain = await getChainType(l2Provider);
-  log("Preparing %d retryable tickets for %s", messages.length, targetChain);
+  log("Preparing %d retryable tickets", messages.length);
 
   const results = await Promise.all(
-    messages.map((message) => prepareRetryableRedemption(message, targetChain, options))
+    messages.map((message) => prepareRetryableRedemption(message, l2Provider, options))
   );
 
+  const targetChain = await getChainType(l2Provider);
   return { total: messages.length, results, targetChain };
 }
 

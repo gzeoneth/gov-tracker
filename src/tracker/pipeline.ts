@@ -52,7 +52,8 @@ const placeholder = (
 ): TrackedStage => ({
   type,
   status,
-  chain: L1_STAGES.has(type) ? "L1" : "arb1",
+  chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
+  chainId: L1_STAGES.has(type) ? 1 : 42161,
   transactions: [],
   data: { reason },
 });

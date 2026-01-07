@@ -187,6 +187,7 @@ export function prepareElectionCreation(
       data: calldata,
       value: "0",
       chain: "arb1",
+      chainId: 42161,
       description: `createElection() on SecurityCouncilNomineeElectionGovernor for election #${electionStatus.electionCount}`,
     },
     electionIndex: electionStatus.electionCount,
@@ -609,6 +610,7 @@ export async function prepareMemberElectionTrigger(
     data: calldata,
     value: "0",
     chain: "arb1",
+    chainId: 42161,
     description: `execute() on NomineeElectionGovernor to trigger member election #${electionStatus.electionIndex}`,
   };
 }

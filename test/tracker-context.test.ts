@@ -181,10 +181,10 @@ describe("TrackingContext", () => {
     });
 
     it("should load stages from checkpoint", () => {
-      const completedStage: TrackedStage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const completedStage: TrackedStage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({ proposalId: "12345" })
-        .tx("0xabc", 100, "L2")
+        .tx("0xabc", 100, "arb1", 42161)
         .build();
 
       const checkpoint: TrackingCheckpoint = {
@@ -216,7 +216,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const newStage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const newStage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({ proposalId: "12345" })
         .build();
@@ -236,7 +236,7 @@ describe("TrackingContext", () => {
         onProgress,
       });
 
-      const newStage = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
+      const newStage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
 
       await addStage(ctx, newStage);
 
@@ -257,7 +257,7 @@ describe("TrackingContext", () => {
 
       const originalStageIndex = ctx.stageIndex;
 
-      const newStage = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
+      const newStage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
 
       await addStage(ctx, newStage);
 
@@ -273,7 +273,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
       ctx = await addStage(ctx, stage);
 
       expect(isStageCompleted(ctx, "PROPOSAL_CREATED")).toBe(true);
@@ -285,7 +285,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2").skip("L2-only path").build();
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1").skip("L2-only path").build();
       ctx = await addStage(ctx, stage);
 
       expect(isStageCompleted(ctx, "L2_TO_L1_MESSAGE")).toBe(true);
@@ -297,7 +297,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").status("PENDING").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("PENDING").build();
       ctx = await addStage(ctx, stage);
 
       expect(isStageCompleted(ctx, "PROPOSAL_CREATED")).toBe(false);
@@ -320,7 +320,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
       ctx = await addStage(ctx, stage);
 
       const result = getCompletedStage(ctx, "PROPOSAL_CREATED");
@@ -334,7 +334,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L1_TIMELOCK", "L1").skip("test").build();
+      const stage = new StageBuilder("L1_TIMELOCK", "ethereum").skip("test").build();
       ctx = await addStage(ctx, stage);
 
       const result = getCompletedStage(ctx, "L1_TIMELOCK");
@@ -348,7 +348,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").status("PENDING").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("PENDING").build();
       ctx = await addStage(ctx, stage);
 
       expect(getCompletedStage(ctx, "PROPOSAL_CREATED")).toBeUndefined();
@@ -362,7 +362,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").status("PENDING").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("PENDING").build();
       ctx = await addStage(ctx, stage);
 
       const result = getCachedStage(ctx, "PROPOSAL_CREATED");
@@ -471,7 +471,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_QUEUED", "L2")
+      const stage = new StageBuilder("PROPOSAL_QUEUED", "arb1")
         .status("COMPLETED")
         .data({ timelockAddress: "0x9999999999999999999999999999999999999999" })
         .build();
@@ -486,7 +486,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .status("PENDING")
         .data({ timelockAddress: "0x8888888888888888888888888888888888888888" })
         .build();
@@ -512,7 +512,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_QUEUED", "L2")
+      const stage = new StageBuilder("PROPOSAL_QUEUED", "arb1")
         .status("COMPLETED")
         .data({ operationId: "0xfeedbeef" })
         .build();
@@ -637,7 +637,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({
           proposalId: "12345",
@@ -650,7 +650,7 @@ describe("TrackingContext", () => {
           startBlock: "100",
           endBlock: "200",
         })
-        .tx("0xabc", 50, "L2")
+        .tx("0xabc", 50, "arb1", 42161)
         .build();
       ctx = await addStage(ctx, stage);
 
@@ -690,7 +690,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({ proposalType: "ELECTION_NOMINEE" })
         .build();
@@ -745,7 +745,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2")
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
         .status("COMPLETED")
         .data({ proposalState: "Succeeded" })
         .build();
@@ -762,7 +762,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2")
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
         .status("COMPLETED")
         .data({ deadline: "50000" })
         .build();
@@ -777,7 +777,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2")
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
         .status("COMPLETED")
         .data({ deadline: "50000", extendedDeadline: "60000" })
         .build();
@@ -792,7 +792,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2")
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
         .status("COMPLETED")
         .data({ deadline: "50000", extendedDeadline: "40000" })
         .build();
@@ -818,10 +818,10 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .status("COMPLETED")
-        .tx("0xqueue", 100, "L2", { description: "queued" })
-        .tx("0xexecute", 200, "L2", { description: "executed" })
+        .tx("0xqueue", 100, "arb1", 42161, { description: "queued" })
+        .tx("0xexecute", 200, "arb1", 42161, { description: "executed" })
         .build();
       ctx = await addStage(ctx, stage);
 
@@ -836,7 +836,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2")
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
         .status("PENDING")
         .data({ firstExecutableBlock: 21000000 })
         .build();
@@ -862,10 +862,10 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2")
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
         .status("COMPLETED")
-        .tx("0xl2tx", 1000, "L2")
-        .tx("0xl1tx", 21000000, "L1")
+        .tx("0xl2tx", 1000, "arb1", 42161)
+        .tx("0xl1tx", 21000000, "ethereum", 1)
         .build();
       ctx = await addStage(ctx, stage);
 
@@ -881,10 +881,10 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L1_TIMELOCK", "L1")
+      const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
         .status("COMPLETED")
-        .tx("0xqueue", 21000000, "L1", { description: "queued" })
-        .tx("0xexecute", 21001000, "L1", { description: "executed" })
+        .tx("0xqueue", 21000000, "ethereum", 1, { description: "queued" })
+        .tx("0xexecute", 21001000, "ethereum", 1, { description: "executed" })
         .build();
       ctx = await addStage(ctx, stage);
 
@@ -899,8 +899,8 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage1 = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
-      const stage2 = new StageBuilder("VOTING_ACTIVE", "L2").status("PENDING").build();
+      const stage1 = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
+      const stage2 = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
       ctx = await addStage(ctx, stage1);
       ctx = await addStage(ctx, stage2);
 
@@ -918,7 +918,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput(),
       });
 
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .status("PENDING")
         .data({ operationId: "0xtest", eta: 1700000000 })
         .build();
@@ -940,7 +940,7 @@ describe("TrackingContext", () => {
         input: createGovernorInput({ governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR } as any),
       });
 
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({
           proposalId: "12345",
@@ -954,7 +954,7 @@ describe("TrackingContext", () => {
           endBlock: "200",
           proposalType: "CONSTITUTIONAL",
         })
-        .tx("0xabc", 50, "L2")
+        .tx("0xabc", 50, "arb1", 42161)
         .build();
       ctx = await addStage(ctx, stage);
 

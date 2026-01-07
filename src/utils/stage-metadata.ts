@@ -4,7 +4,7 @@
  * Provides titles, descriptions, and timing info for governance stages.
  */
 
-import type { StageType, ProposalType } from "../types";
+import type { StageType, ProposalType, Chain } from "../types";
 import { GOVERNANCE_STAGE_DURATION_DAYS } from "../constants";
 
 /**
@@ -16,7 +16,7 @@ export interface StageMetadata {
   /** Longer description of what happens in this stage */
   description: string;
   /** Which chain this stage occurs on */
-  chain: "ethereum" | "L2" | "NOVA" | "CROSS_CHAIN";
+  chain: Chain | "CROSS_CHAIN";
   /** Estimated duration in days (may vary by governor type) */
   estimatedDays: number;
   /** Whether this stage requires user action to proceed */

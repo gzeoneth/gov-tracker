@@ -77,25 +77,25 @@ describe("Chain Utilities", () => {
     it("should return L1 for Ethereum mainnet", async () => {
       const provider = createMockProvider(1);
       const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      expect(result).toBe("ethereum");
     });
 
     it("should return L2 for Arbitrum One", async () => {
       const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
       const result = await getChainType(provider);
-      expect(result).toBe("L2");
+      expect(result).toBe("arb1");
     });
 
     it("should return NOVA for Arbitrum Nova", async () => {
       const provider = createMockProvider(CHAIN_IDS.NOVA);
       const result = await getChainType(provider);
-      expect(result).toBe("NOVA");
+      expect(result).toBe("nova");
     });
 
-    it("should return L1 for unknown chains", async () => {
+    it("should return unknown for unknown chains", async () => {
       const provider = createMockProvider(999);
       const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      expect(result).toBe("unknown");
     });
   });
 });

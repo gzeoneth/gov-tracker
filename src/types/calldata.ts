@@ -30,9 +30,6 @@ interface DecodedCalldataBase {
 
   /** Target contract address (if known during decoding) */
   decodingTarget?: string;
-
-  /** Chain context for this calldata (for simulation extraction) */
-  chainContext?: Chain;
 }
 
 /**

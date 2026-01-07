@@ -284,7 +284,7 @@ function processTimelockBatch(
   decoded: DecodedCalldata,
   chainContext: ChainContext
 ): ExtractedSimulation | null {
-  if (decoded.signature?.match(/^schedule(Batch)?$/)) {
+  if (decoded.signature?.match(/^schedule(Batch)?\(/)) {
     // Ideally we use the contract address we are decoding on as the timelock address
     const targetAddress = decoded.decodingTarget;
 

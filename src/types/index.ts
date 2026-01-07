@@ -16,9 +16,20 @@
 export {
   StageType,
   StageStatus,
-  ChainContext,
+  Chain,
+  ChainId,
+  CHAIN_ID_MAP,
+  CHAIN_NAME_MAP,
+  chainIdToChain,
+  chainToChainId,
+  legacyChainTypeToChain,
+  chainToLegacyChainType,
+  legacyTargetChainToChain,
+  chainToLegacyTargetChain,
+  // Legacy exports (deprecated)
   ChainType,
   TargetChainType,
+  ChainContext,
   StageTransaction,
   StageTiming,
   SearchHint,
@@ -139,7 +150,6 @@ export {
 // Simulation data types
 export {
   SimulationType,
-  SimulationChainType,
   BaseSimulationData,
   RetryableSimulationData,
   TimelockSimulationData,

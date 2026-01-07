@@ -21,7 +21,7 @@ import {
   TrackingCheckpoint,
   TrackingInput,
   StageType,
-  ChainType,
+  Chain,
   CallScheduledData,
   ProposalData,
   ProposalType,
@@ -209,7 +209,7 @@ const stageData = <T>(ctx: TrackingContext, type: StageType) =>
   findStage(ctx, type)?.data as T | undefined;
 const execTx = (s: TrackedStage | undefined) =>
   s?.transactions?.find((tx) => tx.description === "executed");
-const chainTx = (s: TrackedStage | undefined, chain: ChainType) =>
+const chainTx = (s: TrackedStage | undefined, chain: Chain) =>
   s?.transactions?.find((tx) => tx.chain === chain);
 
 // Derived Getters - Input-based
@@ -316,7 +316,7 @@ export function getOutboxExecutionTx(
 ): { hash: string; blockNumber: number } | undefined {
   const s = findStage(ctx, "L2_TO_L1_MESSAGE");
   if (s?.status !== "COMPLETED") return undefined;
-  const tx = chainTx(s, "L1");
+  const tx = chainTx(s, "ethereum");
   return tx ? { hash: tx.hash, blockNumber: tx.blockNumber } : undefined;
 }
 

@@ -10,7 +10,7 @@ import {
   PrepareResult,
   getStageData,
   StageType,
-  ChainType,
+  Chain,
   L2TimelockData,
   L1TimelockData,
   CallScheduledData,
@@ -150,7 +150,7 @@ export function validateStageForPrepare(
   return null;
 }
 
-export interface BulkPrepareResult<T extends ChainType = ChainType> {
+export interface BulkPrepareResult<T extends Chain = Chain> {
   total: number;
   results: PrepareResult[];
   targetChain: T;
@@ -161,7 +161,7 @@ export interface SimpleBulkResult {
   results: PrepareResult[];
 }
 
-export function bulkPrepareError<T extends ChainType>(
+export function bulkPrepareError<T extends Chain>(
   error: string,
   targetChain: T
 ): BulkPrepareResult<T> {
@@ -172,7 +172,7 @@ export function simpleBulkError(error: string): SimpleBulkResult {
   return { total: 0, results: [{ success: false, error }] };
 }
 
-export function validateStageForBulkPrepare<T extends ChainType>(
+export function validateStageForBulkPrepare<T extends Chain>(
   stage: TrackedStage,
   targetChain: T,
   options: PrepareValidationOptions = {}
@@ -199,7 +199,7 @@ export async function searchAndCompleteTimelockExecution(
   timelockAddress: string,
   operationId: string,
   provider: ethers.providers.Provider,
-  chain: ChainType,
+  chain: Chain,
   fromBlock: number,
   toBlock?: number,
   queueTimestamp?: number

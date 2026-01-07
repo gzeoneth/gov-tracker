@@ -52,7 +52,7 @@ const placeholder = (
 ): TrackedStage => ({
   type,
   status,
-  chain: L1_STAGES.has(type) ? "L1" : "L2",
+  chain: L1_STAGES.has(type) ? "L1" : "arb1",
   transactions: [],
   data: { reason },
 });

@@ -3,7 +3,7 @@
  */
 
 import { BigNumber } from "ethers";
-import { ChainType, StageType } from "./core";
+import { Chain, ChainId, StageType } from "./core";
 import { TrackedStage } from "./stages";
 import { CallScheduledData } from "./timelock";
 import { ProposalType, ProposalData, ProposalState } from "./governor";
@@ -30,7 +30,8 @@ export interface PreparedTransaction {
   to: string;
   data: string;
   value: string;
-  chain: ChainType;
+  chain: Chain;
+  chainId: ChainId;
   description: string;
   operationId?: string;
   hashValidation?: { isValid: boolean; error?: string };

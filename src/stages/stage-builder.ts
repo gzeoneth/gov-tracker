@@ -3,12 +3,13 @@
  */
 
 import {
-  ChainType,
+  Chain,
+  ChainId,
+  chainToChainId,
   StageStatus,
   StageType,
   StageTransaction,
   StageTiming,
-  TargetChainType,
   TrackedStage,
   TrackedStageData,
 } from "../types";
@@ -16,11 +17,13 @@ import {
 export class StageBuilder {
   private _stage: TrackedStage;
 
-  constructor(type: StageType, chain: ChainType, status: StageStatus = "NOT_STARTED") {
+  constructor(type: StageType, chain: Chain, status: StageStatus = "NOT_STARTED") {
+    const chainId = chainToChainId(chain) ?? 0;
     this._stage = {
       type,
       status,
       chain,
+      chainId,
       transactions: [],
       data: {},
       executable: false,
@@ -58,18 +61,21 @@ export class StageBuilder {
   tx(
     hash: string,
     blockNumber: number,
-    chain: ChainType,
+    chain: Chain,
+    chainId: ChainId,
     options: {
       timestamp?: number;
       logIndex?: number;
-      targetChain?: TargetChainType;
+      targetChain?: Chain;
+      targetChainId?: ChainId;
       description?: string;
     } = {}
   ): this {
-    const tx: StageTransaction = { hash, blockNumber, chain };
+    const tx: StageTransaction = { hash, blockNumber, chain, chainId };
     if (options.timestamp !== undefined) tx.timestamp = options.timestamp;
     if (options.logIndex !== undefined) tx.logIndex = options.logIndex;
     if (options.targetChain !== undefined) tx.targetChain = options.targetChain;
+    if (options.targetChainId !== undefined) tx.targetChainId = options.targetChainId;
     if (options.description !== undefined) tx.description = options.description;
     this._stage.transactions = [...this._stage.transactions, tx];
     return this;

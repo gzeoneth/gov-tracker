@@ -2,14 +2,7 @@
  * Stage data types and TrackedStage definitions
  */
 
-import {
-  ChainType,
-  StageType,
-  StageStatus,
-  StageTransaction,
-  StageTiming,
-  TargetChainType,
-} from "./core";
+import { Chain, ChainId, StageType, StageStatus, StageTransaction, StageTiming } from "./core";
 import { SerializedCallScheduledData } from "./timelock";
 import {
   RetryableTicketInfo,
@@ -136,6 +129,7 @@ export interface L2ToL1MessageStageData extends BaseStageData {
   messageDetails?: Array<{ index: number; status: string }>;
   hasMultipleMessages?: boolean;
   /** L2ToL1Tx event from Arbitrum SDK (contains message data for salt decoding) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   l2ToL1TxEvent?: any;
 }
 
@@ -144,8 +138,9 @@ export interface L2ToL1MessageStageData extends BaseStageData {
  */
 export interface RetryableStageData extends BaseStageData {
   ticketCount?: number;
-  /** All target chains for retryables (can be both Arb1 and Nova) */
-  targetChains?: TargetChainType[];
+  /** All target chains for retryables (can be both arb1 and nova) */
+  targetChains?: Chain[];
+  targetChainIds?: ChainId[];
   l2TxHash?: string;
   l1Block?: number;
   tickets?: RetryableTicketInfo[];
@@ -199,7 +194,8 @@ export type TrackedStageData = Partial<
 export interface TrackedStage {
   type: StageType;
   status: StageStatus;
-  chain: ChainType;
+  chain: Chain;
+  chainId: ChainId;
   transactions: StageTransaction[];
   data: TrackedStageData;
   timing?: StageTiming;

@@ -15,7 +15,7 @@ import {
   getCurrentStage,
   getTrackingStatusSummary,
   getStageTransactionUrl,
-  ChainType,
+  Chain,
   areAllStagesComplete,
   TrackingCheckpoint,
 } from "../../index";
@@ -30,7 +30,7 @@ import {
 export interface JsonStageStatus {
   type: string;
   status: StageStatus;
-  chain: ChainType;
+  chain: Chain;
   txHash?: string;
   blockNumber?: number;
   timestamp?: number;

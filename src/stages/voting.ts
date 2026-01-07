@@ -35,7 +35,7 @@ export async function trackVotingStage(
   stage: TrackedStage;
   votingData: VotingData | null;
 }> {
-  const builder = new StageBuilder("VOTING_ACTIVE", "L2");
+  const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
 
   // Get current block info
   const { blockNumber: currentBlock, timestamp: currentTimestamp } =

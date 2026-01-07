@@ -8,13 +8,13 @@
 
 import { ethers, BigNumber } from "ethers";
 import {
+  Chain,
   TrackedStage,
   TrackedStageData,
   TimelockStageData,
   TimelockState,
   CallScheduledData,
   OperationState,
-  ChainType,
   StageType,
   PrepareResult,
   PrepareOptions,
@@ -61,24 +61,24 @@ const logExecution = loggers.execution;
  * Configuration for timelock tracking that differs between L1 and L2.
  */
 export interface TimelockTrackingConfig {
-  chain: ChainType;
+  chain: Chain;
   stageType: StageType;
   blockTimeSeconds: number;
   logPrefix: string;
 }
 
 const L2_TIMELOCK_CONFIG: TimelockTrackingConfig = {
-  chain: "L2",
+  chain: "arb1",
   stageType: "L2_TIMELOCK",
   blockTimeSeconds: BLOCK_TIMES.L2,
-  logPrefix: "L2",
+  logPrefix: "arb1",
 };
 
 const L1_TIMELOCK_CONFIG: TimelockTrackingConfig = {
-  chain: "L1",
+  chain: "ethereum",
   stageType: "L1_TIMELOCK",
   blockTimeSeconds: BLOCK_TIMES.L1,
-  logPrefix: "L1",
+  logPrefix: "ethereum",
 };
 
 /**
@@ -500,7 +500,7 @@ export async function trackL1Timelock(
   }
 
   if (!l1OperationId) {
-    const stage = new StageBuilder("L1_TIMELOCK", "L1")
+    const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
       .status("NOT_STARTED")
       .data({
         reason: "L1 operation ID not yet discovered (challenge period may not be complete)",

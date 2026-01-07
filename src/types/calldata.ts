@@ -8,7 +8,7 @@
 /**
  * Chain context for address resolution and explorer links
  */
-import { ChainContext } from "./core";
+import { Chain } from "./core";
 
 /**
  * Source of function signature decoding
@@ -32,7 +32,7 @@ interface DecodedCalldataBase {
   decodingTarget?: string;
 
   /** Chain context for this calldata (for simulation extraction) */
-  chainContext?: ChainContext;
+  chainContext?: Chain;
 }
 
 /**
@@ -142,7 +142,7 @@ export interface RetryableTicketData {
 export interface KnownAddress {
   address: string;
   label: string;
-  chain: ChainContext;
+  chain: Chain;
 }
 
 /**

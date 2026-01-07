@@ -129,7 +129,7 @@ export async function prepareTransaction(
       if (!targetChain) {
         return failPrepare("No target chain found in retryable stage data");
       }
-      const targetProvider = targetChain === "Nova" ? novaProvider : l2Provider;
+      const targetProvider = targetChain === "nova" ? novaProvider : l2Provider;
       if (!targetProvider) {
         return failPrepare("Target chain provider not available");
       }

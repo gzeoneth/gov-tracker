@@ -14,11 +14,11 @@ import {
   ParentTransactionReceipt,
   ParentToChildMessageReader,
 } from "@arbitrum/sdk";
-import { TrackedStage, ChainType, PrepareResult } from "../types";
+import { TrackedStage, Chain, ChainId, PrepareResult } from "../types";
 import { loggers } from "../utils/logger";
 
 const log = loggers.retryables;
-import { getChainType } from "../utils/chain";
+import { getChainType, getChainId } from "../utils/chain";
 import { arbRetryableInterface } from "../abis";
 import { ADDRESSES, EVENT_TOPICS, TIMING } from "../constants";
 import { getBlockTimestamp, failPrepare } from "./base";
@@ -34,14 +34,16 @@ import {
 /** Creation details for a retryable ticket */
 interface CreationDetail {
   index: number;
-  targetChain: "Arb1" | "Nova";
+  targetChain: Chain;
+  targetChainId: ChainId;
   l2TxHash: string;
 }
 
 /** Redemption details for a retryable ticket */
 interface RedemptionDetail {
   index: number;
-  targetChain: "Arb1" | "Nova";
+  targetChain: Chain;
+  targetChainId: ChainId;
   status: string;
   l2TxHash: string | null;
 }
@@ -50,7 +52,7 @@ interface RedemptionDetail {
  * Result of detecting retryable target chains, including message counts
  */
 export interface RetryableTargetInfo {
-  chain: ChainType;
+  chain: "arb1" | "NOVA"; // Keep legacy for internal use
   inboxAddress: string;
   messageCount: number;
 }
@@ -85,7 +87,7 @@ export async function detectAllRetryableTargetChains(
 
   if (arb1Count > 0) {
     targets.push({
-      chain: "L2",
+      chain: "arb1",
       inboxAddress: ADDRESSES.ARB1_DELAYED_INBOX,
       messageCount: arb1Count,
     });
@@ -93,7 +95,7 @@ export async function detectAllRetryableTargetChains(
 
   if (novaCount > 0) {
     targets.push({
-      chain: "NOVA",
+      chain: "nova",
       inboxAddress: ADDRESSES.NOVA_DELAYED_INBOX,
       messageCount: novaCount,
     });
@@ -142,7 +144,7 @@ export async function trackRetryables(
   // No retryables found
   if (targetInfos.length === 0) {
     return {
-      stage: new StageBuilder("RETRYABLE_EXECUTED", "L2")
+      stage: new StageBuilder("RETRYABLE_EXECUTED", "arb1")
         .skip("No retryable tickets in transaction")
         .build(),
       messages: [],
@@ -155,7 +157,7 @@ export async function trackRetryables(
   const l1Receipt = await queryWithRetry(() => l1Provider.getTransactionReceipt(l1ExecutionTxHash));
   if (!l1Receipt) {
     return {
-      stage: new StageBuilder("RETRYABLE_EXECUTED", "L2")
+      stage: new StageBuilder("RETRYABLE_EXECUTED", "arb1")
         .skip("L1 transaction receipt not found")
         .build(),
       messages: [],
@@ -173,7 +175,8 @@ export async function trackRetryables(
     {
       hash: l1ExecutionTxHash,
       blockNumber: l1Receipt.blockNumber,
-      chain: "L1",
+      chain: "ethereum",
+      chainId: 1,
       timestamp: l1Timestamp,
       logIndex: 0,
       description: "L1 executed",
@@ -183,25 +186,28 @@ export async function trackRetryables(
   let anyFailed = false;
 
   for (const { chain: targetChain, messageCount } of targetInfos) {
-    const provider = targetChain === "NOVA" ? novaProvider : l2Provider;
-    const chainLabel = targetChain === "NOVA" ? "Nova" : "Arb1";
+    const provider = targetChain === "nova" ? novaProvider : l2Provider;
+    const chainName: Chain = targetChain === "nova" ? "nova" : "arb1";
+    const chainId = targetChain === "nova" ? 42170 : 42161;
 
     // Handle missing provider
     if (!provider) {
       log(
         "No provider for %s, marking %d tickets as PROVIDER_NOT_AVAILABLE",
-        chainLabel,
+        chainName,
         messageCount
       );
       for (let i = 0; i < messageCount; i++) {
         allCreationDetails.push({
           index: allCreationDetails.length,
-          targetChain: chainLabel,
+          targetChain: chainName,
+          targetChainId: chainId,
           l2TxHash: "unknown",
         });
         allRedemptionDetails.push({
           index: allRedemptionDetails.length,
-          targetChain: chainLabel,
+          targetChain: chainName,
+          targetChainId: chainId,
           status: "PROVIDER_NOT_AVAILABLE",
           l2TxHash: null,
         });
@@ -219,17 +225,20 @@ export async function trackRetryables(
     for (const msg of messages) {
       allCreationDetails.push({
         index: allCreationDetails.length,
-        targetChain: chainLabel,
+        targetChain: chainName,
+        targetChainId: chainId,
         l2TxHash: msg.retryableCreationId,
       });
       allTransactions.push({
         hash: msg.retryableCreationId,
         blockNumber: 0,
-        chain: targetChain,
+        chain: chainName,
+        chainId,
         timestamp: l1Timestamp,
         logIndex: allTransactions.length,
-        targetChain: chainLabel,
-        description: `${chainLabel} created`,
+        targetChain: chainName,
+        targetChainId: chainId,
+        description: `${chainName} created`,
       });
     }
 
@@ -254,7 +263,8 @@ export async function trackRetryables(
         allRedeemed = false;
         allRedemptionDetails.push({
           index: allRedemptionDetails.length,
-          targetChain: chainLabel,
+          targetChain: chainName,
+          targetChainId: chainId,
           status: "FETCH_ERROR",
           l2TxHash: null,
         });
@@ -277,11 +287,13 @@ export async function trackRetryables(
         allTransactions.push({
           hash: transactionHash,
           blockNumber,
-          chain: targetChain,
+          chain: chainName,
+          chainId,
           timestamp,
           logIndex: allTransactions.length,
-          targetChain: chainLabel,
-          description: `${chainLabel} redeemed`,
+          targetChain: chainName,
+          targetChainId: chainId,
+          description: `${chainName} redeemed`,
         });
       } else if (status === ParentToChildMessageStatus.EXPIRED) {
         anyFailed = true;
@@ -292,29 +304,31 @@ export async function trackRetryables(
 
       allRedemptionDetails.push({
         index: allRedemptionDetails.length,
-        targetChain: chainLabel,
+        targetChain: chainName,
+        targetChainId: chainId,
         status: statusName,
         l2TxHash,
       });
     }
   }
 
-  // Collect unique target chains, converting ChainType to TargetChainType
-  // "L2" -> "Arb1", "NOVA" -> "Nova"
+  // Collect unique target chains
   const targetChains = [
-    ...new Set(targetInfos.map((t) => (t.chain === "L2" ? "Arb1" : "Nova") as "Arb1" | "Nova")),
+    ...new Set(targetInfos.map((t) => (t.chain === "arb1" ? "arb1" : "nova") as Chain)),
   ];
+  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "arb1" ? 42161 : 42170)))];
 
   // Determine overall status and build stage using StageBuilder
-  // Note: chain is "L2" because retryable redemption executes on L2 chains (Arb1/Nova)
+  // Note: chain is "arb1" because retryable redemption executes on L2 chains (Arb1/Nova)
   const status = anyFailed ? "FAILED" : allRedeemed ? "COMPLETED" : "READY";
-  const builder = new StageBuilder("RETRYABLE_EXECUTED", "L2")
+  const builder = new StageBuilder("RETRYABLE_EXECUTED", "arb1")
     .status(status)
     .transactions(allTransactions)
     .timing({ startedAt: l1Timestamp })
     .data({
       ticketCount: allCreationDetails.length,
       targetChains,
+      targetChainIds,
       creationDetails: allCreationDetails,
       redemptionDetails: allRedemptionDetails,
       redeemedCount: allRedemptionDetails.filter((d) => d.status === "REDEEMED").length,
@@ -351,7 +365,7 @@ export interface RetryablePrepareOptions {
  */
 export async function prepareRetryableRedemption(
   message: ParentToChildMessageReader,
-  targetChain: ChainType = "L2",
+  l2Provider: ethers.providers.Provider,
   options: RetryablePrepareOptions = {}
 ): Promise<PrepareResult> {
   const ticketId = message.retryableCreationId;
@@ -375,6 +389,10 @@ export async function prepareRetryableRedemption(
     }
   }
 
+  // Get chain info from provider
+  const targetChain = await getChainType(l2Provider);
+  const targetChainId = await getChainId(l2Provider);
+
   const calldata = arbRetryableInterface.encodeFunctionData("redeem", [ticketId]);
 
   return {
@@ -384,6 +402,7 @@ export async function prepareRetryableRedemption(
       data: calldata,
       value: "0",
       chain: targetChain,
+      chainId: targetChainId,
       description: `Redeem retryable ticket ${ticketId}`,
     },
   };
@@ -399,11 +418,11 @@ export async function prepareAllRetryables(
   options: RetryablePrepareOptions = {}
 ): Promise<BulkPrepareResult> {
   const receipt = await queryWithRetry(() => l1Provider.getTransactionReceipt(l1TxHash));
-  if (!receipt) return bulkPrepareError("L1 transaction receipt not found", "L2");
+  if (!receipt) return bulkPrepareError("L1 transaction receipt not found", "arb1");
 
   const parentReceipt = new ParentTransactionReceipt(receipt);
   const messages = await parentReceipt.getParentToChildMessages(l2Provider);
-  if (messages.length === 0) return bulkPrepareError("No retryable tickets found", "L2");
+  if (messages.length === 0) return bulkPrepareError("No retryable tickets found", "arb1");
 
   const targetChain = await getChainType(l2Provider);
   log("Preparing %d retryable tickets for %s", messages.length, targetChain);
@@ -424,13 +443,13 @@ export async function prepareRetryableStage(
   l2Provider: ethers.providers.Provider,
   options: RetryablePrepareOptions = {}
 ): Promise<BulkPrepareResult> {
-  const validationError = validateStageForBulkPrepare(stage, "L2", {
+  const validationError = validateStageForBulkPrepare(stage, "arb1", {
     prepareCompleted: options.prepareCompleted,
   });
   if (validationError) return validationError;
 
   const l1TxHash = stage.transactions[0]?.hash;
-  if (!l1TxHash) return bulkPrepareError("L1 transaction hash not found", "L2");
+  if (!l1TxHash) return bulkPrepareError("L1 transaction hash not found", "arb1");
 
   return prepareAllRetryables(l1TxHash, l1Provider, l2Provider, options);
 }

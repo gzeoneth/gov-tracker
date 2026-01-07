@@ -37,12 +37,17 @@ export type {
   // Core stage types
   StageType,
   StageStatus,
-  ChainType,
+  Chain,
+  ChainId,
   TrackedStage,
   StageTransaction,
   StageTiming,
   StageDataMap,
   TypedTrackedStage,
+  // Legacy types (deprecated)
+  ChainType,
+  Chain,
+  ChainContext,
   // Tracking types
   StageTrackingContext,
   NextStageHints,
@@ -104,7 +109,6 @@ export type {
   GovernorProposalState,
   ElectionCheckResult,
   // Calldata decoding types
-  ChainContext,
   DecodingSource,
   DecodedCalldata,
   DecodedParameter,
@@ -113,7 +117,6 @@ export type {
   SignatureEntry,
   // Simulation data types
   SimulationType,
-  SimulationChainType,
   BaseSimulationData,
   RetryableSimulationData,
   TimelockSimulationData,
@@ -263,6 +266,7 @@ export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
 export { addressEquals, isAddressIn, getChainType } from "./utils/chain";
+export { chainIdToChain, chainToChainId } from "./types";
 
 // Error classification
 export { isGasEstimationError } from "./utils/error-classification";

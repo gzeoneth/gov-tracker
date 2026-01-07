@@ -233,9 +233,9 @@ export async function executeTransaction(
 
   try {
     const provider =
-      prepared.chain === "L1"
+      prepared.chain === "ethereum"
         ? providers.l1Provider
-        : prepared.chain === "NOVA"
+        : prepared.chain === "nova"
           ? providers.novaProvider
           : providers.l2Provider;
 
@@ -246,7 +246,7 @@ export async function executeTransaction(
     if (prepared.value !== "0") console.log(`  Value: ${prepared.value}`);
 
     // Use custom gas settings for L2 chains (Arb1 and Nova)
-    const isL2Chain = prepared.chain === "L2" || prepared.chain === "NOVA";
+    const isL2Chain = prepared.chain === "arb1" || prepared.chain === "nova";
     const effectiveGasSettings = isL2Chain ? (gasSettings ?? DEFAULT_L2_GAS_SETTINGS) : undefined;
 
     const txRequest: ethers.providers.TransactionRequest = {
@@ -401,8 +401,8 @@ export function formatTrackingResult(result: TrackingResult, label?: string): st
       const pendingCount = stage.data.pendingCount as number | undefined;
 
       if (ticketCount && ticketCount > 0) {
-        const arb1Count = creationDetails?.filter((d) => d.targetChain === "Arb1").length ?? 0;
-        const novaCount = creationDetails?.filter((d) => d.targetChain === "Nova").length ?? 0;
+        const arb1Count = creationDetails?.filter((d) => d.targetChain === "arb1").length ?? 0;
+        const novaCount = creationDetails?.filter((d) => d.targetChain === "nova").length ?? 0;
         const chains = [arb1Count > 0 && `${arb1Count} Arb1`, novaCount > 0 && `${novaCount} Nova`]
           .filter(Boolean)
           .join(", ");
@@ -640,7 +640,7 @@ async function prepareStagesForResult(
       // Prepare retryables for each target chain (can be both Arb1 and Nova)
       for (const targetChain of targetChains) {
         const targetProvider =
-          targetChain === "Nova" ? providers.novaProvider : providers.l2Provider;
+          targetChain === "nova" ? providers.novaProvider : providers.l2Provider;
         const { results } = await prepareRetryableStage(
           stage,
           providers.l1Provider,

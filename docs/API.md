@@ -442,11 +442,11 @@ interface RetryableSimulationData {
 
 ```bash
 # Track and decode calldata
-npx gov-tracker track --tx 0x... --inspect-only
+npx gov-tracker track 0x... --inspect-only
 
 # Show simulation data
-npx gov-tracker track --tx 0x... --show-simulation
+npx gov-tracker track 0x... --show-simulation
 
 # Execute ready stages
-npx gov-tracker track --tx 0x... --write --private-key $PRIVATE_KEY
+npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY
 ```

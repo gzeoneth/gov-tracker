@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `--show-simulation` flag (display simulation data)
   - Tree-formatted calldata output with nested calls
 
+- **New SDK APIs**:
+  - `decodeCalldata()`, `decodeCalldataArray()` - Decode proposal calldata with signature lookup
+  - `lookupSignature()`, `extractFunctionName()` - Function signature resolution
+  - `getAddressLabel()`, `getChainLabel()` - Known address labeling
+  - `isRetryableTicketMagic()`, `decodeRetryableTicket()` - Retryable ticket parsing
+  - `extractAllSimulationsFromDecoded()` - Extract simulation data from decoded calldata
+  - `prepareRetryableSimulation()`, `prepareTimelockSimulation()` - Prepare simulation data
+  - `calculateAddressAlias()`, `getL1TimelockAlias()` - L1→L2 address aliasing
+
 - **New Types**: 40+ exported functions/types
   - `DecodedCalldata`, `DecodedParameter`, `RetryableTicketData`
   - `SimulationData`, `TimelockSimulationData`, `RetryableSimulationData`

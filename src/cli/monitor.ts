@@ -61,7 +61,7 @@ import {
   parseGasSettings,
   parseChunkingConfig,
 } from "./lib/cli";
-import { decodeCalldata } from "../calldata";
+import { decodeCalldata, extractCalldataFromStage } from "../calldata";
 import type { DecodedCalldata, ChainContext } from "../types/calldata";
 
 // ============================================================================
@@ -434,6 +434,7 @@ trackCmd
 
       let calldatas: string[] = [];
       let targets: string[] = [];
+      let values: string[] = [];
 
       // If --inspect-only, skip tracking and just decode
       if (opts.inspectOnly) {
@@ -446,13 +447,15 @@ trackCmd
         }
 
         const result = results[0];
-        if (result.stages.length > 0 && result.stages[0].data) {
-          const stage = result.stages[0];
-          const data = stage.data as { calldatas?: string[]; targets?: string[] };
-          if (data.calldatas) {
-            calldatas = data.calldatas;
-            targets = data.targets || [];
-          }
+        if (result.stages.length > 0) {
+          const {
+            calldatas: extractedCalldatas,
+            targets: extractedTargets,
+            values: extractedValues,
+          } = extractCalldataFromStage(result.stages[0]);
+          calldatas = extractedCalldatas;
+          targets = extractedTargets;
+          values = extractedValues;
         }
 
         if (calldatas.length === 0) {
@@ -499,13 +502,15 @@ trackCmd
         }
 
         // Extract calldata for decoding
-        if (results.length > 0 && results[0].stages.length > 0 && results[0].stages[0].data) {
-          const stage = results[0].stages[0];
-          const data = stage.data as { calldatas?: string[]; targets?: string[] };
-          if (data.calldatas) {
-            calldatas = data.calldatas;
-            targets = data.targets || [];
-          }
+        if (results.length > 0 && results[0].stages.length > 0) {
+          const {
+            calldatas: extractedCalldatas,
+            targets: extractedTargets,
+            values: extractedValues,
+          } = extractCalldataFromStage(results[0].stages[0]);
+          calldatas = extractedCalldatas;
+          targets = extractedTargets;
+          values = extractedValues;
         }
 
         // Execute if --write (only when not in inspect-only mode)
@@ -577,7 +582,8 @@ trackCmd
 
           if (calldatas.length > 1) {
             console.log(`--- Action ${i + 1}/${calldatas.length} ---`);
-            if (targets[i]) console.log(`Target: ${targets[i]}`);
+            console.log(`Target: ${targets[i]}`);
+            console.log(`Value: ${values[i]}`);
           }
           console.log(formatDecodedCalldata(decoded));
           console.log("");

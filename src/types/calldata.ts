@@ -152,3 +152,12 @@ export interface SignatureEntry {
   selector: string;
   signature: string;
 }
+
+/**
+ * Extracted calldata info with aligned arrays
+ */
+export interface ExtractedCalldata {
+  calldatas: string[];
+  targets: string[];
+  values: string[];
+}

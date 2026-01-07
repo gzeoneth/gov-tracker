@@ -28,7 +28,9 @@ import {
   TrackingProgress,
   CHUNK_SIZES,
   ChunkingConfig,
+  extractAllSimulationsFromDecoded,
 } from "../index";
+import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
 import {
@@ -59,6 +61,88 @@ import {
   parseGasSettings,
   parseChunkingConfig,
 } from "./lib/cli";
+import { decodeCalldata, extractCalldataFromStage } from "../calldata";
+import { ChainContext } from "../types";
+import type { DecodedCalldata } from "../types/calldata";
+
+// ============================================================================
+// Helper Functions for Calldata Decoding and Display
+// ============================================================================
+
+/**
+ * Format decoded calldata as an indented tree
+ */
+function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
+  const prefix = "  ".repeat(indent);
+  const lines: string[] = [];
+
+  if (decoded.isRetryable) {
+    // Format retryable ticket label (use raw chain identifier)
+    const chain = decoded.targetChain;
+    lines.push(`${prefix}Retryable Ticket → ${chain}`);
+  } else if (decoded.signature) {
+    lines.push(`${prefix}${decoded.signature}`);
+  } else {
+    lines.push(`${prefix}Unknown function (${decoded.selector})`);
+  }
+
+  if (decoded.parameters) {
+    for (const param of decoded.parameters) {
+      let paramLine = `${prefix}  ${param.name} (${param.type}): `;
+
+      // For addresses, show label if available
+      if (param.addressLabel) {
+        paramLine += `${param.value} [${param.addressLabel}]`;
+      } else {
+        paramLine += param.value;
+      }
+
+      lines.push(paramLine);
+
+      // Show nested calldata
+      if (param.nested) {
+        lines.push(`${prefix}    └─ [NESTED]`);
+        lines.push(formatDecodedCalldata(param.nested, indent + 3));
+      }
+
+      // Show nested array
+      if (param.nestedArray && param.nestedArray.length > 0) {
+        for (let i = 0; i < param.nestedArray.length; i++) {
+          lines.push(`${prefix}    [${i}]:`);
+          lines.push(formatDecodedCalldata(param.nestedArray[i], indent + 3));
+        }
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Format simulation data for display
+ */
+function formatSimulations(simulations: ExtractedSimulation[]): string {
+  if (simulations.length === 0) return "  No simulatable calls found.";
+
+  const lines: string[] = [];
+  for (const sim of simulations) {
+    lines.push(`  [${sim.simulation.type.toUpperCase()}] ${sim.label}`);
+    lines.push(`    Network: ${sim.simulation.networkId}`);
+    lines.push(`    From: ${sim.simulation.from}`);
+    lines.push(`    To: ${sim.simulation.to}`);
+    lines.push(`    Value: ${sim.simulation.value}`);
+
+    if (sim.simulation.type === "timelock") {
+      lines.push(`    Operation ID: ${sim.simulation.operationId}`);
+    }
+
+    if (sim.batchIndex !== undefined) {
+      lines.push(`    Batch Index: ${sim.batchIndex}`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
 
 /**
  * Get the platform-specific application data directory
@@ -321,16 +405,17 @@ trackCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
   .addOption(verboseOption)
+  .option("--inspect-only", "Decode and inspect calldata without tracking")
+  .option("--show-simulation", "Show simulation data for each call")
   .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
-
-    console.log(`Tracking from tx: ${txHash}\n`);
 
     try {
       const providers = createProvidersFromOptions(opts);
       const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
       const gasSettings: GasSettings = parseGasSettings(opts);
+      const chainContext: ChainContext = "arb1";
 
       if (opts.verbose) {
         console.log(
@@ -347,82 +432,172 @@ trackCmd
         chunkingConfig,
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });
-      const shouldPrepare =
-        opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-      const { results, preparations, preparedTransactions } = await trackAndPrepare(
-        tracker,
-        txHash,
-        {
-          prepare: shouldPrepare,
-          prepareCompleted: opts.prepareCompleted,
-          preparePending: opts.preparePending,
-        },
-        providers
-      );
+      let calldatas: string[] = [];
+      let targets: string[] = [];
+      let values: string[] = [];
 
-      // Format output
-      results.forEach((r, i) => {
-        const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-        console.log(formatTrackingResult(r, label));
-      });
+      // If --inspect-only, skip tracking and just decode
+      if (opts.inspectOnly) {
+        console.log(`Fetching proposal from tx: ${txHash}...\n`);
 
-      // Show all prepared transactions
-      if (preparedTransactions.length > 0) {
-        console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
-      }
+        const results = await tracker.trackByTxHash(txHash);
+        if (results.length === 0) {
+          console.error("No proposal found in transaction");
+          process.exit(1);
+        }
 
-      // Show preparation errors
-      const failedPreparations = preparations.filter((p) => !p.success);
-      failedPreparations.forEach((prep) => {
-        console.log(`\n[PREPARE ERROR] ${prep.error}`);
-      });
+        const result = results[0];
+        if (result.stages.length > 0) {
+          const {
+            calldatas: extractedCalldatas,
+            targets: extractedTargets,
+            values: extractedValues,
+          } = extractCalldataFromStage(result.stages[0]);
+          calldatas = extractedCalldatas;
+          targets = extractedTargets;
+          values = extractedValues;
+        }
 
-      // Execute if --write
-      if (opts.write && preparedTransactions.length > 0) {
-        const signer = createSigner(opts.privateKey);
-        console.log(`\n=== Executing with ${signer.address} ===`);
+        if (calldatas.length === 0) {
+          console.error("No calldata found in proposal");
+          process.exit(1);
+        }
+      } else {
+        // Normal tracking flow
+        console.log(`Tracking from tx: ${txHash}\n`);
 
-        let currentPreparedTxs = preparedTransactions;
-        let chainDepth = 0;
-        const maxChainDepth = 10;
+        const shouldPrepare =
+          opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-        while (currentPreparedTxs.length > 0 && chainDepth < maxChainDepth) {
-          chainDepth++;
-          let executedAny = false;
+        const { results, preparations, preparedTransactions } = !opts.inspectOnly
+          ? await trackAndPrepare(
+              tracker,
+              txHash,
+              {
+                prepare: shouldPrepare,
+                prepareCompleted: opts.prepareCompleted,
+                preparePending: opts.preparePending,
+              },
+              providers
+            )
+          : { results: [], preparations: [], preparedTransactions: [] };
 
-          for (const prepared of currentPreparedTxs) {
-            const result = await executeTransaction(prepared, signer, providers, gasSettings);
-            if (!result.success) {
-              console.error(`Execution failed: ${result.error}`);
-            } else {
-              executedAny = true;
-            }
-          }
-
-          if (!executedAny) break;
-
-          console.log(`\nRe-tracking to find next stages...`);
-          const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
-
-          retracked.results.forEach((r, i) => {
-            const label =
-              retracked.results.length > 1
-                ? `Operation ${i + 1}/${retracked.results.length}`
-                : undefined;
+        // Format tracking output
+        if (!opts.inspectOnly) {
+          results.forEach((r, i) => {
+            const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
             console.log(formatTrackingResult(r, label));
           });
 
-          if (retracked.preparedTransactions.length > 0) {
-            console.log(`\n${formatMultiplePreparedTransactions(retracked.preparedTransactions)}`);
+          // Show all prepared transactions
+          if (preparedTransactions.length > 0) {
+            console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
           }
 
-          const retrackedFailed = retracked.preparations.filter((p) => !p.success);
-          retrackedFailed.forEach((prep) => {
+          // Show preparation errors
+          const failedPreparations = preparations.filter((p) => !p.success);
+          failedPreparations.forEach((prep) => {
             console.log(`\n[PREPARE ERROR] ${prep.error}`);
           });
+        }
 
-          currentPreparedTxs = retracked.preparedTransactions;
+        // Extract calldata for decoding
+        if (results.length > 0 && results[0].stages.length > 0) {
+          const {
+            calldatas: extractedCalldatas,
+            targets: extractedTargets,
+            values: extractedValues,
+          } = extractCalldataFromStage(results[0].stages[0]);
+          calldatas = extractedCalldatas;
+          targets = extractedTargets;
+          values = extractedValues;
+        }
+
+        // Execute if --write (only when not in inspect-only mode)
+        if (opts.write && preparedTransactions.length > 0 && !opts.inspectOnly) {
+          const signer = createSigner(opts.privateKey);
+          console.log(`\n=== Executing with ${signer.address} ===`);
+
+          let currentPreparedTxs = preparedTransactions;
+          let chainDepth = 0;
+          const maxChainDepth = 10;
+
+          while (currentPreparedTxs.length > 0 && chainDepth < maxChainDepth) {
+            chainDepth++;
+            let executedAny = false;
+
+            for (const prepared of currentPreparedTxs) {
+              const result = await executeTransaction(prepared, signer, providers, gasSettings);
+              if (!result.success) {
+                console.error(`Execution failed: ${result.error}`);
+              } else {
+                executedAny = true;
+              }
+            }
+
+            if (!executedAny) break;
+
+            console.log(`\nRe-tracking to find next stages...`);
+            const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
+
+            retracked.results.forEach((r, i) => {
+              const label =
+                retracked.results.length > 1
+                  ? `Operation ${i + 1}/${retracked.results.length}`
+                  : undefined;
+              console.log(formatTrackingResult(r, label));
+            });
+
+            if (retracked.preparedTransactions.length > 0) {
+              console.log(
+                `\n${formatMultiplePreparedTransactions(retracked.preparedTransactions)}`
+              );
+            }
+
+            const retrackedFailed = retracked.preparations.filter((p) => !p.success);
+            retrackedFailed.forEach((prep) => {
+              console.log(`\n[PREPARE ERROR] ${prep.error}`);
+            });
+
+            currentPreparedTxs = retracked.preparedTransactions;
+          }
+        }
+      }
+
+      // Decode and display calldata if requested
+      if (opts.showSimulation || opts.inspectOnly) {
+        if (calldatas.length === 0) {
+          console.error("No calldata available for decoding");
+          process.exit(1);
+        }
+
+        console.log("\n=== Decoded Calldata ===\n");
+
+        const allDecoded: DecodedCalldata[] = [];
+        const allSimulations: ExtractedSimulation[] = [];
+
+        for (let i = 0; i < calldatas.length; i++) {
+          const decoded = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
+          allDecoded.push(decoded);
+
+          if (calldatas.length > 1) {
+            console.log(`--- Action ${i + 1}/${calldatas.length} ---`);
+            console.log(`Target: ${targets[i]}`);
+            console.log(`Value: ${values[i]}`);
+          }
+          console.log(formatDecodedCalldata(decoded));
+          console.log("");
+
+          if (opts.showSimulation) {
+            const sims = extractAllSimulationsFromDecoded(decoded, chainContext);
+            allSimulations.push(...sims);
+          }
+        }
+
+        if (opts.showSimulation) {
+          console.log("=== Simulation Data ===\n");
+          console.log(formatSimulations(allSimulations));
         }
       }
     } catch (e) {

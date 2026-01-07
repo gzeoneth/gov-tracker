@@ -103,6 +103,23 @@ export type {
   ElectionStatus,
   GovernorProposalState,
   ElectionCheckResult,
+  // Calldata decoding types
+  ChainContext,
+  DecodingSource,
+  DecodedCalldata,
+  DecodedParameter,
+  RetryableTicketData,
+  KnownAddress,
+  SignatureEntry,
+  // Simulation data types
+  SimulationType,
+  SimulationChainType,
+  BaseSimulationData,
+  RetryableSimulationData,
+  TimelockSimulationData,
+  CallSimulationData,
+  SimulationData,
+  ExtractedSimulation,
 } from "./types";
 
 // Type guards
@@ -128,6 +145,7 @@ export {
   areAllStagesComplete,
   extractOperationId,
   isTimelockStage,
+  findStage,
 } from "./stages/base";
 
 // ============================================================================
@@ -265,7 +283,45 @@ export {
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 
 // ============================================================================
-// TIER 6: Internal Utilities (for testing)
+// TIER 6: Calldata Decoding
+// ============================================================================
+
+export {
+  // Main decoder
+  decodeCalldata,
+  decodeCalldataArray,
+  // Signature lookup
+  lookupSignature,
+  lookupLocalSignature,
+  // Parameter utilities
+  parseParamTypes,
+  isLikelyCalldata,
+  formatDecodedValue,
+  // Address utilities
+  getAddressLabel,
+  // Retryable ticket
+  isRetryableTicketMagic,
+  decodeRetryableTicket,
+  getRetryableChainName,
+  RETRYABLE_TICKET_MAGIC,
+} from "./calldata";
+
+// ============================================================================
+// TIER 7: Simulation Data Preparation
+// ============================================================================
+
+export {
+  // Simulation data
+  prepareRetryableSimulation,
+  prepareTimelockSimulation,
+  prepareCallSimulation,
+  extractAllSimulationsFromDecoded,
+  NETWORK_IDS,
+  TIMELOCK_SELECTORS,
+} from "./simulation";
+
+// ============================================================================
+// TIER 8: Internal Utilities (for testing)
 // ============================================================================
 
 export { createCheckpoint, createTrackingContext } from "./tracker/context";

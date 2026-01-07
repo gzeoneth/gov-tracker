@@ -274,7 +274,7 @@ export async function readCacheStatus(cachePath: string): Promise<{
 
   const checkpoints = new Map<string, TrackingCheckpoint>();
   const allKeys = cache.keys();
-  const keys = Array.isArray(allKeys) ? allKeys : Array.from(allKeys);
+  const keys = Array.from(allKeys as Iterable<string>);
 
   for (const key of keys) {
     if (key.startsWith("tx:")) {

@@ -84,12 +84,23 @@ export async function trackVotingStage(
     !votingData.extendedDeadline.eq(votingData.deadline);
   const extensionPossible = !votingData.isVotingPeriodOver && !votingData.hasReachedQuorum;
 
+  // Format vote amounts for display (ARB tokens)
+  const formatVotes = (votes: ethers.BigNumber): string => {
+    const formatted = ethers.utils.formatEther(votes);
+    // Remove trailing zeros and unnecessary decimal point
+    return formatted.replace(/\.?0+$/, "") + " ARB";
+  };
+
   // Add voting statistics
   builder.data({
-    forVotes: votingData.forVotes.toString(),
-    againstVotes: votingData.againstVotes.toString(),
-    abstainVotes: votingData.abstainVotes.toString(),
-    quorum: votingData.quorum.toString(),
+    forVotes: formatVotes(votingData.forVotes),
+    forVotesRaw: votingData.forVotes.toString(),
+    againstVotes: formatVotes(votingData.againstVotes),
+    againstVotesRaw: votingData.againstVotes.toString(),
+    abstainVotes: formatVotes(votingData.abstainVotes),
+    abstainVotesRaw: votingData.abstainVotes.toString(),
+    quorum: formatVotes(votingData.quorum),
+    quorumRaw: votingData.quorum.toString(),
     quorumReached: votingData.hasReachedQuorum,
     deadline: votingData.deadline.toString(),
     extendedDeadline: votingData.extendedDeadline?.toString(),

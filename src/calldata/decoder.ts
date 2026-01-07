@@ -7,7 +7,7 @@
 
 import Debug from "debug";
 import type { ChainContext, DecodedCalldata, DecodedParameter } from "../types/calldata";
-import { lookupSignature, extractFunctionName } from "./signature-lookup";
+import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
 import {
   isRetryableTicketMagic,
@@ -76,7 +76,8 @@ export async function decodeCalldata(
     };
   }
 
-  const functionName = extractFunctionName(signature);
+  // Use full signature as function name
+  const functionName = signature;
 
   // Determine chain context for nested content
   // sendTxToL1 means nested content is on L1

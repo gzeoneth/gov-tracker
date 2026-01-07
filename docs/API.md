@@ -336,9 +336,7 @@ clearSignatureCache();
 ```typescript
 import {
   getAddressLabel,
-  getKnownAddresses,
-  getAddressExplorerUrl,
-  getChainLabel
+  getKnownAddresses
 } from "@gzeoneth/gov-tracker";
 
 // Get human-readable label for known governance contracts
@@ -348,15 +346,6 @@ const label = getAddressLabel("0xf07DeD...", "arb1");
 // Get all known addresses for a chain
 const addresses = getKnownAddresses("arb1");
 // [{ address, label, chain }, ...]
-
-// Generate explorer URLs
-const url = getAddressExplorerUrl("0x...", "ethereum");
-// "https://etherscan.io/address/0x..."
-
-// Chain labels
-getChainLabel("arb1");    // "Arb1"
-getChainLabel("nova");    // "Nova"
-getChainLabel("ethereum"); // "L1"
 ```
 
 ---

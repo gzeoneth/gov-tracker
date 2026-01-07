@@ -301,7 +301,7 @@ const { calldatas, targets } = stage.data;
 for (let i = 0; i < calldatas.length; i++) {
   const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
 
-  console.log(`Action ${i + 1}: ${decoded.functionName || "Unknown"}`);
+  console.log(`Action ${i + 1}: ${decoded.functionName ?? "Unknown"}`);
   if (decoded.decodingTarget) {
     console.log(`Target: ${decoded.decodingTarget}`);
   }
@@ -514,23 +514,20 @@ async function prepareFoundrySimulation(txHash: string) {
 
 ### Address Aliasing for L1→L2 Messages
 
-When simulating L1→L2 messages, use address aliasing to match on-chain behavior.
+When simulating L1→L2 messages, use the Arbitrum SDK for address aliasing to match on-chain behavior.
 
 ```typescript
-import { calculateAddressAlias, getL1TimelockAlias } from "@gzeoneth/gov-tracker";
+import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
 
 // Calculate alias for any L1 address
 const l1Address = "0xE6841D92B0C345144506576eC13ECf5103aC7f49"; // L1 Timelock
-const aliasedAddress = calculateAddressAlias(l1Address);
+const aliasedAddress = new Address(l1Address).applyAlias().value;
 console.log(aliasedAddress); // 0xf6951Cd6...
-
-// Get L1 Timelock alias (commonly used)
-const timelockAlias = getL1TimelockAlias();
 
 // Use in simulation
 const simulation = {
   networkId: "42161", // Arb1
-  from: timelockAlias, // Aliased address as msg.sender
+  from: aliasedAddress, // Aliased address as msg.sender
   to: upgradeExecutorAddress,
   input: executeCalldata,
   value: "0",

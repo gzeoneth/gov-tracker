@@ -6,6 +6,7 @@
  */
 
 import { ethers } from "ethers";
+import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
 import type { ChainContext, DecodedCalldata } from "../types/calldata";
 import type {
   RetryableSimulationData,
@@ -14,7 +15,11 @@ import type {
   ExtractedSimulation,
   SimulationChainType,
 } from "../types/simulation";
-import { L1_TIMELOCK_ADDRESS, getL1TimelockAlias } from "./address-alias";
+
+/**
+ * L1 Timelock address
+ */
+const L1_TIMELOCK_ADDRESS = "0xE6841D92B0C345144506576eC13ECf5103aC7f49";
 
 /**
  * Network IDs for supported chains
@@ -74,7 +79,7 @@ export function prepareRetryableSimulation(
   l2Chain: ChainContext
 ): RetryableSimulationData {
   const networkId = getNetworkId(l2Chain);
-  const fromAddress = getL1TimelockAlias();
+  const fromAddress = new Address(L1_TIMELOCK_ADDRESS).applyAlias().value;
 
   return {
     type: "retryable",
@@ -259,7 +264,7 @@ export function prepareCallSimulation(
     if (chain === "ethereum") {
       fromAddress = L1_TIMELOCK_ADDRESS;
     } else {
-      fromAddress = getL1TimelockAlias();
+      fromAddress = new Address(L1_TIMELOCK_ADDRESS).applyAlias().value;
     }
   }
 

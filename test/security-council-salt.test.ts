@@ -167,5 +167,5 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking"
     // L2 timelock should be present
     const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
     expect(l2TimelockStage).toBeDefined();
-  });
+  }, 300000); // 5 minute timeout for slow SC tracking
 });

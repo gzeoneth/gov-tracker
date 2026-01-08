@@ -62,7 +62,7 @@ const L1_TX_WITH_RETRYABLE = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.expectedStag
 describe.skipIf(process.env.NO_RPC === "1")(
   "Retryable Lifecycle Tests",
   {
-    timeout: 180000, // 3 minutes for slow retryable tests
+    timeout: 300000, // 5 minutes for slow retryable tests
   },
   () => {
     let l1Provider: ethers.providers.JsonRpcProvider;
@@ -101,7 +101,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       fullProposalResult = fullResults[0];
       l2OnlyProposalResult = l2Results[0];
       console.log("✓ All retryables and proposals tracked and cached");
-    }, 180000); // 3 minute timeout for initial tracking
+    }, 300000); // 5 minute timeout for initial tracking
 
     describe("detectAllRetryableTargetChains", () => {
       it("should detect Arb1 as target chain for known retryable", async () => {

@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.3] - 2026-01-08
-
 ### Breaking Changes
 
 #### Chain Type Refactoring
@@ -219,8 +217,7 @@ Initial release of governance proposal lifecycle tracking SDK with support for 7
 
 ---
 
-[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.3...HEAD
-[0.1.3]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.1.3
+[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...HEAD
 [0.1.2]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gzeoneth/gov-tracker/releases/tag/v0.1.0

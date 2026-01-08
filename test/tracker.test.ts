@@ -437,6 +437,70 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(providers.nova).toBeDefined();
     });
   });
+
+  describe("trackFromCheckpoint", () => {
+    it("should track from timelock checkpoint", async () => {
+      // Create a timelock checkpoint from the cached result
+      const timelockCheckpoint = timelockResult.checkpoint;
+      expect(timelockCheckpoint.input.type).toBe("timelock");
+
+      // Track from checkpoint
+      const result = await tracker.trackFromCheckpoint(timelockCheckpoint);
+
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("timelock");
+      // Timelock tracking skips governor stages
+      const createdStage = result.stages.find((s: TrackedStage) => s.type === "PROPOSAL_CREATED");
+      expect(createdStage).toBeUndefined();
+    });
+
+    it("should track from governor checkpoint", async () => {
+      // Create a governor checkpoint from the cached result
+      const governorCheckpoint = fullRoundtripResult.checkpoint;
+      expect(governorCheckpoint.input.type).toBe("governor");
+
+      // Track from checkpoint
+      const result = await tracker.trackFromCheckpoint(governorCheckpoint);
+
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("governor");
+      // Governor tracking includes all stages
+      const createdStage = result.stages.find((s: TrackedStage) => s.type === "PROPOSAL_CREATED");
+      expect(createdStage).toBeDefined();
+    });
+  });
+
+  describe("checkElection", () => {
+    it("should return election status", async () => {
+      const result = await tracker.checkElection();
+
+      expect(result).toBeDefined();
+      expect(result.status).toBeDefined();
+      expect(result.status.electionCount).toBeGreaterThanOrEqual(0);
+      expect(typeof result.canCreate).toBe("boolean");
+      expect(typeof result.canTriggerMember).toBe("boolean");
+      expect(result.prepared).toBeDefined();
+    });
+
+    it("should include current election when elections exist", async () => {
+      const result = await tracker.checkElection();
+
+      if (result.status.electionCount > 0) {
+        expect(result.currentElection).toBeDefined();
+        expect(result.currentElection!.electionIndex).toBe(result.status.electionCount - 1);
+      }
+    });
+
+    it("should prepare election creation when canCreate is true", async () => {
+      const result = await tracker.checkElection();
+
+      if (result.canCreate) {
+        expect(result.prepared.createElection).toBeDefined();
+        expect(result.prepared.createElection!.to).toBeDefined();
+        expect(result.prepared.createElection!.data).toBeDefined();
+      }
+    });
+  });
 });
 
 // Note: createTracker unit tests are in utils.test.ts

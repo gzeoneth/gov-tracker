@@ -417,6 +417,26 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       }
     });
   });
+
+  describe("getProviders", () => {
+    it("should return all configured providers", () => {
+      const providers = tracker.getProviders();
+
+      expect(providers.l1).toBe(l1Provider);
+      expect(providers.l2).toBe(l2Provider);
+      expect(providers.nova).toBe(novaProvider);
+    });
+
+    it("should use default nova provider when not explicitly configured", () => {
+      const trackerNoNova = createTracker({ l1Provider, l2Provider });
+      const providers = trackerNoNova.getProviders();
+
+      expect(providers.l1).toBe(l1Provider);
+      expect(providers.l2).toBe(l2Provider);
+      // Nova defaults to public RPC when not provided
+      expect(providers.nova).toBeDefined();
+    });
+  });
 });
 
 // Note: createTracker unit tests are in utils.test.ts

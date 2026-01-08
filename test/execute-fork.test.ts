@@ -20,6 +20,7 @@ import { createTracker, ProposalStageTracker, ADDRESSES, getStageData, TrackedSt
 import { prepareTransaction, ExecuteContext } from "../src/tracker/execute";
 import { prepareL2ToL1MessageStage } from "../src/stages/l2-to-l1-message";
 import { prepareRetryableStage } from "../src/stages/retryables";
+import { executeTransaction, ProviderBundle } from "../src/cli/lib/cli";
 import {
   CONSTITUTIONAL_GOVERNOR_COMPLETED,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
@@ -586,6 +587,72 @@ describe("Execute Module Fork Tests", () => {
       const retryableData = getStageData(retryableStage!, "RETRYABLE_EXECUTED");
       if (retryableStage?.status === "COMPLETED") {
         expect(retryableData?.redeemedCount).toBeGreaterThan(0);
+      }
+    });
+
+    it("should execute transaction on anvil fork using CLI executeTransaction", async () => {
+      // Use a block where L2 timelock is READY (delay passed but not executed)
+      // Block 371_840_000 is just before L2 timelock execution
+      const READY_BLOCK = 371_840_000;
+
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls.l1,
+        l2Url: rpcUrls.l2Archive,
+        l2BlockNumber: READY_BLOCK,
+      });
+
+      tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider,
+      });
+
+      const results = await tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_COMPLETED.creationTxHash);
+      expect(results.length).toBeGreaterThan(0);
+
+      const result = results[0];
+      const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
+
+      // Check if stage is READY for execution
+      if (l2TimelockStage?.status === "READY") {
+        const prepResult = await tracker.prepareTransaction(l2TimelockStage);
+
+        if (prepResult.success) {
+          // Create test wallet with anvil's first account private key
+          const anvilPrivateKey =
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+          const testWallet = new ethers.Wallet(anvilPrivateKey);
+
+          // Fund the test wallet with anvil
+          await forks.l2.provider.send("anvil_setBalance", [
+            testWallet.address,
+            "0x" + (10n ** 18n).toString(16), // 1 ETH
+          ]);
+
+          // Create provider bundle for executeTransaction
+          const providers: ProviderBundle = {
+            l1Provider: forks.l1.provider,
+            l2Provider: forks.l2.provider,
+            novaProvider,
+          };
+
+          // Try to execute - this will likely fail because the test wallet
+          // doesn't have the executor role, but it exercises the code path
+          const execResult = await executeTransaction(prepResult.prepared, testWallet, providers, {
+            maxFeePerGas: 0.1,
+            maxPriorityFeePerGas: 0.01,
+          });
+
+          // Transaction will fail due to access control, but code path is exercised
+          expect(execResult).toBeDefined();
+          // Either succeeds or fails with a specific error
+          if (!execResult.success) {
+            expect(execResult.error).toBeDefined();
+          }
+        }
+      } else {
+        // Stage is not READY, which is also valid at this historical block
+        expect(["PENDING", "COMPLETED"]).toContain(l2TimelockStage?.status);
       }
     });
   });

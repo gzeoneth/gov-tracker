@@ -143,15 +143,15 @@ export function formatDecodedValue(value: unknown, type: string): string {
     return `[${formatted.join(", ")}]`;
   }
 
-  // Handle bytes - truncate middle for readability
-  if (typeof value === "string" && value.startsWith("0x") && value.length > 34) {
-    const prefix = value.slice(0, 18);
-    const suffix = value.slice(-16);
+  // Handle very long strings - only truncate if > 1000 chars to preserve data integrity
+  const strValue = String(value);
+  if (strValue.length > 1000) {
+    const prefix = strValue.slice(0, 500);
+    const suffix = strValue.slice(-500);
     return `${prefix}...${suffix}`;
   }
 
-  // Default: convert to string
-  return String(value);
+  return strValue;
 }
 
 /**

@@ -195,17 +195,17 @@ describe("Parameter Decoder", () => {
       expect(result).toBe("[100, 200]");
     });
 
-    it("should truncate long bytes values", () => {
-      const longBytes = "0x" + "ab".repeat(40); // 80 chars of hex
+    it("should truncate very long values (> 1000 chars)", () => {
+      const longBytes = "0x" + "ab".repeat(600); // 1202 chars total
       const result = formatDecodedValue(longBytes, "bytes");
       expect(result).toContain("...");
-      expect(result.length).toBeLessThan(longBytes.length);
+      expect(result.length).toBe(1003); // 500 + 3 + 500
     });
 
-    it("should not truncate short bytes values", () => {
-      const shortBytes = "0x12345678"; // 8 hex chars
-      const result = formatDecodedValue(shortBytes, "bytes");
-      expect(result).toBe(shortBytes);
+    it("should not truncate values under 1000 chars", () => {
+      const mediumBytes = "0x" + "ab".repeat(400); // 802 chars
+      const result = formatDecodedValue(mediumBytes, "bytes");
+      expect(result).toBe(mediumBytes);
     });
 
     it("should convert other values to string", () => {

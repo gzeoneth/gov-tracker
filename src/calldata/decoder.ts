@@ -331,13 +331,17 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
   // 2. Check for Timelock scheduled data (L1/L2 Timelock)
   // Timelock stages usually have `callScheduledData` array containing the operations
   if (data.callScheduledData) {
-    for (const scheduled of data.callScheduledData) {
+    for (let i = 0; i < data.callScheduledData.length; i++) {
+      const scheduled = data.callScheduledData[i];
       // scheduled.data and scheduled.target are strictly typed in CallScheduledData
       result.calldatas.push(scheduled.data);
       result.targets.push(scheduled.target);
-      result.values.push(
-        typeof scheduled.value === "string" ? scheduled.value : scheduled.value?.toString() || "0"
-      );
+      const valueStr =
+        typeof scheduled.value === "string" ? scheduled.value : scheduled.value?.toString();
+      if (valueStr === undefined) {
+        throw new Error(`Missing value in callScheduledData at index ${i}`);
+      }
+      result.values.push(valueStr);
     }
     if (result.calldatas.length > 0) {
       return result;

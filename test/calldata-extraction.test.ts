@@ -8,6 +8,7 @@ describe("extractCalldataFromStage", () => {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
+      chainId: 1,
       transactions: [],
       data: {
         calldatas: ["0x1234"],
@@ -27,6 +28,7 @@ describe("extractCalldataFromStage", () => {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
+      chainId: 1,
       transactions: [],
       data: {
         calldatas: ["0x1", "0x2"],
@@ -46,6 +48,7 @@ describe("extractCalldataFromStage", () => {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
+      chainId: 1,
       transactions: [],
       data: {
         calldatas: ["0x1", "0x2", "0x3"],
@@ -62,6 +65,7 @@ describe("extractCalldataFromStage", () => {
       type: "L2_TIMELOCK",
       status: "READY",
       chain: "arb1",
+      chainId: 42161,
       transactions: [],
       data: {
         operationId: "0xop",
@@ -92,6 +96,8 @@ describe("extractCalldataFromStage", () => {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
+      chainId: 1,
+      chainId: 1,
       transactions: [],
       data: {},
     };

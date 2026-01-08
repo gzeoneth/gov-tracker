@@ -150,8 +150,8 @@ describe("Timing Utilities", () => {
           .timing({ eta: 1701296000 }) // +1 day
           .build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
-        new StageBuilder("L1_TIMELOCK", "ethereum", 1).status("NOT_STARTED").build(),
-        new StageBuilder("RETRYABLE_EXECUTED", "ethereum", 1).status("NOT_STARTED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
     }
 

@@ -97,8 +97,8 @@ describe("StageBuilder", () => {
 
     it("should replace transactions array", () => {
       const existingTxs = [
-        { hash: "0x111", blockNumber: 100, chain: "arb1" as const },
-        { hash: "0x222", blockNumber: 200, chain: "arb1" as const },
+        { hash: "0x111", blockNumber: 100, chain: "arb1" as const, chainId: 42161 },
+        { hash: "0x222", blockNumber: 200, chain: "arb1" as const, chainId: 42161 },
       ];
 
       const stage = new StageBuilder("L2_TIMELOCK", "arb1").transactions(existingTxs).build();
@@ -112,7 +112,7 @@ describe("StageBuilder", () => {
       const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .status("COMPLETED")
         .data({ operationId: "0x123" })
-        .tx("0xabc", 100, "arb1")
+        .tx("0xabc", 100, "arb1", 42161)
         .timing({ startedAt: 1700000000 })
         .build();
 

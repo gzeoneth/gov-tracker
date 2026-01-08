@@ -44,19 +44,16 @@ const HISTORICAL_L2_BLOCKS = {
   TREASURY_COMPLETED: 397_000_000,
 };
 
-describe("Historical Tracking Fork Tests", () => {
+const hasArchiveRpc = () => getTestRpcUrls() !== null;
+
+describe.skipIf(!hasArchiveRpc())("Historical Tracking Fork Tests", () => {
   let forks: DualForkResult | null = null;
   let tracker: ProposalStageTracker;
   let rpcUrls: ReturnType<typeof getTestRpcUrls>;
   let novaProvider: ethers.providers.JsonRpcProvider;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls();
-    if (!rpcUrls) {
-      throw new Error(
-        "Archive RPC URLs required: Set ARB_ARCHIVE_RPC, L1_RPC_URL/ETH_RPC, and ARB1_RPC_URL/ARB_RPC environment variables"
-      );
-    }
+    rpcUrls = getTestRpcUrls()!;
     novaProvider = new ethers.providers.JsonRpcProvider(rpcUrls.nova);
   });
 

@@ -20,7 +20,10 @@ import {
   isShuttingDown,
   addOptions,
   runWithLoop,
+  executeTransaction,
+  ProviderBundle,
 } from "../src/cli/lib/cli";
+import { ethers } from "ethers";
 import { Command, Option } from "commander";
 import {
   PreparedTransaction,
@@ -613,6 +616,116 @@ describe("CLI Utilities", () => {
       await expect(runWithLoop(cycleFn, { loop: false, intervalMs: 1000 })).rejects.toThrow(
         "Test error"
       );
+    });
+  });
+
+  describe("executeTransaction", () => {
+    function createMockProviders(): ProviderBundle {
+      return {
+        l1Provider: {} as ethers.providers.JsonRpcProvider,
+        l2Provider: {} as ethers.providers.JsonRpcProvider,
+        novaProvider: {} as ethers.providers.JsonRpcProvider,
+      };
+    }
+
+    function createMockSigner(
+      sendResult: { hash: string; wait: () => Promise<{ blockNumber: number }> } | Error
+    ) {
+      const mockConnectedSigner = {
+        sendTransaction:
+          sendResult instanceof Error
+            ? vi.fn().mockRejectedValue(sendResult)
+            : vi.fn().mockResolvedValue(sendResult),
+      };
+      return {
+        connect: vi.fn().mockReturnValue(mockConnectedSigner),
+      } as unknown as ethers.Wallet;
+    }
+
+    it("should execute L1 transaction successfully", async () => {
+      const mockTx = {
+        hash: "0x" + "a".repeat(64),
+        wait: vi.fn().mockResolvedValue({ blockNumber: 12345 }),
+      };
+      const signer = createMockSigner(mockTx);
+      const providers = createMockProviders();
+      const prepared = createMockPrepared({ chain: "ethereum", chainId: 1 });
+
+      const result = await executeTransaction(prepared, signer, providers);
+
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBe(mockTx.hash);
+    });
+
+    it("should execute L2 transaction with gas settings", async () => {
+      const mockTx = {
+        hash: "0x" + "b".repeat(64),
+        wait: vi.fn().mockResolvedValue({ blockNumber: 99999 }),
+      };
+      const signer = createMockSigner(mockTx);
+      const providers = createMockProviders();
+      const prepared = createMockPrepared({ chain: "arb1", chainId: 42161 });
+
+      const result = await executeTransaction(prepared, signer, providers, {
+        maxFeePerGas: 1,
+        maxPriorityFeePerGas: 0.1,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBe(mockTx.hash);
+    });
+
+    it("should execute Nova transaction", async () => {
+      const mockTx = {
+        hash: "0x" + "c".repeat(64),
+        wait: vi.fn().mockResolvedValue({ blockNumber: 77777 }),
+      };
+      const signer = createMockSigner(mockTx);
+      const providers = createMockProviders();
+      const prepared = createMockPrepared({ chain: "nova", chainId: 42170 });
+
+      const result = await executeTransaction(prepared, signer, providers);
+
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBe(mockTx.hash);
+    });
+
+    it("should handle transaction failure", async () => {
+      const signer = createMockSigner(new Error("Insufficient funds"));
+      const providers = createMockProviders();
+      const prepared = createMockPrepared();
+
+      const result = await executeTransaction(prepared, signer, providers);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Insufficient funds");
+    });
+
+    it("should treat already-redeemed retryable as success", async () => {
+      const signer = createMockSigner(new Error("NoTicketWithID"));
+      const providers = createMockProviders();
+      const prepared = createMockPrepared({
+        description: "Redeem retryable ticket",
+      });
+
+      const result = await executeTransaction(prepared, signer, providers);
+
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("should log value when non-zero", async () => {
+      const mockTx = {
+        hash: "0x" + "d".repeat(64),
+        wait: vi.fn().mockResolvedValue({ blockNumber: 12345 }),
+      };
+      const signer = createMockSigner(mockTx);
+      const providers = createMockProviders();
+      const prepared = createMockPrepared({ value: "1000000000000000000" }); // 1 ETH
+
+      const result = await executeTransaction(prepared, signer, providers);
+
+      expect(result.success).toBe(true);
     });
   });
 });

@@ -33,17 +33,14 @@ const TEST_L2_BLOCKS = {
   ELECTION_POKE: 379_398_080,
 };
 
-describe("Election Fork Tests", () => {
+const hasArchiveRpc = () => getTestRpcUrls() !== null;
+
+describe.skipIf(!hasArchiveRpc())("Election Fork Tests", () => {
   let forks: DualForkResult | null = null;
   let rpcUrls: ReturnType<typeof getTestRpcUrls>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls();
-    if (!rpcUrls) {
-      throw new Error(
-        "Archive RPC URLs required: Set ARB1_ARCHIVE_RPC, ETH_RPC/ETH_RPC, and ARB1_RPC/ARB1_RPC environment variables"
-      );
-    }
+    rpcUrls = getTestRpcUrls()!;
   });
 
   afterAll(async () => {
@@ -128,17 +125,12 @@ describe("Election Fork Tests", () => {
   });
 });
 
-describe("Election Proposal Tracking with Forks", () => {
+describe.skipIf(!hasArchiveRpc())("Election Proposal Tracking with Forks", () => {
   let forks: DualForkResult | null = null;
   let rpcUrls: ReturnType<typeof getTestRpcUrls>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls();
-    if (!rpcUrls) {
-      throw new Error(
-        "Archive RPC URLs required: Set ARB1_ARCHIVE_RPC, ETH_RPC/ETH_RPC, and ARB1_RPC/ARB1_RPC environment variables"
-      );
-    }
+    rpcUrls = getTestRpcUrls()!;
   });
 
   afterAll(async () => {
@@ -186,16 +178,11 @@ describe("Election Proposal Tracking with Forks", () => {
   });
 });
 
-describe("Fork Infrastructure Tests", () => {
+describe.skipIf(!hasArchiveRpc())("Fork Infrastructure Tests", () => {
   let rpcUrls: ReturnType<typeof getTestRpcUrls>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls();
-    if (!rpcUrls) {
-      throw new Error(
-        "Archive RPC URLs required: Set ARB1_ARCHIVE_RPC, ETH_RPC/ETH_RPC, and ARB1_RPC/ARB1_RPC environment variables"
-      );
-    }
+    rpcUrls = getTestRpcUrls()!;
   });
 
   it("should start and stop anvil forks", async () => {

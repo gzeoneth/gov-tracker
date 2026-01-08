@@ -732,7 +732,8 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
 
   // Block range known to contain elections, constitutional & non-constitutional proposals
   // Per user: 369846189-389241837 has elections, both types of proposals, and timelock operations
-  const TEST_FROM_BLOCK = 369_846_189;
+  // Start one block before to ensure boundary inclusion (369846189 is exact creation block)
+  const TEST_FROM_BLOCK = 369_846_188;
   const TEST_TO_BLOCK = 389_241_837;
 
   beforeAll(() => {

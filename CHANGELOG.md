@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Commits: 487334b..2658efa (refactor-types branch)
+> Commits: 487334b..006ecb4 (refactor-trackedstage branch)
+
+### Fixed
+
+- **Security**: `extractCalldataFromStage` now throws an error when `value` is missing from `callScheduledData` instead of silently defaulting to "0". This prevents users from approving proposals that appear to transfer no ETH when the actual calldata sends funds.
 
 ### Breaking Changes
 

@@ -40,9 +40,9 @@ export const CHAIN_ID_MAP: Record<KnownChain, number> = {
 } as const;
 
 /**
- * Map numeric chain IDs to chain names
+ * Map numeric chain IDs to chain names (internal)
  */
-export const CHAIN_NAME_MAP: Record<number, Chain> = {
+const CHAIN_NAME_MAP: Record<number, Chain> = {
   1: "ethereum",
   42161: "arb1",
   42170: "nova",
@@ -103,31 +103,9 @@ export interface SearchHint {
   direction?: "forward" | "backward";
 }
 
-// Timing/ETA Types (merged from timing.ts)
+// Timing/ETA Types
 
 export interface EstimatedTimeRange {
   minDate: Date;
   maxDate: Date;
-}
-
-export interface VotingTimeRange {
-  votingStartDate: Date;
-  votingEndMinDate: Date;
-  votingEndMaxDate: Date;
-}
-
-export interface BlockBasedTiming {
-  startBlock: number;
-  endBlock: number;
-  currentL1Block: number;
-}
-
-export interface StageMetadata {
-  type: StageType;
-  estimatedDuration?: string;
-}
-
-export interface EstimatedTimesResult {
-  estimatedTimes: Map<StageType, EstimatedTimeRange>;
-  votingTimeRange: VotingTimeRange | null;
 }

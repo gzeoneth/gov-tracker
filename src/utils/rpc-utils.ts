@@ -18,7 +18,7 @@ export function delay(ms: number): Promise<void> {
 /**
  * Error type for RPC failures
  */
-export class RpcError extends Error {
+class RpcError extends Error {
   constructor(
     message: string,
     public readonly code?: string,

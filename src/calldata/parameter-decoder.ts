@@ -7,7 +7,7 @@
  */
 
 import { ethers } from "ethers";
-import type { DecodedParameter, KnownAddress } from "../types/calldata";
+import type { DecodedParameter } from "../types/calldata";
 import type { Chain } from "../types";
 
 /**
@@ -78,25 +78,6 @@ export function getAddressLabel(address: string, chain: Chain | undefined): stri
   }
 
   return undefined;
-}
-
-/**
- * Get all known addresses for a chain
- *
- * @param chain - Chain context
- * @returns Array of known address entries
- */
-export function getKnownAddresses(chain: Chain): KnownAddress[] {
-  if (chain === "unknown") return [];
-
-  const chainAddresses = KNOWN_ADDRESSES[chain];
-  if (!chainAddresses) return [];
-
-  return Object.entries(chainAddresses).map(([address, label]) => ({
-    address,
-    label,
-    chain,
-  }));
 }
 
 /**

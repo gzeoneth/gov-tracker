@@ -158,10 +158,3 @@ export async function lookupSignature(
 
   return { signature: null, source: "failed" };
 }
-
-/**
- * Clear the signature cache (useful for testing)
- */
-export function clearSignatureCache(): void {
-  signatureCache.clear();
-}

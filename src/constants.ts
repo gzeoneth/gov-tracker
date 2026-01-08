@@ -10,7 +10,6 @@ import type {
   RetryConfig,
   ProposalState,
   DiscoveryTargets,
-  Chain,
   StageTransaction,
 } from "./types";
 
@@ -363,15 +362,6 @@ export const PROPOSAL_STATE = {
 // Explorer URLs
 
 /**
- * Explorer base URLs by chain
- */
-export const EXPLORER_URLS: Record<Exclude<Chain, "unknown">, string> = {
-  arb1: "https://arbiscan.io",
-  nova: "https://nova.arbiscan.io",
-  ethereum: "https://etherscan.io",
-};
-
-/**
  * Get explorer URL for a transaction or address
  */
 export function getExplorerUrl(chainId: number, type: "tx" | "address", hash: string): string {
@@ -407,16 +397,4 @@ export function getTxUrl(chainId: number, txHash: string): string {
  */
 export function getStageTransactionUrl(tx: StageTransaction): string {
   return getTxUrl(tx.chainId, tx.hash);
-}
-
-/**
- * Get block explorer URL for a transaction
- *
- * @param txHash - Transaction hash
- * @param chain - Chain context
- * @returns Full explorer URL
- */
-export function getTxExplorerUrl(txHash: string, chain: Chain): string {
-  const baseUrl = EXPLORER_URLS[chain as Exclude<Chain, "unknown">] ?? EXPLORER_URLS.ethereum;
-  return `${baseUrl}/tx/${txHash}`;
 }

@@ -33,7 +33,7 @@ const scopeStorage = new AsyncLocalStorage<LogScope>();
 /**
  * Get current scope prefix, or empty string if not in a scope.
  */
-export function getCurrentScope(): string {
+function getCurrentScope(): string {
   return scopeStorage.getStore()?.prefix ?? "";
 }
 
@@ -55,7 +55,7 @@ export function withScope<T>(prefix: string, fn: () => T): T {
  * Unlike regular debug loggers, the scope is dynamically determined
  * at call time using AsyncLocalStorage.
  */
-export function scopedLog(namespace: string): (fmt: string, ...args: unknown[]) => void {
+function scopedLog(namespace: string): (fmt: string, ...args: unknown[]) => void {
   const baseLog = createDebug(namespace);
 
   return (fmt: string, ...args: unknown[]) => {

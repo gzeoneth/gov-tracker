@@ -38,9 +38,9 @@ export const TIMELOCK_SELECTORS = {
 } as const;
 
 /**
- * Get network ID for chain
+ * Get network ID for chain (internal)
  */
-export function getNetworkId(chain: Chain): string {
+function getNetworkId(chain: Chain): string {
   if (chain === "unknown") return NETWORK_IDS.ethereum;
   return NETWORK_IDS[chain] ?? NETWORK_IDS.ethereum;
 }

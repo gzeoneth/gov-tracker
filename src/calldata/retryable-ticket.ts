@@ -8,10 +8,10 @@ import { ethers } from "ethers";
 import type { RetryableTicketData } from "../types/calldata";
 import { ADDRESSES } from "../constants";
 
-// Re-export addresses from constants for backward compatibility (lowercase for comparison)
+// Addresses for comparison (lowercase)
 export const RETRYABLE_TICKET_MAGIC = ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase();
-export const ARB1_DELAYED_INBOX = ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase();
-export const NOVA_DELAYED_INBOX = ADDRESSES.NOVA_DELAYED_INBOX.toLowerCase();
+const ARB1_DELAYED_INBOX = ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase();
+const NOVA_DELAYED_INBOX = ADDRESSES.NOVA_DELAYED_INBOX.toLowerCase();
 
 /**
  * Check if an address is the retryable ticket magic address
@@ -29,7 +29,7 @@ export function isRetryableTicketMagic(target: string): boolean {
  * @param inboxAddress - Delayed inbox address on L1
  * @returns Target L2 chain
  */
-export function detectChainFromInbox(inboxAddress: string): "arb1" | "nova" | "unknown" {
+function detectChainFromInbox(inboxAddress: string): "arb1" | "nova" | "unknown" {
   const lowerInbox = inboxAddress.toLowerCase();
 
   if (lowerInbox === ARB1_DELAYED_INBOX) return "arb1";

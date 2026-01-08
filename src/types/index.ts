@@ -17,7 +17,6 @@ export {
   StageType,
   StageStatus,
   Chain,
-  KnownChain,
   L2Chain,
   ChainId,
   chainIdToChain,
@@ -26,10 +25,6 @@ export {
   StageTiming,
   SearchHint,
   EstimatedTimeRange,
-  VotingTimeRange,
-  BlockBasedTiming,
-  StageMetadata,
-  EstimatedTimesResult,
 } from "./core";
 
 // Governor types

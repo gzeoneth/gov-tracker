@@ -86,7 +86,6 @@ export type {
   RetryableStatus,
   RetryableData,
   // ETA types
-  EstimatedTimesResult,
   EstimatedTimeRange,
   // Stage data types
   ProposalCreatedData,

@@ -214,9 +214,19 @@ export type TypedTrackedStage<T extends StageType> = Omit<TrackedStage, "type" |
 };
 
 /**
- * Type guard to check if a stage is of a specific type
+ * Type guard to check if a stage is of a specific type.
+ * When used in conditionals, narrows the stage to TypedTrackedStage<T>.
+ *
+ * @example
+ * if (isStageType(stage, "PROPOSAL_CREATED")) {
+ *   // stage.data is now properly typed as ProposalCreatedData
+ *   console.log(stage.data.proposer);
+ * }
  */
-export function isStageType<T extends StageType>(stage: TrackedStage, type: T): boolean {
+export function isStageType<T extends StageType>(
+  stage: TrackedStage,
+  type: T
+): stage is TypedTrackedStage<T> {
   return stage.type === type;
 }
 

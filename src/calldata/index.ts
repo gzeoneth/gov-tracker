@@ -9,12 +9,7 @@
 export { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "./decoder";
 
 // Signature lookup
-export {
-  lookupSignature,
-  lookupLocalSignature,
-  lookup4byteDirectory,
-  clearSignatureCache,
-} from "./signature-lookup";
+export { lookupSignature, lookupLocalSignature, clearSignatureCache } from "./signature-lookup";
 
 // Parameter decoder and address utilities
 export {

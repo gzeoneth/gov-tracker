@@ -6,18 +6,12 @@
 
 import { ethers } from "ethers";
 import type { RetryableTicketData } from "../types/calldata";
+import { ADDRESSES } from "../constants";
 
-/**
- * Magic address that indicates a retryable ticket in timelock operations
- * When a timelock target is this address, the calldata contains a retryable tuple
- */
-export const RETRYABLE_TICKET_MAGIC = "0xa723c008e76e379c55599d2e4d93879beafda79c";
-
-/**
- * Delayed inbox addresses for chain detection
- */
-export const ARB1_DELAYED_INBOX = "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f";
-export const NOVA_DELAYED_INBOX = "0xc4448b71118c9071bcb9734a0eac55d18a153949";
+// Re-export addresses from constants for backward compatibility (lowercase for comparison)
+export const RETRYABLE_TICKET_MAGIC = ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase();
+export const ARB1_DELAYED_INBOX = ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase();
+export const NOVA_DELAYED_INBOX = ADDRESSES.NOVA_DELAYED_INBOX.toLowerCase();
 
 /**
  * Check if an address is the retryable ticket magic address

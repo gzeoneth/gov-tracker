@@ -88,7 +88,7 @@ export function lookupLocalSignature(selector: string): string | null {
  * @param selector - The 4-byte function selector
  * @returns The function signature if found, null otherwise
  */
-export async function lookup4byteDirectory(selector: string): Promise<string | null> {
+async function lookup4byteDirectory(selector: string): Promise<string | null> {
   const normalizedSelector = selector.toLowerCase();
 
   // Check session cache

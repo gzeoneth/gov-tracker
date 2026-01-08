@@ -22,20 +22,6 @@ export async function getChainId(provider: ethers.providers.Provider): Promise<C
 }
 
 /**
- * Get both chain name and ID from provider.
- */
-export async function getChainInfo(
-  provider: ethers.providers.Provider
-): Promise<{ chain: Chain; chainId: ChainId }> {
-  const network = await provider.getNetwork();
-  const chainId = network.chainId;
-  return {
-    chain: chainIdToChain(chainId),
-    chainId,
-  };
-}
-
-/**
  * Case-insensitive address comparison.
  */
 export function addressEquals(a: string, b: string): boolean {

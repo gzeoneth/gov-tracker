@@ -92,8 +92,7 @@ function decodeScheduleBatchParams(calldata: string): {
   // Remove selector
   const data = calldata.slice(10);
 
-  const abiCoder = new ethers.utils.AbiCoder();
-  const decoded = abiCoder.decode(
+  const decoded = ethers.utils.defaultAbiCoder.decode(
     ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
     "0x" + data
   );
@@ -119,14 +118,13 @@ function convertScheduleToExecute(calldata: string): string {
   if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.scheduleBatch)) {
     // Decode scheduleBatch parameters (includes delay as 6th param)
     const data = calldata.slice(10);
-    const abiCoder = new ethers.utils.AbiCoder();
-    const decoded = abiCoder.decode(
+    const decoded = ethers.utils.defaultAbiCoder.decode(
       ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
       "0x" + data
     );
 
     // Re-encode as executeBatch (without delay)
-    const encoded = abiCoder.encode(
+    const encoded = ethers.utils.defaultAbiCoder.encode(
       ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
       [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
     );
@@ -137,14 +135,13 @@ function convertScheduleToExecute(calldata: string): string {
   if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.schedule)) {
     // Decode schedule parameters (includes delay as 6th param)
     const data = calldata.slice(10);
-    const abiCoder = new ethers.utils.AbiCoder();
-    const decoded = abiCoder.decode(
+    const decoded = ethers.utils.defaultAbiCoder.decode(
       ["address", "uint256", "bytes", "bytes32", "bytes32", "uint256"],
       "0x" + data
     );
 
     // Re-encode as execute (without delay)
-    const encoded = abiCoder.encode(
+    const encoded = ethers.utils.defaultAbiCoder.encode(
       ["address", "uint256", "bytes", "bytes32", "bytes32"],
       [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
     );

@@ -70,8 +70,7 @@ export function getRetryableChainName(chain: "arb1" | "nova" | "unknown"): strin
  * @returns Decoded retryable ticket data
  */
 export function decodeRetryableTicket(bytes: string): RetryableTicketData {
-  const abiCoder = new ethers.utils.AbiCoder();
-  const decoded = abiCoder.decode(
+  const decoded = ethers.utils.defaultAbiCoder.decode(
     ["address", "address", "uint256", "uint256", "uint256", "bytes"],
     bytes
   );

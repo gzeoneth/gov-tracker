@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-01-08
+
+### Breaking Changes
+
+#### Chain Type Refactoring
+- **Replaced `ChainType`** ("L1", "L2", "NOVA") with unified `Chain` type ("ethereum", "arb1", "nova")
+- **Replaced `TargetChainType`** ("Arb1", "Nova") with `L2Chain` ("arb1", "nova")
+- **Added `ChainId`** - Numeric chain IDs (1, 42161, 42170)
+- **Added conversion functions**:
+  - `chainIdToChain(chainId)` - Convert numeric chain ID to chain name
+  - `chainToChainId(chain)` - Convert chain name to numeric chain ID
+
+#### Type Changes in `TrackedStage`
+```typescript
+// Before
+interface TrackedStage {
+  chain: ChainType;  // "L1" | "L2" | "NOVA"
+  // ...
+}
+
+// After
+interface TrackedStage {
+  chain: Chain;      // "ethereum" | "arb1" | "nova"
+  chainId: ChainId;  // 1 | 42161 | 42170
+  // ...
+}
+```
+
+#### Type Changes in `StageTransaction`
+```typescript
+// Before
+interface StageTransaction {
+  chain: ChainType;
+  targetChain?: TargetChainType;  // "Arb1" | "Nova"
+}
+
+// After
+interface StageTransaction {
+  chain: Chain;
+  chainId: ChainId;
+  targetChain?: Chain;
+  targetChainId?: ChainId;
+}
+```
+
+#### Type Changes in `PreparedTransaction`
+```typescript
+// Before
+interface PreparedTransaction {
+  chain: ChainType;  // "L1" | "L2" | "NOVA"
+}
+
+// After
+interface PreparedTransaction {
+  chain: Chain;      // "ethereum" | "arb1" | "nova"
+  chainId: ChainId;
+}
+```
+
+### Removed
+
+- **Unused types removed**:
+  - `L2ToL1MessageData` - Never used in tracking
+  - `L2ToL1MessageStatus` - Never used in tracking
+  - `RetryableStatus` - Never used (use `stage.status` instead)
+  - `RetryableData` - Never used
+  - `RetryableTicketInfo` - Replaced by `RetryableCreationDetail`
+  - `RetryableRedemptionInfo` - Replaced by `RetryableRedemptionDetail`
+  - `EstimatedTimeRange` - Never used
+  - `L2TimelockData` / `L1TimelockData` - Use `TimelockStageData` instead
+  - `ExecutionResult` - Never used
+  - `StageTrackingContext` - Internal only
+  - `StageTrackResultWith` - Internal only
+  - `SimulationChainType` - Use `Chain` instead
+  - `GovernorProposalState` - Use `ProposalState` instead
+
+- **Removed exports**:
+  - `getKnownAddresses()` - Internal utility
+  - `lookup4byteDirectory()` - Internal, use `lookupSignature()` instead
+  - `clearSignatureCache()` - Internal utility
+  - `chainTypeToId()` - Replaced by `chainToChainId()`
+  - `getChainType()` - Replaced by `getChain()`
+
+### Added
+
+- **New exports**:
+  - `NETWORK_IDS` - Tenderly network IDs (`{ ethereum: "1", arb1: "42161", nova: "42170" }`)
+  - `TIMELOCK_SELECTORS` - Function selectors for schedule/execute operations
+  - `FileCache`, `LocalStorageCache`, `MemoryCache` - Cache adapter implementations
+  - `getChain(provider)` - Get chain name from provider
+  - `getChainId(provider)` - Get chain ID from provider
+
+- **Type improvements**:
+  - `isStageType()` now properly narrows to `TypedTrackedStage<T>`
+  - Added `KnownChain` type (chains excluding "unknown")
+
+### Changed
+
+- **Constants consolidated** - Moved URL utilities (`getTxUrl`, `getStageTransactionUrl`) to `constants.ts`
+- **Calldata module consolidated** - Merged `address-utils.ts` and `extraction.ts` into main modules
+- **Logger consolidated** - Merged `scoped-logger.ts` into `logger.ts`
+- **Improved type safety** - Added strict typing throughout
+
+### Fixed
+
+- `getRetryableChainName("nova")` now returns "Nova" instead of "nova"
+
+### Development
+
+- Added `knip` for dead code detection
+- Added `check:unused` script to pre-commit hooks
+- Added `public-api.test.ts` to verify export stability
+
+## [0.1.2] - 2026-01-07
+
+Patch release with minor fixes.
+
 ## [0.1.1] - 2026-01-06
 
 ### Added
@@ -100,6 +217,8 @@ Initial release of governance proposal lifecycle tracking SDK with support for 7
 
 ---
 
-[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gzeoneth/gov-tracker/releases/tag/v0.1.0

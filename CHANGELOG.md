@@ -7,9 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Commits: 487334b..5bc7bbe (refactor-types branch)
+> Commits: 487334b..2658efa (refactor-types branch)
 
 ### Breaking Changes
+
+#### TrackedStage Discriminated Union
+
+`TrackedStage` is now a discriminated union keyed by `type`. TypeScript automatically narrows `data` when checking `stage.type`:
+
+```typescript
+// Before: data was a loose intersection type
+if (stage.type === "VOTING_ACTIVE") {
+  const votes = stage.data.forVotes; // ❌ TypeScript didn't know this exists
+}
+
+// After: data is properly typed per stage type
+if (stage.type === "VOTING_ACTIVE") {
+  const votes = stage.data.forVotes; // ✓ TypeScript knows VotingActiveData
+}
+```
+
+**StageBuilder is now generic:**
+```typescript
+// Before
+const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
+builder.data({ anyField: "value" }); // No type checking
+
+// After
+const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
+builder.data({ forVotes: "100" }); // ✓ Type-checked against VotingActiveData
+```
 
 #### Chain Type Refactoring
 - **Replaced `ChainType`** ("L1", "L2", "NOVA") with unified `Chain` type ("ethereum", "arb1", "nova")

@@ -198,15 +198,32 @@ type ChainId = 1 | 42161 | 42170 | number;
 function chainIdToChain(chainId: ChainId): Chain;
 function chainToChainId(chain: Chain): ChainId | undefined;
 
-interface TrackedStage {
+// TrackedStage is a discriminated union - TypeScript narrows `data` based on `type`
+type TrackedStage = {
   type: StageType;
   status: StageStatus;
-  chain: Chain;              // "ethereum" | "arb1" | "nova"
-  chainId: ChainId;          // 1 | 42161 | 42170
+  chain: Chain;
+  chainId: ChainId;
   transactions: StageTransaction[];
-  data: TrackedStageData;
+  data: StageDataMap[StageType];  // Typed per stage type
   timing?: StageTiming;
   executable?: boolean;
+};
+
+// Type guard for narrowing stage type
+function isStageType<T extends StageType>(stage: TrackedStage, type: T): stage is TypedTrackedStage<T>;
+
+// Get typed data from a stage (returns null if type mismatch)
+function getStageData<T extends StageType>(stage: TrackedStage, type: T): StageDataMap[T] | null;
+
+// Example: TypeScript automatically narrows data when checking type
+if (stage.type === "VOTING_ACTIVE") {
+  console.log(stage.data.forVotes);  // ✓ TypeScript knows VotingActiveData
+}
+
+// Or use the type guard
+if (isStageType(stage, "L2_TIMELOCK")) {
+  console.log(stage.data.operationId);  // ✓ TypeScript knows TimelockStageData
 }
 
 interface StageTransaction {

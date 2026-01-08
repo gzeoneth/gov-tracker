@@ -711,3 +711,228 @@ describe("Tracker Discovery Module", () => {
     });
   });
 });
+
+/**
+ * RPC-dependent tests for discovery functions
+ */
+import * as dotenv from "dotenv";
+import { discoverProposals, discoverTimelockOps, discoverAll } from "../src/tracker/discovery";
+import {
+  CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
+  NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
+} from "./fixtures";
+import { DEFAULT_RPC_URLS } from "../src/constants";
+
+dotenv.config({ quiet: true });
+
+describe.skipIf(process.env.NO_RPC === "1")(
+  "Discovery RPC Tests",
+  {
+    timeout: 120000,
+  },
+  () => {
+    let l2Provider: ethers.providers.JsonRpcProvider;
+    let cache: CacheAdapter;
+
+    beforeEach(() => {
+      const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+      l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+      cache = createMemoryCache();
+    });
+
+    describe("discoverProposals", () => {
+      it("should discover proposals in block range containing known proposal", async () => {
+        const creationBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationBlock;
+        // Search a small range around the known creation block
+        const fromBlock = creationBlock - 10;
+        const toBlock = creationBlock + 10;
+
+        const proposals = await discoverProposals(
+          ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+          fromBlock,
+          toBlock,
+          l2Provider
+        );
+
+        expect(proposals.length).toBeGreaterThan(0);
+        const found = proposals.find(
+          (p) => p.proposalId === CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.proposalId
+        );
+        expect(found).toBeDefined();
+        expect(found?.creationBlock).toBe(creationBlock);
+      });
+
+      it("should return empty array for empty block range", async () => {
+        // Use a range with no proposals
+        const proposals = await discoverProposals(
+          ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+          100,
+          110,
+          l2Provider
+        );
+
+        expect(proposals).toEqual([]);
+      });
+    });
+
+    describe("discoverTimelockOps", () => {
+      it("should discover timelock ops in block range containing known op", async () => {
+        const queueBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.queueBlockNumber;
+        // Search a small range around the known queue block
+        const fromBlock = queueBlock - 10;
+        const toBlock = queueBlock + 10;
+
+        const ops = await discoverTimelockOps(
+          ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+          fromBlock,
+          toBlock,
+          l2Provider
+        );
+
+        expect(ops.length).toBeGreaterThan(0);
+        const found = ops.find(
+          (op) =>
+            op.operationId.toLowerCase() ===
+            CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.operationId.toLowerCase()
+        );
+        expect(found).toBeDefined();
+      });
+
+      it("should return empty array for empty block range", async () => {
+        const ops = await discoverTimelockOps(
+          ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+          100,
+          110,
+          l2Provider
+        );
+
+        expect(ops).toEqual([]);
+      });
+    });
+
+    describe("discoverAll", () => {
+      it("should discover from multiple targets", async () => {
+        const creationBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationBlock;
+        const fromBlock = creationBlock - 10;
+        const toBlock = creationBlock + 10;
+
+        const result = await discoverAll(
+          { constitutionalGovernor: true },
+          toBlock,
+          l2Provider,
+          cache,
+          { constitutionalGovernor: fromBlock }
+        );
+
+        expect(result.proposals.length).toBeGreaterThan(0);
+        expect(result.watermarks.constitutionalGovernor).toBe(toBlock);
+      });
+
+      it("should create pending checkpoints for discovered proposals", async () => {
+        const creationBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationBlock;
+        const fromBlock = creationBlock - 10;
+        const toBlock = creationBlock + 10;
+
+        await discoverAll({ constitutionalGovernor: true }, toBlock, l2Provider, cache, {
+          constitutionalGovernor: fromBlock,
+        });
+
+        // Check that a pending checkpoint was created
+        const keysResult = await cache.keys();
+        const keys = Array.isArray(keysResult) ? keysResult : Array.from(keysResult);
+        expect(keys.length).toBeGreaterThan(0);
+        const txKey = keys.find((k: string) => k.startsWith("tx:"));
+        expect(txKey).toBeDefined();
+      });
+
+      it("should handle multiple governor targets", async () => {
+        // Use NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY for a second governor
+        const block1 = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationBlock;
+        const block2 = NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationBlock;
+
+        const result = await discoverAll(
+          {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+          },
+          Math.max(block1, block2) + 10,
+          l2Provider,
+          cache,
+          {
+            constitutionalGovernor: block1 - 10,
+            nonConstitutionalGovernor: block2 - 10,
+          }
+        );
+
+        // Should have discovered from both governors
+        expect(result.watermarks.constitutionalGovernor).toBeDefined();
+        expect(result.watermarks.nonConstitutionalGovernor).toBeDefined();
+      });
+
+      it("should handle timelock targets", async () => {
+        const queueBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.queueBlockNumber;
+        const fromBlock = queueBlock - 10;
+        const toBlock = queueBlock + 10;
+
+        const result = await discoverAll(
+          { l2ConstitutionalTimelock: true },
+          toBlock,
+          l2Provider,
+          cache,
+          { l2ConstitutionalTimelock: fromBlock }
+        );
+
+        expect(result.timelockOps.length).toBeGreaterThan(0);
+        expect(result.watermarks.l2ConstitutionalTimelock).toBe(toBlock);
+      });
+
+      it("should return empty results for no targets enabled", async () => {
+        const result = await discoverAll({}, 1000, l2Provider, cache, {});
+
+        expect(result.proposals).toEqual([]);
+        expect(result.timelockOps).toEqual([]);
+      });
+
+      it("should work without cache", async () => {
+        const creationBlock = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationBlock;
+        const fromBlock = creationBlock - 10;
+        const toBlock = creationBlock + 10;
+
+        const result = await discoverAll(
+          { constitutionalGovernor: true },
+          toBlock,
+          l2Provider,
+          undefined, // No cache
+          { constitutionalGovernor: fromBlock }
+        );
+
+        expect(result.proposals.length).toBeGreaterThan(0);
+      });
+    });
+  }
+);
+
+function createMemoryCache(): CacheAdapter {
+  const store = new Map<string, string>();
+  return {
+    get: async <T>(key: string): Promise<T | null> => {
+      const value = store.get(key);
+      return value ? JSON.parse(value) : null;
+    },
+    set: async <T>(key: string, value: T): Promise<void> => {
+      store.set(key, JSON.stringify(value));
+    },
+    delete: async (key: string): Promise<void> => {
+      store.delete(key);
+    },
+    clear: async (): Promise<void> => {
+      store.clear();
+    },
+    has: async (key: string): Promise<boolean> => {
+      return store.has(key);
+    },
+    keys: async (): Promise<string[]> => {
+      return Array.from(store.keys());
+    },
+  };
+}

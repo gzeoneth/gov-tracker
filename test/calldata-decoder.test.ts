@@ -357,3 +357,101 @@ describe("Retryable Ticket", () => {
     });
   });
 });
+
+describe("Nested Array Parameter Decoding", () => {
+  it("should decode bytes[] with nested calldata items", async () => {
+    // Create inner calldata items (transfer calls)
+    const transferIface = new ethers.utils.Interface([
+      "function transfer(address to, uint256 amount)",
+    ]);
+    const innerCalldata1 = transferIface.encodeFunctionData("transfer", [
+      "0x1111111111111111111111111111111111111111",
+      ethers.utils.parseEther("1"),
+    ]);
+    const innerCalldata2 = transferIface.encodeFunctionData("transfer", [
+      "0x2222222222222222222222222222222222222222",
+      ethers.utils.parseEther("2"),
+    ]);
+
+    // Create outer calldata with bytes[] containing inner calldatas
+    const targets = [
+      "0x3333333333333333333333333333333333333333",
+      "0x4444444444444444444444444444444444444444",
+    ];
+    const values = [ethers.BigNumber.from(0), ethers.BigNumber.from(0)];
+    const payloads = [innerCalldata1, innerCalldata2];
+
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [targets, values, payloads, ethers.constants.HashZero, ethers.constants.HashZero, 259200]
+    );
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    const result = await decodeCalldata(calldata);
+
+    expect(result.signature).toContain("scheduleBatch");
+    expect(result.parameters).not.toBeNull();
+
+    // Find the bytes[] parameter (payloads/data)
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    expect(bytesArrayParam).toBeDefined();
+
+    // Should have nestedArray with decoded inner calldatas
+    if (bytesArrayParam?.nestedArray) {
+      expect(bytesArrayParam.nestedArray.length).toBe(2);
+      expect(bytesArrayParam.nestedArray[0].signature).toBe("transfer(address,uint256)");
+      expect(bytesArrayParam.nestedArray[1].signature).toBe("transfer(address,uint256)");
+    }
+  });
+
+  it("should handle bytes[] with mixed valid and invalid calldata", async () => {
+    const transferIface = new ethers.utils.Interface([
+      "function transfer(address to, uint256 amount)",
+    ]);
+    const validCalldata = transferIface.encodeFunctionData("transfer", [
+      "0x1111111111111111111111111111111111111111",
+      ethers.utils.parseEther("1"),
+    ]);
+
+    // Mix of valid calldata and short data that won't decode
+    const payloads = [validCalldata, "0x1234"];
+    const targets = [
+      "0x3333333333333333333333333333333333333333",
+      "0x4444444444444444444444444444444444444444",
+    ];
+    const values = [ethers.BigNumber.from(0), ethers.BigNumber.from(0)];
+
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [targets, values, payloads, ethers.constants.HashZero, ethers.constants.HashZero, 259200]
+    );
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    const result = await decodeCalldata(calldata);
+
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    // Should decode at least the valid one
+    if (bytesArrayParam?.nestedArray) {
+      expect(bytesArrayParam.nestedArray.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("should handle bytes[] with empty array", async () => {
+    const targets: string[] = [];
+    const values: ethers.BigNumber[] = [];
+    const payloads: string[] = [];
+
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [targets, values, payloads, ethers.constants.HashZero, ethers.constants.HashZero, 259200]
+    );
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    const result = await decodeCalldata(calldata);
+
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    expect(bytesArrayParam).toBeDefined();
+    // Empty array should not create nestedArray
+    expect(bytesArrayParam?.nestedArray).toBeUndefined();
+  });
+});

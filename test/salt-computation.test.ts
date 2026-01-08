@@ -11,6 +11,7 @@ import {
   saltFromDescription,
   decodeL1TimelockSchedule,
   computeL1TimelockSalt,
+  computeL2TimelockSalt,
 } from "../src/utils/salt-computation";
 import { timelockInterface } from "../src/abis";
 import type { TrackedStage } from "../src/types";
@@ -275,6 +276,134 @@ describe("Salt Computation", () => {
 
       expect(result.salt).toBe(expectedSalt);
       expect(result.predecessor).toBe(ethers.constants.HashZero);
+    });
+  });
+
+  describe("computeL2TimelockSalt", () => {
+    it("should return HashZero when no allStages provided", async () => {
+      const result = await computeL2TimelockSalt({});
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should return HashZero when allStages is empty", async () => {
+      const result = await computeL2TimelockSalt({}, []);
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should return HashZero when no PROPOSAL_CREATED stage", async () => {
+      const stages: TrackedStage[] = [
+        {
+          type: "VOTING_ACTIVE",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {},
+        },
+      ];
+
+      const result = await computeL2TimelockSalt({}, stages);
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should return HashZero when PROPOSAL_CREATED has no description", async () => {
+      const stages: TrackedStage[] = [
+        {
+          type: "PROPOSAL_CREATED",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            proposalId: "12345",
+          },
+        },
+      ];
+
+      const result = await computeL2TimelockSalt({}, stages);
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should derive salt from proposal description (governor path)", async () => {
+      const description = "AIP-1.2: Test Proposal for Coverage";
+      const expectedSalt = ethers.utils.id(description);
+
+      const stages: TrackedStage[] = [
+        {
+          type: "PROPOSAL_CREATED",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            proposalId: "12345",
+            description,
+          },
+        },
+      ];
+
+      const result = await computeL2TimelockSalt({}, stages);
+
+      expect(result).toBe(expectedSalt);
+    });
+
+    it("should derive salt from description even with empty stageData", async () => {
+      const description = "Another test description";
+      const expectedSalt = saltFromDescription(description);
+
+      const stages: TrackedStage[] = [
+        {
+          type: "PROPOSAL_CREATED",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: { description },
+        },
+        {
+          type: "VOTING_ACTIVE",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {},
+        },
+      ];
+
+      const result = await computeL2TimelockSalt({ isSecurityCouncilOperation: false }, stages);
+
+      expect(result).toBe(expectedSalt);
+    });
+
+    it("should handle SC operation flag without required fields (fallback to HashZero)", async () => {
+      const result = await computeL2TimelockSalt({
+        isSecurityCouncilOperation: true,
+      });
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should handle SC operation with members but no nonce (fallback)", async () => {
+      const result = await computeL2TimelockSalt({
+        isSecurityCouncilOperation: true,
+        securityCouncilMembers: ["0x1111111111111111111111111111111111111111"],
+      });
+
+      expect(result).toBe(ethers.constants.HashZero);
+    });
+
+    it("should handle SC operation with members and nonce but no provider (fallback)", async () => {
+      const result = await computeL2TimelockSalt({
+        isSecurityCouncilOperation: true,
+        securityCouncilMembers: ["0x1111111111111111111111111111111111111111"],
+        securityCouncilNonce: "5",
+      });
+
+      expect(result).toBe(ethers.constants.HashZero);
     });
   });
 });

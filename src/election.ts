@@ -20,6 +20,7 @@ import {
   ElectionStatus,
 } from "./types";
 import { getL1BlockNumberFromL2 } from "./utils/timing";
+import { saltFromDescription } from "./utils/salt-computation";
 import { loggers } from "./utils/logger";
 
 const log = loggers.election;
@@ -455,7 +456,7 @@ export async function getElectionProposalId(
   const [targets, values, calldatas, description] = proposeArgs;
 
   // Hash the description to get descriptionHash
-  const descriptionHash = ethers.utils.id(description);
+  const descriptionHash = saltFromDescription(description);
 
   // Calculate proposal ID using hashProposal
   const proposalId = await queryWithRetry(() =>
@@ -533,7 +534,7 @@ export async function getElectionProposalParams(
           values: args.values,
           calldatas: args.calldatas,
           description: args.description,
-          descriptionHash: ethers.utils.id(args.description),
+          descriptionHash: saltFromDescription(args.description),
         };
       }
     } catch {

@@ -44,6 +44,7 @@ import {
   StageTransaction,
 } from "../src";
 import type { L2Chain } from "../src/types/core";
+import type { RetryableStageData } from "../src/types/stages";
 
 // Type for trackRetryables return value
 interface RetryableTrackingResult {
@@ -153,16 +154,18 @@ describe.skipIf(process.env.NO_RPC === "1")(
         );
 
         // Should have creation and redemption details
-        expect(result.stage.data.ticketCount).toBeGreaterThan(0);
-        expect(result.stage.data.creationDetails).toBeDefined();
-        expect(result.stage.data.redemptionDetails).toBeDefined();
-        expect(Array.isArray(result.stage.data.creationDetails)).toBe(true);
+        const data = result.stage.data as RetryableStageData;
+        expect(data.ticketCount).toBeGreaterThan(0);
+        expect(data.creationDetails).toBeDefined();
+        expect(data.redemptionDetails).toBeDefined();
+        expect(Array.isArray(data.creationDetails)).toBe(true);
       });
 
       it("should include L2 transaction hash in creation details", async () => {
         const result = retryableResult;
+        const retryableData = result.stage.data as RetryableStageData;
 
-        const creationDetails = result.stage.data.creationDetails as Array<{
+        const creationDetails = retryableData.creationDetails as Array<{
           index: number;
           targetChain: string;
           l2TxHash: string;
@@ -194,7 +197,8 @@ describe.skipIf(process.env.NO_RPC === "1")(
 
         expect(result.messages.length).toBeGreaterThan(0);
 
-        const redemptionDetails = result.stage.data.redemptionDetails as Array<{
+        const data = result.stage.data as RetryableStageData;
+        const redemptionDetails = data.redemptionDetails as Array<{
           targetChain: string;
           status: string;
         }>;
@@ -324,21 +328,23 @@ describe.skipIf(process.env.NO_RPC === "1")(
     describe("Retryable data accuracy", () => {
       it("should have correct ticket count in stage", async () => {
         const result = retryableResult;
+        const data = result.stage.data as RetryableStageData;
 
-        const ticketCount = result.stage.data.ticketCount as number;
+        const ticketCount = data.ticketCount as number;
         expect(ticketCount).toBeGreaterThan(0);
       });
 
       it("should have matching creation and redemption details", async () => {
         const result = retryableResult;
+        const data = result.stage.data as RetryableStageData;
 
-        const creationDetails = result.stage.data.creationDetails as Array<{
+        const creationDetails = data.creationDetails as Array<{
           index: number;
           targetChain: string;
           l2TxHash: string;
         }>;
 
-        const redemptionDetails = result.stage.data.redemptionDetails as Array<{
+        const redemptionDetails = data.redemptionDetails as Array<{
           index: number;
           targetChain: string;
           status: string;

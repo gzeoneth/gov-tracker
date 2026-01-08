@@ -84,13 +84,17 @@ import { prepareTransaction as prepareTransactionInternal } from "./tracker/exec
 export function extractTimelockLink(stages: TrackedStage[]): TimelockLink | undefined {
   const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
 
-  if (!queuedStage || queuedStage.status !== "COMPLETED") {
+  if (
+    !queuedStage ||
+    queuedStage.type !== "PROPOSAL_QUEUED" ||
+    queuedStage.status !== "COMPLETED"
+  ) {
     return undefined;
   }
 
   const txHash = queuedStage.transactions[0]?.hash;
-  const operationId = queuedStage.data.operationId as string | undefined;
-  const timelockAddress = queuedStage.data.timelockAddress as string | undefined;
+  const operationId = queuedStage.data.operationId;
+  const timelockAddress = queuedStage.data.timelockAddress;
   const queueBlockNumber = queuedStage.transactions[0]?.blockNumber;
 
   if (!txHash || !operationId || !timelockAddress || !queueBlockNumber) {

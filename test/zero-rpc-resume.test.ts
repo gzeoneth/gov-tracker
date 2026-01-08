@@ -148,7 +148,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
               transactions: [],
               data: {},
             },
-          ] as TrackedStage[],
+          ] as unknown as TrackedStage[],
         },
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       } as TrackingCheckpoint,

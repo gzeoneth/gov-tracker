@@ -24,14 +24,14 @@ const mockContext: ExecuteContext = {
 describe("Tracker Execute Module", () => {
   describe("prepareTransaction", () => {
     it("should fail for PROPOSAL_CREATED stage (not supported)", async () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "PROPOSAL_CREATED",
         status: "COMPLETED",
         chain: "arb1",
         chainId: 42161,
         transactions: [],
         data: {},
-      };
+      } as unknown as TrackedStage;
 
       const result = await prepareTransaction(stage, mockContext);
       expect(result.success).toBe(false);
@@ -41,14 +41,14 @@ describe("Tracker Execute Module", () => {
     });
 
     it("should fail for VOTING_ACTIVE stage (not supported)", async () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "VOTING_ACTIVE",
         status: "COMPLETED",
         chain: "arb1",
         chainId: 42161,
         transactions: [],
         data: {},
-      };
+      } as unknown as TrackedStage;
 
       const result = await prepareTransaction(stage, mockContext);
       expect(result.success).toBe(false);
@@ -58,14 +58,14 @@ describe("Tracker Execute Module", () => {
     });
 
     it("should fail for PROPOSAL_QUEUED with missing data", async () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "PROPOSAL_QUEUED",
         status: "READY",
         chain: "arb1",
         chainId: 42161,
         transactions: [],
         data: {}, // Missing required fields
-      };
+      } as unknown as TrackedStage;
 
       const result = await prepareTransaction(stage, mockContext);
       expect(result.success).toBe(false);
@@ -75,7 +75,7 @@ describe("Tracker Execute Module", () => {
     });
 
     it("should fail for PROPOSAL_QUEUED with incomplete data", async () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "PROPOSAL_QUEUED",
         status: "READY",
         chain: "arb1",
@@ -86,7 +86,7 @@ describe("Tracker Execute Module", () => {
           proposalId: "12345",
           // Missing targets, values, calldatas, description
         },
-      };
+      } as unknown as TrackedStage;
 
       const result = await prepareTransaction(stage, mockContext);
       expect(result.success).toBe(false);
@@ -97,7 +97,7 @@ describe("Tracker Execute Module", () => {
 
     describe("L2_TO_L1_MESSAGE preparation", () => {
       it("should fail for stage without READY status", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "L2_TO_L1_MESSAGE",
           status: "PENDING",
           chain: "arb1",
@@ -106,7 +106,7 @@ describe("Tracker Execute Module", () => {
           data: {
             l2TxHash: "0x" + "a".repeat(64),
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -116,7 +116,7 @@ describe("Tracker Execute Module", () => {
       });
 
       it("should fail for stage with missing l2TxHash", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "L2_TO_L1_MESSAGE",
           status: "READY",
           chain: "arb1",
@@ -126,7 +126,7 @@ describe("Tracker Execute Module", () => {
             messageCount: 1,
             // Missing l2TxHash
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -136,7 +136,7 @@ describe("Tracker Execute Module", () => {
       });
 
       it("should fail for COMPLETED stage without prepareCompleted option", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "L2_TO_L1_MESSAGE",
           status: "COMPLETED",
           chain: "arb1",
@@ -145,7 +145,7 @@ describe("Tracker Execute Module", () => {
           data: {
             l2TxHash: "0x" + "a".repeat(64),
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -157,7 +157,7 @@ describe("Tracker Execute Module", () => {
 
     describe("RETRYABLE_EXECUTED preparation", () => {
       it("should fail for stage with missing target chain", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "RETRYABLE_EXECUTED",
           status: "READY",
           chain: "ethereum",
@@ -166,7 +166,7 @@ describe("Tracker Execute Module", () => {
           data: {
             // Missing targetChains
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -176,7 +176,7 @@ describe("Tracker Execute Module", () => {
       });
 
       it("should fail for stage with missing L1 tx hash", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "RETRYABLE_EXECUTED",
           status: "READY",
           chain: "ethereum",
@@ -186,7 +186,7 @@ describe("Tracker Execute Module", () => {
             targetChains: ["arb1"],
             // Missing L1 tx hash
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -196,7 +196,7 @@ describe("Tracker Execute Module", () => {
       });
 
       it("should fail for stage with empty targetChains array", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "RETRYABLE_EXECUTED",
           status: "READY",
           chain: "ethereum",
@@ -205,7 +205,7 @@ describe("Tracker Execute Module", () => {
           data: {
             targetChains: [],
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -215,7 +215,7 @@ describe("Tracker Execute Module", () => {
       });
 
       it("should fail for PENDING status", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "RETRYABLE_EXECUTED",
           status: "PENDING",
           chain: "ethereum",
@@ -231,7 +231,7 @@ describe("Tracker Execute Module", () => {
           data: {
             targetChains: ["arb1"],
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -243,7 +243,7 @@ describe("Tracker Execute Module", () => {
 
     describe("L2_TIMELOCK preparation", () => {
       it("should fail for stage with wrong type", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "L2_TIMELOCK",
           status: "READY",
           chain: "arb1",
@@ -252,7 +252,7 @@ describe("Tracker Execute Module", () => {
           data: {
             // Missing required timelock data
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -264,7 +264,7 @@ describe("Tracker Execute Module", () => {
 
     describe("L1_TIMELOCK preparation", () => {
       it("should fail for stage without proper data", async () => {
-        const stage: TrackedStage = {
+        const stage = {
           type: "L1_TIMELOCK",
           status: "READY",
           chain: "ethereum",
@@ -273,7 +273,7 @@ describe("Tracker Execute Module", () => {
           data: {
             // Missing required timelock data
           },
-        };
+        } as unknown as TrackedStage;
 
         const result = await prepareTransaction(stage, mockContext);
         expect(result.success).toBe(false);
@@ -291,7 +291,7 @@ describe("Tracker Execute Module", () => {
         chainId: 42161,
         transactions: [],
         data: {},
-      } as TrackedStage;
+      } as unknown as TrackedStage;
 
       const result = await prepareTransaction(stage, mockContext);
       expect(result.success).toBe(false);

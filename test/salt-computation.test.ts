@@ -161,7 +161,7 @@ describe("Salt Computation", () => {
     });
 
     it("should return HashZero when no L2_TO_L1_MESSAGE stage", () => {
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "PROPOSAL_CREATED",
           status: "COMPLETED",
@@ -170,7 +170,7 @@ describe("Salt Computation", () => {
           transactions: [],
           data: {},
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = computeL1TimelockSalt(stages);
 
@@ -178,7 +178,7 @@ describe("Salt Computation", () => {
     });
 
     it("should return HashZero when L2_TO_L1_MESSAGE has no l2ToL1TxEvent", () => {
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "L2_TO_L1_MESSAGE",
           status: "COMPLETED",
@@ -187,7 +187,7 @@ describe("Salt Computation", () => {
           transactions: [],
           data: {},
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = computeL1TimelockSalt(stages);
 
@@ -208,7 +208,7 @@ describe("Salt Computation", () => {
         BigNumber.from(259200),
       ]);
 
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "L2_TO_L1_MESSAGE",
           status: "COMPLETED",
@@ -229,7 +229,7 @@ describe("Salt Computation", () => {
             },
           },
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = computeL1TimelockSalt(stages);
 
@@ -249,7 +249,7 @@ describe("Salt Computation", () => {
         BigNumber.from(259200),
       ]);
 
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "L2_TO_L1_MESSAGE",
           status: "COMPLETED",
@@ -270,7 +270,7 @@ describe("Salt Computation", () => {
             },
           },
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = computeL1TimelockSalt(stages);
 
@@ -293,7 +293,7 @@ describe("Salt Computation", () => {
     });
 
     it("should return HashZero when no PROPOSAL_CREATED stage", async () => {
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "VOTING_ACTIVE",
           status: "COMPLETED",
@@ -302,7 +302,7 @@ describe("Salt Computation", () => {
           transactions: [],
           data: {},
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = await computeL2TimelockSalt({}, stages);
 
@@ -310,7 +310,7 @@ describe("Salt Computation", () => {
     });
 
     it("should return HashZero when PROPOSAL_CREATED has no description", async () => {
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "PROPOSAL_CREATED",
           status: "COMPLETED",
@@ -321,7 +321,7 @@ describe("Salt Computation", () => {
             proposalId: "12345",
           },
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = await computeL2TimelockSalt({}, stages);
 
@@ -332,7 +332,7 @@ describe("Salt Computation", () => {
       const description = "AIP-1.2: Test Proposal for Coverage";
       const expectedSalt = ethers.utils.id(description);
 
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "PROPOSAL_CREATED",
           status: "COMPLETED",
@@ -344,7 +344,7 @@ describe("Salt Computation", () => {
             description,
           },
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = await computeL2TimelockSalt({}, stages);
 
@@ -355,7 +355,7 @@ describe("Salt Computation", () => {
       const description = "Another test description";
       const expectedSalt = saltFromDescription(description);
 
-      const stages: TrackedStage[] = [
+      const stages = [
         {
           type: "PROPOSAL_CREATED",
           status: "COMPLETED",
@@ -372,7 +372,7 @@ describe("Salt Computation", () => {
           transactions: [],
           data: {},
         },
-      ];
+      ] as unknown as TrackedStage[];
 
       const result = await computeL2TimelockSalt({ isSecurityCouncilOperation: false }, stages);
 

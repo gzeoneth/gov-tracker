@@ -73,14 +73,17 @@ export const deserializeCallScheduledDataArray = (data: SerializedCallScheduledD
 // ============================================================================
 
 /**
- * Create a new tracked stage with default values
+ * Create a new tracked stage with default values.
+ * Used for initializing placeholder stages that will be filled in later.
  */
 function createStage(
   type: StageType,
   chain: Chain,
   status: StageStatus = "NOT_STARTED"
 ): TrackedStage {
-  const chainId = chainToChainId(chain) ?? 0; // Default to 0 for unknown chains
+  const chainId = chainToChainId(chain) ?? 0;
+  // Assertion needed: we create placeholder stages with empty data that get
+  // replaced by properly-built stages. TypeScript can't track this flow.
   return {
     type,
     status,
@@ -89,7 +92,7 @@ function createStage(
     transactions: [],
     data: {},
     executable: false,
-  };
+  } as TrackedStage;
 }
 
 /**
@@ -299,12 +302,19 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
  * @returns The operationId if found, undefined otherwise
  */
 export function extractOperationId(stages: TrackedStage[]): string | undefined {
-  // Check stages that contain operationId (in order of likelihood)
-  const stageTypes: StageType[] = ["PROPOSAL_QUEUED", "L2_TIMELOCK"];
+  // Check PROPOSAL_QUEUED first (most common)
+  const queuedStage = stages.find((s) => s.type === "PROPOSAL_QUEUED");
+  if (queuedStage?.type === "PROPOSAL_QUEUED") {
+    const opId = queuedStage.data.operationId;
+    if (typeof opId === "string" && opId.length > 0) {
+      return opId;
+    }
+  }
 
-  for (const type of stageTypes) {
-    const stage = stages.find((s) => s.type === type);
-    const opId = stage?.data?.operationId;
+  // Fallback to L2_TIMELOCK
+  const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
+  if (l2TimelockStage?.type === "L2_TIMELOCK") {
+    const opId = l2TimelockStage.data.operationId;
     if (typeof opId === "string" && opId.length > 0) {
       return opId;
     }

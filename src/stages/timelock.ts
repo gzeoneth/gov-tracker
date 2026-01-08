@@ -11,12 +11,10 @@ import {
   Chain,
   chainToChainId,
   TrackedStage,
-  TrackedStageData,
   TimelockStageData,
   TimelockState,
   CallScheduledData,
   OperationState,
-  StageType,
   PrepareResult,
   PrepareOptions,
   TimelockParams,
@@ -61,9 +59,11 @@ const logExecution = loggers.execution;
 /**
  * Configuration for timelock tracking that differs between L1 and L2.
  */
+type TimelockStageType = "L2_TIMELOCK" | "L1_TIMELOCK";
+
 interface TimelockTrackingConfig {
   chain: Chain;
-  stageType: StageType;
+  stageType: TimelockStageType;
   blockTimeSeconds: number;
   logPrefix: string;
 }
@@ -265,14 +265,14 @@ async function trackTimelock(
       builder.data({ predecessor: allData[0].predecessor });
     }
 
-    log("%s: Computed salt: %s", config.logPrefix, salt);
+    log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   } else if (config.stageType === "L1_TIMELOCK") {
     const { salt, predecessor } = computeL1TimelockSalt(options.allStages);
     builder.data({ salt });
     if (predecessor) {
       builder.data({ predecessor });
     }
-    log("%s: Computed salt: %s", config.logPrefix, salt);
+    log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   }
 
   // Determine if operation uses scheduleBatch or schedule by trying both validations
@@ -609,17 +609,15 @@ export async function calculateBatchRetryableValues(
 /**
  * Helper: Get salt from cached stage data or user override
  */
-function getSalt(stageData: TrackedStageData, options: PrepareOptions): string {
+function getSalt(stageData: TimelockStageData, options: PrepareOptions): string {
   return options.salt ?? stageData.salt ?? ethers.constants.HashZero;
 }
 
 /**
  * Helper: Get predecessor from cached stage data or user override
  */
-function getPredecessor(stageData: TrackedStageData, options: PrepareOptions): string {
-  return (
-    options.predecessor ?? (stageData as TimelockStageData).predecessor ?? ethers.constants.HashZero
-  );
+function getPredecessor(stageData: TimelockStageData, options: PrepareOptions): string {
+  return options.predecessor ?? stageData.predecessor ?? ethers.constants.HashZero;
 }
 
 /**
@@ -629,7 +627,7 @@ export async function prepareTimelockOperation(
   timelockAddress: string,
   params: TimelockParams,
   operationId: string,
-  stageData: TrackedStageData,
+  stageData: TimelockStageData,
   provider: ethers.providers.Provider,
   options: PrepareOptions = {}
 ): Promise<PrepareResult> {
@@ -700,7 +698,7 @@ export async function prepareTimelockBatch(
   timelockAddress: string,
   params: TimelockBatchParams,
   operationId: string,
-  stageData: TrackedStageData,
+  stageData: TimelockStageData,
   provider: ethers.providers.Provider,
   options: PrepareOptions = {}
 ): Promise<PrepareResult> {
@@ -798,20 +796,24 @@ export async function prepareTimelockStage(
   });
   if (validationError) return validationError;
 
-  const stageData = createTimelockStageData(stage);
-  if (!stageData) {
+  // Get execution payload (for targets, values, payloads)
+  const execPayload = createTimelockStageData(stage);
+  if (!execPayload) {
     return failPrepare("Stage is not a timelock stage");
   }
 
-  const { timelockAddress, operationId } = stageData;
+  const { timelockAddress, operationId } = execPayload;
   if (!timelockAddress || !operationId) {
     return failPrepare("Missing timelock address or operation ID");
   }
 
-  const { callScheduledData } = stageData;
+  const { callScheduledData } = execPayload;
   if (!callScheduledData?.length) {
     return failPrepare("Missing callScheduledData for preparation.");
   }
+
+  // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)
+  const timelockStageData = stage.data as TimelockStageData;
 
   const sortedData = [...callScheduledData].sort((a, b) => a.index.toNumber() - b.index.toNumber());
   const targets = sortedData.map((d) => d.target);
@@ -823,8 +825,7 @@ export async function prepareTimelockStage(
 
   // Use cached isBatchOperation to determine which method to use
   // Fallback to count-based logic if not cached
-  const timelockData = stage.data as TimelockStageData;
-  const useBatch = timelockData.isBatchOperation ?? targets.length > 1;
+  const useBatch = timelockStageData.isBatchOperation ?? targets.length > 1;
 
   if (useBatch) {
     return prepareTimelockBatch(
@@ -837,7 +838,7 @@ export async function prepareTimelockStage(
         salt: "",
       },
       operationId,
-      stage.data,
+      timelockStageData,
       provider,
       options
     );
@@ -853,7 +854,7 @@ export async function prepareTimelockStage(
       salt: "",
     },
     operationId,
-    stage.data,
+    timelockStageData,
     provider,
     options
   );

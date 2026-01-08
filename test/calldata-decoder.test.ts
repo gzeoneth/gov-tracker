@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "../src/calldata";
 import { ethers } from "ethers";
 import { TIMELOCK_SELECTORS, ADDRESSES } from "../src/constants";
+import type { TrackedStage } from "../src/types";
 
 describe("Calldata Decoder", () => {
   describe("decodeCalldata", () => {
@@ -203,7 +204,7 @@ describe("Calldata Decoder", () => {
         },
       };
 
-      const result = extractCalldataFromStage(stage);
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
       expect(result.calldatas).toEqual([]);
       expect(result.targets).toEqual([]);
       expect(result.values).toEqual([]);
@@ -245,7 +246,9 @@ describe("Calldata Decoder", () => {
         },
       };
 
-      expect(() => extractCalldataFromStage(stage)).toThrow(/Mismatch in values length/);
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in values length/
+      );
     });
   });
 });

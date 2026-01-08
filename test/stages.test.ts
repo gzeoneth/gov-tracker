@@ -307,7 +307,7 @@ describe("Stage Base Functions", () => {
       const result = updateStageInList(stages, updatedStage);
 
       expect(result[0].status).toBe("COMPLETED");
-      expect(result[0].data?.proposalId).toBe("123");
+      expect((result[0].data as { proposalId?: string })?.proposalId).toBe("123");
       expect(result[1].status).toBe("NOT_STARTED");
     });
 

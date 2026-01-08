@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ethers } from "ethers";
 import { trackVotingStage } from "../src/stages/voting";
-import type { ProposalData } from "../src/types";
+import type { ProposalData, VotingActiveData } from "../src/types";
 import { ADDRESSES } from "../src/constants";
 
 // Mock the discovery modules
@@ -157,8 +157,9 @@ describe("Voting Stage Tracking", () => {
       expect(result.stage.status).toBe("PENDING");
       expect(result.stage.type).toBe("VOTING_ACTIVE");
       expect(result.votingData).not.toBeNull();
-      expect(result.stage.data.forVotes).toContain("ARB");
-      expect(result.stage.data.quorumReached).toBe(true);
+      const votingData = result.stage.data as VotingActiveData;
+      expect(votingData.forVotes).toContain("ARB");
+      expect(votingData.quorumReached).toBe(true);
     });
 
     it("should return COMPLETED when proposal has succeeded", async () => {
@@ -263,9 +264,10 @@ describe("Voting Stage Tracking", () => {
       );
 
       expect(result.stage.status).toBe("PENDING");
-      expect(result.stage.data.hasVettingPeriod).toBe(true);
-      expect(result.stage.data.isVettingActive).toBe(true);
-      expect(result.stage.data.waitingForVetting).toBe(true);
+      const data = result.stage.data as VotingActiveData;
+      expect(data.hasVettingPeriod).toBe(true);
+      expect(data.isVettingActive).toBe(true);
+      expect(data.waitingForVetting).toBe(true);
     });
 
     it("should detect extended voting deadline", async () => {
@@ -302,7 +304,7 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
-      expect(result.stage.data.wasExtended).toBe(true);
+      expect((result.stage.data as VotingActiveData).wasExtended).toBe(true);
     });
 
     it("should handle Queued proposal state", async () => {

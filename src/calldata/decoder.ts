@@ -7,7 +7,7 @@
 
 import Debug from "debug";
 import type { DecodedCalldata, DecodedParameter } from "../types/calldata";
-import { Chain, TrackedStage, TrackedStageData, ExtractedCalldata } from "../types";
+import { Chain, TrackedStage, ExtractedCalldata } from "../types";
 import { lookupSignature } from "./signature-lookup";
 import { decodeParameters, isLikelyCalldata, getAddressLabel } from "./parameter-decoder";
 import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
@@ -276,6 +276,21 @@ export async function decodeCalldataArray(
 }
 
 /**
+ * Loose data type for extracting calldata from multiple stage types.
+ * Used to access fields that exist on some but not all stage data types.
+ */
+interface ExtractableStageData {
+  calldatas?: string[];
+  targets?: string[];
+  values?: string[];
+  callScheduledData?: Array<{
+    data: string;
+    target: string;
+    value?: string | { toString(): string };
+  }>;
+}
+
+/**
  * Extract calldata, targets, and values from a tracked stage.
  * Handles different data structures for Proposals vs Timelock operations.
  * Ensures all returned arrays have the same length.
@@ -284,7 +299,8 @@ export async function decodeCalldataArray(
  * @returns Object containing aligned arrays of calldatas, targets, and values
  */
 export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata {
-  const data = stage.data as TrackedStageData;
+  // Cast to loose type for field extraction - fields may not exist on all stage types
+  const data = stage.data as unknown as ExtractableStageData;
   const result: ExtractedCalldata = { calldatas: [], targets: [], values: [] };
 
   // 1. Check for explicit calldatas array (Proposals)
@@ -319,7 +335,9 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
       // scheduled.data and scheduled.target are strictly typed in CallScheduledData
       result.calldatas.push(scheduled.data);
       result.targets.push(scheduled.target);
-      result.values.push(scheduled.value || "0");
+      result.values.push(
+        typeof scheduled.value === "string" ? scheduled.value : scheduled.value?.toString() || "0"
+      );
     }
     if (result.calldatas.length > 0) {
       return result;

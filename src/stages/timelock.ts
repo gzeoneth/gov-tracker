@@ -35,7 +35,7 @@ import { validateSalt, validateSaltBatch } from "../utils/operation-id";
 import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-computation";
 import { INBOX_ABI, timelockInterface } from "../abis";
 import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
-import { getChainType, addressEquals } from "../utils/chain";
+import { getChain, addressEquals } from "../utils/chain";
 import { getBlockTimestamp, checkOperationReady, failPrepare } from "./base";
 import { StageBuilder } from "./stage-builder";
 import { getCurrentBlockInfo, blockAfterDelay } from "../utils/timing";
@@ -43,11 +43,11 @@ import {
   collectAllScheduledData,
   calculateTimelockEta,
   buildExecutionPayloadData,
-  serializeCallScheduledDataArray,
   searchAndCompleteTimelockExecution,
   createTimelockStageData,
   validateStageForPrepare,
 } from "../utils/stage-helpers";
+import { serializeCallScheduledDataArray } from "../stages/base";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { loggers } from "../utils/logger";
 
@@ -668,7 +668,7 @@ export async function prepareTimelockOperation(
     : null;
   const executionValue = retryableValue ?? params.value;
 
-  const chain = await getChainType(provider);
+  const chain = await getChain(provider);
   const calldata = timelockInterface.encodeFunctionData("execute", [
     params.target,
     params.value,
@@ -756,7 +756,7 @@ export async function prepareTimelockBatch(
   }
   const totalValue = executionValues.reduce((acc, v) => acc.add(v), BigNumber.from(0));
 
-  const chain = await getChainType(provider);
+  const chain = await getChain(provider);
   const calldata = timelockInterface.encodeFunctionData("executeBatch", [
     params.targets,
     params.values,

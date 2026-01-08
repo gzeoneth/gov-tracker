@@ -29,16 +29,6 @@ import {
 import { StageBuilder } from "../stages/stage-builder";
 import { findCallExecutedEvent } from "../discovery/timelock-discovery";
 
-// Re-export serialization functions from base (used by timelock.ts and tests)
-export {
-  serialize,
-  deserialize,
-  serializeCallScheduledData,
-  deserializeCallScheduledData,
-  serializeCallScheduledDataArray,
-  deserializeCallScheduledDataArray,
-} from "../stages/base";
-
 // ============================================================================
 // Timelock Execution Payload
 // ============================================================================

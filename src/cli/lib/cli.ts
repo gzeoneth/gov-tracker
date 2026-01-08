@@ -566,8 +566,7 @@ export async function runWithLoop(
 export interface TrackCallbackResult {
   key: string;
   result: TrackingResult | null;
-  prepared?: PreparedTransaction; // Legacy: first prepared transaction (deprecated)
-  preparedTransactions?: PreparedTransaction[]; // All prepared transactions
+  preparedTransactions?: PreparedTransaction[];
   error?: string;
 }
 
@@ -612,14 +611,12 @@ async function prepareStagesForResult(
   options: { prepare?: boolean; prepareCompleted?: boolean; preparePending?: boolean },
   providers: ProviderBundle
 ): Promise<{
-  prepared?: PreparedTransaction;
   preparedTransactions: PreparedTransaction[];
   preparations: PrepareResult[];
   count: number;
 }> {
   const preparations: PrepareResult[] = [];
   const preparedTransactions: PreparedTransaction[] = [];
-  let prepared: PreparedTransaction | undefined;
   let count = 0;
 
   if (!options.prepare) return { preparations, preparedTransactions, count };
@@ -652,7 +649,6 @@ async function prepareStagesForResult(
           if (result.success) {
             count++;
             preparedTransactions.push(result.prepared);
-            if (!prepared) prepared = result.prepared;
           }
         }
       }
@@ -668,7 +664,6 @@ async function prepareStagesForResult(
         if (result.success) {
           count++;
           preparedTransactions.push(result.prepared);
-          if (!prepared) prepared = result.prepared;
         }
       }
     } else {
@@ -678,7 +673,6 @@ async function prepareStagesForResult(
       if (prepResult.success) {
         count++;
         preparedTransactions.push(prepResult.prepared);
-        prepared = prepResult.prepared;
       }
     }
   }
@@ -706,7 +700,7 @@ async function prepareStagesForResult(
     }
   }
 
-  return { prepared, preparedTransactions, preparations, count };
+  return { preparedTransactions, preparations, count };
 }
 
 // ============================================================================
@@ -791,7 +785,6 @@ export async function runMonitorCycle(
         const callbackResult = await options.onTrack?.({
           key,
           result: trackResult,
-          prepared: prepResult.prepared,
           preparedTransactions: prepResult.preparedTransactions,
         });
 

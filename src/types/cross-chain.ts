@@ -3,7 +3,7 @@
  */
 
 import { BigNumber } from "ethers";
-import { Chain, ChainId } from "./core";
+import { ChainId, L2Chain } from "./core";
 
 /**
  * L2 to L1 message status
@@ -54,7 +54,7 @@ export interface RetryableData {
  */
 export interface RetryableTicketInfo {
   l2TxHash: string;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   status: string;
 }
@@ -64,7 +64,7 @@ export interface RetryableTicketInfo {
  */
 export interface RetryableRedemptionInfo {
   l2TxHash: string;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   txHash: string;
   blockNumber: number;
@@ -75,7 +75,7 @@ export interface RetryableRedemptionInfo {
  */
 export interface RetryableCreationDetail {
   index: number;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   l2TxHash: string;
 }
@@ -85,7 +85,7 @@ export interface RetryableCreationDetail {
  */
 export interface RetryableRedemptionDetail {
   index: number;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   status: string;
   l2TxHash: string | null;

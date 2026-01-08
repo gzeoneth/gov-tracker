@@ -14,11 +14,11 @@ import {
   ParentTransactionReceipt,
   ParentToChildMessageReader,
 } from "@arbitrum/sdk";
-import { TrackedStage, Chain, ChainId, PrepareResult } from "../types";
+import { TrackedStage, ChainId, L2Chain, PrepareResult } from "../types";
+import { getChain, getChainId } from "../utils/chain";
 import { loggers } from "../utils/logger";
 
 const log = loggers.retryables;
-import { getChainType, getChainId } from "../utils/chain";
 import { arbRetryableInterface } from "../abis";
 import { ADDRESSES, EVENT_TOPICS, TIMING } from "../constants";
 import { getBlockTimestamp, failPrepare } from "./base";
@@ -34,7 +34,7 @@ import {
 /** Creation details for a retryable ticket */
 interface CreationDetail {
   index: number;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   l2TxHash: string;
 }
@@ -42,7 +42,7 @@ interface CreationDetail {
 /** Redemption details for a retryable ticket */
 interface RedemptionDetail {
   index: number;
-  targetChain: Chain;
+  targetChain: L2Chain;
   targetChainId: ChainId;
   status: string;
   l2TxHash: string | null;
@@ -52,7 +52,7 @@ interface RedemptionDetail {
  * Result of detecting retryable target chains, including message counts
  */
 export interface RetryableTargetInfo {
-  chain: "arb1" | "NOVA"; // Keep legacy for internal use
+  chain: L2Chain;
   inboxAddress: string;
   messageCount: number;
 }
@@ -95,7 +95,7 @@ export async function detectAllRetryableTargetChains(
 
   if (novaCount > 0) {
     targets.push({
-      chain: "NOVA",
+      chain: "nova",
       inboxAddress: ADDRESSES.NOVA_DELAYED_INBOX,
       messageCount: novaCount,
     });
@@ -134,7 +134,7 @@ export async function trackRetryables(
   messages: ParentToChildMessageReader[];
   isComplete: boolean;
   /** All target chains for retryables (can be both arb1 and nova) */
-  targetChains: Chain[];
+  targetChains: L2Chain[];
 }> {
   const { l2Provider, novaProvider } = options;
 
@@ -186,9 +186,9 @@ export async function trackRetryables(
   let anyFailed = false;
 
   for (const { chain: targetChain, messageCount } of targetInfos) {
-    const provider = targetChain === "NOVA" ? novaProvider : l2Provider;
-    const chainName: Chain = targetChain === "NOVA" ? "nova" : "arb1";
-    const chainId = targetChain === "NOVA" ? 42170 : 42161;
+    const provider = targetChain === "nova" ? novaProvider : l2Provider;
+    const chainName: L2Chain = targetChain;
+    const chainId = targetChain === "nova" ? 42170 : 42161;
 
     // Handle missing provider
     if (!provider) {
@@ -313,10 +313,8 @@ export async function trackRetryables(
   }
 
   // Collect unique target chains
-  const targetChains = [
-    ...new Set(targetInfos.map((t) => (t.chain === "NOVA" ? "nova" : "arb1") as Chain)),
-  ];
-  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "NOVA" ? 42170 : 42161)))];
+  const targetChains = [...new Set(targetInfos.map((t) => t.chain))];
+  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "nova" ? 42170 : 42161)))];
 
   // Determine overall status and build stage using StageBuilder
   // Note: chain is "arb1" because retryable redemption executes on L2 chains (Arb1/Nova)
@@ -390,7 +388,7 @@ export async function prepareRetryableRedemption(
   }
 
   // Get chain info from provider
-  const targetChain = await getChainType(l2Provider);
+  const targetChain = await getChain(l2Provider);
   const targetChainId = await getChainId(l2Provider);
 
   const calldata = arbRetryableInterface.encodeFunctionData("redeem", [ticketId]);
@@ -430,7 +428,7 @@ export async function prepareAllRetryables(
     messages.map((message) => prepareRetryableRedemption(message, l2Provider, options))
   );
 
-  const targetChain = await getChainType(l2Provider);
+  const targetChain = await getChain(l2Provider);
   return { total: messages.length, results, targetChain };
 }
 

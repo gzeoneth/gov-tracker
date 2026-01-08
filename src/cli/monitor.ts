@@ -312,8 +312,7 @@ runCmd
             console.log(`\n[${r.key}] ERROR: ${r.error}`);
           }
 
-          // Use preparedTransactions if available, otherwise fall back to prepared (legacy)
-          const txsToDisplay = r.preparedTransactions ?? (r.prepared ? [r.prepared] : []);
+          const txsToDisplay = r.preparedTransactions ?? [];
           if (txsToDisplay.length > 0) {
             console.log(`\n[PREPARED] ${r.key}`);
             console.log(formatMultiplePreparedTransactions(txsToDisplay));

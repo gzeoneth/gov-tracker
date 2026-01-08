@@ -15,15 +15,25 @@
 export type Chain = "ethereum" | "arb1" | "nova" | "unknown";
 
 /**
+ * Supported chain names (no "unknown").
+ */
+export type KnownChain = Exclude<Chain, "unknown">;
+
+/**
+ * Supported L2 chain names.
+ */
+export type L2Chain = Exclude<Chain, "ethereum" | "unknown">;
+
+/**
  * Numeric chain IDs for supported chains.
  * Can be a known chain ID or any number for unknown chains.
  */
-export type ChainId = 1 | 42161 | 42170 | number;
+export type ChainId = (typeof CHAIN_ID_MAP)[keyof typeof CHAIN_ID_MAP] | number;
 
 /**
  * Map chain names to their numeric chain IDs
  */
-export const CHAIN_ID_MAP: Record<Exclude<Chain, "unknown">, ChainId> = {
+export const CHAIN_ID_MAP: Record<KnownChain, number> = {
   ethereum: 1,
   arb1: 42161,
   nova: 42170,

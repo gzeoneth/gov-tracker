@@ -2,7 +2,15 @@
  * Stage data types and TrackedStage definitions
  */
 
-import { Chain, ChainId, StageType, StageStatus, StageTransaction, StageTiming } from "./core";
+import {
+  Chain,
+  ChainId,
+  L2Chain,
+  StageType,
+  StageStatus,
+  StageTransaction,
+  StageTiming,
+} from "./core";
 import { SerializedCallScheduledData } from "./timelock";
 import {
   RetryableTicketInfo,
@@ -139,7 +147,7 @@ export interface L2ToL1MessageStageData extends BaseStageData {
 export interface RetryableStageData extends BaseStageData {
   ticketCount?: number;
   /** All target chains for retryables (can be both arb1 and nova) */
-  targetChains?: Chain[];
+  targetChains?: L2Chain[];
   targetChainIds?: ChainId[];
   l2TxHash?: string;
   l1Block?: number;

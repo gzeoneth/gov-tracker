@@ -261,7 +261,7 @@ export {
 export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
-export { addressEquals, isAddressIn, getChainType, chainToId } from "./utils/chain";
+export { addressEquals, isAddressIn, getChain } from "./utils/chain";
 export { chainIdToChain, chainToChainId } from "./types";
 
 // Error classification

@@ -23,7 +23,7 @@ import {
   findCallScheduledByTxHash,
   getL2TimelockForGovernor,
 } from "../discovery/timelock-discovery";
-import { serializeCallScheduledDataArray } from "../utils/stage-helpers";
+import { serializeCallScheduledDataArray } from "../stages/base";
 import { getBlockTimestamp, failPrepare } from "./base";
 import { StageBuilder } from "./stage-builder";
 

@@ -16,6 +16,7 @@ import {
   checkElectionStatus,
   prepareElectionCreation,
   trackElectionProposal,
+  createTracker,
   ADDRESSES,
 } from "../src";
 
@@ -185,6 +186,58 @@ describe("Election Proposal Tracking with Forks", () => {
       await forks.stopAll();
       forks = null;
     });
+  });
+});
+
+describe("Tracker checkElection Integration", () => {
+  let forks: DualForkResult | null = null;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+
+  beforeAll(() => {
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
+  });
+
+  afterAll(async () => {
+    if (forks) {
+      await forks.stopAll();
+    }
+  });
+
+  it("should prepare createElection transaction when canCreateElection is true", async () => {
+    // #given Fork at block where election can be created
+    forks = await startDualForksAtL2Block({
+      l1Url: rpcUrls!.l1,
+      l2Url: rpcUrls!.l2Archive,
+      l2BlockNumber: TEST_L2_BLOCKS.ELECTION_POKE,
+    });
+
+    // Create tracker with forked providers
+    const tracker = createTracker({
+      l1Provider: forks.l1.provider,
+      l2Provider: forks.l2.provider,
+      novaProvider: forks.l2.provider, // Use L2 provider for nova (not used in election check)
+    });
+
+    // #when checking election through tracker
+    const result = await tracker.checkElection();
+
+    // #then should have canCreate=true and prepared transaction
+    expect(result.canCreate).toBe(true);
+    expect(result.prepared.createElection).toBeDefined();
+    expect(result.prepared.createElection!.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(result.prepared.createElection!.description).toContain("createElection()");
+
+    // Should also have current election info since electionCount > 0
+    expect(result.currentElection).toBeDefined();
+
+    await forks.stopAll();
+    forks = null;
   });
 });
 

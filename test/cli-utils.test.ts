@@ -1481,5 +1481,153 @@ describe("CLI Utilities", () => {
       expect(mockTracker.trackFromCheckpoint).toHaveBeenCalledWith(mockCheckpoint);
       expect(result.result.retracked).toBe(1);
     });
+
+    it("should throw when timelock operation tracking returns no results", async () => {
+      // #given - covers lines 880-881
+      const mockTimelockOp = {
+        scheduledTxHash: "0x" + "c".repeat(64),
+        operationId: "0x" + "d".repeat(64),
+        timelockAddress: "0x" + "e".repeat(40),
+      };
+
+      const onTrack = vi.fn();
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [mockTimelockOp],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([]), // Returns empty array
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers,
+        { onTrack }
+      );
+
+      // #then - should record as error
+      expect(result.result.errors).toBe(1);
+      expect(onTrack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.stringContaining("No timelock operation found"),
+          result: null,
+        })
+      );
+    });
+
+    it("should find matching result by operationId from timelockLink", async () => {
+      // #given - covers lines 882-887 (matching by timelockLink.operationId)
+      const operationId = "0x" + "d".repeat(64);
+      const mockTimelockOp = {
+        scheduledTxHash: "0x" + "c".repeat(64),
+        operationId: operationId,
+        timelockAddress: "0x" + "e".repeat(40),
+      };
+
+      // First result doesn't match, second has matching timelockLink.operationId
+      const nonMatchingResult = createMockTrackingResult([
+        createMockStage("L2_TIMELOCK", "PENDING", "arb1", { operationId: "0x" + "f".repeat(64) }),
+      ]);
+
+      const matchingResult = createMockTrackingResult(
+        [createMockStage("L2_TIMELOCK", "PENDING", "arb1", { operationId: "other" })],
+        {
+          timelockLink: {
+            operationId: operationId, // Matches via timelockLink
+            txHash: mockTimelockOp.scheduledTxHash,
+            timelockAddress: mockTimelockOp.timelockAddress,
+            queueBlockNumber: 100000,
+          },
+        }
+      );
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [mockTimelockOp],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([nonMatchingResult, matchingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      const onTrack = vi.fn();
+
+      // #when
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, { onTrack });
+
+      // #then - should find and use the matching result
+      expect(onTrack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: matchingResult,
+        })
+      );
+    });
+
+    it("should retrack incomplete timelock checkpoints", async () => {
+      // #given - covers lines 893-903
+      const operationId = "0x" + "op".repeat(32);
+      const mockTrackingResult = createMockTrackingResult(
+        [createMockStage("L2_TIMELOCK", "PENDING", "arb1", { operationId })],
+        {
+          input: {
+            type: "timelock",
+            timelockAddress: "0xTL",
+            operationId,
+            scheduledTxHash: "0x" + "b".repeat(64),
+          },
+        }
+      );
+
+      const mockCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "timelock",
+          timelockAddress: "0xTL",
+          operationId,
+          scheduledTxHash: "0x" + "b".repeat(64),
+        },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() - 100000 },
+      };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi
+          .fn()
+          .mockResolvedValue([{ key: "tx:0x" + "b".repeat(64), checkpoint: mockCheckpoint }]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      expect(mockTracker.trackFromCheckpoint).toHaveBeenCalledWith(mockCheckpoint);
+      expect(result.result.retracked).toBe(1);
+    });
   });
 });

@@ -19,8 +19,6 @@ import {
   PreparedTransaction,
   PrepareResult,
   DEFAULT_RPC_URLS,
-  getTrackingStatusSummary,
-  getCurrentStage,
   getStageTransactionUrl,
   formatStageTitle,
   areAllStagesComplete,
@@ -423,13 +421,6 @@ export function formatTrackingResult(result: TrackingResult, label?: string): st
   }
 
   return lines.join("\n").concat("\n");
-}
-
-export function formatStagesBrief(stages: TrackedStage[]): string {
-  const summary = getTrackingStatusSummary(stages);
-  const current = getCurrentStage(stages);
-  const title = current ? formatStageTitle(current.type) : "Complete";
-  return `${title}: ${current?.status ?? "DONE"} (${summary.completed}/${summary.total})`;
 }
 
 export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>): string {

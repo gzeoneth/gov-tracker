@@ -14,7 +14,13 @@ import {
   ParentTransactionReceipt,
   ParentToChildMessageReader,
 } from "@arbitrum/sdk";
-import { TrackedStage, ChainId, L2Chain, PrepareResult } from "../types";
+import {
+  TrackedStage,
+  L2Chain,
+  PrepareResult,
+  RetryableCreationDetail,
+  RetryableRedemptionDetail,
+} from "../types";
 import { getChain, getChainId } from "../utils/chain";
 import { loggers } from "../utils/logger";
 
@@ -30,23 +36,6 @@ import {
   bulkPrepareError,
   BulkPrepareResult,
 } from "../utils/stage-helpers";
-
-/** Creation details for a retryable ticket */
-interface CreationDetail {
-  index: number;
-  targetChain: L2Chain;
-  targetChainId: ChainId;
-  l2TxHash: string;
-}
-
-/** Redemption details for a retryable ticket */
-interface RedemptionDetail {
-  index: number;
-  targetChain: L2Chain;
-  targetChainId: ChainId;
-  status: string;
-  l2TxHash: string | null;
-}
 
 /**
  * Result of detecting retryable target chains, including message counts
@@ -169,8 +158,8 @@ export async function trackRetryables(
 
   // Collect results from all target chains
   const allMessages: ParentToChildMessageReader[] = [];
-  const allCreationDetails: CreationDetail[] = [];
-  const allRedemptionDetails: RedemptionDetail[] = [];
+  const allRetryableCreationDetails: RetryableCreationDetail[] = [];
+  const allRetryableRedemptionDetails: RetryableRedemptionDetail[] = [];
   const allTransactions: TrackedStage["transactions"] = [
     {
       hash: l1ExecutionTxHash,
@@ -198,14 +187,14 @@ export async function trackRetryables(
         messageCount
       );
       for (let i = 0; i < messageCount; i++) {
-        allCreationDetails.push({
-          index: allCreationDetails.length,
+        allRetryableCreationDetails.push({
+          index: allRetryableCreationDetails.length,
           targetChain: chainName,
           targetChainId: chainId,
           l2TxHash: "unknown",
         });
-        allRedemptionDetails.push({
-          index: allRedemptionDetails.length,
+        allRetryableRedemptionDetails.push({
+          index: allRetryableRedemptionDetails.length,
           targetChain: chainName,
           targetChainId: chainId,
           status: "PROVIDER_NOT_AVAILABLE",
@@ -223,8 +212,8 @@ export async function trackRetryables(
 
     // Add creation details and transactions
     for (const msg of messages) {
-      allCreationDetails.push({
-        index: allCreationDetails.length,
+      allRetryableCreationDetails.push({
+        index: allRetryableCreationDetails.length,
         targetChain: chainName,
         targetChainId: chainId,
         l2TxHash: msg.retryableCreationId,
@@ -261,8 +250,8 @@ export async function trackRetryables(
       if (isFetchError) {
         // Fetch error - treat as inconclusive, don't mark as redeemed
         allRedeemed = false;
-        allRedemptionDetails.push({
-          index: allRedemptionDetails.length,
+        allRetryableRedemptionDetails.push({
+          index: allRetryableRedemptionDetails.length,
           targetChain: chainName,
           targetChainId: chainId,
           status: "FETCH_ERROR",
@@ -302,8 +291,8 @@ export async function trackRetryables(
         allRedeemed = false;
       }
 
-      allRedemptionDetails.push({
-        index: allRedemptionDetails.length,
+      allRetryableRedemptionDetails.push({
+        index: allRetryableRedemptionDetails.length,
         targetChain: chainName,
         targetChainId: chainId,
         status: statusName,
@@ -324,16 +313,16 @@ export async function trackRetryables(
     .transactions(allTransactions)
     .timing({ startedAt: l1Timestamp })
     .data({
-      ticketCount: allCreationDetails.length,
+      ticketCount: allRetryableCreationDetails.length,
       targetChains,
       targetChainIds,
-      creationDetails: allCreationDetails,
-      redemptionDetails: allRedemptionDetails,
-      redeemedCount: allRedemptionDetails.filter((d) => d.status === "REDEEMED").length,
-      pendingCount: allRedemptionDetails.filter(
+      creationDetails: allRetryableCreationDetails,
+      redemptionDetails: allRetryableRedemptionDetails,
+      redeemedCount: allRetryableRedemptionDetails.filter((d) => d.status === "REDEEMED").length,
+      pendingCount: allRetryableRedemptionDetails.filter(
         (d) => d.status === "FUNDS_DEPOSITED_ON_CHILD" || d.status === "NOT_YET_CREATED"
       ).length,
-      statuses: allRedemptionDetails.map((d) => d.status),
+      statuses: allRetryableRedemptionDetails.map((d) => d.status),
     });
 
   if (status === "READY") {

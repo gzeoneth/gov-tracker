@@ -85,8 +85,6 @@ export type {
   L2ToL1MessageData,
   RetryableStatus,
   RetryableData,
-  // ETA types
-  EstimatedTimeRange,
   // Stage data types
   ProposalCreatedData,
   VotingActiveData,

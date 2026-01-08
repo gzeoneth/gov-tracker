@@ -24,7 +24,6 @@ export {
   StageTransaction,
   StageTiming,
   SearchHint,
-  EstimatedTimeRange,
 } from "./core";
 
 // Governor types

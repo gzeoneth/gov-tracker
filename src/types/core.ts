@@ -102,10 +102,3 @@ export interface SearchHint {
   endBlock?: number;
   direction?: "forward" | "backward";
 }
-
-// Timing/ETA Types
-
-export interface EstimatedTimeRange {
-  minDate: Date;
-  maxDate: Date;
-}

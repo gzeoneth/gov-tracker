@@ -178,7 +178,7 @@ import { findAllExecutableStages } from "@gzeoneth/gov-tracker";
 for (const stage of findAllExecutableStages(result.stages)) {
   const prep = await tracker.prepareTransaction(stage);
   if (prep.success) {
-    const signer = stage.chain === "L1" ? l1Signer : l2Signer;
+    const signer = stage.chain === "ethereum" ? l1Signer : l2Signer;
     await signer.sendTransaction(prep.prepared);
   }
 }

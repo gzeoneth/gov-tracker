@@ -66,7 +66,7 @@ const readyStage = findExecutableStage(result.stages);
 if (readyStage) {
   const prep = await tracker.prepareTransaction(readyStage);
   if (prep.success) {
-    const provider = prep.prepared.chain === "L1" ? l1Provider : l2Provider;
+    const provider = prep.prepared.chain === "ethereum" ? l1Provider : l2Provider;
     const signer = new ethers.Wallet(PRIVATE_KEY, provider);
     await signer.sendTransaction(prep.prepared);
   }

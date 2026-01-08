@@ -124,6 +124,12 @@ interface PreparedTransaction {
 
 - **GitHub Copilot Instructions** (PR #14): Added `.github/copilot-instructions.md` for AI-assisted development
 
+### Fixed
+
+- **ethers.js compatibility issues**: Fixed critical bugs in event parsing and calldata decoding
+  - Fixed `values` property collision with ethers.js internals in `parseProposalCreatedEvent()` - now accessed by index
+  - Fixed Interface initialization in `decodeParameters()` - signature now properly prefixed with `function`
+
 ## [0.1.1] - 2026-01-06
 
 ### Added

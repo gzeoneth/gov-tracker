@@ -124,16 +124,16 @@ if (election.canCreate) {
 | `detectProposalType(address, provider)` | Detect governor type |
 | `getProposalState(governor, id, provider)` | Get proposal state |
 | `getTimelockOperationState(timelock, id, provider)` | Get timelock state |
-| `isKnownGovernor(address)` | Check if known governor |
-| `isKnownL2Timelock(address)` | Check if known timelock |
+| `isKnownL2Timelock(address)` | Check if known L2 timelock |
+| `isL1Timelock(address)` | Check if L1 timelock |
 
 ### Timing
 
 | Function | Description |
 |----------|-------------|
-| `calculateEta(stage)` | Calculate ETA for pending stage |
-| `hasDeadlinePassed(deadline)` | Check if deadline passed |
-| `isChallengeComplete(block, currentBlock)` | Check challenge period |
+| `calculateEta(blockNumber, provider)` | Calculate ETA timestamp for block |
+| `calculateExpectedEta(currentBlock, delayBlocks, timestamp, blockTime)` | Calculate expected ETA |
+| `calculateRemainingSeconds(eta)` | Calculate seconds remaining until ETA |
 
 ### URLs
 
@@ -189,7 +189,7 @@ type StageType =
 type StageStatus =
   | "NOT_STARTED" | "PENDING" | "READY" | "COMPLETED" | "FAILED" | "SKIPPED";
 
-// Chain identifiers (v0.1.3+)
+// Chain identifiers
 type Chain = "ethereum" | "arb1" | "nova" | "unknown";
 type L2Chain = "arb1" | "nova";
 type ChainId = 1 | 42161 | 42170 | number;

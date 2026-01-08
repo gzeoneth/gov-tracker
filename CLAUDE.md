@@ -85,13 +85,11 @@ src/
 ├── calldata/               # Calldata decoding module (v0.1.1+)
 │   ├── decoder.ts          # Recursive calldata decoder
 │   ├── signature-lookup.ts # Function signature resolution
-│   ├── parameter-decoder.ts # ABI parameter decoding
+│   ├── parameter-decoder.ts # ABI parameter decoding + address labeling
 │   ├── retryable-ticket.ts # Retryable ticket parsing
-│   ├── address-utils.ts    # Known address labeling
 │   └── index.ts            # Module exports
 ├── simulation/             # Simulation data preparation (v0.1.1+)
-│   ├── simulation-data.ts  # Tenderly/Foundry data extraction
-│   ├── address-alias.ts    # L1→L2 address aliasing
+│   ├── simulation-data.ts  # Tenderly/Foundry data extraction + address aliasing
 │   └── index.ts            # Module exports
 ├── discovery/              # Governor and timelock introspection
 ├── utils/                  # Timing, log search, operation IDs, etc.

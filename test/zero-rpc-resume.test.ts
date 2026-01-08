@@ -10,16 +10,18 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import * as fs from "fs";
 
-import { ProposalStageTracker, createTracker, TrackingCheckpoint, TrackedStage } from "../src";
+import {
+  ProposalStageTracker,
+  createTracker,
+  TrackingCheckpoint,
+  TrackedStage,
+  DEFAULT_RPC_URLS,
+} from "../src";
 import { createCheckpoint, createTrackingContext } from "../src/tracker/context";
 
 import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
 
 dotenv.config({ quiet: true });
-
-const ETH_RPC = process.env.ETH_RPC;
-const ARB1_RPC = process.env.ARB1_RPC;
-const NOVA_RPC = process.env.NOVA_RPC;
 
 describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
   const TEST_CACHE_PATH = "/tmp/zero-rpc-test-gov-tracker-cache.json";
@@ -32,14 +34,16 @@ describe.skipIf(process.env.NO_RPC === "1")("Zero-RPC Resume", () => {
   });
 
   it("should restore completed stages from cache without RPC calls", async () => {
-    if (!ETH_RPC || !ARB1_RPC || !NOVA_RPC) {
-      console.log("Skipping - RPC URLs not configured");
-      return;
+    const ethRpc = process.env.ETH_RPC;
+    if (!ethRpc) {
+      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
     }
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
 
-    const l1Provider = new ethers.providers.JsonRpcProvider(ETH_RPC);
-    const l2Provider = new ethers.providers.JsonRpcProvider(ARB1_RPC);
-    const novaProvider = new ethers.providers.JsonRpcProvider(NOVA_RPC);
+    const l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+    const l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
+    const novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
 
     // First track: Fresh (requires RPC calls)
     const tracker1 = createTracker({

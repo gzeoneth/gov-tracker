@@ -95,69 +95,197 @@ describe("Tracker Execute Module", () => {
       }
     });
 
-    it("should fail for L2_TO_L1_MESSAGE with missing message data", async () => {
-      const stage: TrackedStage = {
-        type: "L2_TO_L1_MESSAGE",
-        status: "READY",
-        chain: "arb1",
-        chainId: 42161,
-        transactions: [],
-        data: {
-          // Missing message data - no l2TxHash
-        },
-      };
+    describe("L2_TO_L1_MESSAGE preparation", () => {
+      it("should fail for stage without READY status", async () => {
+        const stage: TrackedStage = {
+          type: "L2_TO_L1_MESSAGE",
+          status: "PENDING",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            l2TxHash: "0x" + "a".repeat(64),
+          },
+        };
 
-      const result = await prepareTransaction(stage, mockContext);
-      expect(result.success).toBe(false);
-      // The actual error is about missing L2 transaction hash
-      if (!result.success) {
-        expect(result.error).toBeDefined();
-      }
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
+
+      it("should fail for stage with missing l2TxHash", async () => {
+        const stage: TrackedStage = {
+          type: "L2_TO_L1_MESSAGE",
+          status: "READY",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            messageCount: 1,
+            // Missing l2TxHash
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
+
+      it("should fail for COMPLETED stage without prepareCompleted option", async () => {
+        const stage: TrackedStage = {
+          type: "L2_TO_L1_MESSAGE",
+          status: "COMPLETED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            l2TxHash: "0x" + "a".repeat(64),
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
     });
 
-    it("should fail for RETRYABLE_EXECUTED with missing target chain", async () => {
-      const stage: TrackedStage = {
-        type: "RETRYABLE_EXECUTED",
-        status: "READY",
-        chain: "ethereum",
-        chainId: 1,
-        transactions: [],
-        data: {
-          // Missing targetChains
-        },
-      };
+    describe("RETRYABLE_EXECUTED preparation", () => {
+      it("should fail for stage with missing target chain", async () => {
+        const stage: TrackedStage = {
+          type: "RETRYABLE_EXECUTED",
+          status: "READY",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [],
+          data: {
+            // Missing targetChains
+          },
+        };
 
-      const result = await prepareTransaction(stage, mockContext);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("No target chain found");
-      }
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toContain("No target chain found");
+        }
+      });
+
+      it("should fail for stage with missing L1 tx hash", async () => {
+        const stage: TrackedStage = {
+          type: "RETRYABLE_EXECUTED",
+          status: "READY",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [],
+          data: {
+            targetChains: ["arb1"],
+            // Missing L1 tx hash
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
+
+      it("should fail for stage with empty targetChains array", async () => {
+        const stage: TrackedStage = {
+          type: "RETRYABLE_EXECUTED",
+          status: "READY",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [],
+          data: {
+            targetChains: [],
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toContain("No target chain found");
+        }
+      });
+
+      it("should fail for PENDING status", async () => {
+        const stage: TrackedStage = {
+          type: "RETRYABLE_EXECUTED",
+          status: "PENDING",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [
+            {
+              hash: "0x" + "b".repeat(64),
+              blockNumber: 123,
+              chain: "ethereum",
+              chainId: 1,
+            },
+          ],
+          data: {
+            targetChains: ["arb1"],
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
     });
 
-    it("should fail for RETRYABLE_EXECUTED with missing tickets", async () => {
-      const stage: TrackedStage = {
-        type: "RETRYABLE_EXECUTED",
-        status: "READY",
-        chain: "ethereum",
-        chainId: 1,
-        transactions: [],
-        data: {
-          targetChains: ["arb1"],
-          // Missing L1 tx hash needed to find tickets
-        },
-      };
+    describe("L2_TIMELOCK preparation", () => {
+      it("should fail for stage with wrong type", async () => {
+        const stage: TrackedStage = {
+          type: "L2_TIMELOCK",
+          status: "READY",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: {
+            // Missing required timelock data
+          },
+        };
 
-      const result = await prepareTransaction(stage, mockContext);
-      expect(result.success).toBe(false);
-      // The actual error is about missing L1 transaction hash
-      if (!result.success) {
-        expect(result.error).toBeDefined();
-      }
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
+    });
+
+    describe("L1_TIMELOCK preparation", () => {
+      it("should fail for stage without proper data", async () => {
+        const stage: TrackedStage = {
+          type: "L1_TIMELOCK",
+          status: "READY",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [],
+          data: {
+            // Missing required timelock data
+          },
+        };
+
+        const result = await prepareTransaction(stage, mockContext);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBeDefined();
+        }
+      });
     });
 
     it("should fail for unknown stage type", async () => {
       const stage = {
-        type: "UNKNOWN_STAGE" as any,
+        type: "UNKNOWN_STAGE" as never,
         status: "READY",
         chain: "arb1",
         chainId: 42161,

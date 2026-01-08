@@ -698,14 +698,13 @@ async function prepareStagesForResult(
 // Monitor Cycle
 // ============================================================================
 
-/** Create a short scope name from a tracking key */
+/** Extract scope name from a tracking key (no truncation) */
 function shortScope(key: string): string {
-  // "tx:0x1234...abcd" -> "0x1234..abcd"
-  if (key.startsWith("tx:0x")) {
-    const hash = key.slice(3);
-    return hash.slice(0, 6) + ".." + hash.slice(-4);
+  // "tx:0x1234..." -> "0x1234..." (full hash, no truncation)
+  if (key.startsWith("tx:")) {
+    return key.slice(3); // Remove "tx:" prefix, keep full hash
   }
-  return key.slice(0, 12);
+  return key;
 }
 
 export async function runMonitorCycle(

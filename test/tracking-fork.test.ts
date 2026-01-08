@@ -155,6 +155,53 @@ describe("Historical Tracking Fork Tests", () => {
       await forks.stopAll();
       forks = null;
     });
+
+    it("should track L2→L1 message in UNCONFIRMED state with timing data", async () => {
+      // #given - Fork at L2 block after L2 timelock execution
+      // L2 timelock executed at block 378,942,159, use L2 block 379M
+      // Use L1 block 23,365,000 - shortly after message sent, well within challenge period
+      // Challenge period is ~45,818 L1 blocks, ends around L1 block 23,405,392
+      const L2_BLOCK_AFTER_EXECUTION = 379_000_000;
+      const L1_BLOCK_IN_CHALLENGE_PERIOD = 23_365_000;
+
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: L2_BLOCK_AFTER_EXECUTION,
+        l1BlockOverride: L1_BLOCK_IN_CHALLENGE_PERIOD,
+      });
+
+      tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider,
+      });
+
+      // #when tracking the proposal
+      const results = await tracker.trackByTxHash(
+        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
+      );
+      const result = results[0];
+
+      // #then L2→L1 message should be in PENDING state (UNCONFIRMED in SDK terms)
+      const messageSentStage = result.stages.find((s) => s.type === "L2_TO_L1_MESSAGE");
+      expect(messageSentStage).toBeDefined();
+
+      // Should have message data
+      expect(messageSentStage!.data.messageCount).toBeGreaterThan(0);
+      expect(messageSentStage!.data.l2TxHash).toBeDefined();
+
+      // Assert PENDING status (UNCONFIRMED) - this is required for coverage
+      expect(messageSentStage!.status).toBe("PENDING");
+      expect(messageSentStage!.data.status).toBe("UNCONFIRMED");
+
+      // Verify timing data for UNCONFIRMED state
+      expect(messageSentStage!.timing).toBeDefined();
+      expect(messageSentStage!.data.firstExecutableBlock).toBeDefined();
+
+      await forks.stopAll();
+      forks = null;
+    });
   });
 
   describe("Treasury Proposal Completed State", () => {

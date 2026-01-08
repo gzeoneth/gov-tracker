@@ -213,6 +213,70 @@ describe("Log Filters", () => {
 
       expect(result).toBeNull();
     });
+
+    it("should filter by address", () => {
+      const targetAddress = "0x1111111111111111111111111111111111111111";
+      const otherAddress = "0x2222222222222222222222222222222222222222";
+      const targetTopic = "0x" + "d".repeat(64);
+
+      const logs = [
+        createMockLog({ address: otherAddress, topics: [targetTopic], data: "0x0001" }),
+        createMockLog({ address: targetAddress, topics: [targetTopic], data: "0x0002" }),
+      ];
+
+      const result = findFirstLog(logs, { topic: targetTopic, address: targetAddress }, (log) =>
+        parseInt(log.data, 16)
+      );
+
+      expect(result).toBe(2);
+    });
+
+    it("should return null when address does not match", () => {
+      const targetAddress = "0x1111111111111111111111111111111111111111";
+      const otherAddress = "0x2222222222222222222222222222222222222222";
+      const targetTopic = "0x" + "d".repeat(64);
+
+      const logs = [
+        createMockLog({ address: otherAddress, topics: [targetTopic], data: "0x0001" }),
+      ];
+
+      const result = findFirstLog(logs, { topic: targetTopic, address: targetAddress }, (log) =>
+        parseInt(log.data, 16)
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should handle parser returning null", () => {
+      const targetTopic = "0x" + "d".repeat(64);
+      const logs = [
+        createMockLog({ topics: [targetTopic], data: "0x0001" }),
+        createMockLog({ topics: [targetTopic], data: "0x0002" }),
+      ];
+
+      const result = findFirstLog(logs, { topic: targetTopic }, (log) => {
+        // Only return value for second log
+        if (log.data === "0x0002") return parseInt(log.data, 16);
+        return null;
+      });
+
+      expect(result).toBe(2);
+    });
+
+    it("should handle parser throwing error", () => {
+      const targetTopic = "0x" + "d".repeat(64);
+      const logs = [
+        createMockLog({ topics: [targetTopic], data: "invalid" }),
+        createMockLog({ topics: [targetTopic], data: "0x0002" }),
+      ];
+
+      const result = findFirstLog(logs, { topic: targetTopic }, (log) => {
+        if (log.data === "invalid") throw new Error("Parse error");
+        return parseInt(log.data, 16);
+      });
+
+      expect(result).toBe(2);
+    });
   });
 });
 

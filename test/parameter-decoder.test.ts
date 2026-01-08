@@ -195,14 +195,31 @@ describe("Parameter Decoder", () => {
       expect(result).toBe("[100, 200]");
     });
 
-    it("should truncate long bytes values", () => {
+    it("should NOT truncate long bytes values (regression test)", () => {
+      // Truncation loses important information for verification/debugging
       const longBytes = "0x" + "ab".repeat(40); // 80 chars of hex
       const result = formatDecodedValue(longBytes, "bytes");
-      expect(result).toContain("...");
-      expect(result.length).toBeLessThan(longBytes.length);
+      expect(result).toBe(longBytes); // Full value preserved
+      expect(result).not.toContain("...");
     });
 
-    it("should not truncate short bytes values", () => {
+    it("should NOT truncate address values (regression test)", () => {
+      // Addresses should NEVER be truncated
+      const address = "0x1234567890123456789012345678901234567890";
+      const result = formatDecodedValue(address, "address");
+      expect(result).toBe(address); // Full address preserved
+      expect(result).not.toContain("...");
+    });
+
+    it("should NOT truncate calldata values (regression test)", () => {
+      // Calldata should NEVER be truncated
+      const calldata = "0x23b872dd" + "00".repeat(96); // transferFrom calldata
+      const result = formatDecodedValue(calldata, "bytes");
+      expect(result).toBe(calldata); // Full calldata preserved
+      expect(result).not.toContain("...");
+    });
+
+    it("should preserve short bytes values", () => {
       const shortBytes = "0x12345678"; // 8 hex chars
       const result = formatDecodedValue(shortBytes, "bytes");
       expect(result).toBe(shortBytes);
@@ -250,6 +267,34 @@ describe("Parameter Decoder", () => {
 
       expect(result).not.toBeNull();
       expect(result!.params[0].addressLabel).toBe("Core Governor");
+    });
+
+    it("should preserve full address in value field without truncation (regression test)", () => {
+      const fullAddress = "0x1234567890123456789012345678901234567890";
+      const iface = new ethers.utils.Interface(["function upgrade(address target)"]);
+      const calldata = iface.encodeFunctionData("upgrade", [fullAddress]);
+
+      const result = decodeParameters(calldata, "upgrade(address)", "arb1");
+
+      expect(result).not.toBeNull();
+      // value should contain full address, not truncated
+      expect(result!.params[0].value).toBe(fullAddress);
+      expect(result!.params[0].value).not.toContain("...");
+      // rawValue should also be the full address
+      expect(result!.params[0].rawValue).toBe(fullAddress);
+    });
+
+    it("should preserve full bytes in value field without truncation (regression test)", () => {
+      const longBytes = "0x" + "ab".repeat(100); // 200+ chars
+      const iface = new ethers.utils.Interface(["function execute(bytes data)"]);
+      const calldata = iface.encodeFunctionData("execute", [longBytes]);
+
+      const result = decodeParameters(calldata, "execute(bytes)", "arb1");
+
+      expect(result).not.toBeNull();
+      // value should contain full bytes, not truncated
+      expect(result!.params[0].value).toBe(longBytes);
+      expect(result!.params[0].value).not.toContain("...");
     });
 
     it("should decode bytes parameter and detect nested calldata", () => {

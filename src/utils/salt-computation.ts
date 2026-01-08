@@ -7,7 +7,7 @@
 
 import { ethers, BigNumber } from "ethers";
 import { TrackedStage } from "../types";
-import { TIMELOCK_ABI, SECURITY_COUNCIL_MANAGER_ABI } from "../abis";
+import { SECURITY_COUNCIL_MANAGER_ABI, timelockInterface } from "../abis";
 import { ADDRESSES } from "../constants";
 import { queryWithRetry } from "./rpc-utils";
 
@@ -76,8 +76,6 @@ export type DecodedTimelockSchedule =
  * @returns Decoded schedule parameters or null if not a timelock schedule call
  */
 export function decodeL1TimelockSchedule(l2ToL1TxData: string): DecodedTimelockSchedule | null {
-  const timelockInterface = new ethers.utils.Interface(TIMELOCK_ABI);
-
   // Try to decode as scheduleBatch first
   try {
     const batch = timelockInterface.decodeFunctionData("scheduleBatch", l2ToL1TxData);

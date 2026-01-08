@@ -10,9 +10,6 @@ test/**/*.d.ts.map
 test/**/*.js
 test/**/*.js.map
 
-# Reference files - keep PLAN.md, COMPARE.md, ISSUE*.md
-# (per CLAUDE.md: write important research to ./ref/)
-
 # IDE
 .idea/
 .vscode/
@@ -34,9 +31,3 @@ coverage/
 .env
 .env.local
 .env.*.local
-
-# Reference directory (symlinks to external repos)
-ref/
-
-# Project specific
-SPEC.md

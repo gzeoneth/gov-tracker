@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractCalldataFromStage } from "../src/calldata/extraction";
+import { extractCalldataFromStage } from "../src/calldata";
 import { TrackedStage } from "../src/types";
 
 describe("extractCalldataFromStage", () => {

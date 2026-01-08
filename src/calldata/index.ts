@@ -5,11 +5,8 @@
  * and address utilities.
  */
 
-// Main decoder
-export { decodeCalldata, decodeCalldataArray } from "./decoder";
-
-// Extraction
-export { extractCalldataFromStage } from "./extraction";
+// Main decoder and extraction
+export { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "./decoder";
 
 // Signature lookup
 export {
@@ -19,16 +16,15 @@ export {
   clearSignatureCache,
 } from "./signature-lookup";
 
-// Parameter decoder
+// Parameter decoder and address utilities
 export {
   parseParamTypes,
   isLikelyCalldata,
   formatDecodedValue,
   decodeParameters,
+  getAddressLabel,
+  getKnownAddresses,
 } from "./parameter-decoder";
-
-// Address utilities
-export { getAddressLabel, getKnownAddresses } from "./address-utils";
 
 // Retryable ticket
 export {

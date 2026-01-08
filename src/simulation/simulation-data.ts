@@ -15,27 +15,8 @@ import type {
   CallSimulationData,
   ExtractedSimulation,
 } from "../types/simulation";
-import { ADDRESSES } from "../constants";
+import { ADDRESSES, NETWORK_IDS, TIMELOCK_SELECTORS } from "../constants";
 import { hashOperationBatch } from "../utils/operation-id";
-
-/**
- * Network IDs for supported chains
- */
-export const NETWORK_IDS = {
-  ethereum: "1",
-  arb1: "42161",
-  nova: "42170",
-} as const;
-
-/**
- * Function selectors for timelock operations
- */
-export const TIMELOCK_SELECTORS = {
-  schedule: "0x01d5062a",
-  execute: "0x134008d3",
-  scheduleBatch: "0x8f2a0bb0",
-  executeBatch: "0xe38335e5",
-} as const;
 
 /**
  * Get network ID for chain (internal)

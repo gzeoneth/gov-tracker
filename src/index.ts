@@ -126,6 +126,8 @@ export {
   CHAIN_IDS,
   DEFAULT_RPC_URLS,
   CHUNK_SIZES,
+  NETWORK_IDS,
+  TIMELOCK_SELECTORS,
   isElectionGovernor,
   buildDefaultTargets,
 } from "./constants";
@@ -312,12 +314,16 @@ export {
   prepareTimelockSimulation,
   prepareCallSimulation,
   extractAllSimulationsFromDecoded,
-  NETWORK_IDS,
-  TIMELOCK_SELECTORS,
 } from "./simulation/simulation-data";
 
 // ============================================================================
-// TIER 8: Internal Utilities (for testing)
+// TIER 8: Cache Implementations
+// ============================================================================
+
+export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/state";
+
+// ============================================================================
+// TIER 9: Internal Utilities (for testing)
 // ============================================================================
 
 export { createCheckpoint, createTrackingContext } from "./tracker/context";

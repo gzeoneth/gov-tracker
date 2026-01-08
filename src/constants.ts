@@ -398,3 +398,24 @@ export function getTxUrl(chainId: number, txHash: string): string {
 export function getStageTransactionUrl(tx: StageTransaction): string {
   return getTxUrl(tx.chainId, tx.hash);
 }
+
+// Simulation Constants
+
+/**
+ * Network IDs for Tenderly simulation (string format)
+ */
+export const NETWORK_IDS = {
+  ethereum: "1",
+  arb1: "42161",
+  nova: "42170",
+} as const;
+
+/**
+ * Function selectors for timelock operations
+ */
+export const TIMELOCK_SELECTORS = {
+  schedule: "0x01d5062a",
+  execute: "0x134008d3",
+  scheduleBatch: "0x8f2a0bb0",
+  executeBatch: "0xe38335e5",
+} as const;

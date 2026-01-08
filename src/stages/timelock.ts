@@ -61,7 +61,7 @@ const logExecution = loggers.execution;
 /**
  * Configuration for timelock tracking that differs between L1 and L2.
  */
-export interface TimelockTrackingConfig {
+interface TimelockTrackingConfig {
   chain: Chain;
   stageType: StageType;
   blockTimeSeconds: number;
@@ -85,7 +85,7 @@ const L1_TIMELOCK_CONFIG: TimelockTrackingConfig = {
 /**
  * Options for timelock stage tracking.
  */
-export interface TrackTimelockOptions {
+interface TrackTimelockOptions {
   callScheduledData?: CallScheduledData;
   cachedExecutionTxHash?: string;
   /** Whether to check for Security Council enrichment (L2 only) */

@@ -6,7 +6,7 @@
  * the exact state. This provides deterministic results that don't change
  * over time.
  *
- * NOTE: These tests require ARB_ARCHIVE_RPC and L1_RPC_URL to be set in .env.
+ * NOTE: These tests require ARB1_ARCHIVE_RPC and L1_RPC_URL to be set in .env.
  * They use specific block ranges where we know the proposal state.
  */
 

@@ -23,6 +23,8 @@ import {
   executeTransaction,
   ProviderBundle,
 } from "../src/cli/lib/cli";
+import { formatElectionStatus } from "../src/cli/lib/election-check";
+import { ElectionStatus, ElectionProposalStatus } from "../src/types/election";
 import { ethers } from "ethers";
 import { Command, Option } from "commander";
 import {
@@ -726,6 +728,149 @@ describe("CLI Utilities", () => {
       const result = await executeTransaction(prepared, signer, providers);
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("formatElectionStatus", () => {
+    function createMockElectionStatus(overrides: Partial<ElectionStatus> = {}): ElectionStatus {
+      const now = Math.floor(Date.now() / 1000);
+      return {
+        electionCount: 5,
+        cohort: 0,
+        nextElectionTimestamp: now + 86400,
+        currentL1Timestamp: now,
+        canCreateElection: false,
+        secondsUntilElection: 86400,
+        timeUntilElection: "1 day",
+        ...overrides,
+      };
+    }
+
+    function createMockProposalStatus(
+      overrides: Partial<ElectionProposalStatus> = {}
+    ): ElectionProposalStatus {
+      return {
+        electionIndex: 4,
+        cohort: 0,
+        phase: "NOMINEE_SELECTION",
+        targetNomineeCount: 6,
+        compliantNomineeCount: 3,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        nomineeProposalId: null,
+        nomineeProposalState: null,
+        memberProposalId: null,
+        memberProposalState: null,
+        ...overrides,
+      };
+    }
+
+    it("should format basic election status", () => {
+      const status = createMockElectionStatus({
+        electionCount: 5,
+        cohort: 0,
+        canCreateElection: false,
+        timeUntilElection: "2 days, 3 hours",
+      });
+
+      const output = formatElectionStatus(status);
+
+      expect(output).toContain("Security Council Election Status");
+      expect(output).toContain("Election Count: 5");
+      expect(output).toContain("Cohort: First (0)");
+      expect(output).toContain("Can Create Election: NO");
+      expect(output).toContain("Time Until Election: 2 days, 3 hours");
+    });
+
+    it("should show second cohort correctly", () => {
+      const status = createMockElectionStatus({ cohort: 1 });
+
+      const output = formatElectionStatus(status);
+
+      expect(output).toContain("Cohort: Second (1)");
+    });
+
+    it("should not show time until election when election can be created", () => {
+      const status = createMockElectionStatus({
+        canCreateElection: true,
+        secondsUntilElection: 0,
+        timeUntilElection: "0 seconds",
+      });
+
+      const output = formatElectionStatus(status);
+
+      expect(output).toContain("Can Create Election: YES");
+      expect(output).not.toContain("Time Until Election:");
+    });
+
+    it("should format election proposal status when provided", () => {
+      const status = createMockElectionStatus({ electionCount: 5 });
+      const electionStatus = createMockProposalStatus({
+        phase: "NOMINEE_SELECTION",
+        compliantNomineeCount: 4,
+        targetNomineeCount: 6,
+        canProceedToMemberPhase: false,
+      });
+
+      const output = formatElectionStatus(status, electionStatus);
+
+      expect(output).toContain("Election #4 Status");
+      expect(output).toContain("Phase: NOMINEE_SELECTION");
+      expect(output).toContain("Compliant Nominees: 4/6");
+      expect(output).toContain("Can Proceed to Member Phase: NO");
+    });
+
+    it("should show nominee proposal info when present", () => {
+      const status = createMockElectionStatus();
+      const electionStatus = createMockProposalStatus({
+        nomineeProposalId: "123456789",
+        nomineeProposalState: "Active",
+      });
+
+      const output = formatElectionStatus(status, electionStatus);
+
+      expect(output).toContain("Nominee Proposal: 123456789");
+      expect(output).toContain("Nominee State: Active");
+    });
+
+    it("should show member proposal info when present", () => {
+      const status = createMockElectionStatus();
+      const electionStatus = createMockProposalStatus({
+        memberProposalId: "987654321",
+        memberProposalState: "Succeeded",
+      });
+
+      const output = formatElectionStatus(status, electionStatus);
+
+      expect(output).toContain("Member Proposal: 987654321");
+      expect(output).toContain("Member State: Succeeded");
+    });
+
+    it("should show vetting period info when in vetting period", () => {
+      const status = createMockElectionStatus();
+      const electionStatus = createMockProposalStatus({
+        isInVettingPeriod: true,
+        vettingDeadline: 20000000,
+      });
+
+      const output = formatElectionStatus(status, electionStatus);
+
+      expect(output).toContain("In Vetting Period: YES");
+      expect(output).toContain("deadline block 20000000");
+    });
+
+    it("should show can proceed when ready", () => {
+      const status = createMockElectionStatus();
+      const electionStatus = createMockProposalStatus({
+        compliantNomineeCount: 6,
+        canProceedToMemberPhase: true,
+      });
+
+      const output = formatElectionStatus(status, electionStatus);
+
+      expect(output).toContain("Compliant Nominees: 6/6");
+      expect(output).toContain("Can Proceed to Member Phase: YES");
     });
   });
 });

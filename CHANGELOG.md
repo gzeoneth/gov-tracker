@@ -122,7 +122,9 @@ interface PreparedTransaction {
 
 ## [0.1.2] - 2026-01-07
 
-Patch release with minor fixes.
+### Added
+
+- **GitHub Copilot Instructions** (PR #14): Added `.github/copilot-instructions.md` for AI-assisted development
 
 ## [0.1.1] - 2026-01-06
 

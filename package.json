@@ -1,6 +1,6 @@
 {
   "name": "@gzeoneth/gov-tracker",
-  "version": "0.1.2",
+  "version": "0.2.0-0",
   "description": "Lightweight, high-performance library for tracking Arbitrum DAO governance proposal lifecycle stages",
   "license": "Apache-2.0",
   "author": "gzeoneth",

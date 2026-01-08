@@ -34,43 +34,6 @@ export interface L2ToL1MessageData {
 export type RetryableStatus = "CREATED" | "REDEEMED" | "EXPIRED" | "FAILED";
 
 /**
- * Retryable ticket data
- */
-export interface RetryableData {
-  ticketId: string;
-  l1TxHash: string;
-  l2TxHash?: string;
-  from: string;
-  to: string;
-  value: BigNumber;
-  data: string;
-  status: RetryableStatus;
-  createdAtBlock: number;
-  redeemedAtBlock?: number;
-}
-
-/**
- * Retryable ticket info for stage data
- */
-export interface RetryableTicketInfo {
-  l2TxHash: string;
-  targetChain: L2Chain;
-  targetChainId: ChainId;
-  status: string;
-}
-
-/**
- * Retryable redemption info for stage data
- */
-export interface RetryableRedemptionInfo {
-  l2TxHash: string;
-  targetChain: L2Chain;
-  targetChainId: ChainId;
-  txHash: string;
-  blockNumber: number;
-}
-
-/**
  * Retryable creation detail
  */
 export interface RetryableCreationDetail {

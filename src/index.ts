@@ -45,10 +45,8 @@ export type {
   StageDataMap,
   TypedTrackedStage,
   // Tracking types
-  StageTrackingContext,
   NextStageHints,
   StageTrackResult,
-  StageTrackResultWith,
   TrackingResult,
   TrackingInput,
   GovernorTrackingInput,
@@ -61,7 +59,6 @@ export type {
   DiscoveryWatermarks,
   DiscoveryTargets,
   // Execution types
-  ExecutionResult,
   PreparedTransaction,
   PrepareResult,
   PrepareOptions,
@@ -84,7 +81,6 @@ export type {
   L2ToL1MessageStatus,
   L2ToL1MessageData,
   RetryableStatus,
-  RetryableData,
   // Stage data types
   ProposalCreatedData,
   VotingActiveData,

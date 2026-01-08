@@ -14,8 +14,6 @@ import type {
   BaseStageData,
   BaseTimelockData,
   // Retryable types (for advanced usage)
-  RetryableTicketInfo,
-  RetryableRedemptionInfo,
   RetryableCreationDetail,
   RetryableRedemptionDetail,
   // Discovery types
@@ -74,26 +72,6 @@ describe("Public API: Types", () => {
   });
 
   it("exports retryable types for advanced usage", () => {
-    // Verify RetryableTicketInfo is properly typed
-    const ticketInfo: RetryableTicketInfo = {
-      l2TxHash: "0x123",
-      status: "pending",
-      targetChain: "arb1",
-      targetChainId: 42161,
-    };
-    expect(ticketInfo.status).toBe("pending");
-    expect(ticketInfo.targetChain).toBe("arb1");
-
-    // Verify RetryableRedemptionInfo is properly typed
-    const redemptionInfo: RetryableRedemptionInfo = {
-      l2TxHash: "0x123",
-      txHash: "0x456",
-      blockNumber: 12345,
-      targetChain: "arb1",
-      targetChainId: 42161,
-    };
-    expect(redemptionInfo.txHash).toBe("0x456");
-
     // Verify RetryableCreationDetail is properly typed
     const creationDetail: RetryableCreationDetail = {
       index: 0,

@@ -12,12 +12,7 @@ import {
   StageTiming,
 } from "./core";
 import { SerializedCallScheduledData } from "./timelock";
-import {
-  RetryableTicketInfo,
-  RetryableRedemptionInfo,
-  RetryableCreationDetail,
-  RetryableRedemptionDetail,
-} from "./cross-chain";
+import { RetryableCreationDetail, RetryableRedemptionDetail } from "./cross-chain";
 
 /**
  * Base stage data with common fields
@@ -145,8 +140,6 @@ export interface RetryableStageData extends BaseStageData {
   targetChainIds?: ChainId[];
   l2TxHash?: string;
   l1Block?: number;
-  tickets?: RetryableTicketInfo[];
-  redemptions?: RetryableRedemptionInfo[];
   creationDetails?: RetryableCreationDetail[];
   redemptionDetails?: RetryableRedemptionDetail[];
   statuses?: string[];

@@ -22,6 +22,8 @@ import {
   runWithLoop,
   executeTransaction,
   ProviderBundle,
+  trackAndPrepare,
+  runMonitorCycle,
 } from "../src/cli/lib/cli";
 import { formatElectionStatus } from "../src/cli/lib/election-check";
 import { ElectionStatus, ElectionProposalStatus } from "../src/types/election";
@@ -33,6 +35,7 @@ import {
   TrackedStage,
   TrackingCheckpoint,
   StageStatus,
+  ProposalStageTracker,
 } from "../src/index";
 import { ADDRESSES } from "../src/constants";
 import { StageBuilder } from "../src/stages/stage-builder";
@@ -64,7 +67,8 @@ function createMockStage(
   chain: "ethereum" | "arb1" | "nova" = "arb1",
   data: Record<string, unknown> = {}
 ): TrackedStage {
-  const builder = new StageBuilder(type, chain, status);
+  const builder = new StageBuilder(type, chain);
+  builder.status(status); // Set status via method to properly set executable flag
   if (Object.keys(data).length > 0) {
     builder.data(data as never);
   }
@@ -871,6 +875,611 @@ describe("CLI Utilities", () => {
 
       expect(output).toContain("Compliant Nominees: 6/6");
       expect(output).toContain("Can Proceed to Member Phase: YES");
+    });
+  });
+
+  describe("trackAndPrepare", () => {
+    function createMockProviders(): ProviderBundle {
+      return {
+        l1Provider: {} as ethers.providers.JsonRpcProvider,
+        l2Provider: {} as ethers.providers.JsonRpcProvider,
+        novaProvider: {} as ethers.providers.JsonRpcProvider,
+      };
+    }
+
+    it("should track and return results", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+        createMockStage("VOTING_ACTIVE", "COMPLETED"),
+      ]);
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: false, error: "Not ready" }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        {},
+        providers
+      );
+
+      // #then
+      expect(mockTracker.trackByTxHash).toHaveBeenCalledWith("0x1234");
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]).toBe(mockTrackingResult);
+    });
+
+    it("should prepare ready stages when prepare option enabled", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+        createMockStage("L2_TIMELOCK", "READY", "arb1", {
+          operationId: "0x" + "ab".repeat(32),
+        }),
+      ]);
+
+      const preparedTx = createMockPrepared({
+        description: "Execute L2 Timelock",
+      });
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        { prepare: true },
+        providers
+      );
+
+      // #then
+      expect(mockTracker.prepareTransaction).toHaveBeenCalled();
+      expect(result.preparedTransactions).toHaveLength(1);
+      expect(result.preparedTransactions[0]).toBe(preparedTx);
+    });
+
+    it("should return empty preparations when no stages are ready", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+        createMockStage("VOTING_ACTIVE", "PENDING"),
+      ]);
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        { prepare: true },
+        providers
+      );
+
+      // #then
+      expect(result.preparations).toHaveLength(0);
+      expect(result.preparedTransactions).toHaveLength(0);
+    });
+
+    it("should handle multiple tracking results", async () => {
+      // #given
+      const mockResult1 = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+      ]);
+      const mockResult2 = createMockTrackingResult([
+        createMockStage("L2_TIMELOCK", "READY", "arb1", {
+          operationId: "0x" + "cd".repeat(32),
+        }),
+      ]);
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockResult1, mockResult2]),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: false, error: "Not ready" }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        { prepare: true },
+        providers
+      );
+
+      // #then
+      expect(result.results).toHaveLength(2);
+    });
+
+    it("should prepare completed timelock stages when prepareCompleted option enabled", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("L2_TIMELOCK", "COMPLETED", "arb1", {
+          operationId: "0x" + "ab".repeat(32),
+        }),
+      ]);
+
+      const preparedTx = createMockPrepared({
+        description: "Execute L2 Timelock",
+      });
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        { prepare: true, prepareCompleted: true },
+        providers
+      );
+
+      // #then
+      expect(mockTracker.prepareTransaction).toHaveBeenCalled();
+      expect(result.preparedTransactions).toHaveLength(1);
+    });
+
+    it("should prepare pending stages when preparePending option enabled", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("L2_TIMELOCK", "PENDING", "arb1", {
+          operationId: "0x" + "ab".repeat(32),
+        }),
+      ]);
+
+      const preparedTx = createMockPrepared({
+        description: "Execute L2 Timelock",
+      });
+
+      const mockTracker = {
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await trackAndPrepare(
+        mockTracker as unknown as ProposalStageTracker,
+        "0x1234",
+        { prepare: true, preparePending: true },
+        providers
+      );
+
+      // #then
+      expect(mockTracker.prepareTransaction).toHaveBeenCalled();
+      expect(result.preparedTransactions).toHaveLength(1);
+    });
+  });
+
+  describe("runMonitorCycle", () => {
+    function createMockProviders(): ProviderBundle {
+      const mockProvider = {
+        getBlockNumber: vi.fn().mockResolvedValue(100000),
+      };
+      return {
+        l1Provider: mockProvider as unknown as ethers.providers.JsonRpcProvider,
+        l2Provider: mockProvider as unknown as ethers.providers.JsonRpcProvider,
+        novaProvider: mockProvider as unknown as ethers.providers.JsonRpcProvider,
+      };
+    }
+
+    it("should run discovery and return results", async () => {
+      // #given
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      expect(mockTracker.discoverAll).toHaveBeenCalled();
+      expect(result.result.tracked).toBe(0);
+      expect(result.result.errors).toBe(0);
+      expect(result.proposals).toEqual([]);
+      expect(result.timelockOps).toEqual([]);
+    });
+
+    it("should track discovered proposals", async () => {
+      // #given
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+      ]);
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      expect(mockTracker.trackByTxHash).toHaveBeenCalledWith(mockProposal.creationTxHash);
+      expect(result.result.tracked).toBe(1);
+    });
+
+    it("should call onTrack callback for each tracked proposal", async () => {
+      // #given
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+      ]);
+
+      const onTrack = vi.fn();
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, { onTrack });
+
+      // #then
+      expect(onTrack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: `tx:${mockProposal.creationTxHash.toLowerCase()}`,
+          result: mockTrackingResult,
+        })
+      );
+    });
+
+    it("should handle tracking errors gracefully", async () => {
+      // #given
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      const onTrack = vi.fn();
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockRejectedValue(new Error("RPC error")),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers,
+        { onTrack }
+      );
+
+      // #then
+      expect(result.result.errors).toBe(1);
+      expect(onTrack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "RPC error",
+          result: null,
+        })
+      );
+    });
+
+    it("should retrack when shouldRetrack is returned from callback", async () => {
+      // #given
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+      ]);
+
+      let callCount = 0;
+      const onTrack = vi.fn().mockImplementation(() => {
+        callCount++;
+        // Only request retrack on first call
+        return callCount === 1 ? { shouldRetrack: true } : undefined;
+      });
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, { onTrack });
+
+      // #then
+      // Should have been called twice (original + retrack)
+      expect(onTrack).toHaveBeenCalledTimes(2);
+    });
+
+    it("should track timelock operations", async () => {
+      // #given
+      const mockTimelockOp = {
+        scheduledTxHash: "0x" + "c".repeat(64),
+        operationId: "0x" + "d".repeat(64),
+        timelockAddress: "0x" + "e".repeat(40),
+      };
+
+      const mockTrackingResult = createMockTrackingResult(
+        [
+          createMockStage("L2_TIMELOCK", "PENDING", "arb1", {
+            operationId: mockTimelockOp.operationId,
+          }),
+        ],
+        {
+          input: {
+            type: "timelock",
+            timelockAddress: mockTimelockOp.timelockAddress,
+            operationId: mockTimelockOp.operationId,
+            scheduledTxHash: mockTimelockOp.scheduledTxHash,
+          },
+        }
+      );
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [mockTimelockOp],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      expect(mockTracker.trackByTxHash).toHaveBeenCalledWith(mockTimelockOp.scheduledTxHash);
+      expect(result.result.tracked).toBe(1);
+    });
+
+    it("should use custom startBlock when provided", async () => {
+      // #given
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        startBlock: 50000,
+      });
+
+      // #then
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.any(Number),
+        expect.objectContaining({
+          constitutionalGovernor: 49999, // startBlock - 1
+        })
+      );
+    });
+
+    it("should prepare ready stages when prepare option enabled", async () => {
+      // #given
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("L2_TIMELOCK", "READY", "arb1", {
+          operationId: "0x" + "ab".repeat(32),
+        }),
+      ]);
+
+      const preparedTx = createMockPrepared();
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers,
+        { prepare: true }
+      );
+
+      // #then
+      expect(mockTracker.prepareTransaction).toHaveBeenCalled();
+      expect(result.result.prepared).toBe(1);
+    });
+
+    it("should skip duplicate timelock operations already tracked via proposals", async () => {
+      // #given
+      const operationId = "0x" + "d".repeat(64);
+
+      const mockProposal = {
+        creationTxHash: "0x" + "a".repeat(64),
+        proposalId: "123",
+        governor: "0x" + "b".repeat(40),
+      };
+
+      // Timelock op with same operationId as proposal
+      const mockTimelockOp = {
+        scheduledTxHash: "0x" + "c".repeat(64),
+        operationId: operationId,
+        timelockAddress: "0x" + "e".repeat(40),
+      };
+
+      const mockProposalResult = createMockTrackingResult(
+        [createMockStage("L2_TIMELOCK", "PENDING", "arb1", { operationId })],
+        {
+          timelockLink: {
+            operationId,
+            txHash: "0x" + "a".repeat(64),
+            timelockAddress: "0x" + "e".repeat(40),
+            queueBlockNumber: 100000,
+          },
+        }
+      );
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [mockProposal],
+          timelockOps: [mockTimelockOp],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn().mockResolvedValue([mockProposalResult]),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      // Should only track once (the proposal), not the duplicate timelock op
+      expect(mockTracker.trackByTxHash).toHaveBeenCalledTimes(1);
+      expect(result.result.tracked).toBe(1);
+    });
+
+    it("should retrack incomplete checkpoints", async () => {
+      // #given
+      const mockTrackingResult = createMockTrackingResult([
+        createMockStage("PROPOSAL_CREATED", "COMPLETED"),
+        createMockStage("VOTING_ACTIVE", "PENDING"),
+      ]);
+
+      const mockCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "governor",
+          governorAddress: "0x" + "a".repeat(40),
+          proposalId: "123",
+          creationTxHash: "0x" + "b".repeat(64),
+        },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() - 100000 },
+      };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi
+          .fn()
+          .mockResolvedValue([{ key: "tx:0x" + "b".repeat(64), checkpoint: mockCheckpoint }]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
+        prepareTransaction: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then
+      expect(mockTracker.trackFromCheckpoint).toHaveBeenCalledWith(mockCheckpoint);
+      expect(result.result.retracked).toBe(1);
     });
   });
 });

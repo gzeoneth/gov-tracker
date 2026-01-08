@@ -48,7 +48,7 @@ export function getRetryableChainName(chain: "arb1" | "nova" | "unknown"): strin
     case "arb1":
       return "Arbitrum One";
     case "nova":
-      return "nova";
+      return "Nova";
     default:
       return "Unknown L2";
   }

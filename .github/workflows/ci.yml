@@ -63,11 +63,18 @@ jobs:
         run: yarn build
 
       - name: Run all tests
-        run: yarn test:all
+        run: yarn test:coverage:all
         env:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           ARB1_RPC: ${{ secrets.ARB1_RPC }}
           NOVA_RPC: ${{ secrets.NOVA_RPC }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+          verbose: true
 
   fork-tests:
     name: Fork Tests

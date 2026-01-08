@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Commits: 487334b..006ecb4 (refactor-trackedstage branch)
+> Commits: 487334b..257dd82 (refactor-trackedstage branch)
 
 ### Fixed
 
@@ -29,6 +29,18 @@ if (stage.type === "VOTING_ACTIVE") {
 if (stage.type === "VOTING_ACTIVE") {
   const votes = stage.data.forVotes; // ✓ TypeScript knows VotingActiveData
 }
+```
+
+**Stage tracking functions now return typed stages:**
+```typescript
+// trackVotingStage returns TypedTrackedStage<"VOTING_ACTIVE">
+const { stage } = await trackVotingStage(...);
+stage.data.forVotes; // ✓ No cast needed
+
+// trackProposalCreated returns TypedTrackedStage<"PROPOSAL_CREATED">
+// trackProposalQueued returns TypedTrackedStage<"PROPOSAL_QUEUED">
+// trackL2ToL1Message returns TypedTrackedStage<"L2_TO_L1_MESSAGE">
+// trackRetryables returns TypedTrackedStage<"RETRYABLE_EXECUTED">
 ```
 
 **StageBuilder is now generic:**

@@ -99,6 +99,14 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(tracker.chunkingConfig).toBeDefined();
       expect(tracker.chunkingConfig.l2ChunkSize).toBe(10_000_000);
     });
+
+    it("should return providers via getProviders()", () => {
+      const providers = tracker.getProviders();
+
+      expect(providers.l1).toBe(l1Provider);
+      expect(providers.l2).toBe(l2Provider);
+      expect(providers.nova).toBe(novaProvider);
+    });
   });
 
   describe("trackByTxHash - Core Governor Full Roundtrip", () => {

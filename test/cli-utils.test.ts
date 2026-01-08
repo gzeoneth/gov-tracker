@@ -19,6 +19,7 @@ import {
   DEFAULT_L2_GAS_SETTINGS,
   isShuttingDown,
   addOptions,
+  runWithLoop,
 } from "../src/cli/lib/cli";
 import { Command, Option } from "commander";
 import {
@@ -590,6 +591,24 @@ describe("CLI Utilities", () => {
   describe("isShuttingDown", () => {
     it("should return false when not shutting down", () => {
       expect(isShuttingDown()).toBe(false);
+    });
+  });
+
+  describe("runWithLoop", () => {
+    it("should run cycle once when loop is false", async () => {
+      const cycleFn = vi.fn().mockResolvedValue(undefined);
+
+      await runWithLoop(cycleFn, { loop: false, intervalMs: 1000 });
+
+      expect(cycleFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("should propagate errors when loop is false", async () => {
+      const cycleFn = vi.fn().mockRejectedValue(new Error("Test error"));
+
+      await expect(runWithLoop(cycleFn, { loop: false, intervalMs: 1000 })).rejects.toThrow(
+        "Test error"
+      );
     });
   });
 });

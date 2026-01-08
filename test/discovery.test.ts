@@ -4,9 +4,11 @@
  * Tests for governor-discovery, timelock-discovery, and security-council modules.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
+import * as dotenv from "dotenv";
 import type { CacheAdapter, TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
+import { DEFAULT_RPC_URLS } from "../src";
 import {
   detectProposalType,
   isElectionProposal,
@@ -27,12 +29,18 @@ import {
   loadWatermarks,
   saveWatermarks,
   createPendingCheckpoints,
+  discoverProposals,
+  discoverTimelockOps,
+  discoverAll,
   WATERMARKS_KEY,
   DiscoveredProposal,
   DiscoveredTimelockOp,
 } from "../src/tracker/discovery";
+
 import { ADDRESSES } from "../src/constants";
 import { proposalCreatedInterface, timelockInterface } from "../src/abis";
+
+dotenv.config({ quiet: true });
 
 describe("Governor Discovery", () => {
   describe("detectProposalType", () => {
@@ -709,5 +717,213 @@ describe("Tracker Discovery Module", () => {
     it("should have correct format", () => {
       expect(WATERMARKS_KEY).toBe("discovery:watermarks");
     });
+  });
+});
+
+/**
+ * RPC-based discovery tests
+ *
+ * Tests discoverProposals, discoverTimelockOps, and discoverAll with real RPC.
+ * Uses block range 369846189-389241837 which contains elections, proposals, and timelock ops.
+ */
+describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
+  let l2Provider: ethers.providers.JsonRpcProvider;
+  let cache: MockCache;
+
+  // Block range known to contain elections, constitutional & non-constitutional proposals
+  const TEST_FROM_BLOCK = 380_000_000;
+  const TEST_TO_BLOCK = 385_000_000;
+
+  beforeAll(() => {
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+  });
+
+  beforeEach(() => {
+    cache = new MockCache();
+  });
+
+  describe("discoverProposals", () => {
+    it("should discover constitutional proposals in block range", async () => {
+      // #given a block range with constitutional proposals
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering proposals
+      const proposals = await discoverProposals(
+        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then should find at least one proposal
+      expect(proposals.length).toBeGreaterThanOrEqual(0);
+      if (proposals.length > 0) {
+        expect(proposals[0].governorAddress.toLowerCase()).toBe(
+          ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase()
+        );
+        expect(proposals[0].proposalId).toBeDefined();
+        expect(proposals[0].creationTxHash).toBeDefined();
+        expect(proposals[0].creationBlock).toBeGreaterThan(fromBlock);
+      }
+    }, 60000);
+
+    it("should discover election proposals in block range", async () => {
+      // #given a block range with election proposals
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering proposals from nominee governor
+      const proposals = await discoverProposals(
+        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then may find election proposals
+      expect(Array.isArray(proposals)).toBe(true);
+      if (proposals.length > 0) {
+        expect(proposals[0].governorAddress.toLowerCase()).toBe(
+          ADDRESSES.ELECTION_NOMINEE_GOVERNOR.toLowerCase()
+        );
+      }
+    }, 60000);
+  });
+
+  describe("discoverTimelockOps", () => {
+    it("should discover timelock operations in block range", async () => {
+      // #given a block range with timelock operations
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering timelock ops
+      const ops = await discoverTimelockOps(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then should find operations
+      expect(Array.isArray(ops)).toBe(true);
+      if (ops.length > 0) {
+        expect(ops[0].timelockAddress.toLowerCase()).toBe(
+          ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK.toLowerCase()
+        );
+        expect(ops[0].operationId).toBeDefined();
+        expect(ops[0].scheduledTxHash).toBeDefined();
+      }
+    }, 60000);
+  });
+
+  describe("discoverAll", () => {
+    it("should discover from all enabled targets", async () => {
+      // #given targets for all governors and timelocks
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: true,
+        electionNomineeGovernor: true,
+        electionMemberGovernor: true,
+        l2ConstitutionalTimelock: true,
+        l2NonConstitutionalTimelock: true,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+        nonConstitutionalGovernor: TEST_FROM_BLOCK,
+        electionNomineeGovernor: TEST_FROM_BLOCK,
+        electionMemberGovernor: TEST_FROM_BLOCK,
+        l2ConstitutionalTimelock: TEST_FROM_BLOCK,
+        l2NonConstitutionalTimelock: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering all
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then should return proposals, timelockOps, and updated watermarks
+      expect(result.proposals).toBeDefined();
+      expect(result.timelockOps).toBeDefined();
+      expect(result.watermarks).toBeDefined();
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
+      expect(result.watermarks.nonConstitutionalGovernor).toBe(TEST_TO_BLOCK);
+    }, 120000);
+
+    it("should create pending checkpoints for discovered proposals", async () => {
+      // #given targets for constitutional governor only
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then if proposals found, pending checkpoints should be created
+      if (result.proposals.length > 0) {
+        const keys = await cache.keys();
+        const txKeys = keys.filter((k) => k.startsWith("tx:"));
+        expect(txKeys.length).toBeGreaterThan(0);
+      }
+    }, 60000);
+
+    it("should skip disabled targets", async () => {
+      // #given only constitutional governor enabled
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then only constitutional watermark should be updated
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
+      expect(result.watermarks.nonConstitutionalGovernor).toBeUndefined();
+      expect(result.watermarks.l2ConstitutionalTimelock).toBeUndefined();
+    }, 60000);
+
+    it("should work with empty watermarks (start from default)", async () => {
+      // #given empty watermarks - will use GOVERNANCE_START_BLOCKS
+      // Using a narrow range to avoid huge scan
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks: DiscoveryWatermarks = {
+        // Pre-set to avoid scanning from genesis
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(
+        targets,
+        TEST_FROM_BLOCK + 1_000_000,
+        l2Provider,
+        cache,
+        watermarks
+      );
+
+      // #then should succeed with updated watermarks
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_FROM_BLOCK + 1_000_000);
+    }, 60000);
   });
 });

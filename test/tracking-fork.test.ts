@@ -14,9 +14,10 @@ import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { startDualForksAtL2Block, getTestRpcUrls, DualForkResult } from "./helpers/anvil-fork";
-import { createTracker, ProposalStageTracker } from "../src";
+import { createTracker, ProposalStageTracker, ADDRESSES } from "../src";
 import {
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
+  CONSTITUTIONAL_GOVERNOR_COMPLETED,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
 } from "./fixtures";
 
@@ -225,6 +226,54 @@ describe("Historical Tracking Fork Tests", () => {
       // L2 executed should not be complete at this block
       const l2ExecutedStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(l2ExecutedStage?.status).not.toBe("COMPLETED");
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("L1 Timelock Execute Transaction", () => {
+    it("should prepare and execute L1 timelock transaction when READY", async () => {
+      // Fork at a block where L1 timelock is READY for CONSTITUTIONAL_GOVERNOR_COMPLETED
+      // Queue: 23258264, Executed: 23279739, delay: ~21600 blocks (~3 days)
+      // Ready should be around queue + delay, pick a block just before actual execution
+      const L1_READY_BLOCK = 23279700;
+
+      // Need to find corresponding L2 block for this L1 block
+      // Use a recent L2 block that has this L1 block as reference
+      const L2_BLOCK_FOR_L1_READY = 374_000_000;
+
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: L2_BLOCK_FOR_L1_READY,
+        l1BlockOverride: L1_READY_BLOCK,
+      });
+
+      tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider,
+      });
+
+      const results = await tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_COMPLETED.creationTxHash);
+
+      expect(results.length).toBeGreaterThan(0);
+      const result = results[0];
+
+      // At this L1 block, L1 timelock should be READY
+      const l1TimelockStage = result.stages.find((s) => s.type === "L1_TIMELOCK");
+      expect(l1TimelockStage).toBeDefined();
+      expect(l1TimelockStage?.status).toBe("READY");
+
+      // Prepare the execution transaction
+      const prepResult = await tracker.prepareTransaction(l1TimelockStage!);
+      expect(prepResult.success).toBe(true);
+      if (prepResult.success) {
+        expect(prepResult.prepared).toBeDefined();
+        expect(prepResult.prepared.chain).toBe("ethereum");
+        expect(prepResult.prepared.to.toLowerCase()).toBe(ADDRESSES.L1_TIMELOCK.toLowerCase());
+      }
 
       await forks.stopAll();
       forks = null;

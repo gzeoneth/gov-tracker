@@ -731,8 +731,9 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
   let cache: MockCache;
 
   // Block range known to contain elections, constitutional & non-constitutional proposals
-  const TEST_FROM_BLOCK = 380_000_000;
-  const TEST_TO_BLOCK = 385_000_000;
+  // Per user: 369846189-389241837 has elections, both types of proposals, and timelock operations
+  const TEST_FROM_BLOCK = 369_846_189;
+  const TEST_TO_BLOCK = 389_241_837;
 
   beforeAll(() => {
     const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;

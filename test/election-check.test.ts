@@ -3,11 +3,18 @@
  *
  * Tests formatElectionStatus function.
  * No RPC calls needed - pure unit tests.
+ *
+ * RPC tests for checkAndExecuteElection function.
  */
 
-import { describe, expect, it } from "vitest";
-import { formatElectionStatus } from "../src/cli/lib/election-check";
-import { ElectionStatus, ElectionProposalStatus } from "../src/index";
+import { describe, expect, it, beforeAll } from "vitest";
+import { ethers } from "ethers";
+import * as dotenv from "dotenv";
+import { formatElectionStatus, checkAndExecuteElection } from "../src/cli/lib/election-check";
+import { ProviderBundle } from "../src/cli/lib/cli";
+import { ElectionStatus, ElectionProposalStatus, DEFAULT_RPC_URLS } from "../src/index";
+
+dotenv.config({ quiet: true });
 
 describe("Election Check Utilities", () => {
   describe("formatElectionStatus", () => {
@@ -179,3 +186,81 @@ describe("Election Check Utilities", () => {
     });
   });
 });
+
+/**
+ * RPC tests for checkAndExecuteElection
+ */
+describe.skipIf(process.env.NO_RPC === "1")(
+  "checkAndExecuteElection (RPC)",
+  {
+    timeout: 60000,
+  },
+  () => {
+    let providers: ProviderBundle;
+
+    beforeAll(() => {
+      const ethRpc = process.env.ETH_RPC;
+      if (!ethRpc) {
+        throw new Error("ETH_RPC required for election check tests");
+      }
+      const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+      const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+
+      providers = {
+        l1Provider: new ethers.providers.JsonRpcProvider(ethRpc),
+        l2Provider: new ethers.providers.JsonRpcProvider(arbRpc),
+        novaProvider: new ethers.providers.JsonRpcProvider(novaRpc),
+      };
+    });
+
+    it("should return election status without write mode", async () => {
+      // #when checking election status without write mode
+      const result = await checkAndExecuteElection(providers, null, {
+        write: false,
+        verbose: false,
+      });
+
+      // #then should return valid status with no errors
+      expect(result.status).toBeDefined();
+      expect(result.status.electionCount).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(result.errors)).toBe(true);
+    });
+
+    it("should include current election status when elections exist", async () => {
+      // #when checking election status
+      const result = await checkAndExecuteElection(providers, null, {
+        write: false,
+        verbose: false,
+      });
+
+      // #then if elections exist, should include current election status
+      if (result.status.electionCount > 0) {
+        expect(result.currentElectionStatus).toBeDefined();
+        expect(result.currentElectionStatus?.phase).toBeDefined();
+      }
+    });
+
+    it("should not execute transactions when signer is null", async () => {
+      // #when checking with no signer
+      const result = await checkAndExecuteElection(providers, null, {
+        write: true, // write is true but signer is null
+        verbose: false,
+      });
+
+      // #then should not execute (no electionCreated or memberElectionTriggered)
+      expect(result.electionCreated).toBeUndefined();
+      expect(result.memberElectionTriggered).toBeUndefined();
+    });
+
+    it("should handle verbose mode", async () => {
+      // #when checking with verbose mode
+      const result = await checkAndExecuteElection(providers, null, {
+        write: false,
+        verbose: true,
+      });
+
+      // #then should still return valid status
+      expect(result.status).toBeDefined();
+    });
+  }
+);

@@ -425,6 +425,121 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       }
     });
   });
+
+  describe("trackFromCheckpoint", () => {
+    it("should resume governor checkpoint with creationTxHash", async () => {
+      // #given a valid governor checkpoint
+      const checkpoint = fullRoundtripResult.checkpoint;
+
+      // #when resuming from checkpoint
+      const result = await tracker.trackFromCheckpoint(checkpoint);
+
+      // #then should return valid tracking result
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("governor");
+      expect(result.stages.length).toBeGreaterThan(0);
+    });
+
+    it("should resume timelock checkpoint with scheduledTxHash", async () => {
+      // #given a valid timelock checkpoint
+      const checkpoint = timelockResult.checkpoint;
+
+      // #when resuming from checkpoint
+      const result = await tracker.trackFromCheckpoint(checkpoint);
+
+      // #then should return valid tracking result
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("timelock");
+      expect(result.stages.length).toBeGreaterThan(0);
+    });
+
+    it("should throw error for governor checkpoint missing creationTxHash", async () => {
+      // #given a governor checkpoint without creationTxHash
+      // Use type assertion since we're intentionally creating invalid input for testing
+      const checkpoint = {
+        ...fullRoundtripResult.checkpoint,
+        input: {
+          type: "governor" as const,
+          governorAddress: "0x123",
+          proposalId: "123",
+          creationTxHash: undefined,
+        } as unknown as typeof fullRoundtripResult.checkpoint.input,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Governor checkpoint missing creationTxHash"
+      );
+    });
+
+    it("should throw error for timelock checkpoint missing scheduledTxHash", async () => {
+      // #given a timelock checkpoint without scheduledTxHash
+      // Use type assertion since we're intentionally creating invalid input for testing
+      const checkpoint = {
+        ...timelockResult.checkpoint,
+        input: {
+          type: "timelock" as const,
+          operationId: "0x123",
+          timelockAddress: "0x456",
+          scheduledTxHash: undefined,
+        } as unknown as typeof timelockResult.checkpoint.input,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Timelock checkpoint missing scheduledTxHash"
+      );
+    });
+
+    it("should throw error for unsupported checkpoint input type", async () => {
+      // #given a checkpoint with unsupported type
+      const checkpoint = {
+        ...fullRoundtripResult.checkpoint,
+        input: { type: "unsupported" as unknown } as never,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Unsupported checkpoint input type"
+      );
+    });
+  });
+
+  describe("checkElection", () => {
+    it("should return election status with canCreate flag", async () => {
+      // #when checking election status
+      const result = await tracker.checkElection();
+
+      // #then should return valid result with status
+      expect(result).toBeDefined();
+      expect(result.status).toBeDefined();
+      expect(typeof result.canCreate).toBe("boolean");
+      expect(typeof result.canTriggerMember).toBe("boolean");
+      expect(result.prepared).toBeDefined();
+    });
+
+    it("should include current election info if elections exist", async () => {
+      // #when checking election status
+      const result = await tracker.checkElection();
+
+      // #then if elections exist, should include current election
+      if (result.status.electionCount > 0) {
+        expect(result.currentElection).toBeDefined();
+        expect(result.currentElection?.electionIndex).toBe(result.status.electionCount - 1);
+      }
+    });
+
+    it("should allow custom nominee governor address", async () => {
+      // #when checking with custom address (using default address for test)
+      const result = await tracker.checkElection({
+        nomineeGovernorAddress: "0x8a1cDA8dee421cD06023470608605934c16A05a0",
+      });
+
+      // #then should return valid result
+      expect(result).toBeDefined();
+      expect(result.status).toBeDefined();
+    });
+  });
 });
 
 // Note: createTracker unit tests are in utils.test.ts

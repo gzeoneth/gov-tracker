@@ -14,6 +14,7 @@ import {
   getAllMessagePositionsFromReceipt,
   trackL2ToL1Message,
   getL2ToL1Messages,
+  prepareL2ToL1MessageStage,
 } from "../src/stages/l2-to-l1-message";
 import { arbSysInterface } from "../src/abis";
 import { ADDRESSES, DEFAULT_RPC_URLS } from "../src/constants";
@@ -347,6 +348,79 @@ describe.skipIf(process.env.NO_RPC === "1")(
       it("should have l2ToL1TxEvent in stage data", () => {
         const l2ToL1Stage = trackedResult.stages.find((s) => s.type === "L2_TO_L1_MESSAGE");
         expect(l2ToL1Stage?.data.l2ToL1TxEvent).toBeDefined();
+      });
+    });
+
+    describe("prepareL2ToL1MessageStage", () => {
+      it("should prepare completed stage with prepareCompleted option", async () => {
+        // #given a completed L2_TO_L1_MESSAGE stage
+        const l2ToL1Stage = trackedResult.stages.find((s) => s.type === "L2_TO_L1_MESSAGE");
+        expect(l2ToL1Stage).toBeDefined();
+
+        // #when preparing with prepareCompleted option
+        const result = await prepareL2ToL1MessageStage(l2ToL1Stage!, l2Provider, l1Provider, {
+          prepareCompleted: true,
+        });
+
+        // #then should return prepared transactions
+        expect(result.total).toBeGreaterThan(0);
+        expect(result.results.length).toBe(result.total);
+        expect(result.results[0].success).toBe(true);
+        if (result.results[0].success) {
+          expect(result.results[0].prepared.chain).toBe("ethereum");
+          expect(result.results[0].prepared.to).toMatch(/^0x[a-fA-F0-9]{40}$/);
+        }
+      });
+
+      it("should return error for stage without l2TxHash", async () => {
+        // #given a stage without l2TxHash - use type assertion for test mock
+        const mockStage = {
+          type: "L2_TO_L1_MESSAGE" as const,
+          status: "READY" as const,
+          chain: "arb1" as const,
+          chainId: 42161,
+          transactions: [],
+          data: {
+            messageCount: 0,
+            l2Block: 0,
+            l2TxHash: "", // Empty to trigger error
+            messagePositions: [],
+          },
+        };
+
+        // #when preparing
+        const result = await prepareL2ToL1MessageStage(mockStage, l2Provider, l1Provider);
+
+        // #then should return error in results
+        expect(result.results.length).toBeGreaterThan(0);
+        expect(result.results[0].success).toBe(false);
+        if (!result.results[0].success) {
+          expect(result.results[0].error).toBeDefined();
+        }
+      });
+
+      it("should return error for NOT_STARTED stage without prepareCompleted", async () => {
+        // #given a NOT_STARTED stage - use type assertion for test mock
+        const mockStage = {
+          type: "L2_TO_L1_MESSAGE" as const,
+          status: "NOT_STARTED" as const,
+          chain: "arb1" as const,
+          chainId: 42161,
+          transactions: [],
+          data: {
+            messageCount: 0,
+            l2Block: 0,
+            l2TxHash: "0x123",
+            messagePositions: [],
+          },
+        };
+
+        // #when preparing without prepareCompleted
+        const result = await prepareL2ToL1MessageStage(mockStage, l2Provider, l1Provider);
+
+        // #then should return validation error in results
+        expect(result.results.length).toBeGreaterThan(0);
+        expect(result.results[0].success).toBe(false);
       });
     });
   }

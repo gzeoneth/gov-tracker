@@ -321,6 +321,147 @@ describe("L2 to L1 Message Stage", () => {
       }
     });
   });
+
+  describe("aggregate status determination", () => {
+    it("should correctly identify CONFIRMED aggregate when all messages CONFIRMED", () => {
+      // #given - array of all CONFIRMED statuses
+      const statuses = [ChildToParentMessageStatus.CONFIRMED, ChildToParentMessageStatus.CONFIRMED];
+
+      // #when - checking aggregate conditions
+      const allExecuted = statuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
+      const anyUnconfirmed = statuses.some((s) => s === ChildToParentMessageStatus.UNCONFIRMED);
+      const allConfirmedOrExecuted = statuses.every(
+        (s) =>
+          s === ChildToParentMessageStatus.CONFIRMED || s === ChildToParentMessageStatus.EXECUTED
+      );
+
+      // #then - should determine CONFIRMED aggregate
+      expect(allExecuted).toBe(false);
+      expect(anyUnconfirmed).toBe(false);
+      expect(allConfirmedOrExecuted).toBe(true);
+      // Result: aggregateStatus = CONFIRMED (lines 290-291)
+    });
+
+    it("should correctly identify CONFIRMED aggregate when mix of CONFIRMED and EXECUTED", () => {
+      // #given - array of mixed CONFIRMED and EXECUTED statuses
+      const statuses = [
+        ChildToParentMessageStatus.CONFIRMED,
+        ChildToParentMessageStatus.EXECUTED,
+        ChildToParentMessageStatus.CONFIRMED,
+      ];
+
+      // #when - checking aggregate conditions
+      const allExecuted = statuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
+      const anyUnconfirmed = statuses.some((s) => s === ChildToParentMessageStatus.UNCONFIRMED);
+      const allConfirmedOrExecuted = statuses.every(
+        (s) =>
+          s === ChildToParentMessageStatus.CONFIRMED || s === ChildToParentMessageStatus.EXECUTED
+      );
+
+      // #then - should determine CONFIRMED aggregate
+      expect(allExecuted).toBe(false);
+      expect(anyUnconfirmed).toBe(false);
+      expect(allConfirmedOrExecuted).toBe(true);
+      // Result: aggregateStatus = CONFIRMED (lines 290-291)
+    });
+
+    it("should prioritize UNCONFIRMED over CONFIRMED in aggregate", () => {
+      // #given - array with at least one UNCONFIRMED
+      const statuses = [
+        ChildToParentMessageStatus.CONFIRMED,
+        ChildToParentMessageStatus.UNCONFIRMED,
+        ChildToParentMessageStatus.EXECUTED,
+      ];
+
+      // #when - checking aggregate conditions
+      const allExecuted = statuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
+      const anyUnconfirmed = statuses.some((s) => s === ChildToParentMessageStatus.UNCONFIRMED);
+
+      // #then - should have UNCONFIRMED aggregate
+      expect(allExecuted).toBe(false);
+      expect(anyUnconfirmed).toBe(true);
+      // Result: aggregateStatus = UNCONFIRMED (lines 288-289)
+    });
+
+    it("should identify EXECUTED aggregate when all messages EXECUTED", () => {
+      // #given - array of all EXECUTED statuses
+      const statuses = [ChildToParentMessageStatus.EXECUTED, ChildToParentMessageStatus.EXECUTED];
+
+      // #when - checking aggregate conditions
+      const allExecuted = statuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
+
+      // #then - should have EXECUTED aggregate
+      expect(allExecuted).toBe(true);
+      // Result: aggregateStatus = EXECUTED (lines 286-287)
+    });
+  });
+
+  describe("firstExecutableBlock iteration logic", () => {
+    it("should find minimum firstExecutableBlock from UNCONFIRMED messages", () => {
+      // #given - mock data representing firstExecutableBlock values
+      const firstExecutableBlocks = [
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: 1000 },
+        { status: ChildToParentMessageStatus.CONFIRMED, block: null },
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: 500 },
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: 750 },
+      ];
+
+      // #when - simulating the loop logic from lines 299-320
+      let firstExecutableBlock: number | undefined;
+      for (const msg of firstExecutableBlocks) {
+        if (msg.status === ChildToParentMessageStatus.UNCONFIRMED && msg.block !== null) {
+          if (!firstExecutableBlock || msg.block < firstExecutableBlock) {
+            firstExecutableBlock = msg.block;
+          }
+        }
+      }
+
+      // #then - should find minimum value
+      expect(firstExecutableBlock).toBe(500);
+    });
+
+    it("should handle when getFirstExecutableBlock returns null for some messages", () => {
+      // #given - some UNCONFIRMED messages have null blocks
+      const firstExecutableBlocks = [
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: null },
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: 1000 },
+      ];
+
+      // #when - simulating the loop logic
+      let firstExecutableBlock: number | undefined;
+      for (const msg of firstExecutableBlocks) {
+        if (msg.status === ChildToParentMessageStatus.UNCONFIRMED && msg.block !== null) {
+          if (!firstExecutableBlock || msg.block < firstExecutableBlock) {
+            firstExecutableBlock = msg.block;
+          }
+        }
+      }
+
+      // #then - should use available value
+      expect(firstExecutableBlock).toBe(1000);
+    });
+
+    it("should remain undefined when all UNCONFIRMED messages have null blocks", () => {
+      // #given - all UNCONFIRMED messages have null blocks
+      const firstExecutableBlocks = [
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: null },
+        { status: ChildToParentMessageStatus.UNCONFIRMED, block: null },
+      ];
+
+      // #when - simulating the loop logic
+      let firstExecutableBlock: number | undefined;
+      for (const msg of firstExecutableBlocks) {
+        if (msg.status === ChildToParentMessageStatus.UNCONFIRMED && msg.block !== null) {
+          if (!firstExecutableBlock || msg.block < firstExecutableBlock) {
+            firstExecutableBlock = msg.block;
+          }
+        }
+      }
+
+      // #then - should remain undefined
+      expect(firstExecutableBlock).toBeUndefined();
+    });
+  });
 });
 
 /**

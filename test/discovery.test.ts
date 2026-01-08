@@ -13,6 +13,8 @@ import {
   detectProposalType,
   isElectionProposal,
   parseProposalCreatedEvent,
+  detectGovernorCapabilities,
+  getTimelockAddress,
 } from "../src/discovery/governor-discovery";
 import {
   isKnownL2Timelock,
@@ -156,6 +158,128 @@ describe("Governor Discovery", () => {
 
       const result = parseProposalCreatedEvent(invalidLog);
       expect(result).toBeNull();
+    });
+  });
+
+  describe("detectGovernorCapabilities", () => {
+    /**
+     * Create a mock provider using Web3Provider pattern that passes ethers validation
+     */
+    function createMockProvider(options: {
+      hasTimelock?: boolean;
+      hasVetting?: boolean;
+      timelockAddress?: string;
+    }): ethers.providers.Provider {
+      // Use a proper mock that satisfies ethers.Contract constructor
+      const mockSend = async (method: string, params: unknown[]) => {
+        if (method === "eth_chainId") {
+          return "0xa4b1"; // Arbitrum chainId
+        }
+        if (method === "eth_call") {
+          const callParams = params[0] as { data?: string };
+          const timelockSelector = "0xd33219b4"; // timelock()
+          const nomineeVetterSelector = "0x0298ad49"; // nomineeVetter()
+
+          if (callParams.data?.startsWith(timelockSelector)) {
+            if (options.hasTimelock) {
+              return ethers.utils.defaultAbiCoder.encode(
+                ["address"],
+                [options.timelockAddress || "0x1234567890123456789012345678901234567890"]
+              );
+            }
+            throw { code: "CALL_EXCEPTION", message: "No timelock" };
+          }
+
+          if (callParams.data?.startsWith(nomineeVetterSelector)) {
+            if (options.hasVetting) {
+              return ethers.utils.defaultAbiCoder.encode(
+                ["address"],
+                ["0x1234567890123456789012345678901234567890"]
+              );
+            }
+            throw { code: "CALL_EXCEPTION", message: "No nomineeVetter" };
+          }
+
+          throw { code: "CALL_EXCEPTION", message: "Function not found" };
+        }
+        throw new Error(`Unsupported method: ${method}`);
+      };
+
+      // Create a JsonRpcProvider-like object
+      return new ethers.providers.Web3Provider({
+        request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+          return mockSend(method, params || []);
+        },
+      });
+    }
+
+    it("should detect WITH_TIMELOCK for governors with timelock()", async () => {
+      // #given a mock provider that returns success for timelock()
+      const mockProvider = createMockProvider({ hasTimelock: true });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return WITH_TIMELOCK
+      expect(result).toBe("WITH_TIMELOCK");
+    });
+
+    it("should detect WITH_VETTING for governors with nomineeVetter()", async () => {
+      // #given a mock provider that returns failure for timelock() but success for nomineeVetter()
+      const mockProvider = createMockProvider({ hasTimelock: false, hasVetting: true });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return WITH_VETTING
+      expect(result).toBe("WITH_VETTING");
+    });
+
+    it("should detect NO_TIMELOCK for governors without timelock or vetting", async () => {
+      // #given a mock provider that returns failure for both
+      const mockProvider = createMockProvider({ hasTimelock: false, hasVetting: false });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return NO_TIMELOCK
+      expect(result).toBe("NO_TIMELOCK");
+    });
+  });
+
+  describe("getTimelockAddress", () => {
+    it("should return timelock address from governor", async () => {
+      // #given a mock provider that returns a timelock address (use proper checksum)
+      const expectedTimelock = ethers.utils.getAddress(
+        "0xabcdef1234567890abcdef1234567890abcdef12"
+      );
+      const mockProvider = new ethers.providers.Web3Provider({
+        request: async ({ method }: { method: string; params?: unknown[] }) => {
+          if (method === "eth_chainId") return "0xa4b1";
+          if (method === "eth_call") {
+            return ethers.utils.defaultAbiCoder.encode(["address"], [expectedTimelock]);
+          }
+          throw new Error(`Unsupported method: ${method}`);
+        },
+      });
+
+      // #when getting timelock address
+      const result = await getTimelockAddress(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return the timelock address
+      expect(result.toLowerCase()).toBe(expectedTimelock.toLowerCase());
     });
   });
 });

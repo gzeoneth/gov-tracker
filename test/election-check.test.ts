@@ -10,7 +10,7 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
-import { formatElectionStatus, checkAndExecuteElection } from "../src/cli/lib/election-check";
+import { formatElectionStatus } from "../src/cli/lib/election-check";
 import { ProviderBundle } from "../src/cli/lib/cli";
 import { ElectionStatus, ElectionProposalStatus, DEFAULT_RPC_URLS } from "../src/index";
 
@@ -196,9 +196,14 @@ describe.skipIf(process.env.NO_RPC === "1")(
     timeout: 60000,
   },
   () => {
+    // Import checkAndExecuteElection dynamically to avoid mock conflicts
+    let checkAndExecuteElection: typeof import("../src/cli/lib/election-check").checkAndExecuteElection;
     let providers: ProviderBundle;
 
-    beforeAll(() => {
+    beforeAll(async () => {
+      const module = await import("../src/cli/lib/election-check");
+      checkAndExecuteElection = module.checkAndExecuteElection;
+
       const ethRpc = process.env.ETH_RPC;
       if (!ethRpc) {
         throw new Error("ETH_RPC required for election check tests");

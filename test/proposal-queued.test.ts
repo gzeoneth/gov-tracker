@@ -7,7 +7,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BigNumber, ethers } from "ethers";
-import { prepareGovernorQueue, GovernorProposalParams } from "../src/stages/proposal-queued";
+import {
+  prepareGovernorQueue,
+  GovernorProposalParams,
+  trackProposalQueued,
+} from "../src/stages/proposal-queued";
 import { PROPOSAL_STATE, ADDRESSES } from "../src/constants";
 
 // Mock the security-council module
@@ -15,8 +19,30 @@ vi.mock("../src/discovery/security-council", () => ({
   checkVettingPeriod: vi.fn(),
 }));
 
+// Mock the governor-discovery module
+vi.mock("../src/discovery/governor-discovery", () => ({
+  getProposalState: vi.fn(),
+  findProposalQueuedEvent: vi.fn(),
+  getTimelockAddress: vi.fn(),
+}));
+
+// Mock the timelock-discovery module
+vi.mock("../src/discovery/timelock-discovery", () => ({
+  findCallScheduledByTxHash: vi.fn(),
+  getL2TimelockForGovernor: vi.fn(),
+}));
+
 // Import after mocking
 import { checkVettingPeriod } from "../src/discovery/security-council";
+import {
+  getProposalState,
+  findProposalQueuedEvent,
+  getTimelockAddress,
+} from "../src/discovery/governor-discovery";
+import {
+  findCallScheduledByTxHash,
+  getL2TimelockForGovernor,
+} from "../src/discovery/timelock-discovery";
 
 /**
  * Create a mock provider that returns a specific proposal state
@@ -215,6 +241,175 @@ describe("Proposal Queued Stage", () => {
       );
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("trackProposalQueued", () => {
+    const governorAddress = ADDRESSES.CONSTITUTIONAL_GOVERNOR;
+    const proposalId = "12345678901234567890";
+    const fromBlock = 100000;
+    const mockProvider = {} as ethers.providers.Provider;
+
+    beforeEach(() => {
+      vi.mocked(getL2TimelockForGovernor).mockReturnValue(null);
+      vi.mocked(getTimelockAddress).mockResolvedValue("0x3333333333333333333333333333333333333333");
+      vi.mocked(findCallScheduledByTxHash).mockResolvedValue(undefined);
+    });
+
+    it("should return NOT_STARTED when proposal is Pending", async () => {
+      // #given proposal state is Pending
+      vi.mocked(getProposalState).mockResolvedValue("Pending");
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return NOT_STARTED status
+      expect(result.stage.status).toBe("NOT_STARTED");
+      expect(result.stage.data.proposalState).toBe("Pending");
+    });
+
+    it("should return NOT_STARTED when proposal is Active", async () => {
+      // #given proposal state is Active
+      vi.mocked(getProposalState).mockResolvedValue("Active");
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return NOT_STARTED status
+      expect(result.stage.status).toBe("NOT_STARTED");
+      expect(result.stage.data.proposalState).toBe("Active");
+    });
+
+    it("should return SKIPPED when proposal is Defeated", async () => {
+      // #given proposal state is Defeated
+      vi.mocked(getProposalState).mockResolvedValue("Defeated");
+      vi.mocked(findProposalQueuedEvent).mockResolvedValue(null);
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return SKIPPED status
+      expect(result.stage.status).toBe("SKIPPED");
+      expect(result.stage.data.proposalState).toBe("Defeated");
+    });
+
+    it("should return SKIPPED when proposal is Canceled", async () => {
+      // #given proposal state is Canceled
+      vi.mocked(getProposalState).mockResolvedValue("Canceled");
+      vi.mocked(findProposalQueuedEvent).mockResolvedValue(null);
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return SKIPPED status
+      expect(result.stage.status).toBe("SKIPPED");
+    });
+
+    it("should return READY when proposal is Succeeded but not yet queued", async () => {
+      // #given proposal is Succeeded but queue event not found
+      vi.mocked(getProposalState).mockResolvedValue("Succeeded");
+      vi.mocked(findProposalQueuedEvent).mockResolvedValue(null);
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return READY status with canQueue=true
+      expect(result.stage.status).toBe("READY");
+      expect(result.stage.data.proposalState).toBe("Succeeded");
+      expect(result.stage.data.canQueue).toBe(true);
+      expect(result.stage.data.governorAddress).toBe(governorAddress);
+      expect(result.stage.data.proposalId).toBe(proposalId);
+    });
+
+    it("should fallback to getTimelockAddress when getL2TimelockForGovernor returns null", async () => {
+      // #given proposal is Queued and queue event exists
+      vi.mocked(getProposalState).mockResolvedValue("Queued");
+      vi.mocked(getL2TimelockForGovernor).mockReturnValue(null);
+      vi.mocked(getTimelockAddress).mockResolvedValue("0x4444444444444444444444444444444444444444");
+      vi.mocked(findProposalQueuedEvent).mockResolvedValue({
+        blockNumber: 200000,
+        txHash: "0xabc123",
+        eta: BigNumber.from(1700000000),
+      });
+      vi.mocked(findCallScheduledByTxHash).mockResolvedValue([
+        {
+          operationId: "0xopid123",
+          index: BigNumber.from(0),
+          target: "0x1111111111111111111111111111111111111111",
+          value: BigNumber.from(0),
+          data: "0xabcdef",
+          predecessor: ethers.constants.HashZero,
+          delay: BigNumber.from(259200),
+          blockNumber: 200000,
+          txHash: "0xabc123",
+          logIndex: 0,
+          timelockAddress: "0x4444444444444444444444444444444444444444",
+        },
+      ]);
+
+      // Mock getBlockTimestamp
+      const originalGetBlock = mockProvider.getBlock;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockProvider as any).getBlock = vi.fn().mockResolvedValue({ timestamp: 1699900000 });
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should use fallback timelockAddress from getTimelockAddress
+      expect(getTimelockAddress).toHaveBeenCalledWith(governorAddress, mockProvider);
+      expect(result.stage.status).toBe("COMPLETED");
+      expect(result.timelockAddress).toBe("0x4444444444444444444444444444444444444444");
+
+      // Restore
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockProvider as any).getBlock = originalGetBlock;
+    });
+
+    it("should return PENDING when queue event not found and state is Queued", async () => {
+      // #given proposal is Queued but queue event not found (race condition)
+      vi.mocked(getProposalState).mockResolvedValue("Queued");
+      vi.mocked(findProposalQueuedEvent).mockResolvedValue(null);
+
+      // #when tracking proposal queued stage
+      const result = await trackProposalQueued(
+        governorAddress,
+        proposalId,
+        mockProvider,
+        fromBlock
+      );
+
+      // #then should return PENDING status
+      expect(result.stage.status).toBe("PENDING");
     });
   });
 });

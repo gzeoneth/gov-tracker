@@ -1,6 +1,7 @@
 # @gzeoneth/gov-tracker
 
 [![npm version](https://img.shields.io/npm/v/@gzeoneth/gov-tracker.svg)](https://www.npmjs.com/package/@gzeoneth/gov-tracker)
+[![codecov](https://codecov.io/gh/gzeoneth/gov-tracker/graph/badge.svg?token=2WVH8Z82TE)](https://codecov.io/gh/gzeoneth/gov-tracker)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Track and execute Arbitrum DAO governance proposal lifecycle stages.

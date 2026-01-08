@@ -5,41 +5,24 @@
  * and address utilities.
  */
 
-// Main decoder
-export { decodeCalldata, decodeCalldataArray } from "./decoder";
-
-// Extraction
-export { extractCalldataFromStage } from "./extraction";
+// Main decoder and extraction
+export { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "./decoder";
 
 // Signature lookup
-export {
-  lookupSignature,
-  lookupLocalSignature,
-  lookup4byteDirectory,
-  clearSignatureCache,
-} from "./signature-lookup";
+export { lookupSignature, lookupLocalSignature } from "./signature-lookup";
 
-// Parameter decoder
+// Parameter decoder and address utilities
 export {
   parseParamTypes,
   isLikelyCalldata,
   formatDecodedValue,
-  decodeParameters,
+  getAddressLabel,
 } from "./parameter-decoder";
-
-// Address utilities
-export { getAddressLabel, getKnownAddresses } from "./address-utils";
-
-// URL utilities
-export { getTxExplorerUrl } from "../utils/urls";
 
 // Retryable ticket
 export {
   RETRYABLE_TICKET_MAGIC,
-  ARB1_DELAYED_INBOX,
-  NOVA_DELAYED_INBOX,
   isRetryableTicketMagic,
-  detectChainFromInbox,
   decodeRetryableTicket,
   getRetryableChainName,
 } from "./retryable-ticket";

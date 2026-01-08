@@ -179,7 +179,7 @@ describe("Historical Tracking Fork Tests", () => {
       expect(l2ExecutedStage?.status).toBe("COMPLETED");
 
       // Treasury proposal is L2-only, so L1 stages should be skipped
-      const l1Stages = result.stages.filter((s) => s.chain === "L1");
+      const l1Stages = result.stages.filter((s) => s.chain === "ethereum");
       for (const stage of l1Stages) {
         expect(stage.status).toBe("SKIPPED");
       }

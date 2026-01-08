@@ -18,27 +18,28 @@ import {
   getCurrentStage,
   getStagesForPath,
 } from "../src/stages/base";
+import { isStageType, getStageData } from "../src/types";
 import { ADDRESSES } from "../src/constants";
 
 describe("StageBuilder", () => {
   describe("construction", () => {
     it("should create a stage with type and chain", () => {
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2").build();
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").build();
 
       expect(stage.type).toBe("PROPOSAL_CREATED");
-      expect(stage.chain).toBe("L2");
+      expect(stage.chain).toBe("arb1");
       expect(stage.status).toBe("NOT_STARTED");
       expect(stage.transactions).toEqual([]);
     });
 
     it("should set status", () => {
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2").status("PENDING").build();
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
 
       expect(stage.status).toBe("PENDING");
     });
 
     it("should set data", () => {
-      const stage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .data({ proposalId: "12345", proposer: "0xabc" })
         .build();
 
@@ -46,7 +47,7 @@ describe("StageBuilder", () => {
     });
 
     it("should merge data from multiple calls", () => {
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .data({ operationId: "0x123", timelockAddress: "0xabc" })
         .data({ eta: 1700000000 })
         .data({ callScheduledData: [] })
@@ -61,9 +62,9 @@ describe("StageBuilder", () => {
     });
 
     it("should add transactions", () => {
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
-        .tx("0xabc", 100, "L2", { timestamp: 1700000000, description: "queued" })
-        .tx("0xdef", 200, "L2", { timestamp: 1700100000, description: "executed" })
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, { timestamp: 1700000000, description: "queued" })
+        .tx("0xdef", 200, "arb1", 42161, { timestamp: 1700100000, description: "executed" })
         .build();
 
       expect(stage.transactions?.length).toBe(2);
@@ -73,8 +74,47 @@ describe("StageBuilder", () => {
       expect(stage.transactions?.[1].description).toBe("executed");
     });
 
+    it("should add transactions with optional logIndex", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, { logIndex: 5 })
+        .build();
+
+      expect(stage.transactions?.[0].logIndex).toBe(5);
+    });
+
+    it("should add transactions with optional targetChain and targetChainId", () => {
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, {
+          targetChain: "ethereum",
+          targetChainId: 1,
+        })
+        .build();
+
+      expect(stage.transactions?.[0].targetChain).toBe("ethereum");
+      expect(stage.transactions?.[0].targetChainId).toBe(1);
+    });
+
+    it("should add transactions with all optional fields", () => {
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, {
+          timestamp: 1700000000,
+          logIndex: 3,
+          targetChain: "ethereum",
+          targetChainId: 1,
+          description: "cross-chain message",
+        })
+        .build();
+
+      const tx = stage.transactions?.[0];
+      expect(tx?.timestamp).toBe(1700000000);
+      expect(tx?.logIndex).toBe(3);
+      expect(tx?.targetChain).toBe("ethereum");
+      expect(tx?.targetChainId).toBe(1);
+      expect(tx?.description).toBe("cross-chain message");
+    });
+
     it("should set timing", () => {
-      const stage = new StageBuilder("VOTING_ACTIVE", "L2")
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
         .timing({
           startedAt: 1700000000,
           eta: 1700086400,
@@ -88,7 +128,7 @@ describe("StageBuilder", () => {
     });
 
     it("should create SKIPPED status with skip method", () => {
-      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2")
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
         .skip("L2-only path, no L1 roundtrip needed")
         .build();
 
@@ -97,11 +137,11 @@ describe("StageBuilder", () => {
 
     it("should replace transactions array", () => {
       const existingTxs = [
-        { hash: "0x111", blockNumber: 100, chain: "L2" as const },
-        { hash: "0x222", blockNumber: 200, chain: "L2" as const },
+        { hash: "0x111", blockNumber: 100, chain: "arb1" as const, chainId: 42161 },
+        { hash: "0x222", blockNumber: 200, chain: "arb1" as const, chainId: 42161 },
       ];
 
-      const stage = new StageBuilder("L2_TIMELOCK", "L2").transactions(existingTxs).build();
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").transactions(existingTxs).build();
 
       expect(stage.transactions).toEqual(existingTxs);
     });
@@ -109,10 +149,10 @@ describe("StageBuilder", () => {
 
   describe("chaining", () => {
     it("should support fluent API", () => {
-      const stage = new StageBuilder("L2_TIMELOCK", "L2")
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
         .status("COMPLETED")
         .data({ operationId: "0x123" })
-        .tx("0xabc", 100, "L2")
+        .tx("0xabc", 100, "arb1", 42161)
         .timing({ startedAt: 1700000000 })
         .build();
 
@@ -188,16 +228,16 @@ describe("Stage Base Functions", () => {
       const l1Timelock = stages.find((s) => s.type === "L1_TIMELOCK");
       const retryable = stages.find((s) => s.type === "RETRYABLE_EXECUTED");
 
-      expect(l1Timelock?.chain).toBe("L1");
-      expect(retryable?.chain).toBe("L1");
+      expect(l1Timelock?.chain).toBe("ethereum");
+      expect(retryable?.chain).toBe("ethereum");
     });
   });
 
   describe("findStage", () => {
     it("should find stage by type", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build(),
       ];
 
       const result = findStage(stages, "VOTING_ACTIVE");
@@ -207,7 +247,7 @@ describe("Stage Base Functions", () => {
     });
 
     it("should return undefined when not found", () => {
-      const stages = [new StageBuilder("PROPOSAL_CREATED", "L2").build()];
+      const stages = [new StageBuilder("PROPOSAL_CREATED", "arb1").build()];
 
       const result = findStage(stages, "L2_TIMELOCK");
 
@@ -218,9 +258,9 @@ describe("Stage Base Functions", () => {
   describe("getCurrentStage", () => {
     it("should return first non-complete stage", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("PENDING").build(),
-        new StageBuilder("PROPOSAL_QUEUED", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("NOT_STARTED").build(),
       ];
 
       const result = getCurrentStage(stages);
@@ -230,9 +270,9 @@ describe("Stage Base Functions", () => {
 
     it("should skip SKIPPED stages", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").skip("test").build(),
-        new StageBuilder("PROPOSAL_QUEUED", "L2").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").skip("test").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("PENDING").build(),
       ];
 
       const result = getCurrentStage(stages);
@@ -242,8 +282,8 @@ describe("Stage Base Functions", () => {
 
     it("should return null when all complete", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
       ];
 
       const result = getCurrentStage(stages);
@@ -255,11 +295,11 @@ describe("Stage Base Functions", () => {
   describe("updateStageInList", () => {
     it("should update existing stage", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("NOT_STARTED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("NOT_STARTED").build(),
       ];
 
-      const updatedStage = new StageBuilder("PROPOSAL_CREATED", "L2")
+      const updatedStage = new StageBuilder("PROPOSAL_CREATED", "arb1")
         .status("COMPLETED")
         .data({ proposalId: "123" })
         .build();
@@ -272,10 +312,10 @@ describe("Stage Base Functions", () => {
     });
 
     it("should not mutate original array", () => {
-      const stages = [new StageBuilder("PROPOSAL_CREATED", "L2").status("NOT_STARTED").build()];
+      const stages = [new StageBuilder("PROPOSAL_CREATED", "arb1").status("NOT_STARTED").build()];
       const originalStatus = stages[0].status;
 
-      const updatedStage = new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build();
+      const updatedStage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
 
       updateStageInList(stages, updatedStage);
 
@@ -287,9 +327,9 @@ describe("Stage Base Functions", () => {
   describe("areAllStagesComplete", () => {
     it("should return true when all stages are COMPLETED", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("COMPLETED").build(),
-        new StageBuilder("L2_TIMELOCK", "L2").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
       ];
 
       expect(areAllStagesComplete(stages)).toBe(true);
@@ -297,9 +337,9 @@ describe("Stage Base Functions", () => {
 
     it("should return true when all stages are SKIPPED", () => {
       const stages = [
-        new StageBuilder("L2_TO_L1_MESSAGE", "L2").skip("test").build(),
-        new StageBuilder("L1_TIMELOCK", "L1").skip("test").build(),
-        new StageBuilder("RETRYABLE_EXECUTED", "L1").skip("test").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").skip("test").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").skip("test").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").skip("test").build(),
       ];
 
       expect(areAllStagesComplete(stages)).toBe(true);
@@ -307,24 +347,24 @@ describe("Stage Base Functions", () => {
 
     it("should return true for mix of COMPLETED and SKIPPED", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("L2_TO_L1_MESSAGE", "L2").skip("L2-only").build(),
-        new StageBuilder("L1_TIMELOCK", "L1").skip("L2-only").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").skip("L2-only").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").skip("L2-only").build(),
       ];
 
       expect(areAllStagesComplete(stages)).toBe(true);
     });
 
     it("should return true for FAILED stage (terminal state)", () => {
-      const stages = [new StageBuilder("VOTING_ACTIVE", "L2").status("FAILED").build()];
+      const stages = [new StageBuilder("VOTING_ACTIVE", "arb1").status("FAILED").build()];
 
       expect(areAllStagesComplete(stages)).toBe(true);
     });
 
     it("should return false when any stage is PENDING", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build(),
       ];
 
       expect(areAllStagesComplete(stages)).toBe(false);
@@ -332,15 +372,15 @@ describe("Stage Base Functions", () => {
 
     it("should return false when any stage is NOT_STARTED", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("COMPLETED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("NOT_STARTED").build(),
       ];
 
       expect(areAllStagesComplete(stages)).toBe(false);
     });
 
     it("should return false when any stage is READY", () => {
-      const stages = [new StageBuilder("L2_TIMELOCK", "L2").status("READY").build()];
+      const stages = [new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build()];
 
       expect(areAllStagesComplete(stages)).toBe(false);
     });
@@ -421,6 +461,95 @@ describe("Stage Status Helpers", () => {
     // Type check that all statuses are valid
     validStatuses.forEach((status) => {
       expect(typeof status).toBe("string");
+    });
+  });
+});
+
+describe("Type Guards", () => {
+  describe("isStageType", () => {
+    it("should return true when stage type matches", () => {
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({ proposalId: "12345" })
+        .build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(true);
+    });
+
+    it("should return false when stage type does not match", () => {
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(false);
+      expect(isStageType(stage, "L2_TIMELOCK")).toBe(false);
+    });
+
+    it("should work as type narrowing in conditionals", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .data({ operationId: "0xabc", timelockAddress: "0x123" })
+        .build();
+
+      if (isStageType(stage, "L2_TIMELOCK")) {
+        // TypeScript should know stage is L2_TIMELOCK here
+        expect(stage.type).toBe("L2_TIMELOCK");
+        expect(stage.data.operationId).toBe("0xabc");
+      }
+    });
+
+    it("should return false for all non-matching types", () => {
+      const stage = new StageBuilder("RETRYABLE_EXECUTED", "arb1").status("COMPLETED").build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(false);
+      expect(isStageType(stage, "VOTING_ACTIVE")).toBe(false);
+      expect(isStageType(stage, "PROPOSAL_QUEUED")).toBe(false);
+      expect(isStageType(stage, "L2_TIMELOCK")).toBe(false);
+      expect(isStageType(stage, "L2_TO_L1_MESSAGE")).toBe(false);
+      expect(isStageType(stage, "L1_TIMELOCK")).toBe(false);
+    });
+  });
+
+  describe("getStageData", () => {
+    it("should return typed data when stage type matches", () => {
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({ proposalId: "12345", proposer: "0xabc" })
+        .build();
+
+      const data = getStageData(stage, "PROPOSAL_CREATED");
+
+      expect(data).not.toBeNull();
+      expect(data?.proposalId).toBe("12345");
+    });
+
+    it("should return null when stage type does not match", () => {
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
+
+      const data = getStageData(stage, "PROPOSAL_CREATED");
+
+      expect(data).toBeNull();
+    });
+
+    it("should return L2_TIMELOCK data correctly", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .data({ operationId: "0xdef456", timelockAddress: "0x789" })
+        .build();
+
+      const data = getStageData(stage, "L2_TIMELOCK");
+
+      expect(data).not.toBeNull();
+      expect(data?.operationId).toBe("0xdef456");
+      expect(data?.timelockAddress).toBe("0x789");
+    });
+
+    it("should return null when checking wrong type", () => {
+      const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
+        .status("PENDING")
+        .data({ operationId: "0x123" })
+        .build();
+
+      expect(getStageData(stage, "L2_TIMELOCK")).toBeNull();
+      expect(getStageData(stage, "PROPOSAL_CREATED")).toBeNull();
     });
   });
 });

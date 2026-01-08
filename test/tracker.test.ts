@@ -32,7 +32,9 @@ import {
   TimelockParams,
   TimelockBatchParams,
   DEFAULT_RPC_URLS,
-  TrackedProposal,
+  TrackingResult,
+  TrackedStage,
+  StageTransaction,
 } from "../src";
 
 dotenv.config({ quiet: true });
@@ -44,10 +46,10 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let tracker: ProposalStageTracker;
 
   // Cached tracking results (tracked once, reused across all tests)
-  let fullRoundtripResult: TrackedProposal;
-  let l2OnlyResult: TrackedProposal;
-  let inProgressResult: TrackedProposal;
-  let timelockResult: TrackedProposal;
+  let fullRoundtripResult: TrackingResult;
+  let l2OnlyResult: TrackingResult;
+  let inProgressResult: TrackingResult;
+  let timelockResult: TrackingResult;
 
   beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
@@ -109,7 +111,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(result.isComplete).toBe(true);
 
       // Verify all expected stages present
-      const stageTypes = result.stages.map((s) => s.type);
+      const stageTypes = result.stages.map((s: TrackedStage) => s.type);
       expect(stageTypes).toContain("PROPOSAL_CREATED");
       expect(stageTypes).toContain("VOTING_ACTIVE");
       expect(stageTypes).toContain("PROPOSAL_QUEUED");
@@ -135,7 +137,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should have COMPLETED status for all stages in completed proposal", async () => {
       const result = fullRoundtripResult;
 
-      const nonSkippedStages = result.stages.filter((s) => s.status !== "SKIPPED");
+      const nonSkippedStages = result.stages.filter((s: TrackedStage) => s.status !== "SKIPPED");
       for (const stage of nonSkippedStages) {
         expect(stage.status).toBe("COMPLETED");
       }
@@ -144,13 +146,14 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should include transaction hashes for completed stages", async () => {
       const result = fullRoundtripResult;
 
-      const l2TimelockExecuted = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const l2TimelockExecuted = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       expect(l2TimelockExecuted).toBeDefined();
       expect(l2TimelockExecuted!.transactions.length).toBeGreaterThan(0);
       // Find the execution transaction (has description "executed" or is the last tx)
       const executionTx =
-        l2TimelockExecuted!.transactions.find((t) => t.description === "executed") ||
-        l2TimelockExecuted!.transactions[l2TimelockExecuted!.transactions.length - 1];
+        l2TimelockExecuted!.transactions.find(
+          (t: StageTransaction) => t.description === "executed"
+        ) || l2TimelockExecuted!.transactions[l2TimelockExecuted!.transactions.length - 1];
       expect(executionTx.hash.toLowerCase()).toBe(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.expectedStages.L2_TIMELOCK.hash.toLowerCase()
       );
@@ -181,12 +184,12 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(result.isComplete).toBe(true);
 
       // Should have L2 stages
-      const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const l2Executed = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
       expect(l2Executed!.status).toBe("COMPLETED");
 
       // L1 stages should be skipped
-      const l1Stages = result.stages.filter((s) => s.chain === "L1");
+      const l1Stages = result.stages.filter((s: TrackedStage) => s.chain === "ethereum");
       for (const stage of l1Stages) {
         expect(stage.status).toBe("SKIPPED");
       }
@@ -201,10 +204,10 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should match expected L2 timelock execution hash", async () => {
       const result = l2OnlyResult;
 
-      const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const l2Executed = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       // Find the execution transaction (has description "executed" or is the last tx)
       const executionTx =
-        l2Executed!.transactions.find((t) => t.description === "executed") ||
+        l2Executed!.transactions.find((t: StageTransaction) => t.description === "executed") ||
         l2Executed!.transactions[l2Executed!.transactions.length - 1];
       expect(executionTx.hash.toLowerCase()).toBe(
         NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash.toLowerCase()
@@ -224,7 +227,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should show L2 timelock as completed", async () => {
       const result = inProgressResult;
 
-      const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const l2Executed = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
       expect(l2Executed!.status).toBe("COMPLETED");
     });
@@ -238,11 +241,11 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(result.input.type).toBe("timelock");
 
       // Should not have governor stages (timelock entry skips them)
-      const createdStage = result.stages.find((s) => s.type === "PROPOSAL_CREATED");
+      const createdStage = result.stages.find((s: TrackedStage) => s.type === "PROPOSAL_CREATED");
       expect(createdStage).toBeUndefined();
 
       // Should have timelock stages
-      const l2Executed = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const l2Executed = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
     });
 
@@ -272,8 +275,12 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       const timelockResult2 = timelockResult;
 
       // L2 timelock execution should be the same
-      const govL2Executed = governorResult.stages.find((s) => s.type === "L2_TIMELOCK");
-      const tlL2Executed = timelockResult2.stages.find((s) => s.type === "L2_TIMELOCK");
+      const govL2Executed = governorResult.stages.find(
+        (s: TrackedStage) => s.type === "L2_TIMELOCK"
+      );
+      const tlL2Executed = timelockResult2.stages.find(
+        (s: TrackedStage) => s.type === "L2_TIMELOCK"
+      );
 
       expect(govL2Executed!.transactions[0].hash.toLowerCase()).toBe(
         tlL2Executed!.transactions[0].hash.toLowerCase()
@@ -285,43 +292,35 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should validate correct salt for timelock stage", async () => {
       const result = fullRoundtripResult;
 
-      const timelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const timelockStage = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       if (
         timelockStage &&
         timelockStage.data.salt &&
         timelockStage.data.operationId &&
-        timelockStage.data.timelockAddress
+        timelockStage.data.callScheduledData
       ) {
-        const targets = timelockStage.data.targets as string[] | undefined;
-        if (targets && Array.isArray(targets)) {
+        const callData = timelockStage.data.callScheduledData;
+        const isBatch = callData.length > 1 || timelockStage.data.isBatchOperation;
+
+        if (isBatch) {
           const params: TimelockBatchParams = {
-            targets,
-            values: (timelockStage.data.values as string[]).map((v) => ethers.BigNumber.from(v)),
-            payloads: timelockStage.data.payloads as string[],
+            targets: callData.map((c) => c.target),
+            values: callData.map((c) => ethers.BigNumber.from(c.value)),
+            payloads: callData.map((c) => c.data),
             predecessor: (timelockStage.data.predecessor as string) || ethers.constants.HashZero,
             salt: timelockStage.data.salt as string,
           };
-          const isValid = await validateSaltBatch(
-            timelockStage.data.timelockAddress as string,
-            timelockStage.data.operationId as string,
-            params,
-            l2Provider
-          );
+          const isValid = validateSaltBatch(timelockStage.data.operationId as string, params);
           expect(isValid).toBe(true);
-        } else if (timelockStage.data.target) {
+        } else if (callData.length === 1) {
           const params: TimelockParams = {
-            target: timelockStage.data.target as string,
-            value: ethers.BigNumber.from(timelockStage.data.value ?? "0"),
-            data: (timelockStage.data.data as string) ?? "0x",
+            target: callData[0].target,
+            value: ethers.BigNumber.from(callData[0].value),
+            data: callData[0].data,
             predecessor: (timelockStage.data.predecessor as string) || ethers.constants.HashZero,
             salt: timelockStage.data.salt as string,
           };
-          const isValid = await validateSalt(
-            timelockStage.data.timelockAddress as string,
-            timelockStage.data.operationId as string,
-            params,
-            l2Provider
-          );
+          const isValid = validateSalt(timelockStage.data.operationId as string, params);
           expect(isValid).toBe(true);
         }
       }
@@ -330,40 +329,32 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should reject invalid salt", async () => {
       const result = fullRoundtripResult;
 
-      const timelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
+      const timelockStage = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       const invalidSalt = "0x0000000000000000000000000000000000000000000000000000000000000001";
 
-      if (timelockStage && timelockStage.data.operationId && timelockStage.data.timelockAddress) {
-        const targets = timelockStage.data.targets as string[] | undefined;
-        if (targets && Array.isArray(targets)) {
+      if (timelockStage && timelockStage.data.operationId && timelockStage.data.callScheduledData) {
+        const callData = timelockStage.data.callScheduledData;
+        const isBatch = callData.length > 1 || timelockStage.data.isBatchOperation;
+
+        if (isBatch) {
           const params: TimelockBatchParams = {
-            targets,
-            values: (timelockStage.data.values as string[]).map((v) => ethers.BigNumber.from(v)),
-            payloads: timelockStage.data.payloads as string[],
+            targets: callData.map((c) => c.target),
+            values: callData.map((c) => ethers.BigNumber.from(c.value)),
+            payloads: callData.map((c) => c.data),
             predecessor: (timelockStage.data.predecessor as string) || ethers.constants.HashZero,
             salt: invalidSalt,
           };
-          const isValid = await validateSaltBatch(
-            timelockStage.data.timelockAddress as string,
-            timelockStage.data.operationId as string,
-            params,
-            l2Provider
-          );
+          const isValid = validateSaltBatch(timelockStage.data.operationId as string, params);
           expect(isValid).toBe(false);
-        } else if (timelockStage.data.target) {
+        } else if (callData.length === 1) {
           const params: TimelockParams = {
-            target: timelockStage.data.target as string,
-            value: ethers.BigNumber.from(timelockStage.data.value ?? "0"),
-            data: (timelockStage.data.data as string) ?? "0x",
+            target: callData[0].target,
+            value: ethers.BigNumber.from(callData[0].value),
+            data: callData[0].data,
             predecessor: (timelockStage.data.predecessor as string) || ethers.constants.HashZero,
             salt: invalidSalt,
           };
-          const isValid = await validateSalt(
-            timelockStage.data.timelockAddress as string,
-            timelockStage.data.operationId as string,
-            params,
-            l2Provider
-          );
+          const isValid = validateSalt(timelockStage.data.operationId as string, params);
           expect(isValid).toBe(false);
         }
       }
@@ -389,9 +380,9 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
 
       for (const stage of result.stages) {
         if (l2Stages.includes(stage.type)) {
-          expect(stage.chain).toBe("L2");
+          expect(stage.chain).toBe("arb1");
         } else if (l1Stages.includes(stage.type)) {
-          expect(stage.chain).toBe("L1");
+          expect(stage.chain).toBe("ethereum");
         }
       }
     });
@@ -414,7 +405,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
         "RETRYABLE_EXECUTED",
       ];
 
-      const actualTypes = result.stages.map((s) => s.type);
+      const actualTypes = result.stages.map((s: TrackedStage) => s.type);
       for (let i = 0; i < expectedOrder.length; i++) {
         const expectedType = expectedOrder[i];
         const actualIndex = actualTypes.indexOf(expectedType);

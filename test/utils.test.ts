@@ -25,9 +25,20 @@ import {
 } from "../src";
 
 // Internal imports (for testing internal functions)
-import { hashOperation, hashOperationBatch } from "../src/utils/operation-id";
+import {
+  hashOperation,
+  hashOperationBatch,
+  tryFindSalt,
+  computeAndValidateOperationHash,
+  validateSaltBatch,
+} from "../src/utils/operation-id";
 import { isValidOperationId } from "./helpers/discovery-helpers";
-import { queryWithRetry, delay, isRetryableError } from "../src/utils/rpc-utils";
+import {
+  queryWithRetry,
+  delay,
+  isRetryableError,
+  isGasEstimationError,
+} from "../src/utils/rpc-utils";
 
 describe("Operation ID Utilities", () => {
   beforeEach(() => {
@@ -184,6 +195,169 @@ describe("Operation ID Utilities", () => {
     });
   });
 
+  describe("validateSaltBatch", () => {
+    it("should validate correct salt for batch operation", () => {
+      const params = {
+        targets: [
+          "0x1234567890123456789012345678901234567890",
+          "0x2222222222222222222222222222222222222222",
+        ],
+        values: [BigNumber.from("0"), BigNumber.from("1000")],
+        payloads: ["0xabcd", "0xef01"],
+        predecessor: ethers.constants.HashZero,
+        salt: ethers.utils.id("batch proposal"),
+      };
+
+      const operationId = hashOperationBatch(params);
+
+      expect(validateSaltBatch(operationId, params)).toBe(true);
+    });
+
+    it("should reject incorrect salt for batch operation", () => {
+      const params = {
+        targets: ["0x1234567890123456789012345678901234567890"],
+        values: [BigNumber.from("0")],
+        payloads: ["0xabcd"],
+        predecessor: ethers.constants.HashZero,
+        salt: ethers.utils.id("batch proposal"),
+      };
+
+      const wrongOperationId = "0x0000000000000000000000000000000000000000000000000000000000000001";
+
+      expect(validateSaltBatch(wrongOperationId, params)).toBe(false);
+    });
+  });
+
+  describe("tryFindSalt", () => {
+    it("should find matching salt from candidates for single operation", () => {
+      const correctSalt = ethers.utils.id("correct description");
+      const baseParams = {
+        target: "0x1234567890123456789012345678901234567890",
+        value: BigNumber.from("0"),
+        data: "0xabcdef",
+        predecessor: ethers.constants.HashZero,
+      };
+
+      const expectedOperationId = hashOperation({ ...baseParams, salt: correctSalt });
+
+      const candidates = [
+        ethers.constants.HashZero,
+        ethers.utils.id("wrong description"),
+        correctSalt,
+        ethers.utils.id("another wrong"),
+      ];
+
+      const foundSalt = tryFindSalt(expectedOperationId, baseParams, candidates);
+      expect(foundSalt).toBe(correctSalt);
+    });
+
+    it("should find matching salt from candidates for batch operation", () => {
+      const correctSalt = ethers.utils.id("correct batch description");
+      const baseParams = {
+        targets: ["0x1234567890123456789012345678901234567890"],
+        values: [BigNumber.from("0")],
+        payloads: ["0xabcdef"],
+        predecessor: ethers.constants.HashZero,
+      };
+
+      const expectedOperationId = hashOperationBatch({ ...baseParams, salt: correctSalt });
+
+      const candidates = [ethers.constants.HashZero, correctSalt];
+
+      const foundSalt = tryFindSalt(expectedOperationId, baseParams, candidates);
+      expect(foundSalt).toBe(correctSalt);
+    });
+
+    it("should return null if no matching salt found", () => {
+      const baseParams = {
+        target: "0x1234567890123456789012345678901234567890",
+        value: BigNumber.from("0"),
+        data: "0xabcdef",
+        predecessor: ethers.constants.HashZero,
+      };
+
+      const wrongOperationId = "0x0000000000000000000000000000000000000000000000000000000000000001";
+
+      const candidates = [
+        ethers.constants.HashZero,
+        ethers.utils.id("description1"),
+        ethers.utils.id("description2"),
+      ];
+
+      const foundSalt = tryFindSalt(wrongOperationId, baseParams, candidates);
+      expect(foundSalt).toBeNull();
+    });
+
+    it("should return null for empty candidates", () => {
+      const baseParams = {
+        target: "0x1234567890123456789012345678901234567890",
+        value: BigNumber.from("0"),
+        data: "0xabcdef",
+        predecessor: ethers.constants.HashZero,
+      };
+
+      const foundSalt = tryFindSalt("0x" + "a".repeat(64), baseParams, []);
+      expect(foundSalt).toBeNull();
+    });
+  });
+
+  describe("computeAndValidateOperationHash", () => {
+    it("should return valid for correct single operation params", () => {
+      const params = {
+        target: "0x1234567890123456789012345678901234567890",
+        value: BigNumber.from("1000"),
+        data: "0xabcdef",
+        predecessor: ethers.constants.HashZero,
+        salt: ethers.utils.id("test"),
+      };
+
+      const expectedOperationId = hashOperation(params);
+
+      const result = computeAndValidateOperationHash(expectedOperationId, params);
+
+      expect(result.isValid).toBe(true);
+      expect(result.computedHash).toBe(expectedOperationId);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("should return valid for correct batch operation params", () => {
+      const params = {
+        targets: ["0x1234567890123456789012345678901234567890"],
+        values: [BigNumber.from("0")],
+        payloads: ["0xabcd"],
+        predecessor: ethers.constants.HashZero,
+        salt: ethers.utils.id("batch test"),
+      };
+
+      const expectedOperationId = hashOperationBatch(params);
+
+      const result = computeAndValidateOperationHash(expectedOperationId, params);
+
+      expect(result.isValid).toBe(true);
+      expect(result.computedHash).toBe(expectedOperationId);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("should return invalid with error for mismatched operation ID", () => {
+      const params = {
+        target: "0x1234567890123456789012345678901234567890",
+        value: BigNumber.from("0"),
+        data: "0xabcdef",
+        predecessor: ethers.constants.HashZero,
+        salt: ethers.utils.id("test"),
+      };
+
+      const wrongOperationId = "0x0000000000000000000000000000000000000000000000000000000000000001";
+
+      const result = computeAndValidateOperationHash(wrongOperationId, params);
+
+      expect(result.isValid).toBe(false);
+      expect(result.computedHash).not.toBe(wrongOperationId);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain("mismatch");
+    });
+  });
+
   describe("isValidOperationId", () => {
     it("should validate correct operation ID format", () => {
       // HashZero is NOT valid (zero bytes32 indicates no operation)
@@ -295,6 +469,14 @@ describe("RPC Utilities", () => {
     it("should identify rate limit errors", () => {
       expect(isRetryableError(new Error("rate limit exceeded"))).toBe(true);
       expect(isRetryableError(new Error("Too Many Requests"))).toBe(true);
+      expect(isRetryableError(new Error("429 too many requests"))).toBe(true);
+    });
+
+    it("should identify server errors", () => {
+      expect(isRetryableError(new Error("server error"))).toBe(true);
+      expect(isRetryableError(new Error("502 bad gateway"))).toBe(true);
+      expect(isRetryableError(new Error("503 service unavailable"))).toBe(true);
+      expect(isRetryableError(new Error("504 gateway timeout"))).toBe(true);
     });
 
     it("should identify timeout errors", () => {
@@ -302,9 +484,89 @@ describe("RPC Utilities", () => {
       expect(isRetryableError(new Error("ETIMEDOUT"))).toBe(true);
     });
 
+    it("should identify connection errors", () => {
+      expect(isRetryableError(new Error("ECONNRESET"))).toBe(true);
+      expect(isRetryableError(new Error("ECONNREFUSED"))).toBe(true);
+      expect(isRetryableError(new Error("network error"))).toBe(true);
+    });
+
+    it("should identify provider-specific errors", () => {
+      expect(isRetryableError(new Error("missing response"))).toBe(true);
+      expect(isRetryableError(new Error("request failed"))).toBe(true);
+    });
+
     it("should not retry non-retryable errors", () => {
       expect(isRetryableError(new Error("invalid address"))).toBe(false);
       expect(isRetryableError(new Error("execution reverted"))).toBe(false);
+    });
+
+    it("should return false for non-Error objects", () => {
+      expect(isRetryableError("string error")).toBe(false);
+      expect(isRetryableError(null)).toBe(false);
+      expect(isRetryableError(undefined)).toBe(false);
+      expect(isRetryableError({ message: "rate limit" })).toBe(false);
+    });
+  });
+
+  describe("isGasEstimationError", () => {
+    it("should identify gas required exceeds errors", () => {
+      expect(isGasEstimationError(new Error("gas required exceeds allowance"))).toBe(true);
+    });
+
+    it("should identify execution reverted errors", () => {
+      expect(isGasEstimationError(new Error("execution reverted"))).toBe(true);
+    });
+
+    it("should identify out of gas errors", () => {
+      expect(isGasEstimationError(new Error("out of gas"))).toBe(true);
+    });
+
+    it("should identify intrinsic gas too low errors", () => {
+      expect(isGasEstimationError(new Error("intrinsic gas too low"))).toBe(true);
+    });
+
+    it("should identify insufficient funds for gas errors", () => {
+      expect(isGasEstimationError(new Error("insufficient funds for gas"))).toBe(true);
+    });
+
+    it("should identify cannot estimate gas errors", () => {
+      expect(isGasEstimationError(new Error("cannot estimate gas; transaction may fail"))).toBe(
+        true
+      );
+    });
+
+    it("should identify gas estimation errors", () => {
+      expect(isGasEstimationError(new Error("gas estimation failed"))).toBe(true);
+    });
+
+    it("should identify gas limit errors", () => {
+      expect(isGasEstimationError(new Error("exceeds block gas limit"))).toBe(true);
+    });
+
+    it("should identify revert errors", () => {
+      expect(isGasEstimationError(new Error("transaction will revert"))).toBe(true);
+    });
+
+    it("should identify transaction may fail errors", () => {
+      expect(isGasEstimationError(new Error("transaction may fail or require more gas"))).toBe(
+        true
+      );
+    });
+
+    it("should handle non-Error objects", () => {
+      expect(isGasEstimationError("execution reverted")).toBe(true);
+      expect(isGasEstimationError("out of gas")).toBe(true);
+    });
+
+    it("should return false for non-gas errors", () => {
+      expect(isGasEstimationError(new Error("invalid address"))).toBe(false);
+      expect(isGasEstimationError(new Error("network error"))).toBe(false);
+      expect(isGasEstimationError(new Error("rate limit exceeded"))).toBe(false);
+    });
+
+    it("should be case-insensitive", () => {
+      expect(isGasEstimationError(new Error("GAS REQUIRED EXCEEDS"))).toBe(true);
+      expect(isGasEstimationError(new Error("EXECUTION REVERTED"))).toBe(true);
     });
   });
 });
@@ -494,14 +756,14 @@ describe("Stage Metadata Utilities", () => {
 
       expect(meta.title).toBe("Proposal Created");
       expect(meta.description).toBeDefined();
-      expect(meta.chain).toBe("L2");
+      expect(meta.chain).toBe("arb1");
       expect(typeof meta.estimatedDays).toBe("number");
     });
 
     it("should return metadata for L1 stages", () => {
       const meta = getStageMetadata("L1_TIMELOCK");
 
-      expect(meta.chain).toBe("L1");
+      expect(meta.chain).toBe("ethereum");
       expect(meta.title).toBeDefined();
     });
 
@@ -523,7 +785,7 @@ describe("Stage Metadata Utilities", () => {
         const meta = getStageMetadata(stageType);
         expect(meta.title).toBeDefined();
         expect(meta.description).toBeDefined();
-        expect(["L1", "L2", "NOVA", "CROSS_CHAIN"]).toContain(meta.chain);
+        expect(["ethereum", "arb1", "nova", "CROSS_CHAIN"]).toContain(meta.chain);
       }
     });
   });
@@ -540,8 +802,8 @@ describe("Stage Metadata Utilities", () => {
     it("should include correct chain types", () => {
       const allMeta = getAllStageMetadata();
 
-      expect(allMeta.VOTING_ACTIVE.chain).toBe("L2");
-      expect(allMeta.L1_TIMELOCK.chain).toBe("L1");
+      expect(allMeta.VOTING_ACTIVE.chain).toBe("arb1");
+      expect(allMeta.L1_TIMELOCK.chain).toBe("ethereum");
     });
   });
 
@@ -621,24 +883,9 @@ describe("Tracker Creation (Unit Tests)", () => {
 import type { StageType, StageTransaction } from "../src/types";
 
 // URL utility tests
-import { chainTypeToId, getExplorerUrl, getTxUrl, getStageTransactionUrl } from "../src/utils/urls";
-import { CHAIN_IDS } from "../src/constants";
+import { getExplorerUrl, getTxUrl, getStageTransactionUrl, CHAIN_IDS } from "../src/constants";
 
 describe("URL Utilities", () => {
-  describe("chainTypeToId", () => {
-    it("should return Ethereum chain ID for L1", () => {
-      expect(chainTypeToId("L1")).toBe(CHAIN_IDS.ETHEREUM);
-    });
-
-    it("should return Arbitrum One chain ID for L2", () => {
-      expect(chainTypeToId("L2")).toBe(CHAIN_IDS.ARB_ONE);
-    });
-
-    it("should return Nova chain ID for NOVA", () => {
-      expect(chainTypeToId("NOVA")).toBe(CHAIN_IDS.NOVA);
-    });
-  });
-
   describe("getExplorerUrl", () => {
     it("should return Etherscan URL for Ethereum", () => {
       const url = getExplorerUrl(1, "tx", "0x123");
@@ -673,7 +920,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x123",
         blockNumber: 100,
-        chain: "L1",
+        chain: "ethereum",
+        chainId: 1,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://etherscan.io/tx/0x123");
@@ -683,7 +931,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x456",
         blockNumber: 200,
-        chain: "L2",
+        chain: "arb1",
+        chainId: 42161,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://arbiscan.io/tx/0x456");
@@ -693,7 +942,8 @@ describe("URL Utilities", () => {
       const tx: StageTransaction = {
         hash: "0x789",
         blockNumber: 300,
-        chain: "NOVA",
+        chain: "nova",
+        chainId: 42170,
       };
       const url = getStageTransactionUrl(tx);
       expect(url).toBe("https://nova.arbiscan.io/tx/0x789");

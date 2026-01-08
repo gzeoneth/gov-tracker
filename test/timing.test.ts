@@ -132,26 +132,26 @@ describe("Timing Utilities", () => {
     // Helper to create test stages
     function createTestStages(): TrackedStage[] {
       return [
-        new StageBuilder("PROPOSAL_CREATED", "L2")
+        new StageBuilder("PROPOSAL_CREATED", "arb1")
           .status("COMPLETED")
-          .tx("0xabc", 100, "L2", { timestamp: 1700000000 })
+          .tx("0xabc", 100, "arb1", 42161, { timestamp: 1700000000 })
           .build(),
-        new StageBuilder("VOTING_ACTIVE", "L2")
+        new StageBuilder("VOTING_ACTIVE", "arb1")
           .status("COMPLETED")
-          .tx("0xdef", 200, "L2", { timestamp: 1700086400 })
+          .tx("0xdef", 200, "arb1", 42161, { timestamp: 1700086400 })
           .timing({ eta: 1701209600 }) // ~14 days later
           .build(),
-        new StageBuilder("PROPOSAL_QUEUED", "L2")
+        new StageBuilder("PROPOSAL_QUEUED", "arb1")
           .status("COMPLETED")
-          .tx("0xghi", 300, "L2", { timestamp: 1701209600, description: "executed" })
+          .tx("0xghi", 300, "arb1", 42161, { timestamp: 1701209600, description: "executed" })
           .build(),
-        new StageBuilder("L2_TIMELOCK", "L2")
+        new StageBuilder("L2_TIMELOCK", "arb1")
           .status("PENDING")
           .timing({ eta: 1701296000 }) // +1 day
           .build(),
-        new StageBuilder("L2_TO_L1_MESSAGE", "L2").status("NOT_STARTED").build(),
-        new StageBuilder("L1_TIMELOCK", "L1").status("NOT_STARTED").build(),
-        new StageBuilder("RETRYABLE_EXECUTED", "L1").status("NOT_STARTED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
     }
 
@@ -170,11 +170,11 @@ describe("Timing Utilities", () => {
 
     it("should calculate ETA based on completed stage timestamp", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2")
+        new StageBuilder("PROPOSAL_CREATED", "arb1")
           .status("COMPLETED")
-          .tx("0xabc", 100, "L2", { timestamp: 1700000000, description: "executed" })
+          .tx("0xabc", 100, "arb1", 42161, { timestamp: 1700000000, description: "executed" })
           .build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("NOT_STARTED").build(),
       ];
 
       const eta = calculateExpectedEta(stages, 1);
@@ -188,8 +188,8 @@ describe("Timing Utilities", () => {
 
     it("should return undefined when no reference point available", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2").status("NOT_STARTED").build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("NOT_STARTED").build(),
       ];
 
       const eta = calculateExpectedEta(stages, 1);
@@ -199,13 +199,13 @@ describe("Timing Utilities", () => {
 
     it("should accumulate delays across multiple stages", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2")
+        new StageBuilder("PROPOSAL_CREATED", "arb1")
           .status("COMPLETED")
-          .tx("0xabc", 100, "L2", { timestamp: 1700000000, description: "executed" })
+          .tx("0xabc", 100, "arb1", 42161, { timestamp: 1700000000, description: "executed" })
           .build(),
-        new StageBuilder("VOTING_ACTIVE", "L2").status("NOT_STARTED").build(),
-        new StageBuilder("PROPOSAL_QUEUED", "L2").status("NOT_STARTED").build(),
-        new StageBuilder("L2_TIMELOCK", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("NOT_STARTED").build(),
       ];
 
       // Calculate ETA for L2_TIMELOCK (index 3)
@@ -223,15 +223,15 @@ describe("Timing Utilities", () => {
 
     it("should use first available reference going backwards", () => {
       const stages = [
-        new StageBuilder("PROPOSAL_CREATED", "L2")
+        new StageBuilder("PROPOSAL_CREATED", "arb1")
           .status("COMPLETED")
-          .tx("0xabc", 100, "L2", { timestamp: 1700000000, description: "executed" })
+          .tx("0xabc", 100, "arb1", 42161, { timestamp: 1700000000, description: "executed" })
           .build(),
-        new StageBuilder("VOTING_ACTIVE", "L2")
+        new StageBuilder("VOTING_ACTIVE", "arb1")
           .status("COMPLETED")
           .timing({ eta: 1701209600 })
           .build(),
-        new StageBuilder("PROPOSAL_QUEUED", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("NOT_STARTED").build(),
       ];
 
       // Should use VOTING_ACTIVE eta (1701209600) not PROPOSAL_CREATED timestamp
@@ -243,7 +243,7 @@ describe("Timing Utilities", () => {
     });
 
     it("should handle index 0 (first stage)", () => {
-      const stages = [new StageBuilder("PROPOSAL_CREATED", "L2").status("NOT_STARTED").build()];
+      const stages = [new StageBuilder("PROPOSAL_CREATED", "arb1").status("NOT_STARTED").build()];
 
       const eta = calculateExpectedEta(stages, 0);
 
@@ -253,12 +253,12 @@ describe("Timing Utilities", () => {
 
     it("should prefer execution timestamp over other timestamps", () => {
       const stages = [
-        new StageBuilder("L2_TIMELOCK", "L2")
+        new StageBuilder("L2_TIMELOCK", "arb1")
           .status("COMPLETED")
-          .tx("0xqueue", 100, "L2", { timestamp: 1700000000, description: "queued" })
-          .tx("0xexec", 200, "L2", { timestamp: 1700100000, description: "executed" })
+          .tx("0xqueue", 100, "arb1", 42161, { timestamp: 1700000000, description: "queued" })
+          .tx("0xexec", 200, "arb1", 42161, { timestamp: 1700100000, description: "executed" })
           .build(),
-        new StageBuilder("L2_TO_L1_MESSAGE", "L2").status("NOT_STARTED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
       ];
 
       const eta = calculateExpectedEta(stages, 1);

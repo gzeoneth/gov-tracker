@@ -1,16 +1,10 @@
 /**
- * Simulation Data Module
+ * Simulation Data Preparation Module
  *
- * Exports for simulation data preparation that clients can use
- * to call Tenderly API themselves.
+ * Re-exports simulation data preparation functions for Tenderly API usage.
  */
 
-// Simulation data preparation
 export {
-  NETWORK_IDS,
-  TIMELOCK_SELECTORS,
-  chainContextToSimType,
-  getNetworkId,
   prepareRetryableSimulation,
   prepareTimelockSimulation,
   prepareCallSimulation,

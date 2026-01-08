@@ -13,13 +13,14 @@ import { queryWithRetry } from "./utils/rpc-utils";
 import {
   PreparedTransaction,
   ProposalCreatedEventArgs,
+  ProposalState,
   CohortType,
   ElectionPhase,
-  GovernorProposalState,
   ElectionProposalStatus,
   ElectionStatus,
 } from "./types";
 import { getL1BlockNumberFromL2 } from "./utils/timing";
+import { saltFromDescription } from "./utils/salt-computation";
 import { loggers } from "./utils/logger";
 
 const log = loggers.election;
@@ -186,7 +187,8 @@ export function prepareElectionCreation(
       to: nomineeGovernorAddress,
       data: calldata,
       value: "0",
-      chain: "L2",
+      chain: "arb1",
+      chainId: 42161,
       description: `createElection() on SecurityCouncilNomineeElectionGovernor for election #${electionStatus.electionCount}`,
     },
     electionIndex: electionStatus.electionCount,
@@ -241,8 +243,8 @@ function formatDuration(seconds: number): string {
 /**
  * Convert numeric proposal state to string
  */
-function stateToString(state: number): GovernorProposalState {
-  const states: GovernorProposalState[] = [
+function stateToString(state: number): ProposalState {
+  const states: ProposalState[] = [
     "Pending",
     "Active",
     "Canceled",
@@ -364,7 +366,7 @@ export async function trackElectionProposal(
 
   // Check for member proposal
   let memberProposalId: string | null = null;
-  let memberProposalState: GovernorProposalState | null = null;
+  let memberProposalState: ProposalState | null = null;
 
   try {
     const memberPropId = await queryWithRetry<BigNumber>(() =>
@@ -454,7 +456,7 @@ export async function getElectionProposalId(
   const [targets, values, calldatas, description] = proposeArgs;
 
   // Hash the description to get descriptionHash
-  const descriptionHash = ethers.utils.id(description);
+  const descriptionHash = saltFromDescription(description);
 
   // Calculate proposal ID using hashProposal
   const proposalId = await queryWithRetry(() =>
@@ -532,7 +534,7 @@ export async function getElectionProposalParams(
           values: args.values,
           calldatas: args.calldatas,
           description: args.description,
-          descriptionHash: ethers.utils.id(args.description),
+          descriptionHash: saltFromDescription(args.description),
         };
       }
     } catch {
@@ -608,7 +610,8 @@ export async function prepareMemberElectionTrigger(
     to: nomineeGovernorAddress,
     data: calldata,
     value: "0",
-    chain: "L2",
+    chain: "arb1",
+    chainId: 42161,
     description: `execute() on NomineeElectionGovernor to trigger member election #${electionStatus.electionIndex}`,
   };
 }

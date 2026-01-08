@@ -4,7 +4,7 @@
  * Tests for serialization, validation, and helper utilities.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import {
   serialize,
@@ -13,6 +13,8 @@ import {
   deserializeCallScheduledData,
   serializeCallScheduledDataArray,
   deserializeCallScheduledDataArray,
+} from "../src/stages/base";
+import {
   createTimelockStageData,
   collectAllScheduledData,
   buildExecutionPayloadData,
@@ -21,6 +23,7 @@ import {
   simpleBulkError,
   validateStageForBulkPrepare,
   validateStageForSimpleBulk,
+  calculateTimelockEta,
 } from "../src/utils/stage-helpers";
 import { StageBuilder } from "../src/stages/stage-builder";
 import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
@@ -82,9 +85,9 @@ describe("Serialization Utilities", () => {
       const result = deserialize(data, ["index", "value"]);
 
       expect(BigNumber.isBigNumber(result.index)).toBe(true);
-      expect((result.index as BigNumber).toString()).toBe("5");
+      expect((result.index as unknown as BigNumber).toString()).toBe("5");
       expect(BigNumber.isBigNumber(result.value)).toBe(true);
-      expect((result.value as BigNumber).toString()).toBe("1000000000000000000");
+      expect((result.value as unknown as BigNumber).toString()).toBe("1000000000000000000");
       expect(result.name).toBe("test");
     });
 
@@ -115,6 +118,8 @@ describe("Serialization Utilities", () => {
         delay: BigNumber.from(86400),
         txHash: "0xdef",
         blockNumber: 12345,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       };
 
       const result = serializeCallScheduledData(data);
@@ -139,6 +144,8 @@ describe("Serialization Utilities", () => {
         delay: "86400",
         txHash: "0xdef",
         blockNumber: 12345,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       };
 
       const result = deserializeCallScheduledData(data);
@@ -165,6 +172,8 @@ describe("Serialization Utilities", () => {
           delay: BigNumber.from(86400),
           txHash: "0xdef",
           blockNumber: 12345,
+          logIndex: 0,
+          timelockAddress: "0x0000000000000000000000000000000000000000",
         },
         {
           operationId: "0xabc",
@@ -176,6 +185,8 @@ describe("Serialization Utilities", () => {
           delay: BigNumber.from(86400),
           txHash: "0xdef",
           blockNumber: 12345,
+          logIndex: 0,
+          timelockAddress: "0x0000000000000000000000000000000000000000",
         },
       ];
 
@@ -201,6 +212,8 @@ describe("Serialization Utilities", () => {
           delay: "86400",
           txHash: "0xdef",
           blockNumber: 12345,
+          logIndex: 0,
+          timelockAddress: "0x0000000000000000000000000000000000000000",
         },
         {
           operationId: "0xabc",
@@ -212,6 +225,8 @@ describe("Serialization Utilities", () => {
           delay: "86400",
           txHash: "0xdef",
           blockNumber: 12345,
+          logIndex: 0,
+          timelockAddress: "0x0000000000000000000000000000000000000000",
         },
       ];
 
@@ -238,10 +253,12 @@ describe("createTimelockStageData", () => {
         delay: "86400",
         txHash: "0xdef",
         blockNumber: 12345,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       },
     ];
 
-    const stage = new StageBuilder("L2_TIMELOCK", "L2")
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
       .status("READY")
       .data({
         timelockAddress: "0x3333333333333333333333333333333333333333",
@@ -271,10 +288,12 @@ describe("createTimelockStageData", () => {
         delay: "259200",
         txHash: "0xghi",
         blockNumber: 21000000,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       },
     ];
 
-    const stage = new StageBuilder("L1_TIMELOCK", "L1")
+    const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
       .status("READY")
       .data({
         timelockAddress: "0x4444444444444444444444444444444444444444",
@@ -302,10 +321,12 @@ describe("createTimelockStageData", () => {
         delay: "86400",
         txHash: "0xsc",
         blockNumber: 12345,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       },
     ];
 
-    const stage = new StageBuilder("L2_TIMELOCK", "L2")
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
       .status("READY")
       .data({
         timelockAddress: "0x3333333333333333333333333333333333333333",
@@ -325,7 +346,7 @@ describe("createTimelockStageData", () => {
   });
 
   it("should return null for non-timelock stages", () => {
-    const stage = new StageBuilder("VOTING_ACTIVE", "L2").status("COMPLETED").build();
+    const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build();
 
     const result = createTimelockStageData(stage);
 
@@ -333,7 +354,7 @@ describe("createTimelockStageData", () => {
   });
 
   it("should return null when missing required data", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2")
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
       .status("READY")
       .data({
         timelockAddress: "0x3333333333333333333333333333333333333333",
@@ -347,7 +368,7 @@ describe("createTimelockStageData", () => {
   });
 
   it("should return null for empty callScheduledData array", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2")
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
       .status("READY")
       .data({
         timelockAddress: "0x3333333333333333333333333333333333333333",
@@ -374,6 +395,8 @@ describe("collectAllScheduledData", () => {
       delay: BigNumber.from(86400),
       txHash: "0xdef",
       blockNumber: 12345,
+      logIndex: 0,
+      timelockAddress: "0x0000000000000000000000000000000000000000",
     };
     const data2: CallScheduledData = {
       operationId: "0xabc",
@@ -385,10 +408,15 @@ describe("collectAllScheduledData", () => {
       delay: BigNumber.from(86400),
       txHash: "0xdef",
       blockNumber: 12345,
+      logIndex: 0,
+      timelockAddress: "0x0000000000000000000000000000000000000000",
     };
 
     const timelockState: TimelockState = {
       operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
       scheduledData: data1,
       allScheduledData: [data1, data2],
     };
@@ -411,10 +439,15 @@ describe("collectAllScheduledData", () => {
       delay: BigNumber.from(86400),
       txHash: "0xdef",
       blockNumber: 12345,
+      logIndex: 0,
+      timelockAddress: "0x0000000000000000000000000000000000000000",
     };
 
     const timelockState: TimelockState = {
       operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
       scheduledData: data,
     };
 
@@ -427,6 +460,9 @@ describe("collectAllScheduledData", () => {
   it("should return empty array when no data available", () => {
     const timelockState: TimelockState = {
       operationId: "0xabc",
+      state: "UNKNOWN",
+      isReady: false,
+      isDone: false,
     };
 
     const result = collectAllScheduledData(timelockState);
@@ -448,6 +484,8 @@ describe("buildExecutionPayloadData", () => {
         delay: BigNumber.from(86400),
         txHash: "0xdef",
         blockNumber: 12345,
+        logIndex: 0,
+        timelockAddress: "0x0000000000000000000000000000000000000000",
       },
     ];
 
@@ -470,7 +508,7 @@ describe("buildExecutionPayloadData", () => {
 
 describe("validateStageForPrepare", () => {
   it("should return null for READY stage", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("READY").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build();
 
     const result = validateStageForPrepare(stage);
 
@@ -478,17 +516,19 @@ describe("validateStageForPrepare", () => {
   });
 
   it("should return error for non-READY stage", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("PENDING").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build();
 
     const result = validateStageForPrepare(stage);
 
     expect(result).not.toBeNull();
     expect(result?.success).toBe(false);
-    expect(result?.error).toContain("not ready");
+    if (result && !result.success) {
+      expect(result.error).toContain("not ready");
+    }
   });
 
   it("should allow non-READY with prepareCompleted=true", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("PENDING").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build();
 
     const result = validateStageForPrepare(stage, { prepareCompleted: true });
 
@@ -496,18 +536,20 @@ describe("validateStageForPrepare", () => {
   });
 
   it("should check expectedTypes", () => {
-    const stage = new StageBuilder("VOTING_ACTIVE", "L2").status("READY").build();
+    const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("READY").build();
 
     const result = validateStageForPrepare(stage, {
       expectedTypes: ["L2_TIMELOCK", "L1_TIMELOCK"],
     });
 
     expect(result).not.toBeNull();
-    expect(result?.error).toContain("Unexpected stage type");
+    if (result && !result.success) {
+      expect(result.error).toContain("Unexpected stage type");
+    }
   });
 
   it("should pass when stage type matches expectedTypes", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("READY").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build();
 
     const result = validateStageForPrepare(stage, {
       expectedTypes: ["L2_TIMELOCK", "L1_TIMELOCK"],
@@ -519,13 +561,15 @@ describe("validateStageForPrepare", () => {
 
 describe("bulkPrepareError", () => {
   it("should create error result with target chain", () => {
-    const result = bulkPrepareError("Test error", "L1");
+    const result = bulkPrepareError("Test error", "ethereum");
 
     expect(result.total).toBe(0);
     expect(result.results.length).toBe(1);
     expect(result.results[0].success).toBe(false);
-    expect(result.results[0].error).toBe("Test error");
-    expect(result.targetChain).toBe("L1");
+    if (!result.results[0].success) {
+      expect(result.results[0].error).toBe("Test error");
+    }
+    expect(result.targetChain).toBe("ethereum");
   });
 });
 
@@ -536,33 +580,35 @@ describe("simpleBulkError", () => {
     expect(result.total).toBe(0);
     expect(result.results.length).toBe(1);
     expect(result.results[0].success).toBe(false);
-    expect(result.results[0].error).toBe("Simple error");
+    if (!result.results[0].success) {
+      expect(result.results[0].error).toBe("Simple error");
+    }
   });
 });
 
 describe("validateStageForBulkPrepare", () => {
   it("should return null for valid stage", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("READY").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build();
 
-    const result = validateStageForBulkPrepare(stage, "L2");
+    const result = validateStageForBulkPrepare(stage, "arb1");
 
     expect(result).toBeNull();
   });
 
   it("should return error result for invalid stage", () => {
-    const stage = new StageBuilder("L2_TIMELOCK", "L2").status("PENDING").build();
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build();
 
-    const result = validateStageForBulkPrepare(stage, "L2");
+    const result = validateStageForBulkPrepare(stage, "arb1");
 
     expect(result).not.toBeNull();
     expect(result?.total).toBe(0);
-    expect(result?.targetChain).toBe("L2");
+    expect(result?.targetChain).toBe("arb1");
   });
 });
 
 describe("validateStageForSimpleBulk", () => {
   it("should return null for valid stage", () => {
-    const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2").status("READY").build();
+    const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("READY").build();
 
     const result = validateStageForSimpleBulk(stage);
 
@@ -570,11 +616,132 @@ describe("validateStageForSimpleBulk", () => {
   });
 
   it("should return error result for invalid stage", () => {
-    const stage = new StageBuilder("L2_TO_L1_MESSAGE", "L2").status("COMPLETED").build();
+    const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("COMPLETED").build();
 
     const result = validateStageForSimpleBulk(stage);
 
     expect(result).not.toBeNull();
     expect(result?.total).toBe(0);
+  });
+});
+
+describe("calculateTimelockEta", () => {
+  it("should use operationState.timestamp when scheduledData is not available", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
+      // No scheduledData - will fall through to operationState.timestamp
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: true,
+      isReady: false,
+      isDone: false,
+      state: "PENDING",
+      timestamp: BigNumber.from(1700000000), // Unix timestamp
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return the operationState.timestamp since isDone=false and timestamp > 1
+    expect(result).toBe(1700000000);
+  });
+
+  it("should return undefined when operation isDone", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "DONE",
+      isReady: false,
+      isDone: true,
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: false,
+      isReady: false,
+      isDone: true,
+      state: "DONE",
+      timestamp: BigNumber.from(1700000000),
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return undefined since operation is done
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when timestamp is 0 or 1", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "UNKNOWN",
+      isReady: false,
+      isDone: false,
+    };
+
+    const operationState = {
+      isOperation: false,
+      isPending: false,
+      isReady: false,
+      isDone: false,
+      state: "UNKNOWN",
+      timestamp: BigNumber.from(0), // Timestamp of 0 means not scheduled
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return undefined since timestamp <= 1
+    expect(result).toBeUndefined();
+  });
+
+  it("should calculate ETA from scheduledData when available", async () => {
+    const scheduledData: CallScheduledData = {
+      operationId: "0xabc",
+      index: BigNumber.from(0),
+      target: "0x1111111111111111111111111111111111111111",
+      value: BigNumber.from(0),
+      data: "0x",
+      predecessor: ethers.constants.HashZero,
+      delay: BigNumber.from(86400), // 1 day delay
+      txHash: "0xdef",
+      blockNumber: 12345,
+      logIndex: 0,
+      timelockAddress: "0x0000000000000000000000000000000000000000",
+    };
+
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
+      scheduledData,
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: true,
+      isReady: false,
+      isDone: false,
+      state: "PENDING",
+      timestamp: BigNumber.from(1700000000),
+    };
+
+    // Mock provider to return block timestamp
+    const mockProvider = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+    } as unknown as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return block timestamp + delay = 1700000000 + 86400 = 1700086400
+    expect(result).toBe(1700086400);
   });
 });

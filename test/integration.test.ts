@@ -15,10 +15,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
-import {
-  CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
-  ARBITRUM_ADDRESSES as FIXTURE_ADDRESSES,
-} from "./fixtures";
+import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
 
 import {
   // Discovery functions
@@ -129,7 +126,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
       expect(isSecurityCouncilElectionProposal(scTargets)).toBe(true);
 
       // A proposal not targeting the manager is not an SC election
-      const normalTargets = [FIXTURE_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK];
+      const normalTargets = [ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK];
       expect(isSecurityCouncilElectionProposal(normalTargets)).toBe(false);
     });
   });

@@ -2,8 +2,7 @@
  * Tracking context, results, checkpoint, and execution types
  */
 
-import { BigNumber } from "ethers";
-import { ChainType, StageType } from "./core";
+import { Chain, ChainId, StageType } from "./core";
 import { TrackedStage } from "./stages";
 import { CallScheduledData } from "./timelock";
 import { ProposalType, ProposalData, ProposalState } from "./governor";
@@ -30,19 +29,11 @@ export interface PreparedTransaction {
   to: string;
   data: string;
   value: string;
-  chain: ChainType;
+  chain: Chain;
+  chainId: ChainId;
   description: string;
   operationId?: string;
   hashValidation?: { isValid: boolean; error?: string };
-}
-
-export interface ExecutionResult {
-  success: boolean;
-  txHash: string;
-  blockNumber: number;
-  gasUsed: BigNumber;
-  error?: string;
-  prepared?: PreparedTransaction;
 }
 
 // Tracking Input Types
@@ -81,22 +72,6 @@ export interface DiscoveryTrackingInput {
 export type TrackingInput = GovernorTrackingInput | TimelockTrackingInput | DiscoveryTrackingInput;
 
 /**
- * Common context for stage tracking operations
- */
-export interface StageTrackingContext {
-  fromBlock?: number;
-  toBlock?: number;
-  direction?: "forward" | "backward";
-  cachedData?: {
-    txHash?: string;
-    operationId?: string;
-    callScheduledData?: CallScheduledData | CallScheduledData[];
-    executionTxHash?: string;
-  };
-  checkpoint?: TrackingCheckpoint;
-}
-
-/**
  * Hints for the next stage in the pipeline
  */
 export interface NextStageHints {
@@ -116,11 +91,6 @@ export interface StageTrackResult {
   stage: TrackedStage;
   hints: NextStageHints;
 }
-
-/**
- * Extend StageTrackResult with additional stage-specific data
- */
-export type StageTrackResultWith<TExtra> = StageTrackResult & TExtra;
 
 /**
  * Discovery target keys (shared between watermarks and targets)

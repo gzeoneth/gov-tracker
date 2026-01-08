@@ -6,8 +6,7 @@
  * 2. Scoped loggers - for code that runs concurrently (auto-prefix with scope)
  *
  * Usage:
- *   import { loggers } from "../utils/logger";
- *   import { withScope } from "../utils/scoped-logger";
+ *   import { loggers, withScope } from "../utils/logger";
  *
  *   // Regular logging
  *   loggers.tracker("message %s", value);
@@ -18,10 +17,57 @@
  *   });
  */
 
-import { scopedLog } from "./scoped-logger";
+import { AsyncLocalStorage } from "async_hooks";
+import createDebug from "debug";
 
-// Re-export scoped logging utilities
-export { withScope, getCurrentScope, scopedLog } from "./scoped-logger";
+// ============================================================================
+// Scoped Logging Infrastructure
+// ============================================================================
+
+interface LogScope {
+  prefix: string;
+}
+
+const scopeStorage = new AsyncLocalStorage<LogScope>();
+
+/**
+ * Get current scope prefix, or empty string if not in a scope.
+ */
+function getCurrentScope(): string {
+  return scopeStorage.getStore()?.prefix ?? "";
+}
+
+/**
+ * Run a function within a logging scope.
+ * All scopedLog calls within this function (and nested calls) will
+ * automatically include the scope prefix.
+ *
+ * Scopes can be nested - inner scopes override outer scopes.
+ */
+export function withScope<T>(prefix: string, fn: () => T): T {
+  return scopeStorage.run({ prefix }, fn);
+}
+
+/**
+ * Create a scoped debug logger.
+ * Returns a function that automatically prepends the current scope.
+ *
+ * Unlike regular debug loggers, the scope is dynamically determined
+ * at call time using AsyncLocalStorage.
+ */
+function scopedLog(namespace: string): (fmt: string, ...args: unknown[]) => void {
+  const baseLog = createDebug(namespace);
+
+  return (fmt: string, ...args: unknown[]) => {
+    const scope = getCurrentScope();
+    const prefix = scope ? `[${scope}] ` : "";
+    baseLog(prefix + fmt, ...args);
+  };
+}
+
+// ============================================================================
+// Pre-configured Loggers
+// ============================================================================
 
 /**
  * Pre-configured debug loggers for common namespaces.

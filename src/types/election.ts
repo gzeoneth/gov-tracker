@@ -2,6 +2,7 @@
  * Election-related types for Security Council elections
  */
 
+import { ProposalState } from "./governor";
 import { PreparedTransaction } from "./tracking";
 
 /**
@@ -21,19 +22,6 @@ export type ElectionPhase =
   | "COMPLETED";
 
 /**
- * Governor proposal state (matches OpenZeppelin GovernorCountingSimple)
- */
-export type GovernorProposalState =
-  | "Pending"
-  | "Active"
-  | "Canceled"
-  | "Defeated"
-  | "Succeeded"
-  | "Queued"
-  | "Expired"
-  | "Executed";
-
-/**
  * Status of an election proposal
  */
 export interface ElectionProposalStatus {
@@ -42,8 +30,8 @@ export interface ElectionProposalStatus {
   cohort: CohortType;
   nomineeProposalId: string | null;
   memberProposalId: string | null;
-  nomineeProposalState: GovernorProposalState | null;
-  memberProposalState: GovernorProposalState | null;
+  nomineeProposalState: ProposalState | null;
+  memberProposalState: ProposalState | null;
   compliantNomineeCount: number;
   targetNomineeCount: number;
   vettingDeadline: number | null;

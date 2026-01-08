@@ -1,6 +1,6 @@
 {
   "name": "@gzeoneth/gov-tracker",
-  "version": "0.1.2",
+  "version": "0.2.0-0",
   "description": "Lightweight, high-performance library for tracking Arbitrum DAO governance proposal lifecycle stages",
   "license": "Apache-2.0",
   "author": "gzeoneth",
@@ -22,14 +22,15 @@
   "scripts": {
     "build": "tsc",
     "test": "NO_RPC=1 vitest run",
-    "test:monitor": "vitest run test/monitor.test.ts",
     "test:integration": "vitest run test/integration.test.ts test/tracker.test.ts test/retryables.test.ts",
     "test:fork": "vitest run --config vitest.config.fork.mts",
     "test:all": "vitest run",
     "test:coverage": "NO_RPC=1 vitest run --coverage",
     "test:coverage:all": "vitest run --coverage",
-    "lint": "eslint src test --quiet",
-    "lint:fix": "eslint src test --fix",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "lint": "eslint --quiet",
+    "lint:fix": "eslint --fix",
+    "check:unused": "knip",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "prepublishOnly": "yarn lint && yarn format:check && yarn build",
@@ -55,6 +56,7 @@
     "p-limit": "3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.51.0",
@@ -63,6 +65,7 @@
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "jiti": "^2.6.1",
+    "knip": "^5.80.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",

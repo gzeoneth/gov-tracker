@@ -2,7 +2,7 @@
  * Type definitions for Arbitrum Governance Stage Tracking SDK
  *
  * Organized by domain:
- * - core: Primitives (StageType, ChainType, timing/ETA types)
+ * - core: Primitives (StageType, Chain, timing/ETA types)
  * - governor: Governor, proposal, voting types
  * - timelock: Timelock operations and state
  * - cross-chain: L2→L1 messages and retryables
@@ -16,17 +16,14 @@
 export {
   StageType,
   StageStatus,
-  ChainContext,
-  ChainType,
-  TargetChainType,
+  Chain,
+  L2Chain,
+  ChainId,
+  chainIdToChain,
+  chainToChainId,
   StageTransaction,
   StageTiming,
   SearchHint,
-  EstimatedTimeRange,
-  VotingTimeRange,
-  BlockBasedTiming,
-  StageMetadata,
-  EstimatedTimesResult,
 } from "./core";
 
 // Governor types
@@ -53,16 +50,7 @@ export {
 } from "./timelock";
 
 // Cross-chain types
-export {
-  L2ToL1MessageStatus,
-  L2ToL1MessageData,
-  RetryableStatus,
-  RetryableData,
-  RetryableTicketInfo,
-  RetryableRedemptionInfo,
-  RetryableCreationDetail,
-  RetryableRedemptionDetail,
-} from "./cross-chain";
+export { RetryableCreationDetail, RetryableRedemptionDetail } from "./cross-chain";
 
 // Stage data types
 export {
@@ -72,8 +60,6 @@ export {
   ProposalQueuedData,
   BaseTimelockData,
   TimelockStageData,
-  L2TimelockData,
-  L1TimelockData,
   L2ToL1MessageStageData,
   RetryableStageData,
   StageDataMap,
@@ -89,15 +75,12 @@ export {
   PrepareOptions,
   PrepareResult,
   PreparedTransaction,
-  ExecutionResult,
   GovernorTrackingInput,
   TimelockTrackingInput,
   DiscoveryTrackingInput,
   TrackingInput,
-  StageTrackingContext,
   NextStageHints,
   StageTrackResult,
-  StageTrackResultWith,
   DiscoveryWatermarks,
   DiscoveryTargets,
   TrackingCheckpoint,
@@ -119,7 +102,6 @@ export {
 export {
   CohortType,
   ElectionPhase,
-  GovernorProposalState,
   ElectionProposalStatus,
   ElectionStatus,
   ElectionCheckResult,
@@ -139,7 +121,6 @@ export {
 // Simulation data types
 export {
   SimulationType,
-  SimulationChainType,
   BaseSimulationData,
   RetryableSimulationData,
   TimelockSimulationData,

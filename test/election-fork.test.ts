@@ -89,7 +89,7 @@ describe("Election Fork Tests", () => {
       expect(transaction.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
       expect(transaction.data).toBeDefined();
       expect(transaction.value).toBe("0");
-      expect(transaction.chain).toBe("L2");
+      expect(transaction.chain).toBe("arb1");
       expect(transaction.description).toContain("createElection()");
 
       // Verify election index matches status

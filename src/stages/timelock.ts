@@ -8,13 +8,14 @@
 
 import { ethers, BigNumber } from "ethers";
 import {
+  Chain,
+  chainToChainId,
   TrackedStage,
   TrackedStageData,
   TimelockStageData,
   TimelockState,
   CallScheduledData,
   OperationState,
-  ChainType,
   StageType,
   PrepareResult,
   PrepareOptions,
@@ -34,7 +35,7 @@ import { validateSalt, validateSaltBatch } from "../utils/operation-id";
 import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-computation";
 import { INBOX_ABI, timelockInterface } from "../abis";
 import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
-import { getChainType, addressEquals } from "../utils/chain";
+import { getChain, addressEquals } from "../utils/chain";
 import { getBlockTimestamp, checkOperationReady, failPrepare } from "./base";
 import { StageBuilder } from "./stage-builder";
 import { getCurrentBlockInfo, blockAfterDelay } from "../utils/timing";
@@ -42,11 +43,11 @@ import {
   collectAllScheduledData,
   calculateTimelockEta,
   buildExecutionPayloadData,
-  serializeCallScheduledDataArray,
   searchAndCompleteTimelockExecution,
   createTimelockStageData,
   validateStageForPrepare,
 } from "../utils/stage-helpers";
+import { serializeCallScheduledDataArray } from "../stages/base";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { loggers } from "../utils/logger";
 
@@ -60,31 +61,31 @@ const logExecution = loggers.execution;
 /**
  * Configuration for timelock tracking that differs between L1 and L2.
  */
-export interface TimelockTrackingConfig {
-  chain: ChainType;
+interface TimelockTrackingConfig {
+  chain: Chain;
   stageType: StageType;
   blockTimeSeconds: number;
   logPrefix: string;
 }
 
 const L2_TIMELOCK_CONFIG: TimelockTrackingConfig = {
-  chain: "L2",
+  chain: "arb1",
   stageType: "L2_TIMELOCK",
   blockTimeSeconds: BLOCK_TIMES.L2,
-  logPrefix: "L2",
+  logPrefix: "arb1",
 };
 
 const L1_TIMELOCK_CONFIG: TimelockTrackingConfig = {
-  chain: "L1",
+  chain: "ethereum",
   stageType: "L1_TIMELOCK",
   blockTimeSeconds: BLOCK_TIMES.L1,
-  logPrefix: "L1",
+  logPrefix: "ethereum",
 };
 
 /**
  * Options for timelock stage tracking.
  */
-export interface TrackTimelockOptions {
+interface TrackTimelockOptions {
   callScheduledData?: CallScheduledData;
   cachedExecutionTxHash?: string;
   /** Whether to check for Security Council enrichment (L2 only) */
@@ -328,10 +329,12 @@ async function trackTimelock(
     timelockState.scheduledData.blockNumber !== undefined
   ) {
     queueTimestamp = await getBlockTimestamp(timelockState.scheduledData.blockNumber, provider);
+    const chainId = chainToChainId(config.chain) ?? 0;
     builder.tx(
       timelockState.scheduledData.txHash,
       timelockState.scheduledData.blockNumber,
       config.chain,
+      chainId,
       { timestamp: queueTimestamp, description: "queued" }
     );
   }
@@ -358,9 +361,10 @@ async function trackTimelock(
       const receipt = await provider.getTransactionReceipt(options.cachedExecutionTxHash);
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
+        const chainId = chainToChainId(config.chain) ?? 0;
         builder
           .status("COMPLETED")
-          .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, {
+          .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, chainId, {
             timestamp: execTimestamp,
             description: "executed",
           })
@@ -500,7 +504,7 @@ export async function trackL1Timelock(
   }
 
   if (!l1OperationId) {
-    const stage = new StageBuilder("L1_TIMELOCK", "L1")
+    const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
       .status("NOT_STARTED")
       .data({
         reason: "L1 operation ID not yet discovered (challenge period may not be complete)",
@@ -664,7 +668,7 @@ export async function prepareTimelockOperation(
     : null;
   const executionValue = retryableValue ?? params.value;
 
-  const chain = await getChainType(provider);
+  const chain = await getChain(provider);
   const calldata = timelockInterface.encodeFunctionData("execute", [
     params.target,
     params.value,
@@ -673,6 +677,8 @@ export async function prepareTimelockOperation(
     salt,
   ]);
 
+  const chainId = chainToChainId(chain) ?? 0;
+
   return {
     success: true,
     prepared: {
@@ -680,6 +686,7 @@ export async function prepareTimelockOperation(
       data: calldata,
       value: executionValue.toString(),
       chain,
+      chainId,
       description: `execute() on ${chain} timelock`,
       operationId,
     },
@@ -749,7 +756,7 @@ export async function prepareTimelockBatch(
   }
   const totalValue = executionValues.reduce((acc, v) => acc.add(v), BigNumber.from(0));
 
-  const chain = await getChainType(provider);
+  const chain = await getChain(provider);
   const calldata = timelockInterface.encodeFunctionData("executeBatch", [
     params.targets,
     params.values,
@@ -758,6 +765,8 @@ export async function prepareTimelockBatch(
     salt,
   ]);
 
+  const chainId = chainToChainId(chain) ?? 0;
+
   return {
     success: true,
     prepared: {
@@ -765,6 +774,7 @@ export async function prepareTimelockBatch(
       data: calldata,
       value: totalValue.toString(),
       chain,
+      chainId,
       description: `executeBatch() on ${chain} timelock`,
       operationId,
     },

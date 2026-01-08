@@ -14,7 +14,7 @@
 
 import { ethers } from "ethers";
 import { loggers } from "./utils/logger";
-import { isGasEstimationError } from "./utils/error-classification";
+import { isGasEstimationError } from "./utils/rpc-utils";
 import {
   TrackerOptions,
   TrackingResult,

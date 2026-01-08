@@ -193,8 +193,8 @@ async function pipelineTrackProposalQueued(
           proposalData?.creationBlock ?? 0,
           { votingEndBlock }
         );
-        let stage = r.stage;
-        if (stage.status === "READY" && proposalData) {
+        let stage: TrackedStage = r.stage;
+        if (stage.type === "PROPOSAL_QUEUED" && stage.status === "READY" && proposalData) {
           // Enrich stage data with proposal info for READY state
           stage = {
             ...stage,
@@ -205,7 +205,7 @@ async function pipelineTrackProposalQueued(
               calldatas: proposalData.calldatas,
               description: proposalData.description,
             },
-          } as TrackedStage;
+          };
         }
         return { stage, result: r.operationId !== null && r.timelockAddress !== null };
       });

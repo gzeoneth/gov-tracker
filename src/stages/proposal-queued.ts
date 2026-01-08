@@ -6,7 +6,7 @@
  */
 
 import { BigNumber, ethers } from "ethers";
-import { TrackedStage, CallScheduledData, PrepareResult } from "../types";
+import { TypedTrackedStage, CallScheduledData, PrepareResult } from "../types";
 import { PROPOSAL_STATE_MAP, PROPOSAL_STATE } from "../constants";
 import { GOVERNOR_ABI, governorInterface } from "../abis";
 import { checkVettingPeriod } from "../discovery/security-council";
@@ -44,7 +44,7 @@ export async function trackProposalQueued(
     votingEndBlock?: number;
   } = {}
 ): Promise<{
-  stage: TrackedStage;
+  stage: TypedTrackedStage<"PROPOSAL_QUEUED">;
   timelockAddress?: string;
   operationId?: string;
   callScheduledData?: CallScheduledData[];

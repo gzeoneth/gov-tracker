@@ -16,6 +16,7 @@ import {
 } from "@arbitrum/sdk";
 import {
   TrackedStage,
+  TypedTrackedStage,
   L2Chain,
   PrepareResult,
   RetryableCreationDetail,
@@ -120,7 +121,7 @@ export async function trackRetryables(
   l1Provider: ethers.providers.Provider,
   options: TrackRetryablesOptions
 ): Promise<{
-  stage: TrackedStage;
+  stage: TypedTrackedStage<"RETRYABLE_EXECUTED">;
   messages: ParentToChildMessageReader[];
   isComplete: boolean;
   /** All target chains for retryables (can be both arb1 and nova) */

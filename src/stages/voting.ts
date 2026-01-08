@@ -8,7 +8,7 @@
  */
 
 import { ethers } from "ethers";
-import { ProposalData, TrackedStage, VotingData } from "../types";
+import { ProposalData, TypedTrackedStage, VotingData } from "../types";
 import {
   getProposalState,
   getVotingData,
@@ -32,7 +32,7 @@ export async function trackVotingStage(
   proposalData: ProposalData,
   provider: ethers.providers.Provider
 ): Promise<{
-  stage: TrackedStage;
+  stage: TypedTrackedStage<"VOTING_ACTIVE">;
   votingData: VotingData | null;
 }> {
   const builder = new StageBuilder("VOTING_ACTIVE", "arb1");

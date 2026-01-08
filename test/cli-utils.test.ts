@@ -574,6 +574,10 @@ describe("CLI Utilities", () => {
     it("should not throw when write is true and privateKey is provided", () => {
       expect(() => requirePrivateKeyForWrite({ write: true, privateKey: "0x123" })).not.toThrow();
     });
+
+    it("should exit with error when write is true but privateKey is missing", () => {
+      expect(() => requirePrivateKeyForWrite({ write: true })).toThrow("process.exit");
+    });
   });
 
   describe("addOptions", () => {

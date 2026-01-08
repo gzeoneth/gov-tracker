@@ -758,7 +758,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
       );
 
       // #then should find at least one proposal
-      expect(proposals.length).toBeGreaterThanOrEqual(0);
+      expect(proposals.length).toBeGreaterThan(0);
       if (proposals.length > 0) {
         expect(proposals[0].governorAddress.toLowerCase()).toBe(
           ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase()

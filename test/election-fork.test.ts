@@ -33,14 +33,18 @@ const TEST_L2_BLOCKS = {
   ELECTION_POKE: 379_398_080,
 };
 
-const hasArchiveRpc = () => getTestRpcUrls() !== null;
-
-describe.skipIf(!hasArchiveRpc())("Election Fork Tests", () => {
+describe("Election Fork Tests", () => {
   let forks: DualForkResult | null = null;
-  let rpcUrls: ReturnType<typeof getTestRpcUrls>;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls()!;
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
   });
 
   afterAll(async () => {
@@ -125,12 +129,18 @@ describe.skipIf(!hasArchiveRpc())("Election Fork Tests", () => {
   });
 });
 
-describe.skipIf(!hasArchiveRpc())("Election Proposal Tracking with Forks", () => {
+describe("Election Proposal Tracking with Forks", () => {
   let forks: DualForkResult | null = null;
-  let rpcUrls: ReturnType<typeof getTestRpcUrls>;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls()!;
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
   });
 
   afterAll(async () => {
@@ -178,11 +188,17 @@ describe.skipIf(!hasArchiveRpc())("Election Proposal Tracking with Forks", () =>
   });
 });
 
-describe.skipIf(!hasArchiveRpc())("Fork Infrastructure Tests", () => {
-  let rpcUrls: ReturnType<typeof getTestRpcUrls>;
+describe("Fork Infrastructure Tests", () => {
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
 
   beforeAll(() => {
-    rpcUrls = getTestRpcUrls()!;
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
   });
 
   it("should start and stop anvil forks", async () => {

@@ -4,8 +4,9 @@
  * Tests for governor-discovery, timelock-discovery, and security-council modules.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { ethers, BigNumber } from "ethers";
+import type { CacheAdapter, TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
 import {
   detectProposalType,
   isElectionProposal,
@@ -22,6 +23,14 @@ import {
   isSecurityCouncilElectionProposal,
   isSecurityCouncilOperation,
 } from "../src/discovery/security-council";
+import {
+  loadWatermarks,
+  saveWatermarks,
+  createPendingCheckpoints,
+  WATERMARKS_KEY,
+  DiscoveredProposal,
+  DiscoveredTimelockOp,
+} from "../src/tracker/discovery";
 import { ADDRESSES } from "../src/constants";
 import { proposalCreatedInterface, timelockInterface } from "../src/abis";
 
@@ -427,6 +436,278 @@ describe("Security Council Discovery", () => {
     it("should return false for empty logs", () => {
       const receipt = createMockReceipt([]);
       expect(isSecurityCouncilOperation(receipt)).toBe(false);
+    });
+  });
+});
+
+/**
+ * Mock cache adapter for testing tracker discovery
+ */
+class MockCache implements CacheAdapter {
+  private store = new Map<string, unknown>();
+
+  async get<T>(key: string): Promise<T | null> {
+    return (this.store.get(key) as T) ?? null;
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    this.store.set(key, value);
+  }
+
+  async delete(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+
+  async keys(): Promise<string[]> {
+    return Array.from(this.store.keys());
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.store.has(key);
+  }
+
+  async clear(): Promise<void> {
+    this.store.clear();
+  }
+}
+
+describe("Tracker Discovery Module", () => {
+  let cache: MockCache;
+
+  beforeEach(() => {
+    cache = new MockCache();
+  });
+
+  describe("loadWatermarks", () => {
+    it("should return empty object for undefined cache", async () => {
+      const result = await loadWatermarks(undefined);
+      expect(result).toEqual({});
+    });
+
+    it("should return empty object for empty cache", async () => {
+      const result = await loadWatermarks(cache);
+      expect(result).toEqual({});
+    });
+
+    it("should return watermarks from cached checkpoint", async () => {
+      const watermarks: DiscoveryWatermarks = {
+        constitutionalGovernor: 100000,
+        nonConstitutionalGovernor: 200000,
+      };
+
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "discovery", id: "watermarks" },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 200000 },
+        cachedData: {
+          discoveryWatermarks: watermarks,
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      await cache.set(WATERMARKS_KEY, checkpoint);
+
+      const result = await loadWatermarks(cache);
+      expect(result).toEqual(watermarks);
+    });
+
+    it("should return empty object if checkpoint has no discoveryWatermarks", async () => {
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "discovery", id: "watermarks" },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      await cache.set(WATERMARKS_KEY, checkpoint);
+
+      const result = await loadWatermarks(cache);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe("saveWatermarks", () => {
+    it("should do nothing for undefined cache", async () => {
+      const watermarks: DiscoveryWatermarks = {
+        constitutionalGovernor: 100000,
+      };
+
+      // Should not throw
+      await saveWatermarks(watermarks, undefined);
+    });
+
+    it("should save watermarks as checkpoint", async () => {
+      const watermarks: DiscoveryWatermarks = {
+        constitutionalGovernor: 100000,
+        nonConstitutionalGovernor: 200000,
+        l2ConstitutionalTimelock: 150000,
+      };
+
+      await saveWatermarks(watermarks, cache);
+
+      const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
+      expect(checkpoint).toBeDefined();
+      expect(checkpoint!.input).toEqual({ type: "discovery", id: "watermarks" });
+      expect(checkpoint!.cachedData.discoveryWatermarks).toEqual(watermarks);
+      // Max L2 block should be 200000
+      expect(checkpoint!.lastProcessedBlock.l2).toBe(200000);
+      expect(checkpoint!.version).toBe(1);
+    });
+
+    it("should calculate max L2 block from all watermarks", async () => {
+      const watermarks: DiscoveryWatermarks = {
+        constitutionalGovernor: 100000,
+        nonConstitutionalGovernor: 200000,
+        electionNomineeGovernor: 150000,
+        electionMemberGovernor: 175000,
+        l2ConstitutionalTimelock: 300000, // This is the max
+        l2NonConstitutionalTimelock: 250000,
+      };
+
+      await saveWatermarks(watermarks, cache);
+
+      const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
+      expect(checkpoint!.lastProcessedBlock.l2).toBe(300000);
+    });
+
+    it("should handle empty watermarks", async () => {
+      await saveWatermarks({}, cache);
+
+      const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
+      expect(checkpoint).toBeDefined();
+      expect(checkpoint!.lastProcessedBlock.l2).toBe(0);
+    });
+  });
+
+  describe("createPendingCheckpoints", () => {
+    it("should do nothing for undefined cache", async () => {
+      const proposals: DiscoveredProposal[] = [
+        {
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+          creationBlock: 100000,
+        },
+      ];
+
+      // Should not throw
+      await createPendingCheckpoints(proposals, [], undefined);
+    });
+
+    it("should create pending checkpoints for proposals", async () => {
+      const proposals: DiscoveredProposal[] = [
+        {
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+          creationBlock: 100000,
+        },
+        {
+          proposalId: "67890",
+          governorAddress: "0x" + "2".repeat(40),
+          creationTxHash: "0x" + "b".repeat(64),
+          creationBlock: 200000,
+        },
+      ];
+
+      await createPendingCheckpoints(proposals, [], cache);
+
+      // Check both proposals were cached
+      const cp1 = await cache.get<TrackingCheckpoint>("tx:0x" + "a".repeat(64));
+      expect(cp1).not.toBeNull();
+      expect(cp1!.input.type).toBe("governor");
+      if (cp1!.input.type === "governor") {
+        expect(cp1!.input.proposalId).toBe("12345");
+        expect(cp1!.metadata?.lastTrackedAt).toBe(0); // Never tracked
+      }
+
+      const cp2 = await cache.get<TrackingCheckpoint>("tx:0x" + "b".repeat(64));
+      expect(cp2).not.toBeNull();
+      if (cp2!.input.type === "governor") {
+        expect(cp2!.input.proposalId).toBe("67890");
+      }
+    });
+
+    it("should skip proposals that already have checkpoints", async () => {
+      const existingCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now() - 1000,
+        input: {
+          type: "governor",
+          proposalId: "existing",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 50000 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() - 500 },
+      };
+
+      // Pre-populate cache with existing checkpoint
+      await cache.set("tx:0x" + "a".repeat(64), existingCheckpoint);
+
+      const proposals: DiscoveredProposal[] = [
+        {
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64), // Same tx hash
+          creationBlock: 100000,
+        },
+      ];
+
+      await createPendingCheckpoints(proposals, [], cache);
+
+      // Should not overwrite existing checkpoint
+      const cp = await cache.get<TrackingCheckpoint>("tx:0x" + "a".repeat(64));
+      if (cp!.input.type === "governor") {
+        expect(cp!.input.proposalId).toBe("existing");
+      }
+    });
+
+    it("should lowercase transaction hash for cache key", async () => {
+      const proposals: DiscoveredProposal[] = [
+        {
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "A".repeat(64), // Uppercase
+          creationBlock: 100000,
+        },
+      ];
+
+      await createPendingCheckpoints(proposals, [], cache);
+
+      // Should be stored with lowercase key
+      const cp = await cache.get<TrackingCheckpoint>("tx:0x" + "a".repeat(64));
+      expect(cp).toBeDefined();
+    });
+
+    it("should not create checkpoints for timelock ops (by design)", async () => {
+      const timelockOps: DiscoveredTimelockOp[] = [
+        {
+          operationId: "0x" + "c".repeat(64),
+          timelockAddress: "0x" + "3".repeat(40),
+          scheduledTxHash: "0x" + "d".repeat(64),
+          queueBlock: 100000,
+        },
+      ];
+
+      await createPendingCheckpoints([], timelockOps, cache);
+
+      // Timelock ops should not create pending checkpoints
+      const keys = await cache.keys();
+      expect(keys.length).toBe(0);
+    });
+  });
+
+  describe("WATERMARKS_KEY", () => {
+    it("should have correct format", () => {
+      expect(WATERMARKS_KEY).toBe("discovery:watermarks");
     });
   });
 });

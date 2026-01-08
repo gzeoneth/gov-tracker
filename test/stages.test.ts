@@ -18,6 +18,7 @@ import {
   getCurrentStage,
   getStagesForPath,
 } from "../src/stages/base";
+import { isStageType, getStageData } from "../src/types";
 import { ADDRESSES } from "../src/constants";
 
 describe("StageBuilder", () => {
@@ -71,6 +72,45 @@ describe("StageBuilder", () => {
       expect(stage.transactions?.[0].description).toBe("queued");
       expect(stage.transactions?.[1].hash).toBe("0xdef");
       expect(stage.transactions?.[1].description).toBe("executed");
+    });
+
+    it("should add transactions with optional logIndex", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, { logIndex: 5 })
+        .build();
+
+      expect(stage.transactions?.[0].logIndex).toBe(5);
+    });
+
+    it("should add transactions with optional targetChain and targetChainId", () => {
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, {
+          targetChain: "ethereum",
+          targetChainId: 1,
+        })
+        .build();
+
+      expect(stage.transactions?.[0].targetChain).toBe("ethereum");
+      expect(stage.transactions?.[0].targetChainId).toBe(1);
+    });
+
+    it("should add transactions with all optional fields", () => {
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
+        .tx("0xabc", 100, "arb1", 42161, {
+          timestamp: 1700000000,
+          logIndex: 3,
+          targetChain: "ethereum",
+          targetChainId: 1,
+          description: "cross-chain message",
+        })
+        .build();
+
+      const tx = stage.transactions?.[0];
+      expect(tx?.timestamp).toBe(1700000000);
+      expect(tx?.logIndex).toBe(3);
+      expect(tx?.targetChain).toBe("ethereum");
+      expect(tx?.targetChainId).toBe(1);
+      expect(tx?.description).toBe("cross-chain message");
     });
 
     it("should set timing", () => {
@@ -421,6 +461,95 @@ describe("Stage Status Helpers", () => {
     // Type check that all statuses are valid
     validStatuses.forEach((status) => {
       expect(typeof status).toBe("string");
+    });
+  });
+});
+
+describe("Type Guards", () => {
+  describe("isStageType", () => {
+    it("should return true when stage type matches", () => {
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({ proposalId: "12345" })
+        .build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(true);
+    });
+
+    it("should return false when stage type does not match", () => {
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(false);
+      expect(isStageType(stage, "L2_TIMELOCK")).toBe(false);
+    });
+
+    it("should work as type narrowing in conditionals", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .data({ operationId: "0xabc", timelockAddress: "0x123" })
+        .build();
+
+      if (isStageType(stage, "L2_TIMELOCK")) {
+        // TypeScript should know stage is L2_TIMELOCK here
+        expect(stage.type).toBe("L2_TIMELOCK");
+        expect(stage.data.operationId).toBe("0xabc");
+      }
+    });
+
+    it("should return false for all non-matching types", () => {
+      const stage = new StageBuilder("RETRYABLE_EXECUTED", "arb1").status("COMPLETED").build();
+
+      expect(isStageType(stage, "PROPOSAL_CREATED")).toBe(false);
+      expect(isStageType(stage, "VOTING_ACTIVE")).toBe(false);
+      expect(isStageType(stage, "PROPOSAL_QUEUED")).toBe(false);
+      expect(isStageType(stage, "L2_TIMELOCK")).toBe(false);
+      expect(isStageType(stage, "L2_TO_L1_MESSAGE")).toBe(false);
+      expect(isStageType(stage, "L1_TIMELOCK")).toBe(false);
+    });
+  });
+
+  describe("getStageData", () => {
+    it("should return typed data when stage type matches", () => {
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({ proposalId: "12345", proposer: "0xabc" })
+        .build();
+
+      const data = getStageData(stage, "PROPOSAL_CREATED");
+
+      expect(data).not.toBeNull();
+      expect(data?.proposalId).toBe("12345");
+    });
+
+    it("should return null when stage type does not match", () => {
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build();
+
+      const data = getStageData(stage, "PROPOSAL_CREATED");
+
+      expect(data).toBeNull();
+    });
+
+    it("should return L2_TIMELOCK data correctly", () => {
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .data({ operationId: "0xdef456", timelockAddress: "0x789" })
+        .build();
+
+      const data = getStageData(stage, "L2_TIMELOCK");
+
+      expect(data).not.toBeNull();
+      expect(data?.operationId).toBe("0xdef456");
+      expect(data?.timelockAddress).toBe("0x789");
+    });
+
+    it("should return null when checking wrong type", () => {
+      const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
+        .status("PENDING")
+        .data({ operationId: "0x123" })
+        .build();
+
+      expect(getStageData(stage, "L2_TIMELOCK")).toBeNull();
+      expect(getStageData(stage, "PROPOSAL_CREATED")).toBeNull();
     });
   });
 });

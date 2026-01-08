@@ -676,6 +676,54 @@ describe("TrackingContext", () => {
       expect(result?.creationBlock).toBe(50);
       expect(result?.creationTxHash).toBe("0xabc");
     });
+
+    it("should return undefined when required fields are missing", async () => {
+      let ctx = createTrackingContext({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      // Stage with missing startBlock
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalId: "12345",
+          proposer: "0x1111111111111111111111111111111111111111",
+          // Missing startBlock, endBlock, targets, values, signatures, calldatas
+        })
+        .tx("0xabc", 50, "arb1", 42161)
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      expect(getProposalData(ctx)).toBeUndefined();
+    });
+
+    it("should return undefined when transaction is missing", async () => {
+      let ctx = createTrackingContext({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      // Stage with all data but no transaction
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalId: "12345",
+          proposer: "0x1111111111111111111111111111111111111111",
+          description: "Test proposal",
+          targets: ["0x2222222222222222222222222222222222222222"],
+          values: ["0"],
+          signatures: [""],
+          calldatas: ["0x"],
+          startBlock: "100",
+          endBlock: "200",
+        })
+        // No .tx() call - missing transaction
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      expect(getProposalData(ctx)).toBeUndefined();
+    });
   });
 
   describe("getProposalType", () => {

@@ -4,7 +4,7 @@
  * Tests for serialization, validation, and helper utilities.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import {
   serialize,
@@ -23,6 +23,7 @@ import {
   simpleBulkError,
   validateStageForBulkPrepare,
   validateStageForSimpleBulk,
+  calculateTimelockEta,
 } from "../src/utils/stage-helpers";
 import { StageBuilder } from "../src/stages/stage-builder";
 import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
@@ -621,5 +622,126 @@ describe("validateStageForSimpleBulk", () => {
 
     expect(result).not.toBeNull();
     expect(result?.total).toBe(0);
+  });
+});
+
+describe("calculateTimelockEta", () => {
+  it("should use operationState.timestamp when scheduledData is not available", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
+      // No scheduledData - will fall through to operationState.timestamp
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: true,
+      isReady: false,
+      isDone: false,
+      state: "PENDING",
+      timestamp: BigNumber.from(1700000000), // Unix timestamp
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return the operationState.timestamp since isDone=false and timestamp > 1
+    expect(result).toBe(1700000000);
+  });
+
+  it("should return undefined when operation isDone", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "DONE",
+      isReady: false,
+      isDone: true,
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: false,
+      isReady: false,
+      isDone: true,
+      state: "DONE",
+      timestamp: BigNumber.from(1700000000),
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return undefined since operation is done
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when timestamp is 0 or 1", async () => {
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "UNKNOWN",
+      isReady: false,
+      isDone: false,
+    };
+
+    const operationState = {
+      isOperation: false,
+      isPending: false,
+      isReady: false,
+      isDone: false,
+      state: "UNKNOWN",
+      timestamp: BigNumber.from(0), // Timestamp of 0 means not scheduled
+    };
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return undefined since timestamp <= 1
+    expect(result).toBeUndefined();
+  });
+
+  it("should calculate ETA from scheduledData when available", async () => {
+    const scheduledData: CallScheduledData = {
+      operationId: "0xabc",
+      index: BigNumber.from(0),
+      target: "0x1111111111111111111111111111111111111111",
+      value: BigNumber.from(0),
+      data: "0x",
+      predecessor: ethers.constants.HashZero,
+      delay: BigNumber.from(86400), // 1 day delay
+      txHash: "0xdef",
+      blockNumber: 12345,
+      logIndex: 0,
+      timelockAddress: "0x0000000000000000000000000000000000000000",
+    };
+
+    const timelockState: TimelockState = {
+      operationId: "0xabc",
+      state: "PENDING",
+      isReady: false,
+      isDone: false,
+      scheduledData,
+    };
+
+    const operationState = {
+      isOperation: true,
+      isPending: true,
+      isReady: false,
+      isDone: false,
+      state: "PENDING",
+      timestamp: BigNumber.from(1700000000),
+    };
+
+    // Mock provider to return block timestamp
+    const mockProvider = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+    } as unknown as ethers.providers.Provider;
+
+    const result = await calculateTimelockEta(timelockState, operationState, mockProvider);
+
+    // Should return block timestamp + delay = 1700000000 + 86400 = 1700086400
+    expect(result).toBe(1700086400);
   });
 });

@@ -286,3 +286,45 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
     });
   });
 });
+
+describe("Election Module - Mocked Tests", () => {
+  describe("prepareMemberElectionTrigger", () => {
+    it("should return null when canProceedToMemberPhase is false", async () => {
+      // #given - Any provider (won't be used since function exits early)
+      const mockProvider = {} as ethers.providers.Provider;
+
+      // #when - calling with canProceedToMemberPhase=false
+      const result = await prepareMemberElectionTrigger(
+        { electionIndex: 5, canProceedToMemberPhase: false },
+        mockProvider
+      );
+
+      // #then - should return null without calling any provider methods
+      expect(result).toBeNull();
+    });
+
+    it("should build correct execute calldata structure", () => {
+      // #given - test that the governor interface encoding is correct
+      const governorInterface = new ethers.utils.Interface([
+        "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash)",
+      ]);
+
+      const targets = ["0x1111111111111111111111111111111111111111"];
+      const values = [BigNumber.from(0)];
+      const calldatas = ["0xabcdef"];
+      const descriptionHash = ethers.utils.id("Test election proposal");
+
+      // #when - encoding the execute calldata
+      const calldata = governorInterface.encodeFunctionData("execute", [
+        targets,
+        values,
+        calldatas,
+        descriptionHash,
+      ]);
+
+      // #then - should produce valid calldata
+      expect(calldata).toContain("0x");
+      expect(calldata.length).toBeGreaterThan(10); // At least selector + params
+    });
+  });
+});

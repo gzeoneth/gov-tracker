@@ -49,14 +49,16 @@ const placeholder = (
   type: StageType,
   status: "NOT_STARTED" | "SKIPPED",
   reason: string
-): TrackedStage => ({
-  type,
-  status,
-  chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
-  chainId: L1_STAGES.has(type) ? 1 : 42161,
-  transactions: [],
-  data: { reason },
-});
+): TrackedStage =>
+  // Assertion needed: placeholder stages have partial data that gets filled later
+  ({
+    type,
+    status,
+    chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
+    chainId: L1_STAGES.has(type) ? 1 : 42161,
+    transactions: [],
+    data: { reason },
+  }) as TrackedStage;
 
 // Helper: track with cache check
 async function withCache<K extends string, T>(
@@ -191,8 +193,9 @@ async function pipelineTrackProposalQueued(
           proposalData?.creationBlock ?? 0,
           { votingEndBlock }
         );
-        let stage = r.stage;
-        if (stage.status === "READY" && proposalData) {
+        let stage: TrackedStage = r.stage;
+        if (stage.type === "PROPOSAL_QUEUED" && stage.status === "READY" && proposalData) {
+          // Enrich stage data with proposal info for READY state
           stage = {
             ...stage,
             data: {
@@ -281,8 +284,8 @@ async function pipelineTrackL2ToL1Message(
 
   // Fast-path for pending (still in challenge period)
   const pending = getCachedStage(state, "L2_TO_L1_MESSAGE");
-  if (pending?.status === "PENDING") {
-    const firstExec = (pending.data as { firstExecutableBlock?: number }).firstExecutableBlock;
+  if (pending?.type === "L2_TO_L1_MESSAGE" && pending.status === "PENDING") {
+    const firstExec = pending.data.firstExecutableBlock;
     if (firstExec) {
       const { blockNumber: currentL1Block, timestamp } = await getCurrentBlockInfo(
         state.providers.l1

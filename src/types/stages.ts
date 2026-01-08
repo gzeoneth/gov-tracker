@@ -23,6 +23,7 @@ export interface BaseStageData {
   note?: string;
   message?: string;
   fastPath?: boolean;
+  isElection?: boolean;
 }
 
 /**
@@ -62,6 +63,7 @@ export interface VotingActiveData extends BaseStageData {
   hasVettingPeriod?: boolean;
   vettingDeadline?: string;
   isVettingActive?: boolean;
+  waitingForVetting?: boolean;
   proposalState?: string;
   startBlock?: string;
   currentBlock?: string;
@@ -166,45 +168,56 @@ export interface StageDataMap {
 }
 
 /**
- * Union of all stage data types
+ * Common fields shared by all TrackedStage variants
  */
-export type TrackedStageData = Partial<
-  ProposalCreatedData &
-    VotingActiveData &
-    ProposalQueuedData &
-    TimelockStageData &
-    L2ToL1MessageStageData &
-    RetryableStageData
-> &
-  BaseStageData & {
-    isElection?: boolean;
-    waitingForVetting?: boolean;
-    proposalState?: string;
-    currentL1Block?: number;
-  };
-
-/**
- * A tracked stage in the lifecycle
- */
-export interface TrackedStage {
-  type: StageType;
+interface TrackedStageBase {
   status: StageStatus;
   chain: Chain;
   chainId: ChainId;
   transactions: StageTransaction[];
-  data: TrackedStageData;
   timing?: StageTiming;
   executable?: boolean;
   error?: string;
 }
 
 /**
- * Type-safe tracked stage with properly typed data field
+ * Mapped type generating a discriminated union of all stage types.
+ * Each variant has properly typed `data` field based on `type`.
  */
-export type TypedTrackedStage<T extends StageType> = Omit<TrackedStage, "type" | "data"> & {
-  type: T;
-  data: StageDataMap[T];
+type TrackedStageVariants = {
+  [K in StageType]: TrackedStageBase & {
+    type: K;
+    data: StageDataMap[K];
+  };
 };
+
+/**
+ * A tracked stage in the lifecycle.
+ *
+ * This is a discriminated union - TypeScript automatically narrows `data`
+ * when you check `type`:
+ *
+ * @example
+ * if (stage.type === "PROPOSAL_CREATED") {
+ *   console.log(stage.data.proposer); // ✓ TypeScript knows this exists
+ * }
+ */
+export type TrackedStage = TrackedStageVariants[StageType];
+
+/**
+ * Type-safe tracked stage for a specific stage type.
+ * Use this when you need to declare a variable for a known stage type.
+ *
+ * @example
+ * const votingStage: TypedTrackedStage<"VOTING_ACTIVE"> = stage;
+ */
+export type TypedTrackedStage<T extends StageType> = TrackedStageVariants[T];
+
+/**
+ * Union of all stage data types.
+ * Useful for functions that accept any stage data without knowing the type.
+ */
+export type TrackedStageData = StageDataMap[StageType];
 
 /**
  * Type guard to check if a stage is of a specific type.
@@ -233,5 +246,7 @@ export function getStageData<T extends StageType>(
   if (stage.type !== expectedType) {
     return null;
   }
-  return stage.data as unknown as StageDataMap[T];
+  // TypeScript's narrowing doesn't propagate through generic constraints,
+  // but we've verified the type match above
+  return stage.data as StageDataMap[T];
 }

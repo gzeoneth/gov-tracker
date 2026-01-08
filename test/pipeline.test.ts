@@ -25,14 +25,14 @@ dotenv.config({ quiet: true });
 describe("Pipeline Module", () => {
   describe("Stage chain classification (unit tests)", () => {
     it("should classify L1_TIMELOCK as ethereum chain", () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "L1_TIMELOCK",
         status: "COMPLETED",
         chain: "ethereum",
         chainId: 1,
         transactions: [],
         data: {},
-      };
+      } as unknown as TrackedStage;
 
       expect(stage.chain).toBe("ethereum");
       expect(stage.chainId).toBe(1);
@@ -49,14 +49,14 @@ describe("Pipeline Module", () => {
       ] as const;
 
       for (const type of l2StageTypes) {
-        const stage: TrackedStage = {
+        const stage = {
           type,
           status: "COMPLETED",
           chain: "arb1",
           chainId: 42161,
           transactions: [],
           data: {},
-        };
+        } as unknown as TrackedStage;
 
         expect(stage.chain).toBe("arb1");
         expect(stage.chainId).toBe(42161);
@@ -64,7 +64,7 @@ describe("Pipeline Module", () => {
     });
 
     it("should support nova chain for RETRYABLE_EXECUTED", () => {
-      const stage: TrackedStage = {
+      const stage = {
         type: "RETRYABLE_EXECUTED",
         status: "COMPLETED",
         chain: "nova",
@@ -73,7 +73,7 @@ describe("Pipeline Module", () => {
         data: {
           targetChains: ["nova"],
         },
-      };
+      } as unknown as TrackedStage;
 
       expect(stage.chain).toBe("nova");
       expect(stage.chainId).toBe(42170);
@@ -82,31 +82,31 @@ describe("Pipeline Module", () => {
 
   describe("Placeholder stage creation", () => {
     it("should create NOT_STARTED placeholder with reason", () => {
-      const placeholder: TrackedStage = {
+      const placeholder = {
         type: "L1_TIMELOCK",
         status: "NOT_STARTED",
         chain: "ethereum",
         chainId: 1,
         transactions: [],
         data: { reason: "L2 timelock not executed" },
-      };
+      } as unknown as TrackedStage;
 
       expect(placeholder.status).toBe("NOT_STARTED");
-      expect(placeholder.data.reason).toBe("L2 timelock not executed");
+      expect((placeholder.data as { reason?: string }).reason).toBe("L2 timelock not executed");
     });
 
     it("should create SKIPPED placeholder for L2-only path", () => {
-      const skipped: TrackedStage = {
+      const skipped = {
         type: "L2_TO_L1_MESSAGE",
         status: "SKIPPED",
         chain: "arb1",
         chainId: 42161,
         transactions: [],
         data: { reason: "L2-only path" },
-      };
+      } as unknown as TrackedStage;
 
       expect(skipped.status).toBe("SKIPPED");
-      expect(skipped.data.reason).toBe("L2-only path");
+      expect((skipped.data as { reason?: string }).reason).toBe("L2-only path");
     });
   });
 

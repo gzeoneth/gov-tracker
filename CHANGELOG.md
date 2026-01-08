@@ -7,9 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Commits: 487334b..5bc7bbe (refactor-types branch)
+> Commits: 487334b..257dd82 (refactor-trackedstage branch)
+
+### Fixed
+
+- **Security**: `extractCalldataFromStage` now throws an error when `value` is missing from `callScheduledData` instead of silently defaulting to "0". This prevents users from approving proposals that appear to transfer no ETH when the actual calldata sends funds.
 
 ### Breaking Changes
+
+#### TrackedStage Discriminated Union
+
+`TrackedStage` is now a discriminated union keyed by `type`. TypeScript automatically narrows `data` when checking `stage.type`:
+
+```typescript
+// Before: data was a loose intersection type
+if (stage.type === "VOTING_ACTIVE") {
+  const votes = stage.data.forVotes; // ❌ TypeScript didn't know this exists
+}
+
+// After: data is properly typed per stage type
+if (stage.type === "VOTING_ACTIVE") {
+  const votes = stage.data.forVotes; // ✓ TypeScript knows VotingActiveData
+}
+```
+
+**Stage tracking functions now return typed stages:**
+```typescript
+// trackVotingStage returns TypedTrackedStage<"VOTING_ACTIVE">
+const { stage } = await trackVotingStage(...);
+stage.data.forVotes; // ✓ No cast needed
+
+// trackProposalCreated returns TypedTrackedStage<"PROPOSAL_CREATED">
+// trackProposalQueued returns TypedTrackedStage<"PROPOSAL_QUEUED">
+// trackL2ToL1Message returns TypedTrackedStage<"L2_TO_L1_MESSAGE">
+// trackRetryables returns TypedTrackedStage<"RETRYABLE_EXECUTED">
+```
+
+**StageBuilder is now generic:**
+```typescript
+// Before
+const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
+builder.data({ anyField: "value" }); // No type checking
+
+// After
+const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
+builder.data({ forVotes: "100" }); // ✓ Type-checked against VotingActiveData
+```
 
 #### Chain Type Refactoring
 - **Replaced `ChainType`** ("L1", "L2", "NOVA") with unified `Chain` type ("ethereum", "arb1", "nova")

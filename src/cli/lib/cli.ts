@@ -702,7 +702,7 @@ async function prepareStagesForResult(
 function shortScope(key: string): string {
   // "tx:0x1234..." -> "0x1234..." (full hash, no truncation)
   if (key.startsWith("tx:")) {
-    return key.slice(3); // Remove "tx:" prefix, keep full hash
+    return key.slice(3);
   }
   return key;
 }

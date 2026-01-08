@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "../src/calldata";
 import { ethers } from "ethers";
 import { TIMELOCK_SELECTORS, ADDRESSES } from "../src/constants";
+import type { TrackedStage } from "../src/types";
 
 describe("Calldata Decoder", () => {
   describe("decodeCalldata", () => {
@@ -203,13 +204,13 @@ describe("Calldata Decoder", () => {
         },
       };
 
-      const result = extractCalldataFromStage(stage);
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
       expect(result.calldatas).toEqual([]);
       expect(result.targets).toEqual([]);
       expect(result.values).toEqual([]);
     });
 
-    it("should default value to 0 when missing in callScheduledData", () => {
+    it("should throw when value is missing in callScheduledData", () => {
       const stage = {
         type: "L1_TIMELOCK" as const,
         status: "READY" as const,
@@ -221,14 +222,15 @@ describe("Calldata Decoder", () => {
             {
               target: "0xTarget",
               data: "0xData",
-              // value is missing
+              // value is missing - this is a data integrity error
             },
           ],
         },
       };
 
-      const result = extractCalldataFromStage(stage as any);
-      expect(result.values[0]).toBe("0");
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Missing value in callScheduledData at index 0/
+      );
     });
 
     it("should throw for mismatched values array length", () => {
@@ -245,7 +247,9 @@ describe("Calldata Decoder", () => {
         },
       };
 
-      expect(() => extractCalldataFromStage(stage)).toThrow(/Mismatch in values length/);
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in values length/
+      );
     });
   });
 });

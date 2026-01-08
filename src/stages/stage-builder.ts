@@ -1,5 +1,7 @@
 /**
  * Fluent API for constructing TrackedStage objects
+ *
+ * Generic over StageType to ensure type-safe data assignment.
  */
 
 import {
@@ -10,14 +12,29 @@ import {
   StageType,
   StageTransaction,
   StageTiming,
-  TrackedStage,
-  TrackedStageData,
+  StageDataMap,
+  TypedTrackedStage,
 } from "../types";
 
-export class StageBuilder {
-  private _stage: TrackedStage;
+/**
+ * Internal builder state - uses partial data during construction
+ */
+interface BuilderState<T extends StageType> {
+  type: T;
+  status: StageStatus;
+  chain: Chain;
+  chainId: ChainId;
+  transactions: StageTransaction[];
+  data: Partial<StageDataMap[T]>;
+  timing?: StageTiming;
+  executable: boolean;
+  error?: string;
+}
 
-  constructor(type: StageType, chain: Chain, status: StageStatus = "NOT_STARTED") {
+export class StageBuilder<T extends StageType> {
+  private _stage: BuilderState<T>;
+
+  constructor(type: T, chain: Chain, status: StageStatus = "NOT_STARTED") {
     const chainId = chainToChainId(chain) ?? 0;
     this._stage = {
       type,
@@ -42,7 +59,7 @@ export class StageBuilder {
   /**
    * Add data to the stage (merges with existing data)
    */
-  data(data: TrackedStageData): this {
+  data(data: Partial<StageDataMap[T]>): this {
     this._stage.data = { ...this._stage.data, ...data };
     return this;
   }
@@ -87,7 +104,7 @@ export class StageBuilder {
   skip(reason: string): this {
     this._stage.status = "SKIPPED";
     this._stage.executable = false;
-    this._stage.data = { ...this._stage.data, skipReason: reason };
+    this._stage.data = { ...this._stage.data, skipReason: reason } as Partial<StageDataMap[T]>;
     return this;
   }
 
@@ -108,9 +125,16 @@ export class StageBuilder {
   }
 
   /**
-   * Build and return the final stage object
+   * Build and return the final stage object.
+   * The data field is cast to the full type - callers should ensure
+   * required fields are populated before calling build().
    */
-  build(): TrackedStage {
-    return { ...this._stage };
+  build(): TypedTrackedStage<T> {
+    // TypeScript cannot prove the generic satisfies the discriminated union,
+    // but we control construction and know it's valid
+    return {
+      ...this._stage,
+      data: this._stage.data as StageDataMap[T],
+    } as TypedTrackedStage<T>;
   }
 }

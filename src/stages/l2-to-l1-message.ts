@@ -22,7 +22,7 @@ import {
   getArbitrumNetwork,
 } from "@arbitrum/sdk";
 import { ChildToParentMessageReaderNitro } from "@arbitrum/sdk/dist/lib/message/ChildToParentMessageNitro";
-import { TrackedStage, PrepareResult, getStageData } from "../types";
+import { TrackedStage, TypedTrackedStage, PrepareResult, getStageData } from "../types";
 import { ADDRESSES, BLOCK_TIMES, TIMING } from "../constants";
 import { loggers } from "../utils/logger";
 
@@ -153,7 +153,7 @@ export function getAllMessagePositionsFromReceipt(
  * Result from L2→L1 message stage tracking.
  */
 export interface L2ToL1MessageResult {
-  stage: TrackedStage;
+  stage: TypedTrackedStage<"L2_TO_L1_MESSAGE">;
   messages: ChildToParentMessageReader[];
   messagePosition?: BigNumber;
   messagePositions: BigNumber[];

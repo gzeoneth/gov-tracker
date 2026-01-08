@@ -4,7 +4,7 @@ import { TrackedStage } from "../src/types";
 
 describe("extractCalldataFromStage", () => {
   it("extracts calldata from PROPOSAL_CREATED style stage", () => {
-    const stage: TrackedStage = {
+    const stage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
@@ -15,7 +15,7 @@ describe("extractCalldataFromStage", () => {
         targets: ["0xABCD"],
         values: ["100"],
       },
-    };
+    } as unknown as TrackedStage;
 
     const result = extractCalldataFromStage(stage);
     expect(result.calldatas).toEqual(["0x1234"]);
@@ -24,7 +24,7 @@ describe("extractCalldataFromStage", () => {
   });
 
   it("handles missing values in PROPOSAL_CREATED", () => {
-    const stage: TrackedStage = {
+    const stage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
@@ -35,7 +35,7 @@ describe("extractCalldataFromStage", () => {
         targets: ["0xT1", "0xT2"],
         values: ["0", "0"],
       },
-    };
+    } as unknown as TrackedStage;
 
     const result = extractCalldataFromStage(stage);
     expect(result.calldatas).toEqual(["0x1", "0x2"]);
@@ -44,7 +44,7 @@ describe("extractCalldataFromStage", () => {
   });
 
   it("throws error for mismatched array lengths in PROPOSAL_CREATED", () => {
-    const stage: TrackedStage = {
+    const stage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
@@ -55,13 +55,13 @@ describe("extractCalldataFromStage", () => {
         targets: ["0xT1"], // Too short
         values: ["0", "0", "0", "0"], // Too long
       },
-    };
+    } as unknown as TrackedStage;
 
     expect(() => extractCalldataFromStage(stage)).toThrow(/Mismatch in targets length/);
   });
 
   it("extracts calldata from Timelock stage (L1/L2)", () => {
-    const stage: TrackedStage = {
+    const stage = {
       type: "L2_TIMELOCK",
       status: "READY",
       chain: "arb1",
@@ -81,9 +81,9 @@ describe("extractCalldataFromStage", () => {
             value: "0",
             data: "0xData2",
           },
-        ] as any,
+        ],
       },
-    };
+    } as unknown as TrackedStage;
 
     const result = extractCalldataFromStage(stage);
     expect(result.calldatas).toEqual(["0xData1", "0xData2"]);
@@ -92,14 +92,14 @@ describe("extractCalldataFromStage", () => {
   });
 
   it("returns empty arrays if no calldata found", () => {
-    const stage: TrackedStage = {
+    const stage = {
       type: "PROPOSAL_CREATED",
       status: "COMPLETED",
       chain: "ethereum",
       chainId: 1,
       transactions: [],
       data: {},
-    };
+    } as unknown as TrackedStage;
 
     const result = extractCalldataFromStage(stage);
     expect(result.calldatas).toEqual([]);

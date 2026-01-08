@@ -157,6 +157,7 @@ describe("Voting Stage Tracking", () => {
       expect(result.stage.status).toBe("PENDING");
       expect(result.stage.type).toBe("VOTING_ACTIVE");
       expect(result.votingData).not.toBeNull();
+      // stage.data is now properly typed as VotingActiveData (no cast needed)
       expect(result.stage.data.forVotes).toContain("ARB");
       expect(result.stage.data.quorumReached).toBe(true);
     });
@@ -263,6 +264,7 @@ describe("Voting Stage Tracking", () => {
       );
 
       expect(result.stage.status).toBe("PENDING");
+      // stage.data is now properly typed as VotingActiveData (no cast needed)
       expect(result.stage.data.hasVettingPeriod).toBe(true);
       expect(result.stage.data.isVettingActive).toBe(true);
       expect(result.stage.data.waitingForVetting).toBe(true);
@@ -302,6 +304,7 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
+      // stage.data is now properly typed as VotingActiveData (no cast needed)
       expect(result.stage.data.wasExtended).toBe(true);
     });
 

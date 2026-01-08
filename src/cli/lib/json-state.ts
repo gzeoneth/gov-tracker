@@ -108,14 +108,15 @@ function stageToJson(stage: TrackedStage): JsonStageStatus {
     json.executable = true;
   }
 
-  // Include relevant data fields
+  // Include relevant data fields (cast to loose type for field extraction)
+  const data = stage.data as Record<string, unknown>;
   const relevantData: Record<string, unknown> = {};
-  if (stage.data.operationId) relevantData.operationId = stage.data.operationId;
-  if (stage.data.isSecurityCouncilOperation)
-    relevantData.isSecurityCouncil = stage.data.isSecurityCouncilOperation;
-  if (stage.data.ticketCount) relevantData.ticketCount = stage.data.ticketCount;
-  if (stage.data.redeemedCount !== undefined) relevantData.redeemedCount = stage.data.redeemedCount;
-  if (stage.data.pendingCount !== undefined) relevantData.pendingCount = stage.data.pendingCount;
+  if (data.operationId) relevantData.operationId = data.operationId;
+  if (data.isSecurityCouncilOperation)
+    relevantData.isSecurityCouncil = data.isSecurityCouncilOperation;
+  if (data.ticketCount) relevantData.ticketCount = data.ticketCount;
+  if (data.redeemedCount !== undefined) relevantData.redeemedCount = data.redeemedCount;
+  if (data.pendingCount !== undefined) relevantData.pendingCount = data.pendingCount;
 
   if (Object.keys(relevantData).length > 0) {
     json.data = relevantData;

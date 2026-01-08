@@ -113,12 +113,9 @@ export function isLikelyCalldata(value: string): boolean {
 /**
  * Format a decoded value for display
  *
- * Note: We deliberately do NOT truncate addresses or calldata as truncation
- * loses important information and makes values harder to verify/debug.
- *
  * @param value - The raw decoded value
  * @param type - Solidity type string
- * @returns Formatted string representation (full, untruncated)
+ * @returns Formatted string representation
  */
 export function formatDecodedValue(value: unknown, type: string): string {
   // Handle BigNumber
@@ -146,9 +143,15 @@ export function formatDecodedValue(value: unknown, type: string): string {
     return `[${formatted.join(", ")}]`;
   }
 
-  // Return full value without truncation - truncation loses important information
-  // and makes it harder to verify/debug decoded values
-  return String(value);
+  // Handle very long strings - only truncate if > 1000 chars to preserve data integrity
+  const strValue = String(value);
+  if (strValue.length > 1000) {
+    const prefix = strValue.slice(0, 500);
+    const suffix = strValue.slice(-500);
+    return `${prefix}...${suffix}`;
+  }
+
+  return strValue;
 }
 
 /**

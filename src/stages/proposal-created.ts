@@ -5,7 +5,7 @@
  */
 
 import { ethers } from "ethers";
-import { ProposalData, TrackedStage } from "../types";
+import { ProposalData, TypedTrackedStage } from "../types";
 import { GOVERNANCE_START_BLOCKS } from "../constants";
 import {
   findProposalCreatedEvent,
@@ -29,7 +29,7 @@ export async function trackProposalCreated(
     fromBlock?: number;
   } = {}
 ): Promise<{
-  stage: TrackedStage;
+  stage: TypedTrackedStage<"PROPOSAL_CREATED">;
   proposalData: ProposalData | null;
 }> {
   const builder = new StageBuilder("PROPOSAL_CREATED", "arb1");

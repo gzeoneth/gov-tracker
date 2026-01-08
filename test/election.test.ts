@@ -15,6 +15,7 @@ import {
   getElectionProposalId,
   getElectionProposalParams,
   prepareMemberElectionTrigger,
+  prepareElectionCreation,
   trackElectionProposal,
   DEFAULT_RPC_URLS,
 } from "../src";
@@ -325,6 +326,33 @@ describe("Election Module - Mocked Tests", () => {
       // #then - should produce valid calldata
       expect(calldata).toContain("0x");
       expect(calldata.length).toBeGreaterThan(10); // At least selector + params
+    });
+  });
+
+  describe("prepareElectionCreation", () => {
+    it("should prepare election creation transaction", () => {
+      // #given - minimal election status with election count
+      // #when - preparing election creation
+      const result = prepareElectionCreation({ electionCount: 5 });
+
+      // #then - should return prepared transaction
+      expect(result.transaction).toBeDefined();
+      expect(result.transaction.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+      expect(result.transaction.chain).toBe("arb1");
+      expect(result.transaction.chainId).toBe(42161);
+      expect(result.transaction.value).toBe("0");
+      expect(result.electionIndex).toBe(5);
+    });
+
+    it("should use custom governor address when provided", () => {
+      // #given - custom governor address
+      const customAddress = "0x1111111111111111111111111111111111111111";
+
+      // #when - preparing with custom address
+      const result = prepareElectionCreation({ electionCount: 3 }, customAddress);
+
+      // #then - should use custom address
+      expect(result.transaction.to).toBe(customAddress);
     });
   });
 });

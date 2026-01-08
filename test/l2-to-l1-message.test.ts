@@ -7,14 +7,16 @@
  * RPC-based tests track L2→L1 message functions using real proposal data.
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { BigNumber, ethers } from "ethers";
 import * as dotenv from "dotenv";
+import { ChildToParentMessageStatus } from "@arbitrum/sdk";
 import {
   getAllMessagePositionsFromReceipt,
   trackL2ToL1Message,
   getL2ToL1Messages,
   prepareL2ToL1MessageStage,
+  prepareL2ToL1Message,
 } from "../src/stages/l2-to-l1-message";
 import { arbSysInterface } from "../src/abis";
 import { ADDRESSES, DEFAULT_RPC_URLS } from "../src/constants";
@@ -214,6 +216,109 @@ describe("L2 to L1 Message Stage", () => {
       const positions = getAllMessagePositionsFromReceipt(receipt);
       expect(positions).toHaveLength(1);
       expect(positions[0].eq(largePosition)).toBe(true);
+    });
+  });
+
+  describe("prepareL2ToL1Message (mocked)", () => {
+    /**
+     * Create a mock Nitro reader for testing
+     */
+    function createMockNitroReader(status: ChildToParentMessageStatus) {
+      return {
+        status: vi.fn().mockResolvedValue(status),
+        getOutboxProof: vi.fn().mockResolvedValue(["0x" + "a".repeat(64), "0x" + "b".repeat(64)]),
+        event: {
+          position: BigNumber.from(123),
+          caller: "0x1111111111111111111111111111111111111111",
+          destination: ADDRESSES.L1_TIMELOCK,
+          arbBlockNum: BigNumber.from(100000),
+          ethBlockNum: BigNumber.from(50000),
+          timestamp: BigNumber.from(1700000000),
+          callvalue: BigNumber.from(0),
+          data: "0xabcd",
+        },
+      };
+    }
+
+    const mockProvider = {} as ethers.providers.Provider;
+
+    it("should fail when message is already EXECUTED", async () => {
+      // #given a message with EXECUTED status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.EXECUTED) as any;
+
+      // #when preparing without prepareCompleted option
+      const result = await prepareL2ToL1Message(mockReader, mockProvider);
+
+      // #then should fail with already executed error
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("already executed");
+      }
+    });
+
+    it("should fail when message is UNCONFIRMED", async () => {
+      // #given a message with UNCONFIRMED status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.UNCONFIRMED) as any;
+
+      // #when preparing without prepareCompleted option
+      const result = await prepareL2ToL1Message(mockReader, mockProvider);
+
+      // #then should fail with not ready error
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("not ready");
+        expect(result.error).toContain("UNCONFIRMED");
+      }
+    });
+
+    it("should succeed when message is CONFIRMED", async () => {
+      // #given a message with CONFIRMED status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.CONFIRMED) as any;
+
+      // #when preparing
+      const result = await prepareL2ToL1Message(mockReader, mockProvider);
+
+      // #then should succeed with prepared transaction
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.prepared.chain).toBe("ethereum");
+        expect(result.prepared.to).toBe(ADDRESSES.ARB1_OUTBOX);
+      }
+    });
+
+    it("should skip status check with prepareCompleted option", async () => {
+      // #given a message with EXECUTED status and prepareCompleted option
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.EXECUTED) as any;
+
+      // #when preparing with prepareCompleted=true
+      const result = await prepareL2ToL1Message(mockReader, mockProvider, {
+        prepareCompleted: true,
+      });
+
+      // #then should succeed (bypassing status check)
+      expect(result.success).toBe(true);
+    });
+
+    it("should use custom outbox address when provided", async () => {
+      // #given a confirmed message and custom outbox address
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.CONFIRMED) as any;
+      const customOutbox = "0x5555555555555555555555555555555555555555";
+
+      // #when preparing with custom outbox
+      const result = await prepareL2ToL1Message(mockReader, mockProvider, {
+        outboxAddress: customOutbox,
+      });
+
+      // #then should use the custom outbox address
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.prepared.to).toBe(customOutbox);
+      }
     });
   });
 });

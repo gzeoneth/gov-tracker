@@ -36,8 +36,112 @@ import {
   TrackedStage,
   StageTransaction,
 } from "../src";
+import { extractTimelockLink } from "../src/tracker";
 
 dotenv.config({ quiet: true });
+
+describe("extractTimelockLink (Unit Tests)", () => {
+  it("should return undefined for empty stages array", () => {
+    // #given - empty stages array
+    const stages: TrackedStage[] = [];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when PROPOSAL_QUEUED stage is not completed", () => {
+    // #given - stages with PROPOSAL_QUEUED not completed
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "READY" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [],
+        data: { proposalState: "Succeeded" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when transactions are missing", () => {
+    // #given - completed stage without transactions
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [],
+        data: { proposalState: "Queued", operationId: "0x123", timelockAddress: "0x456" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when operationId is missing", () => {
+    // #given - completed stage without operationId
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [{ hash: "0xabc", blockNumber: 100, chain: "arb1" as const, chainId: 42161 }],
+        data: { proposalState: "Queued", timelockAddress: "0x456" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should extract timelock link from completed PROPOSAL_QUEUED stage", () => {
+    // #given - valid completed PROPOSAL_QUEUED stage
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [
+          { hash: "0xabc123", blockNumber: 100000, chain: "arb1" as const, chainId: 42161 },
+        ],
+        data: {
+          proposalState: "Queued",
+          operationId: "0xoperation456",
+          timelockAddress: "0x789timelock",
+        },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return valid timelock link
+    expect(result).toBeDefined();
+    expect(result?.txHash).toBe("0xabc123");
+    expect(result?.operationId).toBe("0xoperation456");
+    expect(result?.timelockAddress).toBe("0x789timelock");
+    expect(result?.queueBlockNumber).toBe(100000);
+  });
+});
 
 describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;

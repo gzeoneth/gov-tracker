@@ -77,10 +77,6 @@ export type {
   TimelockBatchParams,
   CallScheduledData,
   TimelockLink,
-  // Cross-chain types
-  L2ToL1MessageStatus,
-  L2ToL1MessageData,
-  RetryableStatus,
   // Stage data types
   ProposalCreatedData,
   VotingActiveData,

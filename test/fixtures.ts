@@ -1,36 +1,11 @@
 /**
  * TDD Ground Truth Test Data
  *
- * Re-exports constants from main codebase for test convenience.
- * Address and chain ID constants are imported directly from src/constants.
+ * Test fixtures for governance tracking tests.
+ * Uses constants directly from src/constants.
  */
 
-import { ADDRESSES, CHAIN_IDS, CHUNK_SIZES } from "../src/constants";
-
-/**
- * Re-export ADDRESSES for backward compatibility with existing tests.
- * Adds election governors with test-friendly names.
- */
-export const ARBITRUM_ADDRESSES = {
-  // Re-export from main constants
-  CONSTITUTIONAL_GOVERNOR: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-  NON_CONSTITUTIONAL_GOVERNOR: ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
-  L2_CONSTITUTIONAL_TIMELOCK: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
-  L2_NON_CONSTITUTIONAL_TIMELOCK: ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK,
-  L1_TIMELOCK: ADDRESSES.L1_TIMELOCK,
-  ARB1_DELAYED_INBOX: ADDRESSES.ARB1_DELAYED_INBOX,
-  NOVA_DELAYED_INBOX: ADDRESSES.NOVA_DELAYED_INBOX,
-  SECURITY_COUNCIL_MANAGER: ADDRESSES.SECURITY_COUNCIL_MANAGER,
-
-  // Election governors with test-friendly aliases
-  NOMINEE_ELECTION_GOVERNOR: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-  MEMBER_ELECTION_GOVERNOR: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
-
-  // Chain IDs
-  ARB_ONE_CHAIN_ID: CHAIN_IDS.ARB_ONE,
-  NOVA_CHAIN_ID: CHAIN_IDS.NOVA,
-  ETHEREUM_CHAIN_ID: CHAIN_IDS.ETHEREUM,
-} as const;
+import { ADDRESSES, CHUNK_SIZES } from "../src/constants";
 
 /**
  * Test Case 1: Core Governor - Full L1 Round-trip (COMPLETED)
@@ -39,14 +14,14 @@ export const ARBITRUM_ADDRESSES = {
 export const CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP = {
   // Proposal info
   proposalId: "51852039695020109312343918128899814224888993575448130385109956762385891284115",
-  governorAddress: ARBITRUM_ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+  governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
   creationTxHash: "0x4bf0485d75ff6032dde76dfe98a0e5ff1ca9539cf82a62ff2b9ffb63339a0e8c",
   creationBlock: 369846189,
 
   // Timelock info
   timelockTxHash: "0xc5dd701fba7cdd670d8f8f5b64542404737c389b3322d78b821a9417708d48ce",
   operationId: "0xaf607f045944b4a9caf0b7e13f0fca93facbf22e389b23ea6cfee07afe452016",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 376175960,
 
   // Expected stage transactions
@@ -78,14 +53,14 @@ export const CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP = {
 export const NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY = {
   // Proposal info
   proposalId: "57495998481040869152703890521939307107269690440073097268210566577740258992963",
-  governorAddress: ARBITRUM_ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
+  governorAddress: ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
   creationTxHash: "0xd426ee539f4bfc7ddda642a3db143f6054db97168c2e473a54720a2e363f4262",
   creationBlock: 389241837,
 
   // Timelock info
   timelockTxHash: "0x3926b73298699c92833b4474b9dd09ba8b201ea9cb54617f2f5c0ca0bd83ab3b",
   operationId: "0x313821aa48ce176d399069d29c0de9199c0325afa24158f08745443a9539a67e",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 395667897,
 
   // Expected: Only L2 execution, no L1 stages
@@ -107,14 +82,14 @@ export const NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY = {
 export const CONSTITUTIONAL_GOVERNOR_IN_PROGRESS = {
   // Proposal info
   proposalId: "53154361738756237993090798888616593723057470462495169047773178676976253908001",
-  governorAddress: ARBITRUM_ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+  governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
   creationTxHash: "0x385043172e9314cdc34facf04efb540de5ff6ec99a41ec2ff373d79d0415736d",
   creationBlock: 406178381,
 
   // Timelock info
   timelockTxHash: "0xdfebb93861904590d6d538d48071a96137f66b7a947431a7d74d62a59ce182ec",
   operationId: "0xfe50c9ebc88eb67a91f1309a1b0f26c2bb2cf8ac3bc2b324acbd59953bad6de5",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 412140178,
 
   // Expected: L2 executed, L2→L1 message sent, waiting for challenge period
@@ -143,14 +118,14 @@ export const CONSTITUTIONAL_GOVERNOR_IN_PROGRESS = {
 export const CONSTITUTIONAL_GOVERNOR_COMPLETED = {
   // Proposal info
   proposalId: "97685288731263391833044854304895851471157040105038894699042975271050068874277",
-  governorAddress: ARBITRUM_ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+  governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
   creationTxHash: "0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068",
   creationBlock: 292019815, // Block when proposal was created
 
   // Timelock info
   timelockTxHash: "0xa391dcbeb4747f0f79b8fb67c96a2dc83bc8db6b64bb3ba5bc8e8f7d8e46a7b6",
   operationId: "0x8b915cc1882cbaa0f5dd0ead1d78fb96fbd9636f23d8ae93a0fe99a7e2be7c4b",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 369071489, // Block when CallScheduled emitted
 
   // Execution block hints for fast search (from cache ground truth)
@@ -191,7 +166,7 @@ export const DIRECT_TIMELOCK_OPERATION = {
   // No proposal - start directly from timelock operation
   timelockTxHash: "0xc5dd701fba7cdd670d8f8f5b64542404737c389b3322d78b821a9417708d48ce",
   operationId: "0xaf607f045944b4a9caf0b7e13f0fca93facbf22e389b23ea6cfee07afe452016",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 376175960,
 
   // Same expected stages as CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP, starting from stage 4
@@ -206,7 +181,7 @@ export const CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP_2 = {
   // Timelock operation (full chain data available)
   timelockTxHash: "0xf0ab58113ea28071540c15f9b5b1392cab54c99ec9f5daa6783594b8c5244a24",
   operationId: "0x038f88c074c63860f6538515425c3ce854cc090377874185c67189d7d61e7327",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   queueBlockNumber: 354364540,
 
   // Ground truth execution data from cache
@@ -232,9 +207,9 @@ export const CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP_2 = {
 export const NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY_2 = {
   // Find from proposal-gov-tracker-cache.json - another treasury proposal
   proposalId: "37638751032596392177176596241110468090299645534448966767963399982622616318705",
-  governorAddress: ARBITRUM_ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
+  governorAddress: ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
   creationTxHash: "0x575d76451ec2a5746ecad6441541e1199094d8c4624d7866186671fd7a6d2a56",
-  l2TimelockAddress: ARBITRUM_ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK,
+  l2TimelockAddress: ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK,
 };
 
 /**

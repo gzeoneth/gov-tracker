@@ -8,7 +8,7 @@ import { ethers } from "ethers";
 import type { RetryableTicketData } from "../types/calldata";
 import { ADDRESSES } from "../constants";
 
-// Addresses for comparison (lowercase)
+// Lowercase addresses for comparison
 export const RETRYABLE_TICKET_MAGIC = ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase();
 const ARB1_DELAYED_INBOX = ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase();
 const NOVA_DELAYED_INBOX = ADDRESSES.NOVA_DELAYED_INBOX.toLowerCase();
@@ -30,10 +30,10 @@ export function isRetryableTicketMagic(target: string): boolean {
  * @returns Target L2 chain
  */
 function detectChainFromInbox(inboxAddress: string): "arb1" | "nova" | "unknown" {
-  const lowerInbox = inboxAddress.toLowerCase();
+  const normalized = inboxAddress.toLowerCase();
 
-  if (lowerInbox === ARB1_DELAYED_INBOX) return "arb1";
-  if (lowerInbox === NOVA_DELAYED_INBOX) return "nova";
+  if (normalized === ARB1_DELAYED_INBOX) return "arb1";
+  if (normalized === NOVA_DELAYED_INBOX) return "nova";
   return "unknown";
 }
 

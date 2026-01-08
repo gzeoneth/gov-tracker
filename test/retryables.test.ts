@@ -23,7 +23,6 @@ import * as dotenv from "dotenv";
 import {
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
-  ARBITRUM_ADDRESSES,
 } from "./fixtures";
 
 import {
@@ -114,7 +113,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         expect(arb1Target).toBeDefined();
         if (arb1Target) {
           expect(arb1Target.inboxAddress.toLowerCase()).toBe(
-            ARBITRUM_ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase()
+            ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase()
           );
           expect(arb1Target.messageCount).toBeGreaterThan(0);
         }

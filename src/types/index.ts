@@ -50,13 +50,7 @@ export {
 } from "./timelock";
 
 // Cross-chain types
-export {
-  L2ToL1MessageStatus,
-  L2ToL1MessageData,
-  RetryableStatus,
-  RetryableCreationDetail,
-  RetryableRedemptionDetail,
-} from "./cross-chain";
+export { RetryableCreationDetail, RetryableRedemptionDetail } from "./cross-chain";
 
 // Stage data types
 export {

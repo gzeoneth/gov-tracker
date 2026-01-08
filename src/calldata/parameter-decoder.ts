@@ -68,11 +68,10 @@ export function getAddressLabel(address: string, chain: Chain | undefined): stri
   if (!chain || chain === "unknown") return undefined;
 
   const chainAddresses = KNOWN_ADDRESSES[chain];
-
-  const lowerAddress = address.toLowerCase();
+  const normalized = address.toLowerCase();
 
   for (const [addr, label] of Object.entries(chainAddresses)) {
-    if (addr.toLowerCase() === lowerAddress) {
+    if (addr.toLowerCase() === normalized) {
       return label;
     }
   }

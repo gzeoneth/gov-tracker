@@ -10,9 +10,9 @@ import {
   PrepareResult,
   getStageData,
   StageType,
-  ChainType,
-  L2TimelockData,
-  L1TimelockData,
+  Chain,
+  chainToChainId,
+  TimelockStageData,
   CallScheduledData,
   TimelockState,
   OperationState,
@@ -27,16 +27,6 @@ import {
 } from "../stages/base";
 import { StageBuilder } from "../stages/stage-builder";
 import { findCallExecutedEvent } from "../discovery/timelock-discovery";
-
-// Re-export serialization from base for backwards compatibility
-export {
-  serialize,
-  deserialize,
-  serializeCallScheduledData,
-  deserializeCallScheduledData,
-  serializeCallScheduledDataArray,
-  deserializeCallScheduledDataArray,
-} from "../stages/base";
 
 // ============================================================================
 // Timelock Execution Payload
@@ -54,7 +44,7 @@ export interface TimelockExecutionPayload {
 
 /** Extract timelock execution payload from a stage. */
 export function createTimelockStageData(stage: TrackedStage): TimelockExecutionPayload | null {
-  let stageData: L2TimelockData | L1TimelockData | null = null;
+  let stageData: TimelockStageData | null = null;
   for (const stageType of TIMELOCK_STAGE_TYPES) {
     stageData = getStageData(stage, stageType);
     if (stageData) break;
@@ -150,7 +140,7 @@ export function validateStageForPrepare(
   return null;
 }
 
-export interface BulkPrepareResult<T extends ChainType = ChainType> {
+export interface BulkPrepareResult<T extends Chain = Chain> {
   total: number;
   results: PrepareResult[];
   targetChain: T;
@@ -161,7 +151,7 @@ export interface SimpleBulkResult {
   results: PrepareResult[];
 }
 
-export function bulkPrepareError<T extends ChainType>(
+export function bulkPrepareError<T extends Chain>(
   error: string,
   targetChain: T
 ): BulkPrepareResult<T> {
@@ -172,7 +162,7 @@ export function simpleBulkError(error: string): SimpleBulkResult {
   return { total: 0, results: [{ success: false, error }] };
 }
 
-export function validateStageForBulkPrepare<T extends ChainType>(
+export function validateStageForBulkPrepare<T extends Chain>(
   stage: TrackedStage,
   targetChain: T,
   options: PrepareValidationOptions = {}
@@ -199,7 +189,7 @@ export async function searchAndCompleteTimelockExecution(
   timelockAddress: string,
   operationId: string,
   provider: ethers.providers.Provider,
-  chain: ChainType,
+  chain: Chain,
   fromBlock: number,
   toBlock?: number,
   queueTimestamp?: number
@@ -217,9 +207,10 @@ export async function searchAndCompleteTimelockExecution(
 
   if (event) {
     const execTimestamp = await getBlockTimestamp(event.blockNumber, provider);
+    const chainId = chainToChainId(chain) ?? 0;
     builder
       .status("COMPLETED")
-      .tx(event.txHash, event.blockNumber, chain, {
+      .tx(event.txHash, event.blockNumber, chain, chainId, {
         timestamp: execTimestamp,
         description: "executed",
       })

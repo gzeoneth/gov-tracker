@@ -3,17 +3,22 @@
  */
 
 import { ethers } from "ethers";
-import { ChainType } from "../types";
-import { CHAIN_IDS } from "../constants";
+import { Chain, ChainId, chainIdToChain } from "../types";
 
 /**
- * Get chain type from provider network.
+ * Get chain name from provider network.
  */
-export async function getChainType(provider: ethers.providers.Provider): Promise<ChainType> {
+export async function getChain(provider: ethers.providers.Provider): Promise<Chain> {
   const network = await provider.getNetwork();
-  if (network.chainId === CHAIN_IDS.NOVA) return "NOVA";
-  if (network.chainId === CHAIN_IDS.ARB_ONE) return "L2";
-  return "L1";
+  return chainIdToChain(network.chainId);
+}
+
+/**
+ * Get chain ID from provider network.
+ */
+export async function getChainId(provider: ethers.providers.Provider): Promise<ChainId> {
+  const network = await provider.getNetwork();
+  return network.chainId;
 }
 
 /**

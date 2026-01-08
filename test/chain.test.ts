@@ -2,9 +2,9 @@
  * Tests for Chain Utilities
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { ethers } from "ethers";
-import { getChainType, addressEquals, isAddressIn } from "../src/utils/chain";
+import { getChain, getChainId, addressEquals, isAddressIn } from "../src/utils/chain";
 import { CHAIN_IDS } from "../src/constants";
 
 describe("Chain Utilities", () => {
@@ -67,7 +67,7 @@ describe("Chain Utilities", () => {
     });
   });
 
-  describe("getChainType", () => {
+  describe("getChain", () => {
     function createMockProvider(chainId: number): ethers.providers.Provider {
       return {
         getNetwork: vi.fn().mockResolvedValue({ chainId }),
@@ -76,26 +76,58 @@ describe("Chain Utilities", () => {
 
     it("should return L1 for Ethereum mainnet", async () => {
       const provider = createMockProvider(1);
-      const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      const result = await getChain(provider);
+      expect(result).toBe("ethereum");
     });
 
     it("should return L2 for Arbitrum One", async () => {
       const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
-      const result = await getChainType(provider);
-      expect(result).toBe("L2");
+      const result = await getChain(provider);
+      expect(result).toBe("arb1");
     });
 
     it("should return NOVA for Arbitrum Nova", async () => {
       const provider = createMockProvider(CHAIN_IDS.NOVA);
-      const result = await getChainType(provider);
-      expect(result).toBe("NOVA");
+      const result = await getChain(provider);
+      expect(result).toBe("nova");
     });
 
-    it("should return L1 for unknown chains", async () => {
+    it("should return unknown for unknown chains", async () => {
       const provider = createMockProvider(999);
-      const result = await getChainType(provider);
-      expect(result).toBe("L1");
+      const result = await getChain(provider);
+      expect(result).toBe("unknown");
+    });
+  });
+
+  describe("getChainId", () => {
+    function createMockProvider(chainId: number): ethers.providers.Provider {
+      return {
+        getNetwork: vi.fn().mockResolvedValue({ chainId }),
+      } as unknown as ethers.providers.Provider;
+    }
+
+    it("should return chain ID for Ethereum mainnet", async () => {
+      const provider = createMockProvider(1);
+      const result = await getChainId(provider);
+      expect(result).toBe(1);
+    });
+
+    it("should return chain ID for Arbitrum One", async () => {
+      const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
+      const result = await getChainId(provider);
+      expect(result).toBe(CHAIN_IDS.ARB_ONE);
+    });
+
+    it("should return chain ID for Arbitrum Nova", async () => {
+      const provider = createMockProvider(CHAIN_IDS.NOVA);
+      const result = await getChainId(provider);
+      expect(result).toBe(CHAIN_IDS.NOVA);
+    });
+
+    it("should return chain ID for unknown chains", async () => {
+      const provider = createMockProvider(999);
+      const result = await getChainId(provider);
+      expect(result).toBe(999);
     });
   });
 });
@@ -111,5 +143,70 @@ describe("Chain Constants", () => {
 
   it("should have correct Nova chain ID", () => {
     expect(CHAIN_IDS.NOVA).toBe(42170);
+  });
+});
+
+describe("buildDefaultTargets", () => {
+  // Import buildDefaultTargets dynamically to avoid circular imports
+  let buildDefaultTargets: typeof import("../src/constants").buildDefaultTargets;
+
+  beforeAll(async () => {
+    const constants = await import("../src/constants");
+    buildDefaultTargets = constants.buildDefaultTargets;
+  });
+
+  it("should include all targets by default", () => {
+    const targets = buildDefaultTargets();
+
+    expect(targets.constitutionalGovernor).toBe(true);
+    expect(targets.nonConstitutionalGovernor).toBe(true);
+    expect(targets.electionNomineeGovernor).toBe(true);
+    expect(targets.electionMemberGovernor).toBe(true);
+    expect(targets.l2ConstitutionalTimelock).toBe(true);
+    expect(targets.l2NonConstitutionalTimelock).toBe(true);
+  });
+
+  it("should exclude elections when includeElections is false", () => {
+    const targets = buildDefaultTargets({ includeElections: false });
+
+    expect(targets.constitutionalGovernor).toBe(true);
+    expect(targets.nonConstitutionalGovernor).toBe(true);
+    expect(targets.electionNomineeGovernor).toBe(false);
+    expect(targets.electionMemberGovernor).toBe(false);
+    expect(targets.l2ConstitutionalTimelock).toBe(true);
+    expect(targets.l2NonConstitutionalTimelock).toBe(true);
+  });
+
+  it("should include only governors when governorsOnly is true", () => {
+    const targets = buildDefaultTargets({ governorsOnly: true });
+
+    expect(targets.constitutionalGovernor).toBe(true);
+    expect(targets.nonConstitutionalGovernor).toBe(true);
+    expect(targets.electionNomineeGovernor).toBe(true);
+    expect(targets.electionMemberGovernor).toBe(true);
+    expect(targets.l2ConstitutionalTimelock).toBe(false);
+    expect(targets.l2NonConstitutionalTimelock).toBe(false);
+  });
+
+  it("should include only timelocks when timelocksOnly is true", () => {
+    const targets = buildDefaultTargets({ timelocksOnly: true });
+
+    expect(targets.constitutionalGovernor).toBe(false);
+    expect(targets.nonConstitutionalGovernor).toBe(false);
+    expect(targets.electionNomineeGovernor).toBe(false);
+    expect(targets.electionMemberGovernor).toBe(false);
+    expect(targets.l2ConstitutionalTimelock).toBe(true);
+    expect(targets.l2NonConstitutionalTimelock).toBe(true);
+  });
+
+  it("should combine governorsOnly and includeElections options", () => {
+    const targets = buildDefaultTargets({ governorsOnly: true, includeElections: false });
+
+    expect(targets.constitutionalGovernor).toBe(true);
+    expect(targets.nonConstitutionalGovernor).toBe(true);
+    expect(targets.electionNomineeGovernor).toBe(false);
+    expect(targets.electionMemberGovernor).toBe(false);
+    expect(targets.l2ConstitutionalTimelock).toBe(false);
+    expect(targets.l2NonConstitutionalTimelock).toBe(false);
   });
 });

@@ -124,16 +124,16 @@ if (election.canCreate) {
 | `detectProposalType(address, provider)` | Detect governor type |
 | `getProposalState(governor, id, provider)` | Get proposal state |
 | `getTimelockOperationState(timelock, id, provider)` | Get timelock state |
-| `isKnownGovernor(address)` | Check if known governor |
-| `isKnownL2Timelock(address)` | Check if known timelock |
+| `isKnownL2Timelock(address)` | Check if known L2 timelock |
+| `isL1Timelock(address)` | Check if L1 timelock |
 
 ### Timing
 
 | Function | Description |
 |----------|-------------|
-| `calculateEta(stage)` | Calculate ETA for pending stage |
-| `hasDeadlinePassed(deadline)` | Check if deadline passed |
-| `isChallengeComplete(block, currentBlock)` | Check challenge period |
+| `calculateEta(blockNumber, provider)` | Calculate ETA timestamp for block |
+| `calculateExpectedEta(currentBlock, delayBlocks, timestamp, blockTime)` | Calculate expected ETA |
+| `calculateRemainingSeconds(eta)` | Calculate seconds remaining until ETA |
 
 ### URLs
 
@@ -189,16 +189,36 @@ type StageType =
 type StageStatus =
   | "NOT_STARTED" | "PENDING" | "READY" | "COMPLETED" | "FAILED" | "SKIPPED";
 
-type ChainType = "L1" | "L2" | "NOVA";
+// Chain identifiers
+type Chain = "ethereum" | "arb1" | "nova" | "unknown";
+type L2Chain = "arb1" | "nova";
+type ChainId = 1 | 42161 | 42170 | number;
+
+// Chain conversion utilities
+function chainIdToChain(chainId: ChainId): Chain;
+function chainToChainId(chain: Chain): ChainId | undefined;
 
 interface TrackedStage {
   type: StageType;
   status: StageStatus;
-  chain: ChainType;
+  chain: Chain;              // "ethereum" | "arb1" | "nova"
+  chainId: ChainId;          // 1 | 42161 | 42170
   transactions: StageTransaction[];
   data: TrackedStageData;
   timing?: StageTiming;
   executable?: boolean;
+}
+
+interface StageTransaction {
+  hash: string;
+  blockNumber: number;
+  timestamp?: number;
+  chain: Chain;
+  chainId: ChainId;
+  logIndex?: number;
+  targetChain?: Chain;       // For retryables
+  targetChainId?: ChainId;
+  description?: string;
 }
 
 interface TrackingResult {
@@ -309,7 +329,6 @@ interface DecodedCalldata {
   raw: string;                      // Raw calldata hex string
   decodingSource: DecodingSource;   // Source of decoding ("local" | "api" | "failed")
   decodingTarget?: string;          // Target contract address (if known)
-  chainContext?: ChainContext;      // Chain context ("arb1" | "nova" | "ethereum")
 }
 ```
 
@@ -320,30 +339,20 @@ Function signatures are resolved via:
 2. **4byte.directory** - Public signature database with caching
 
 ```typescript
-import { lookupSignature, clearSignatureCache } from "@gzeoneth/gov-tracker";
+import { lookupSignature } from "@gzeoneth/gov-tracker";
 
 const sig = await lookupSignature("0x134008d3");
 // Returns: "execute(address,uint256,bytes,bytes32,bytes32)"
-
-// Clear cache (in-memory)
-clearSignatureCache();
 ```
 
 ### Address Utilities
 
 ```typescript
-import {
-  getAddressLabel,
-  getKnownAddresses
-} from "@gzeoneth/gov-tracker";
+import { getAddressLabel } from "@gzeoneth/gov-tracker";
 
 // Get human-readable label for known governance contracts
 const label = getAddressLabel("0xf07DeD...", "arb1");
 // Returns: "Core Governor"
-
-// Get all known addresses for a chain
-const addresses = getKnownAddresses("arb1");
-// [{ address, label, chain }, ...]
 ```
 
 ---

@@ -85,7 +85,7 @@ export const INBOX_ABI = [
 /**
  * ArbSys precompile ABI (includes L2ToL1Tx event for message tracking)
  */
-export const ARB_SYS_ABI = [
+const ARB_SYS_ABI = [
   "function arbBlockNumber() view returns (uint256)",
   "function sendTxToL1(address destination, bytes data) payable returns (uint256)",
   "event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)",
@@ -94,31 +94,31 @@ export const ARB_SYS_ABI = [
 /**
  * Upgrade Executor ABI
  */
-export const UPGRADE_EXECUTOR_ABI = ["function execute(address upgrade, bytes data)"];
+const UPGRADE_EXECUTOR_ABI = ["function execute(address upgrade, bytes data)"];
 
 /**
  * Security Council Member Sync Action ABI
  */
-export const MEMBER_SYNC_ACTION_ABI = [
+const MEMBER_SYNC_ACTION_ABI = [
   "function perform(address securityCouncil, address[] members, uint256 nonce) returns (bool)",
 ];
 
 /**
  * Outbox ABI for L2→L1 message execution tracking
  */
-export const OUTBOX_ABI = [
+const OUTBOX_ABI = [
   "event OutBoxTransactionExecuted(address indexed to, address indexed l2Sender, uint256 indexed zero, uint256 transactionIndex)",
 ];
 
 /**
  * ArbRetryableTx precompile ABI for retryable ticket redemption
  */
-export const ARB_RETRYABLE_TX_ABI = ["function redeem(bytes32 ticketId) external"];
+const ARB_RETRYABLE_TX_ABI = ["function redeem(bytes32 ticketId) external"];
 
 /**
  * Outbox ABI for encoding executeTransaction (separate from isSpent/events)
  */
-export const OUTBOX_EXECUTE_ABI = [
+const OUTBOX_EXECUTE_ABI = [
   "function executeTransaction(bytes32[] calldata proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes calldata data) external",
 ];
 
@@ -152,13 +152,13 @@ export const MEMBER_ELECTION_GOVERNOR_ABI = [
 /**
  * ProposalCreated event signature for parsing
  */
-export const PROPOSAL_CREATED_EVENT =
+const PROPOSAL_CREATED_EVENT =
   "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)";
 
 /**
  * ProposalQueued event signature for parsing
  */
-export const PROPOSAL_QUEUED_EVENT = "event ProposalQueued(uint256 proposalId, uint256 eta)";
+const PROPOSAL_QUEUED_EVENT = "event ProposalQueued(uint256 proposalId, uint256 eta)";
 
 // Pre-created Interface instances
 

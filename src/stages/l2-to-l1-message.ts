@@ -22,7 +22,7 @@ import {
   getArbitrumNetwork,
 } from "@arbitrum/sdk";
 import { ChildToParentMessageReaderNitro } from "@arbitrum/sdk/dist/lib/message/ChildToParentMessageNitro";
-import { TrackedStage, ChainType, PrepareResult, getStageData } from "../types";
+import { TrackedStage, PrepareResult, getStageData } from "../types";
 import { ADDRESSES, BLOCK_TIMES, TIMING } from "../constants";
 import { loggers } from "../utils/logger";
 
@@ -189,7 +189,7 @@ export async function trackL2ToL1Message(
   l2Provider: ethers.providers.Provider,
   l1Provider: ethers.providers.Provider
 ): Promise<L2ToL1MessageResult> {
-  const builder = new StageBuilder("L2_TO_L1_MESSAGE", "L2");
+  const builder = new StageBuilder("L2_TO_L1_MESSAGE", "arb1");
 
   if (!executionTxHash) {
     return {
@@ -350,7 +350,7 @@ export async function trackL2ToL1Message(
       // Challenge period complete, ready to execute
       builder
         .status("READY")
-        .tx(executionTxHash, receipt.blockNumber, "L2", {
+        .tx(executionTxHash, receipt.blockNumber, "arb1", 42161, {
           timestamp: l2Timestamp,
           description: "L2 sent",
         })
@@ -359,7 +359,7 @@ export async function trackL2ToL1Message(
 
     case ChildToParentMessageStatus.EXECUTED:
       // Already executed - find the OutBox execution transaction
-      builder.status("COMPLETED").tx(executionTxHash, receipt.blockNumber, "L2", {
+      builder.status("COMPLETED").tx(executionTxHash, receipt.blockNumber, "arb1", 42161, {
         timestamp: l2Timestamp,
         description: "L2 sent",
       });
@@ -383,7 +383,7 @@ export async function trackL2ToL1Message(
         if (outboxExecutionTx) {
           const timestamp = await getBlockTimestamp(outboxExecutionTx.blockNumber, l1Provider);
           builder
-            .tx(outboxExecutionTx.hash, outboxExecutionTx.blockNumber, "L1", {
+            .tx(outboxExecutionTx.hash, outboxExecutionTx.blockNumber, "ethereum", 1, {
               timestamp,
               description: "L1 confirmed",
             })
@@ -394,7 +394,7 @@ export async function trackL2ToL1Message(
 
     case ChildToParentMessageStatus.UNCONFIRMED:
       // Still in challenge period
-      builder.status("PENDING").tx(executionTxHash, receipt.blockNumber, "L2", {
+      builder.status("PENDING").tx(executionTxHash, receipt.blockNumber, "arb1", 42161, {
         timestamp: l2Timestamp,
         description: "L2 sent",
       });
@@ -508,7 +508,8 @@ export async function prepareL2ToL1Message(
       to: outboxAddress,
       data: calldata,
       value: "0",
-      chain: "L1" as ChainType,
+      chain: "ethereum",
+      chainId: 1,
       description: `Execute L2→L1 message #${event.position.toString()} via Outbox`,
     },
   };

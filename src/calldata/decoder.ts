@@ -7,11 +7,10 @@
 
 import Debug from "debug";
 import type { DecodedCalldata, DecodedParameter } from "../types/calldata";
-import { ChainContext } from "../types";
+import { Chain, TrackedStage, TrackedStageData, ExtractedCalldata } from "../types";
 import { lookupSignature } from "./signature-lookup";
-import { decodeParameters, isLikelyCalldata } from "./parameter-decoder";
+import { decodeParameters, isLikelyCalldata, getAddressLabel } from "./parameter-decoder";
 import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
-import { getAddressLabel } from "./address-utils";
 
 const debug = Debug("gov-tracker:calldata");
 
@@ -38,7 +37,7 @@ export async function decodeCalldata(
   calldata: string,
   targetAddress?: string,
   depth = 0,
-  chainContext: ChainContext = "arb1"
+  chainContext: Chain = "arb1"
 ): Promise<DecodedCalldata> {
   // Handle empty or invalid calldata
   if (!calldata || calldata === "0x" || calldata.length < 10) {
@@ -48,7 +47,6 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata || "0x",
       decodingSource: "failed",
-      chainContext,
     };
   }
 
@@ -66,14 +64,13 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata,
       decodingSource: "failed",
-      chainContext,
     };
   }
 
   // Determine chain context for nested content
   // sendTxToL1 means nested content is on L1
   const isSendTxToL1 = selector === SEND_TX_TO_L1_SELECTOR;
-  const nestedContext: ChainContext = isSendTxToL1 ? "ethereum" : chainContext;
+  const nestedContext: Chain = isSendTxToL1 ? "ethereum" : chainContext;
 
   // Decode parameters
   const decoded = decodeParameters(calldata, signature, chainContext);
@@ -86,7 +83,6 @@ export async function decodeCalldata(
       parameters: null,
       raw: calldata,
       decodingSource: source,
-      chainContext,
     };
   }
 
@@ -111,7 +107,6 @@ export async function decodeCalldata(
     raw: calldata,
     decodingSource: source,
     decodingTarget: targetAddress,
-    chainContext,
   };
 }
 
@@ -121,7 +116,7 @@ export async function decodeCalldata(
 async function processNestedParams(
   params: DecodedParameter[],
   rawDecoded: unknown[],
-  chainContext: ChainContext,
+  chainContext: Chain,
   depth: number
 ): Promise<void> {
   // Find address[] parameter (for batch operations, provides targets)
@@ -159,7 +154,7 @@ async function processNestedParams(
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
           // Determine L2 chain context for address labeling and nested decoding
-          const l2ChainContext: ChainContext | undefined =
+          const l2ChainContext: Chain | undefined =
             retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
 
           // Decode l2Calldata with L2 chain context only if chain is known
@@ -227,7 +222,6 @@ async function processNestedParams(
             ],
             raw: bytesItem,
             decodingSource: "local",
-            chainContext: "ethereum", // Retryable tickets are created on L1
             targetChain: retryable.chain, // Explicit target L2 chain field
           };
 
@@ -269,7 +263,7 @@ async function processNestedParams(
 export async function decodeCalldataArray(
   calldatas: string[],
   targets: string[],
-  chainContext: ChainContext = "arb1"
+  chainContext: Chain = "arb1"
 ): Promise<DecodedCalldata[]> {
   const results: DecodedCalldata[] = [];
 
@@ -279,4 +273,58 @@ export async function decodeCalldataArray(
   }
 
   return results;
+}
+
+/**
+ * Extract calldata, targets, and values from a tracked stage.
+ * Handles different data structures for Proposals vs Timelock operations.
+ * Ensures all returned arrays have the same length.
+ *
+ * @param stage The tracked stage to inspect
+ * @returns Object containing aligned arrays of calldatas, targets, and values
+ */
+export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata {
+  const data = stage.data as TrackedStageData;
+  const result: ExtractedCalldata = { calldatas: [], targets: [], values: [] };
+
+  // 1. Check for explicit calldatas array (Proposals)
+  // ProposalCreatedData and ProposalQueuedData use plural 'calldatas', 'targets', 'values'
+  if (data.calldatas && data.calldatas.length > 0) {
+    const count = data.calldatas.length;
+
+    const targets = data.targets || [];
+    const values = data.values || [];
+
+    // Strict length checks - these are part of the logic to ensure data integrity
+    if (targets.length !== count) {
+      throw new Error(`Mismatch in targets length: expected ${count}, got ${targets.length}`);
+    }
+
+    if (values.length !== count) {
+      throw new Error(`Mismatch in values length: expected ${count}, got ${values.length}`);
+    }
+
+    for (let i = 0; i < count; i++) {
+      result.calldatas.push(data.calldatas[i]);
+      result.targets.push(targets[i]);
+      result.values.push(values[i]);
+    }
+    return result;
+  }
+
+  // 2. Check for Timelock scheduled data (L1/L2 Timelock)
+  // Timelock stages usually have `callScheduledData` array containing the operations
+  if (data.callScheduledData) {
+    for (const scheduled of data.callScheduledData) {
+      // scheduled.data and scheduled.target are strictly typed in CallScheduledData
+      result.calldatas.push(scheduled.data);
+      result.targets.push(scheduled.target);
+      result.values.push(scheduled.value || "0");
+    }
+    if (result.calldatas.length > 0) {
+      return result;
+    }
+  }
+
+  return result;
 }

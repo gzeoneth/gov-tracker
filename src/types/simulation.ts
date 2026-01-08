@@ -5,17 +5,12 @@
  * to call Tenderly API themselves.
  */
 
-import type { ChainContext } from "./core";
+import type { Chain, ChainId } from "./core";
 
 /**
  * Type of simulation
  */
 export type SimulationType = "retryable" | "timelock" | "call";
-
-/**
- * Chain type for simulation targeting
- */
-export type SimulationChainType = "L1" | "Arb1" | "Nova" | "unknown";
 
 /**
  * Base simulation data shared by all simulation types
@@ -47,7 +42,8 @@ export interface RetryableSimulationData extends BaseSimulationData {
   type: "retryable";
 
   /** Target L2 chain */
-  l2Chain: ChainContext;
+  l2Chain: Chain;
+  l2ChainId: ChainId;
 
   /** Original L2 target from retryable ticket */
   l2Target: string;
@@ -101,7 +97,8 @@ export interface CallSimulationData extends BaseSimulationData {
   type: "call";
 
   /** Target chain */
-  chain: SimulationChainType;
+  chain: Chain;
+  chainId: ChainId;
 
   /** Target contract */
   target: string;

@@ -52,7 +52,8 @@ const placeholder = (
 ): TrackedStage => ({
   type,
   status,
-  chain: L1_STAGES.has(type) ? "L1" : "L2",
+  chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
+  chainId: L1_STAGES.has(type) ? 1 : 42161,
   transactions: [],
   data: { reason },
 });
@@ -96,7 +97,7 @@ async function track<K extends string, T>(
 
 // Governor Stages (1-3)
 
-export async function pipelineTrackProposalCreated(
+async function pipelineTrackProposalCreated(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; found: boolean }> {
   const governorAddress = getGovernorAddress(state);
@@ -124,7 +125,7 @@ export async function pipelineTrackProposalCreated(
   );
 }
 
-export async function pipelineTrackVoting(
+async function pipelineTrackVoting(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; complete: boolean }> {
   const governorAddress = getGovernorAddress(state);
@@ -153,7 +154,7 @@ export async function pipelineTrackVoting(
   );
 }
 
-export async function pipelineTrackProposalQueued(
+async function pipelineTrackProposalQueued(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; queued: boolean }> {
   const governorAddress = getGovernorAddress(state);
@@ -211,7 +212,7 @@ export async function pipelineTrackProposalQueued(
 
 // Timelock Stage (4)
 
-export async function pipelineTrackL2Timelock(
+async function pipelineTrackL2Timelock(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; executed: boolean }> {
   const timelockAddress = getTimelockAddress(state);
@@ -257,7 +258,7 @@ async function addSkippedL1Stages(state: TrackingContext): Promise<TrackingConte
   return s;
 }
 
-export async function pipelineTrackL2ToL1Message(
+async function pipelineTrackL2ToL1Message(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; executed: boolean; needsL1: boolean }> {
   const l2ExecutionTxHash = getL2ExecutionTxHash(state);
@@ -318,7 +319,7 @@ export async function pipelineTrackL2ToL1Message(
 
 // L1 Timelock Stage (6)
 
-export async function pipelineTrackL1Timelock(
+async function pipelineTrackL1Timelock(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; executed: boolean }> {
   return withCache(
@@ -342,7 +343,7 @@ export async function pipelineTrackL1Timelock(
 
 // Retryable Stage (7)
 
-export async function pipelineTrackRetryables(
+async function pipelineTrackRetryables(
   state: TrackingContext
 ): Promise<{ state: TrackingContext; redeemed: boolean }> {
   const l1ExecutionTxHash = getL1ExecutionTxHash(state);

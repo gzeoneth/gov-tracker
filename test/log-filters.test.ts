@@ -9,6 +9,7 @@ import {
   parseLogsSafe,
   findAndParseLogs,
   findFirstLog,
+  countLogsByAddress,
 } from "../src/utils/log-filters";
 import { EVENT_TOPICS } from "../src/constants";
 
@@ -212,6 +213,83 @@ describe("Log Filters", () => {
 
       expect(result).toBeNull();
     });
+  });
+});
+
+describe("countLogsByAddress", () => {
+  it("should count logs by address", () => {
+    const addr1 = "0x1111111111111111111111111111111111111111";
+    const addr2 = "0x2222222222222222222222222222222222222222";
+    const logs = [
+      createMockLog({ address: addr1 }),
+      createMockLog({ address: addr2 }),
+      createMockLog({ address: addr1 }),
+      createMockLog({ address: addr1 }),
+      createMockLog({ address: addr2 }),
+    ];
+
+    const counts = countLogsByAddress(logs, {});
+
+    expect(counts.get(addr1.toLowerCase())).toBe(3);
+    expect(counts.get(addr2.toLowerCase())).toBe(2);
+  });
+
+  it("should filter by topic before counting", () => {
+    const addr1 = "0x1111111111111111111111111111111111111111";
+    const addr2 = "0x2222222222222222222222222222222222222222";
+    const targetTopic = "0x" + "d".repeat(64);
+    const otherTopic = "0x" + "e".repeat(64);
+
+    const logs = [
+      createMockLog({ address: addr1, topics: [targetTopic] }),
+      createMockLog({ address: addr2, topics: [targetTopic] }),
+      createMockLog({ address: addr1, topics: [otherTopic] }), // Should be excluded
+      createMockLog({ address: addr1, topics: [targetTopic] }),
+    ];
+
+    const counts = countLogsByAddress(logs, { topic: targetTopic });
+
+    expect(counts.get(addr1.toLowerCase())).toBe(2); // Only 2 with target topic
+    expect(counts.get(addr2.toLowerCase())).toBe(1);
+  });
+
+  it("should return lowercase addresses in the map", () => {
+    const upperAddr = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const logs = [createMockLog({ address: upperAddr })];
+
+    const counts = countLogsByAddress(logs, {});
+
+    expect(counts.has(upperAddr.toLowerCase())).toBe(true);
+    expect(counts.has(upperAddr)).toBe(false);
+  });
+
+  it("should return empty map for empty logs", () => {
+    const counts = countLogsByAddress([], {});
+    expect(counts.size).toBe(0);
+  });
+
+  it("should return empty map when no logs match topic", () => {
+    const logs = [
+      createMockLog({ topics: ["0x" + "a".repeat(64)] }),
+      createMockLog({ topics: ["0x" + "b".repeat(64)] }),
+    ];
+
+    const counts = countLogsByAddress(logs, { topic: "0x" + "c".repeat(64) });
+    expect(counts.size).toBe(0);
+  });
+
+  it("should count all logs when no topic filter provided", () => {
+    const addr1 = "0x1111111111111111111111111111111111111111";
+    const logs = [
+      createMockLog({ address: addr1, topics: ["0x" + "a".repeat(64)] }),
+      createMockLog({ address: addr1, topics: ["0x" + "b".repeat(64)] }),
+      createMockLog({ address: addr1, topics: ["0x" + "c".repeat(64)] }),
+    ];
+
+    const counts = countLogsByAddress(logs, {});
+
+    // All 3 logs should be counted since there's no topic filter
+    expect(counts.get(addr1.toLowerCase())).toBe(3);
   });
 });
 

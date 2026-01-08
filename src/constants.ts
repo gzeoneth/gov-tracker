@@ -5,7 +5,13 @@
  */
 
 import { ethers } from "ethers";
-import type { ChunkingConfig, RetryConfig, ProposalState, DiscoveryTargets } from "./types";
+import type {
+  ChunkingConfig,
+  RetryConfig,
+  ProposalState,
+  DiscoveryTargets,
+  StageTransaction,
+} from "./types";
 
 // Contract Addresses
 
@@ -113,11 +119,14 @@ export function buildDefaultTargets(options?: {
 
 /**
  * Chain IDs for supported networks
+ *
+ * Uses CHAIN_ID_MAP from types/core for single source of truth
  */
+import { CHAIN_ID_MAP } from "./types/core";
 export const CHAIN_IDS = {
-  ETHEREUM: 1,
-  ARB_ONE: 42161,
-  NOVA: 42170,
+  ETHEREUM: CHAIN_ID_MAP.ethereum,
+  ARB_ONE: CHAIN_ID_MAP.arb1,
+  NOVA: CHAIN_ID_MAP.nova,
 } as const;
 
 /**
@@ -348,4 +357,65 @@ export const PROPOSAL_STATE = {
   QUEUED: 5,
   EXPIRED: 6,
   EXECUTED: 7,
+} as const;
+
+// Explorer URLs
+
+/**
+ * Get explorer URL for a transaction or address
+ */
+export function getExplorerUrl(chainId: number, type: "tx" | "address", hash: string): string {
+  switch (chainId) {
+    case 1: // Ethereum
+      return `https://etherscan.io/${type}/${hash}`;
+    case CHAIN_IDS.ARB_ONE:
+      return `https://arbiscan.io/${type}/${hash}`;
+    case CHAIN_IDS.NOVA:
+      return `https://nova.arbiscan.io/${type}/${hash}`;
+    default:
+      return `https://etherscan.io/${type}/${hash}`;
+  }
+}
+
+/**
+ * Get transaction URL by chain ID
+ */
+export function getTxUrl(chainId: number, txHash: string): string {
+  return getExplorerUrl(chainId, "tx", txHash);
+}
+
+/**
+ * Get block explorer URL for a stage transaction
+ *
+ * @example
+ * ```typescript
+ * const stage = result.stages[0];
+ * for (const tx of stage.transactions) {
+ *   console.log(`${tx.hash}: ${getStageTransactionUrl(tx)}`);
+ * }
+ * ```
+ */
+export function getStageTransactionUrl(tx: StageTransaction): string {
+  return getTxUrl(tx.chainId, tx.hash);
+}
+
+// Simulation Constants
+
+/**
+ * Network IDs for Tenderly simulation (string format)
+ */
+export const NETWORK_IDS = {
+  ethereum: "1",
+  arb1: "42161",
+  nova: "42170",
+} as const;
+
+/**
+ * Function selectors for timelock operations
+ */
+export const TIMELOCK_SELECTORS = {
+  schedule: "0x01d5062a",
+  execute: "0x134008d3",
+  scheduleBatch: "0x8f2a0bb0",
+  executeBatch: "0xe38335e5",
 } as const;

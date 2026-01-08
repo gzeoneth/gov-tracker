@@ -2,15 +2,66 @@
  * Core primitive types for Arbitrum Governance Stage Tracking SDK
  */
 
+// Chain Types
+
 /**
- * Standard chain context type to be used across the application.
- * Unifies previous ChainType, TargetChainType, and SimulationChainType.
+ * Unified chain identifier (string names).
  *
- * - ethereum: L1
- * - arb1: L2 (Arbitrum One)
- * - nova: L2 (Arbitrum Nova)
+ * - ethereum: Ethereum L1 (chainId: 1)
+ * - arb1: Arbitrum One L2 (chainId: 42161)
+ * - nova: Arbitrum Nova L2 (chainId: 42170)
+ * - unknown: Unknown or unsupported chain (stores actual chainId separately)
  */
-export type ChainContext = "ethereum" | "arb1" | "nova";
+export type Chain = "ethereum" | "arb1" | "nova" | "unknown";
+
+/**
+ * Supported chain names (no "unknown").
+ */
+export type KnownChain = Exclude<Chain, "unknown">;
+
+/**
+ * Supported L2 chain names.
+ */
+export type L2Chain = Exclude<Chain, "ethereum" | "unknown">;
+
+/**
+ * Numeric chain IDs for supported chains.
+ * Can be a known chain ID or any number for unknown chains.
+ */
+export type ChainId = (typeof CHAIN_ID_MAP)[keyof typeof CHAIN_ID_MAP] | number;
+
+/**
+ * Map chain names to their numeric chain IDs
+ */
+export const CHAIN_ID_MAP: Record<KnownChain, number> = {
+  ethereum: 1,
+  arb1: 42161,
+  nova: 42170,
+} as const;
+
+/**
+ * Map numeric chain IDs to chain names (internal)
+ */
+const CHAIN_NAME_MAP: Record<number, Chain> = {
+  1: "ethereum",
+  42161: "arb1",
+  42170: "nova",
+} as const;
+
+/**
+ * Convert chainId to chain name
+ */
+export function chainIdToChain(chainId: ChainId): Chain {
+  return CHAIN_NAME_MAP[chainId] ?? "unknown";
+}
+
+/**
+ * Convert chain name to chainId
+ */
+export function chainToChainId(chain: Chain): ChainId | undefined {
+  if (chain === "unknown") return undefined;
+  return CHAIN_ID_MAP[chain];
+}
 
 // Stage Types
 
@@ -25,20 +76,16 @@ export type StageType =
 
 export type StageStatus = "NOT_STARTED" | "PENDING" | "READY" | "COMPLETED" | "FAILED" | "SKIPPED";
 
-/** @deprecated Use ChainContext instead */
-export type ChainType = "L1" | "L2" | "NOVA";
-/** @deprecated Use ChainContext instead */
-export type TargetChainType = "Arb1" | "Nova";
-
 export interface StageTransaction {
   hash: string;
   blockNumber: number;
   timestamp?: number;
-  // TODO: Migrate to ChainContext
-  chain: ChainType;
+  chain: Chain;
+  chainId: ChainId;
   logIndex?: number;
-  // TODO: Migrate to ChainContext
-  targetChain?: TargetChainType;
+  /** For retryable tickets that target a specific L2 chain */
+  targetChain?: Chain;
+  targetChainId?: ChainId;
   /** Human-readable description for display (e.g., "queued", "executed") */
   description?: string;
 }
@@ -54,33 +101,4 @@ export interface SearchHint {
   startBlock: number;
   endBlock?: number;
   direction?: "forward" | "backward";
-}
-
-// Timing/ETA Types (merged from timing.ts)
-
-export interface EstimatedTimeRange {
-  minDate: Date;
-  maxDate: Date;
-}
-
-export interface VotingTimeRange {
-  votingStartDate: Date;
-  votingEndMinDate: Date;
-  votingEndMaxDate: Date;
-}
-
-export interface BlockBasedTiming {
-  startBlock: number;
-  endBlock: number;
-  currentL1Block: number;
-}
-
-export interface StageMetadata {
-  type: StageType;
-  estimatedDuration?: string;
-}
-
-export interface EstimatedTimesResult {
-  estimatedTimes: Map<StageType, EstimatedTimeRange>;
-  votingTimeRange: VotingTimeRange | null;
 }

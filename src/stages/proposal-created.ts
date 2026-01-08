@@ -32,7 +32,7 @@ export async function trackProposalCreated(
   stage: TrackedStage;
   proposalData: ProposalData | null;
 }> {
-  const builder = new StageBuilder("PROPOSAL_CREATED", "L2");
+  const builder = new StageBuilder("PROPOSAL_CREATED", "arb1");
 
   // Detect governor type
   const proposalType = detectProposalType(governorAddress);
@@ -60,7 +60,7 @@ export async function trackProposalCreated(
 
     builder
       .status("COMPLETED")
-      .tx(proposalData.creationTxHash, proposalData.creationBlock, "L2", { timestamp })
+      .tx(proposalData.creationTxHash, proposalData.creationBlock, "arb1", 42161, { timestamp })
       .timing({ startedAt: timestamp })
       .data({
         proposalId: proposalData.proposalId,

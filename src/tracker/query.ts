@@ -7,7 +7,7 @@
 
 import { TrackingCheckpoint, TrackerStats, CacheAdapter } from "../types";
 import { areAllStagesComplete } from "../stages/base";
-import { isElectionGovernor } from "../constants";
+import { isElectionGovernor, TIMING } from "../constants";
 
 /**
  * List all checkpoint keys in the cache.
@@ -65,7 +65,7 @@ export async function queryIncompleteCheckpoints(
 ): Promise<Array<{ key: string; checkpoint: TrackingCheckpoint }>> {
   const maxAgeDays = options.maxAgeDays ?? 60;
   const maxErrorCount = options.maxErrorCount ?? 5;
-  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+  const maxAgeMs = maxAgeDays * TIMING.MS_PER_DAY;
   const now = Date.now();
 
   const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];

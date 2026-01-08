@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> Commits: 487334b..5bc7bbe (refactor-types branch)
+
 ### Breaking Changes
 
 #### Chain Type Refactoring

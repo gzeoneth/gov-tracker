@@ -55,7 +55,7 @@ async function getSearchDefaults(
   reverseDirection: boolean;
 }> {
   const isL1 = isL1Timelock(timelockAddress);
-  const chunkSize = isL1 ? 10_000 : 10_000_000;
+  const chunkSize = isL1 ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
   const defaultStartBlock = isL1 ? GOVERNANCE_START_BLOCKS.L1 : GOVERNANCE_START_BLOCKS.L2;
   const toBlock = hint?.endBlock ?? (await getCurrentBlockInfo(provider)).blockNumber;
   const fromBlock = hint?.startBlock ?? defaultStartBlock;

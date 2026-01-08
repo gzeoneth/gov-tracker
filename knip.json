@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/index.ts"],
+  "entry": ["src/index.ts", "src/cli/monitor.ts"],
   "project": ["src/**/*.ts"],
-  "ignore": ["**/*.test.ts", "test/**"]
+  "ignore": ["**/*.test.ts", "test/**"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "exports": "warn",
+    "types": "warn"
+  }
 }

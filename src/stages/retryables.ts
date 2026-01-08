@@ -20,6 +20,7 @@ import {
   PrepareResult,
   RetryableCreationDetail,
   RetryableRedemptionDetail,
+  chainToChainId,
 } from "../types";
 import { getChain, getChainId } from "../utils/chain";
 import { loggers } from "../utils/logger";
@@ -177,7 +178,7 @@ export async function trackRetryables(
   for (const { chain: targetChain, messageCount } of targetInfos) {
     const provider = targetChain === "nova" ? novaProvider : l2Provider;
     const chainName: L2Chain = targetChain;
-    const chainId = targetChain === "nova" ? 42170 : 42161;
+    const chainId = chainToChainId(targetChain) ?? 42161;
 
     // Handle missing provider
     if (!provider) {
@@ -303,7 +304,7 @@ export async function trackRetryables(
 
   // Collect unique target chains
   const targetChains = [...new Set(targetInfos.map((t) => t.chain))];
-  const targetChainIds = [...new Set(targetInfos.map((t) => (t.chain === "nova" ? 42170 : 42161)))];
+  const targetChainIds = [...new Set(targetInfos.map((t) => chainToChainId(t.chain) ?? 42161))];
 
   // Determine overall status and build stage using StageBuilder
   // Note: chain is "arb1" because retryable redemption executes on L2 chains (Arb1/Nova)

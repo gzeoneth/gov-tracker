@@ -307,12 +307,11 @@ export {
 // ============================================================================
 
 export {
-  // Simulation data
   prepareRetryableSimulation,
   prepareTimelockSimulation,
   prepareCallSimulation,
   extractAllSimulationsFromDecoded,
-} from "./simulation/simulation-data";
+} from "./simulation";
 
 // ============================================================================
 // TIER 8: Cache Implementations

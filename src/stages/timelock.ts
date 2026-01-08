@@ -265,14 +265,14 @@ async function trackTimelock(
       builder.data({ predecessor: allData[0].predecessor });
     }
 
-    log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
+    log("%s: Computed salt: %s", config.logPrefix, salt);
   } else if (config.stageType === "L1_TIMELOCK") {
     const { salt, predecessor } = computeL1TimelockSalt(options.allStages);
     builder.data({ salt });
     if (predecessor) {
       builder.data({ predecessor });
     }
-    log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
+    log("%s: Computed salt: %s", config.logPrefix, salt);
   }
 
   // Determine if operation uses scheduleBatch or schedule by trying both validations

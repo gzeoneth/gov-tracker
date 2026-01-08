@@ -533,5 +533,4 @@ When making architectural changes, update these docs to match.
 
 - Ignore backward compatibility, this is pre-release
 - Always use lower case comparison for address comparison
-- Always update CHANGELOG Unreleased section after big changes
-
+- Always update CHANGELOG Unreleased section after big changes with mention of the update commit

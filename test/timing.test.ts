@@ -13,8 +13,10 @@ import {
   calculateExpectedEta,
   getL1BlockNumberFromL2,
   getL1BlockForL2Block,
+  getFirstL2BlockForL1Block,
   blockAfterDelay,
 } from "../src/utils/timing";
+import { BigNumber } from "ethers";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
 import { StageBuilder } from "../src/stages/builder";
 import type { TrackedStage } from "../src/types";
@@ -343,6 +345,138 @@ describe("Timing Utilities", () => {
       await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
         "Could not get L1 block number for L2 block 12345"
       );
+    });
+  });
+
+  describe("getFirstL2BlockForL1Block", () => {
+    it("should return firstBlock on fast path (offset=0, exact L1 block match)", async () => {
+      // #given - NodeInterface returns a valid range for the exact L1 block
+      const targetL1Block = 19000000;
+      const expectedFirstBlock = 200000000;
+      const expectedLastBlock = 200000100;
+
+      // Mock the NodeInterface contract by mocking the module
+      const { NodeInterface__factory } =
+        await import("@arbitrum/sdk/dist/lib/abi/factories/NodeInterface__factory");
+      const mockConnect = vi.spyOn(NodeInterface__factory, "connect");
+      mockConnect.mockReturnValue({
+        l2BlockRangeForL1: vi.fn().mockResolvedValue({
+          firstBlock: BigNumber.from(expectedFirstBlock),
+          lastBlock: BigNumber.from(expectedLastBlock),
+        }),
+      } as unknown as ReturnType<typeof NodeInterface__factory.connect>);
+
+      const mockProvider = {} as ethers.providers.JsonRpcProvider;
+
+      // #when
+      const result = await getFirstL2BlockForL1Block(mockProvider, targetL1Block);
+
+      // #then - should return firstBlock (fast path)
+      expect(result).toBe(expectedFirstBlock);
+
+      mockConnect.mockRestore();
+    });
+
+    it("should return lastBlock+1 when nearby L1 block matches (offset > 0)", async () => {
+      // #given - exact L1 block has no L2 blocks, but L1-1 does
+      const targetL1Block = 19000000;
+      const nearbyLastBlock = 199999900;
+
+      const { NodeInterface__factory } =
+        await import("@arbitrum/sdk/dist/lib/abi/factories/NodeInterface__factory");
+      const mockConnect = vi.spyOn(NodeInterface__factory, "connect");
+
+      let callCount = 0;
+      mockConnect.mockReturnValue({
+        l2BlockRangeForL1: vi.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) {
+            // First call (offset=0, exact block) - reverts (no L2 blocks)
+            return Promise.reject(new Error("No L2 blocks for this L1 block"));
+          }
+          // Second call (offset=1, nearby block) - returns range
+          return Promise.resolve({
+            firstBlock: BigNumber.from(nearbyLastBlock - 100),
+            lastBlock: BigNumber.from(nearbyLastBlock),
+          });
+        }),
+      } as unknown as ReturnType<typeof NodeInterface__factory.connect>);
+
+      const mockProvider = {} as ethers.providers.JsonRpcProvider;
+
+      // #when
+      const result = await getFirstL2BlockForL1Block(mockProvider, targetL1Block);
+
+      // #then - should return lastBlock+1 (nearby path)
+      expect(result).toBe(nearbyLastBlock + 1);
+
+      mockConnect.mockRestore();
+    });
+
+    it("should try multiple nearby L1 blocks before falling back to SDK", async () => {
+      // #given - first 3 L1 blocks have no L2 blocks, 4th does
+      const targetL1Block = 19000000;
+      const nearbyLastBlock = 199999700;
+
+      const { NodeInterface__factory } =
+        await import("@arbitrum/sdk/dist/lib/abi/factories/NodeInterface__factory");
+      const mockConnect = vi.spyOn(NodeInterface__factory, "connect");
+
+      let callCount = 0;
+      mockConnect.mockReturnValue({
+        l2BlockRangeForL1: vi.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount <= 3) {
+            // First 3 calls (offset=0,1,2) - revert
+            return Promise.reject(new Error("No L2 blocks"));
+          }
+          // 4th call (offset=3) - returns range
+          return Promise.resolve({
+            firstBlock: BigNumber.from(nearbyLastBlock - 100),
+            lastBlock: BigNumber.from(nearbyLastBlock),
+          });
+        }),
+      } as unknown as ReturnType<typeof NodeInterface__factory.connect>);
+
+      const mockProvider = {} as ethers.providers.JsonRpcProvider;
+
+      // #when
+      const result = await getFirstL2BlockForL1Block(mockProvider, targetL1Block);
+
+      // #then - should return lastBlock+1 from 4th attempt
+      expect(result).toBe(nearbyLastBlock + 1);
+      expect(callCount).toBe(4);
+
+      mockConnect.mockRestore();
+    });
+
+    it("should stop trying when L1 block would be <= 0", async () => {
+      // #given - target L1 block is very low, iterations would go negative
+      const targetL1Block = 3; // Only offsets 0, 1, 2 are valid (3, 2, 1)
+
+      const { NodeInterface__factory } =
+        await import("@arbitrum/sdk/dist/lib/abi/factories/NodeInterface__factory");
+      const mockConnect = vi.spyOn(NodeInterface__factory, "connect");
+
+      let callCount = 0;
+      mockConnect.mockReturnValue({
+        l2BlockRangeForL1: vi.fn().mockImplementation(() => {
+          callCount++;
+          // All calls revert
+          return Promise.reject(new Error("No L2 blocks"));
+        }),
+      } as unknown as ReturnType<typeof NodeInterface__factory.connect>);
+
+      const mockProvider = {} as ethers.providers.JsonRpcProvider;
+
+      // #when
+      await getFirstL2BlockForL1Block(mockProvider, targetL1Block);
+
+      // #then - should have tried only blocks 3, 2, 1 (not 0 or negative)
+      // Then falls back to SDK which returns undefined for mock
+      expect(callCount).toBe(3);
+
+      mockConnect.mockRestore();
     });
   });
 

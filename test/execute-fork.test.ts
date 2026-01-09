@@ -20,6 +20,7 @@ import { createTracker, ProposalStageTracker, ADDRESSES, getStageData, TrackedSt
 import { prepareTransaction, ExecuteContext } from "../src/tracker/execute";
 import { prepareL2ToL1MessageStage } from "../src/stages/l2-to-l1-message";
 import { prepareRetryableStage } from "../src/stages/retryables";
+import { checkOperationReady } from "../src/stages/base";
 import { executeTransaction, ProviderBundle } from "../src/cli/lib/cli";
 import {
   CONSTITUTIONAL_GOVERNOR_COMPLETED,
@@ -35,6 +36,12 @@ dotenv.config({ quiet: true });
 const EXECUTION_TEST_BLOCKS = {
   /** L2 timelock READY - just before execution (L2 timelock delay passed but not yet executed) */
   L2_TIMELOCK_READY: 371_840_000,
+
+  /** L2 timelock NOT_READY - queued but delay period not yet passed */
+  L2_TIMELOCK_NOT_READY: 369_200_000,
+
+  /** L2 timelock DONE - after execution, operation is complete */
+  L2_TIMELOCK_DONE: 372_000_000,
 
   /** L2 timelock just executed - L2→L1 message sent, in challenge period */
   L2_TO_L1_UNCONFIRMED: 372_000_000,
@@ -161,6 +168,71 @@ describe("Execute Module Fork Tests", () => {
           expect(prepResult.prepared.data).toBeTruthy();
           expect(prepResult.prepared.value).toBe("0");
         }
+      }
+    });
+  });
+
+  describe("checkOperationReady Edge Cases", () => {
+    let forks: DualForkResult | null = null;
+
+    afterAll(async () => {
+      if (forks) {
+        await forks.stopAll();
+        forks = null;
+      }
+    });
+
+    it("should return 'Operation already executed' when isDone (covers base.ts lines 348-350)", async () => {
+      // #given - fork at block AFTER L2 timelock execution (operation is DONE)
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls.l1,
+        l2Url: rpcUrls.l2Archive,
+        l2BlockNumber: EXECUTION_TEST_BLOCKS.L2_TIMELOCK_DONE,
+      });
+
+      // #when - call checkOperationReady directly with an operation that is already executed
+      // Use operationId from fixture - at this block the operation is DONE
+      const result = await checkOperationReady(
+        CONSTITUTIONAL_GOVERNOR_COMPLETED.l2TimelockAddress,
+        CONSTITUTIONAL_GOVERNOR_COMPLETED.operationId,
+        forks.l2.provider
+      );
+
+      // #then - should return error with "already executed"
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toContain("already executed");
+      }
+    });
+
+    it("should return 'Operation is not ready' when pending (covers base.ts line 351)", async () => {
+      // #given - fork at block BEFORE L2 timelock delay expires (operation queued but not ready)
+      // Need to stop previous fork
+      if (forks) {
+        await forks.stopAll();
+        forks = null;
+      }
+
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls.l1,
+        l2Url: rpcUrls.l2Archive,
+        l2BlockNumber: EXECUTION_TEST_BLOCKS.L2_TIMELOCK_NOT_READY,
+      });
+
+      // #when - call checkOperationReady directly with an operation that is pending
+      // Use operationId from fixture - at this block the operation is scheduled but not ready
+      const result = await checkOperationReady(
+        CONSTITUTIONAL_GOVERNOR_COMPLETED.l2TimelockAddress,
+        CONSTITUTIONAL_GOVERNOR_COMPLETED.operationId,
+        forks.l2.provider
+      );
+
+      // #then - should return error with "not ready"
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toContain("not ready");
       }
     });
   });

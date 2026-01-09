@@ -310,7 +310,12 @@ export async function trackRetryables(
 
   // Determine overall status and build stage using StageBuilder
   // Note: chain is "arb1" because retryable redemption executes on L2 chains (Arb1/Nova)
-  const status = anyFailed ? "FAILED" : allRedeemed ? "COMPLETED" : "READY";
+  function determineStatus(): "FAILED" | "COMPLETED" | "READY" {
+    if (anyFailed) return "FAILED";
+    if (allRedeemed) return "COMPLETED";
+    return "READY";
+  }
+  const status = determineStatus();
   const builder = new StageBuilder("RETRYABLE_EXECUTED", "arb1")
     .status(status)
     .transactions(allTransactions)

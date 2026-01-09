@@ -234,6 +234,8 @@ async function trackTimelock(
     fromBlock,
     scheduledData: options.callScheduledData,
     skipLogSearch: false,
+    // Skip CallExecuted search here - we do an optimized search below starting after the delay
+    skipExecutedSearch: true,
   });
 
   const { timestamp: currentTimestamp } = await getCurrentBlockInfo(provider);

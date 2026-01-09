@@ -5,11 +5,15 @@
  */
 
 import { BigNumber, ethers } from "ethers";
+import { NodeInterface__factory } from "@arbitrum/sdk/dist/lib/abi/factories/NodeInterface__factory";
 import { getFirstBlockForL1Block as sdkGetFirstBlockForL1Block } from "@arbitrum/sdk/dist/lib/utils/lib";
 import type { StageType, TrackedStage } from "../types";
 import { BLOCK_TIMES as BLOCK_TIMES_CONST, GOVERNANCE_STAGE_DURATION_DAYS } from "../constants";
 import { queryWithRetry } from "./rpc-utils";
 import { loggers } from "./logger";
+
+const NODE_INTERFACE_ADDRESS = "0x00000000000000000000000000000000000000C8";
+const NEARBY_L1_BLOCK_ATTEMPTS = 5;
 
 const log = loggers.rpc;
 
@@ -182,18 +186,21 @@ export async function getL1BlockForL2Block(
 }
 
 /**
- * Get the first L2 block for a given L1 block number using Arbitrum SDK.
+ * Get the first L2 block for a given L1 block number.
  *
  * Arbitrum governors use L1 block numbers for voting deadlines. This function
  * finds the corresponding L2 block for searching L2 logs.
  *
- * Uses binary search via the SDK's getFirstBlockForL1Block which queries
- * NodeInterface.l2BlockRangeForL1() internally.
+ * WHY NOT USE SDK's getFirstBlockForL1Block DIRECTLY:
+ * The SDK's getFirstBlockForL1Block uses a binary search (~23 RPC calls, ~14s).
+ * NodeInterface.l2BlockRangeForL1() is a single RPC call (~1s) when the L1 block
+ * has corresponding L2 blocks. We try exact + nearby L1 blocks first, falling
+ * back to SDK only when 6 consecutive blocks have no L2 blocks (rare).
  *
  * @param l2Provider - L2 provider (must be JsonRpcProvider)
  * @param targetL1Block - Target L1 block number
- * @param options.minL2Block - Minimum L2 block to search from (speeds up binary search)
- * @param options.maxL2Block - Maximum L2 block to search to (speeds up binary search)
+ * @param options.minL2Block - Minimum L2 block to search from (for SDK fallback)
+ * @param options.maxL2Block - Maximum L2 block to search to (for SDK fallback)
  * @returns First L2 block for the given L1 block, or undefined if not found
  */
 export async function getFirstL2BlockForL1Block(
@@ -201,23 +208,59 @@ export async function getFirstL2BlockForL1Block(
   targetL1Block: number,
   options: { minL2Block?: number; maxL2Block?: number } = {}
 ): Promise<number | undefined> {
-  const jsonRpcProvider = l2Provider as ethers.providers.JsonRpcProvider;
+  const start = Date.now();
+  const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider);
 
+  // Try exact block (offset=0) then nearby L1 blocks (offset=1..5)
+  // L1 blocks can be skipped on L2, but adjacent blocks usually have L2 blocks
+  for (let offset = 0; offset <= NEARBY_L1_BLOCK_ATTEMPTS; offset++) {
+    const l1Block = targetL1Block - offset;
+    if (l1Block <= 0) break;
+
+    try {
+      const range = await nodeInterface.l2BlockRangeForL1(l1Block);
+      // For exact match (offset=0), return firstBlock
+      // For nearby blocks, return lastBlock+1 as the first block >= targetL1Block
+      const result = offset === 0 ? range.firstBlock.toNumber() : range.lastBlock.toNumber() + 1;
+      log(
+        "getFirstL2BlockForL1Block: L1=%d -> L2=%d (%s, %d RPC, %dms)",
+        targetL1Block,
+        result,
+        offset === 0 ? "fast path" : `nearby L1=${l1Block}`,
+        offset + 1,
+        Date.now() - start
+      );
+      return result;
+    } catch {
+      // l2BlockRangeForL1 reverts if no L2 block exists for this L1 block
+    }
+  }
+
+  // Slow path: SDK binary search fallback
+  // This should rarely be reached - only when 6 consecutive L1 blocks have no L2 blocks
+  log(
+    "getFirstL2BlockForL1Block: L1=%d falling back to SDK binary search (%dms)",
+    targetL1Block,
+    Date.now() - start
+  );
+
+  const jsonRpcProvider = l2Provider as ethers.providers.JsonRpcProvider;
   const result = await sdkGetFirstBlockForL1Block({
     arbitrumProvider: jsonRpcProvider,
     forL1Block: targetL1Block,
-    allowGreater: true, // Allow finding block even if L1 block is slightly in the future
+    allowGreater: true,
     minArbitrumBlock: options.minL2Block,
     maxArbitrumBlock: options.maxL2Block,
   });
 
   if (result !== undefined) {
     log(
-      "getFirstL2BlockForL1Block: L1=%d -> L2=%d (bounds: %s-%s)",
+      "getFirstL2BlockForL1Block: L1=%d -> L2=%d (SDK fallback, bounds: %s-%s, %dms)",
       targetL1Block,
       result,
       options.minL2Block ?? "start",
-      options.maxL2Block ?? "latest"
+      options.maxL2Block ?? "latest",
+      Date.now() - start
     );
   }
 

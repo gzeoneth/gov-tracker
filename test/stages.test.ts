@@ -444,6 +444,16 @@ describe("Stage Base Functions", () => {
       expect(result).toBe(1700000000);
       expect(mockProvider.getBlock).toHaveBeenCalledWith(12345);
     });
+
+    it("should throw error when block is not found (line 224)", async () => {
+      // #given
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then
+      await expect(getBlockTimestamp(99999, mockProvider)).rejects.toThrow("Block 99999 not found");
+    });
   });
 });
 

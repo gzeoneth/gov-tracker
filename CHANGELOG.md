@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CLI: Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. Run `yarn monitor run --cache data/bundled-cache.json` to regenerate.
+- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `yarn monitor run --cache data/bundled-cache.json` to regenerate.
+
+- **`getBundledCachePath()` export** - New utility function to get the path to the bundled cache for SDK users who want to bootstrap their app's cache.
 
 - **CLI: `--no-cache` flag** - Added `--no-cache` option to `run` and `track` commands to disable caching entirely (don't read or write). Cleaner alternative to `--cache /dev/null`.
 

@@ -29,6 +29,7 @@ import {
   CHUNK_SIZES,
   ChunkingConfig,
   extractAllSimulationsFromDecoded,
+  getBundledCachePath,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
@@ -167,26 +168,6 @@ function getAppDataDir(): string {
   }
 
   return path.join(baseDir, "gov-tracker");
-}
-
-/**
- * Get the path to the bundled cache shipped with the npm package.
- * Returns undefined if the bundled cache doesn't exist.
- */
-function getBundledCachePath(): string | undefined {
-  // Try multiple paths to support both development (ts-node) and production (compiled)
-  // When compiled: dist/cli/monitor.js -> dist/data/bundled-cache.json
-  // In development: src/cli/monitor.ts -> data/bundled-cache.json
-  const candidates = [
-    path.join(__dirname, "..", "data", "bundled-cache.json"), // dist/cli -> dist/data
-    path.join(__dirname, "..", "..", "data", "bundled-cache.json"), // src/cli -> data
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
 }
 
 /**

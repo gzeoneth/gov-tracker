@@ -107,6 +107,41 @@ console.log(`Timelocks: ${stats.timelocks.complete}/${stats.timelocks.total} com
 
 ## Caching
 
+### Bundled Cache (Bootstrap)
+
+The npm package includes a pre-built cache of completed proposals (~2.4MB). Use this to skip initial discovery RPC calls:
+
+```typescript
+import * as fs from "fs";
+import { createTracker, getBundledCachePath } from "@gzeoneth/gov-tracker";
+
+// Option 1: Copy bundled cache to your app's cache location (recommended)
+const bundledPath = getBundledCachePath();
+const appCachePath = "./my-app-cache.json";
+if (bundledPath && !fs.existsSync(appCachePath)) {
+  fs.copyFileSync(bundledPath, appCachePath);
+  console.log("Initialized cache from bundled data");
+}
+
+const tracker = createTracker({
+  l2Provider, l1Provider, novaProvider,
+  cachePath: appCachePath,
+});
+
+// Option 2: Use bundled cache directly (read-only, new proposals won't persist)
+const tracker = createTracker({
+  l2Provider, l1Provider, novaProvider,
+  cachePath: getBundledCachePath(),
+});
+```
+
+The bundled cache contains:
+- All completed governor proposals (~83 proposals)
+- Discovery watermarks for incremental discovery
+- Election tracking data
+
+**Note:** The CLI automatically initializes user cache from bundled data on first run.
+
 ### Browser Usage (localStorage)
 
 ```typescript

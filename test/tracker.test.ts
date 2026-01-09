@@ -615,6 +615,123 @@ describe("trackFromCheckpoint Edge Cases", () => {
   });
 });
 
+describe("trackByTxHash Error Handling (Mocked)", () => {
+  // Helper to create a mock cache
+  function createMockCache() {
+    const storage = new Map<string, unknown>();
+    return {
+      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
+      set: async <T>(key: string, value: T): Promise<void> => {
+        storage.set(key, value);
+      },
+      delete: async (key: string): Promise<void> => {
+        storage.delete(key);
+      },
+      clear: async (): Promise<void> => {
+        storage.clear();
+      },
+      has: async (key: string): Promise<boolean> => storage.has(key),
+      keys: (prefix?: string): string[] =>
+        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
+      _storage: storage,
+    };
+  }
+
+  it("should save checkpoint with incremented error count on tracking failure (lines 370-398)", async () => {
+    // #given - tracker with cache and mock provider that throws
+    const mockCache = createMockCache();
+    const mockL2Provider = {
+      getTransactionReceipt: () => Promise.reject(new Error("RPC connection failed")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    const txHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+    // #when - tracking throws an error
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("RPC connection failed");
+
+    // #then - checkpoint should be saved with error count = 1
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(1);
+  });
+
+  it("should NOT increment error count for gas estimation errors (line 378-379)", async () => {
+    // #given - tracker with cache and mock provider that throws gas error
+    const mockCache = createMockCache();
+    const mockL2Provider = {
+      getTransactionReceipt: () =>
+        Promise.reject(new Error("execution reverted: gas required exceeds allowance")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    const txHash = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+
+    // #when - tracking throws a gas estimation error
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("execution reverted");
+
+    // #then - checkpoint should be saved with error count = 0 (not incremented for gas errors)
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(0);
+  });
+
+  it("should increment error count on consecutive failures", async () => {
+    // #given - tracker with cache containing a discovery checkpoint (not governor/timelock)
+    // Using discovery type means it won't resume and will go through normal tracking
+    const mockCache = createMockCache();
+    const txHash = "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321";
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+
+    // Pre-populate with existing checkpoint that has error count = 2
+    // Use discovery type which is not a resume-able type for trackByTxHash
+    await mockCache.set(cacheKey, {
+      version: 1,
+      createdAt: Date.now(),
+      input: {
+        type: "discovery", // Not governor/timelock, so won't resume
+      },
+      lastProcessedStage: null,
+      lastProcessedBlock: { l1: 0, l2: 0 },
+      cachedData: {},
+      metadata: { errorCount: 2, lastTrackedAt: Date.now() },
+    });
+
+    const mockL2Provider = {
+      getTransactionReceipt: () => Promise.reject(new Error("Network timeout")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    // #when - tracking fails (goes through new tracking since discovery type doesn't resume)
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("Network timeout");
+
+    // #then - error count should be incremented to 3
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(3);
+  });
+});
+
 describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;

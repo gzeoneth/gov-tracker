@@ -76,31 +76,37 @@ export type DecodedTimelockSchedule =
  * @returns Decoded schedule parameters or null if not a timelock schedule call
  */
 export function decodeL1TimelockSchedule(l2ToL1TxData: string): DecodedTimelockSchedule | null {
-  // Try to decode as scheduleBatch first
-  try {
-    const batch = timelockInterface.decodeFunctionData("scheduleBatch", l2ToL1TxData);
-    return {
-      type: "batch",
-      targets: batch[0] as string[],
-      values: batch[1] as BigNumber[],
-      payloads: batch[2] as string[],
-      predecessor: batch[3] as string,
-      salt: batch[4] as string,
-      delay: batch[5] as BigNumber,
-    };
-  } catch {
-    // Not a batch, try single schedule
-    const single = timelockInterface.decodeFunctionData("schedule", l2ToL1TxData);
-    return {
-      type: "single",
-      target: single[0] as string,
-      value: single[1] as BigNumber,
-      data: single[2] as string,
-      predecessor: single[3] as string,
-      salt: single[4] as string,
-      delay: single[5] as BigNumber,
-    };
-  }
+  // Try scheduleBatch first, fall back to schedule
+  const decodeBatch = (): DecodedTimelockSchedule | null => {
+    try {
+      const [targets, values, payloads, predecessor, salt, delay] =
+        timelockInterface.decodeFunctionData("scheduleBatch", l2ToL1TxData) as [
+          string[],
+          BigNumber[],
+          string[],
+          string,
+          string,
+          BigNumber,
+        ];
+      return { type: "batch", targets, values, payloads, predecessor, salt, delay };
+    } catch {
+      return null;
+    }
+  };
+
+  const decodeSingle = (): DecodedTimelockSchedule | null => {
+    try {
+      const [target, value, data, predecessor, salt, delay] = timelockInterface.decodeFunctionData(
+        "schedule",
+        l2ToL1TxData
+      ) as [string, BigNumber, string, string, string, BigNumber];
+      return { type: "single", target, value, data, predecessor, salt, delay };
+    } catch {
+      return null;
+    }
+  };
+
+  return decodeBatch() ?? decodeSingle();
 }
 
 /**

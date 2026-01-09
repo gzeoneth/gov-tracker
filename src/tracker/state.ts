@@ -108,15 +108,21 @@ export interface TrackingState {
 /**
  * Create a new TrackingState.
  */
+function getAddressForPath(input: TrackingInput): string {
+  switch (input.type) {
+    case "governor":
+      return input.governorAddress;
+    case "timelock":
+      return input.timelockAddress;
+    default:
+      return "";
+  }
+}
+
 export function createTrackingState(options: CreateTrackingStateOptions): TrackingState {
   // Initialize stages based on tracking path
   const includeProposal = options.input.type === "governor";
-  const addressForPath =
-    options.input.type === "governor"
-      ? options.input.governorAddress
-      : options.input.type === "timelock"
-        ? options.input.timelockAddress
-        : "";
+  const addressForPath = getAddressForPath(options.input);
 
   const initialStages = initializeStagesForPath(addressForPath, includeProposal);
 

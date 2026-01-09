@@ -155,7 +155,7 @@ async function processNestedParams(
           const retryable = decodeRetryableTicket(bytesItem);
           // Determine L2 chain context for address labeling and nested decoding
           const l2ChainContext: Chain | undefined =
-            retryable.chain === "nova" ? "nova" : retryable.chain === "arb1" ? "arb1" : undefined;
+            retryable.chain === "nova" || retryable.chain === "arb1" ? retryable.chain : undefined;
 
           // Decode l2Calldata with L2 chain context only if chain is known
           let nestedL2Call: DecodedCalldata | undefined;

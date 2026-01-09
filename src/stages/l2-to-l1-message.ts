@@ -45,6 +45,27 @@ import { arbSysInterface, outboxInterface, outboxExecuteInterface } from "../abi
 const ARB_SYS_ADDRESS = ADDRESSES.ARB_SYS;
 
 /**
+ * Determine aggregate status from individual message statuses.
+ * Priority: all EXECUTED > any UNCONFIRMED > all CONFIRMED/EXECUTED > first message's status
+ */
+function determineAggregateStatus(
+  statuses: ChildToParentMessageStatus[]
+): ChildToParentMessageStatus {
+  const allExecuted = statuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
+  if (allExecuted) return ChildToParentMessageStatus.EXECUTED;
+
+  const anyUnconfirmed = statuses.some((s) => s === ChildToParentMessageStatus.UNCONFIRMED);
+  if (anyUnconfirmed) return ChildToParentMessageStatus.UNCONFIRMED;
+
+  const allConfirmedOrExecuted = statuses.every(
+    (s) => s === ChildToParentMessageStatus.CONFIRMED || s === ChildToParentMessageStatus.EXECUTED
+  );
+  if (allConfirmedOrExecuted) return ChildToParentMessageStatus.CONFIRMED;
+
+  return statuses[0];
+}
+
+/**
  * Find the L1 transaction that executed the L2→L1 message (OutBox execution).
  * Uses the message position to match OutBoxTransactionExecuted events.
  *
@@ -276,27 +297,14 @@ export async function trackL2ToL1Message(
   const { blockNumber: currentL1Block, timestamp: currentTimestamp } =
     await getCurrentBlockInfo(l1Provider);
 
-  // Determine aggregate status based on all messages
-  const allExecuted = messageStatuses.every((s) => s === ChildToParentMessageStatus.EXECUTED);
-  const anyUnconfirmed = messageStatuses.some((s) => s === ChildToParentMessageStatus.UNCONFIRMED);
-  const allConfirmedOrExecuted = messageStatuses.every(
-    (s) => s === ChildToParentMessageStatus.CONFIRMED || s === ChildToParentMessageStatus.EXECUTED
-  );
-
-  let aggregateStatus: ChildToParentMessageStatus;
-  if (allExecuted) {
-    aggregateStatus = ChildToParentMessageStatus.EXECUTED;
-  } else if (anyUnconfirmed) {
-    aggregateStatus = ChildToParentMessageStatus.UNCONFIRMED;
-  } else if (allConfirmedOrExecuted) {
-    aggregateStatus = ChildToParentMessageStatus.CONFIRMED;
-  } else {
-    aggregateStatus = messageStatuses[0];
-  }
+  // Determine aggregate status: EXECUTED only if all executed, UNCONFIRMED if any unconfirmed,
+  // CONFIRMED if all confirmed/executed, else use first message's status
+  const aggregateStatus = determineAggregateStatus(messageStatuses);
 
   // Get first executable block from unconfirmed messages
   let firstExecutableBlock: number | undefined;
-  if (anyUnconfirmed) {
+  const hasUnconfirmed = aggregateStatus === ChildToParentMessageStatus.UNCONFIRMED;
+  if (hasUnconfirmed) {
     for (let i = 0; i < messages.length; i++) {
       if (messageStatuses[i] === ChildToParentMessageStatus.UNCONFIRMED) {
         try {
@@ -429,7 +437,7 @@ export async function trackL2ToL1Message(
     messagePositions,
     l2ExecutionBlock,
     isConfirmed: aggregateStatus === ChildToParentMessageStatus.CONFIRMED,
-    isExecuted: allExecuted,
+    isExecuted: aggregateStatus === ChildToParentMessageStatus.EXECUTED,
     firstExecutableBlock,
     l1SearchFromBlock,
     outboxExecutionTx,

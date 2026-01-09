@@ -1029,6 +1029,39 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(l2Executed).toBeDefined();
       expect(l2Executed!.status).toBe("COMPLETED");
     });
+
+    it("should have L2_TO_L1_MESSAGE stage with appropriate status", async () => {
+      // #given - in-progress proposal that passed L2 timelock
+      const result = inProgressResult;
+
+      // #when - checking L2_TO_L1_MESSAGE stage
+      const l2ToL1Stage = result.stages.find((s: TrackedStage) => s.type === "L2_TO_L1_MESSAGE");
+
+      // #then - stage should exist and be PENDING, READY, or COMPLETED depending on chain state
+      expect(l2ToL1Stage).toBeDefined();
+      expect(["PENDING", "READY", "COMPLETED"]).toContain(l2ToL1Stage!.status);
+    });
+
+    it("should have placeholder stages when L2→L1 not executed (pipeline early exit)", async () => {
+      // #given - in-progress proposal
+      const result = inProgressResult;
+
+      // #when - checking for downstream stages
+      const l1TimelockStage = result.stages.find((s: TrackedStage) => s.type === "L1_TIMELOCK");
+      const retryableStage = result.stages.find(
+        (s: TrackedStage) => s.type === "RETRYABLE_EXECUTED"
+      );
+
+      // #then - if L2→L1 message is not executed, downstream stages should be NOT_STARTED
+      const l2ToL1Stage = result.stages.find((s: TrackedStage) => s.type === "L2_TO_L1_MESSAGE");
+      if (l2ToL1Stage?.status !== "COMPLETED") {
+        // Pipeline should add placeholders for unexecuted downstream stages (lines 437-438, 444-445)
+        expect(l1TimelockStage).toBeDefined();
+        expect(["NOT_STARTED", "PENDING"]).toContain(l1TimelockStage!.status);
+        expect(retryableStage).toBeDefined();
+        expect(["NOT_STARTED", "PENDING"]).toContain(retryableStage!.status);
+      }
+    });
   });
 
   describe("trackByTxHash - Timelock Entry", () => {

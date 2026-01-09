@@ -306,4 +306,41 @@ describe("checkAndExecuteElection (Mocked)", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("should log dry run info for triggerMember in verbose mode without write (lines 123, 138-139)", async () => {
+    // #given tracker returns canTriggerMember=true with prepared transaction
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const mockCheckElection = vi.fn().mockResolvedValue({
+      status: baseStatus,
+      canCreate: false,
+      prepared: {
+        triggerMember: {
+          to: "0x5678",
+          data: "0xefgh",
+          value: "0",
+          chain: "arb1",
+          chainId: 42161,
+          description: "triggerMember()",
+        },
+      },
+      currentElection: currentElection,
+      canTriggerMember: true,
+    });
+    vi.mocked(createTracker).mockReturnValue({ checkElection: mockCheckElection } as any);
+
+    // #when checking with verbose=true but write=false (no signer)
+    const result = await checkAndExecuteElection(mockProviders, null, {
+      write: false,
+      verbose: true,
+    });
+
+    // #then should log "Ready to trigger" and dry run info, NOT execute
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Ready to trigger member election")
+    );
+    expect(executeTransaction).not.toHaveBeenCalled();
+    expect(result.memberElectionTriggered).toBeUndefined();
+
+    consoleSpy.mockRestore();
+  });
 });

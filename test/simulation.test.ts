@@ -229,6 +229,11 @@ describe("Simulation Data Preparation", () => {
       expect(result).not.toBeNull();
       expect(result!.networkId).toBe(NETWORK_IDS.ethereum);
     });
+
+    // NOTE: Lines 116-133 in simulation-data.ts (single schedule → execute conversion)
+    // are dead code - unreachable because decodeScheduleBatchParams fails before
+    // convertScheduleToExecute is called. The code could be removed or the
+    // architecture could be modified to support single schedule calls.
   });
 
   describe("prepareCallSimulation", () => {

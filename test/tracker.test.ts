@@ -262,6 +262,102 @@ describe("Tracker Cache Methods (Mocked)", () => {
       expect(stats.elections.total).toBe(0);
     });
   });
+
+  describe("readCacheStatus", () => {
+    it("should read cache status from file path", async () => {
+      // #given - a cache file with checkpoints
+      const os = await import("os");
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const tmpDir = os.tmpdir();
+      const cachePath = path.join(tmpDir, `test-cache-${Date.now()}.json`);
+
+      // Create cache file with test data
+      const cacheData: Record<string, unknown> = {
+        "discovery:watermarks": {
+          version: 1,
+          createdAt: Date.now(),
+          input: { type: "discovery", id: "watermarks" },
+          lastProcessedStage: null,
+          lastProcessedBlock: { l1: 0, l2: 100000 },
+          cachedData: {
+            discoveryWatermarks: {
+              constitutionalGovernor: 100000,
+            },
+          },
+          metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+        },
+        "tx:0xabc": {
+          version: 1,
+          createdAt: Date.now(),
+          input: {
+            type: "governor",
+            governorAddress: "0x123",
+            proposalId: "456",
+            creationTxHash: "0xabc",
+          },
+          lastProcessedStage: null,
+          lastProcessedBlock: { l1: 0, l2: 50000 },
+          cachedData: {},
+          metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+        },
+      };
+
+      await fs.writeFile(cachePath, JSON.stringify(cacheData), "utf-8");
+
+      try {
+        // #when - reading cache status
+        const { watermarks, checkpoints } = await ProposalStageTracker.readCacheStatus(cachePath);
+
+        // #then - should return watermarks and checkpoints
+        // Note: readCacheStatus only returns tx: prefixed keys as checkpoints
+        expect(watermarks.constitutionalGovernor).toBe(100000);
+        expect(checkpoints.size).toBe(1); // Only tx:0xabc, not discovery:watermarks
+        expect(checkpoints.has("tx:0xabc")).toBe(true);
+      } finally {
+        // Cleanup
+        await fs.unlink(cachePath).catch(() => {});
+      }
+    });
+  });
+
+  describe("FileCache initialization", () => {
+    it("should initialize FileCache when cachePath option is provided", async () => {
+      // #given - a valid cache path
+      const os = await import("os");
+      const path = await import("path");
+      const fs = await import("fs/promises");
+
+      const tmpDir = os.tmpdir();
+      const cachePath = path.join(tmpDir, `tracker-cache-${Date.now()}.json`);
+
+      // Create empty cache file
+      await fs.writeFile(cachePath, "{}", "utf-8");
+
+      try {
+        // #when - creating tracker with cachePath (not cache adapter)
+        const tracker = createTracker({
+          l1Provider: mockL1Provider,
+          l2Provider: mockL2Provider,
+          cachePath, // This triggers FileCache initialization (line 164)
+        });
+
+        // #then - tracker should have cache initialized
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cache = (tracker as any).cache;
+        expect(cache).toBeDefined();
+
+        // Verify cache works by saving watermarks
+        await tracker.saveWatermarks({ constitutionalGovernor: 12345 });
+        const loaded = await tracker.loadWatermarks();
+        expect(loaded.constitutionalGovernor).toBe(12345);
+      } finally {
+        // Cleanup
+        await fs.unlink(cachePath).catch(() => {});
+      }
+    });
+  });
 });
 
 describe("Tracker Cache Methods (With Mock Cache)", () => {

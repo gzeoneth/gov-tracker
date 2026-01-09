@@ -38,7 +38,7 @@ describe("Timelock Module", () => {
       vi.restoreAllMocks();
     });
 
-    it("should return NOT_STARTED when operationId is empty (line 207)", async () => {
+    it("should return NOT_STARTED when operationId is empty", async () => {
       // #given - empty operationId
       const emptyOperationId = "";
 
@@ -58,7 +58,7 @@ describe("Timelock Module", () => {
       expect(result.executionTxHash).toBeNull();
     });
 
-    it("should return NOT_STARTED when operation is not scheduled (line 219)", async () => {
+    it("should return NOT_STARTED when operation is not scheduled", async () => {
       // #given - operationId exists but operation not scheduled
       const operationId = "0x" + "a".repeat(64);
 
@@ -89,7 +89,7 @@ describe("Timelock Module", () => {
       expect(result.operationState).toBeNull();
     });
 
-    it("should use cachedExecutionTxHash when provided and receipt exists (line 360-373)", async () => {
+    it("should use cachedExecutionTxHash when provided and receipt exists", async () => {
       // #given - valid operationId with cached execution tx hash
       const operationId = "0x" + "b".repeat(64);
       const cachedTxHash = "0x" + "c".repeat(64);

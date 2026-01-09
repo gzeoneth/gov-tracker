@@ -165,7 +165,6 @@ describe("Timing Utilities", () => {
       // L2_TO_L1_MESSAGE is index 4, should base off L2_TIMELOCK ETA (index 3)
       const eta = calculateExpectedEta(stages, 4);
 
-      expect(eta).toBeDefined();
       // Should add L2_TO_L1_MESSAGE duration to L2_TIMELOCK ETA
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.CHALLENGE_PERIOD;
       const expectedEta = 1701296000 + expectedDays * 24 * 60 * 60;
@@ -183,7 +182,6 @@ describe("Timing Utilities", () => {
 
       const eta = calculateExpectedEta(stages, 1);
 
-      expect(eta).toBeDefined();
       // Should add VOTING_ACTIVE duration to PROPOSAL_CREATED completion time
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.VOTING;
       const expectedEta = 1700000000 + expectedDays * 24 * 60 * 60;
@@ -215,7 +213,6 @@ describe("Timing Utilities", () => {
       // Calculate ETA for L2_TIMELOCK (index 3)
       const eta = calculateExpectedEta(stages, 3);
 
-      expect(eta).toBeDefined();
       // Should accumulate: VOTING + L2_TIMELOCK durations
       // PROPOSAL_QUEUED doesn't have a defined duration in GOVERNANCE_STAGE_DURATION_DAYS
       const votingDays = GOVERNANCE_STAGE_DURATION_DAYS.VOTING;
@@ -241,7 +238,6 @@ describe("Timing Utilities", () => {
       // Should use VOTING_ACTIVE eta (1701209600) not PROPOSAL_CREATED timestamp
       const eta = calculateExpectedEta(stages, 2);
 
-      expect(eta).toBeDefined();
       // PROPOSAL_QUEUED doesn't have duration, so should just be VOTING_ACTIVE eta
       expect(eta).toBe(1701209600);
     });
@@ -267,7 +263,6 @@ describe("Timing Utilities", () => {
 
       const eta = calculateExpectedEta(stages, 1);
 
-      expect(eta).toBeDefined();
       // Should use execution timestamp (1700100000)
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.CHALLENGE_PERIOD;
       const expectedEta = 1700100000 + expectedDays * 24 * 60 * 60;
@@ -276,7 +271,7 @@ describe("Timing Utilities", () => {
   });
 
   describe("getL1BlockNumberFromL2", () => {
-    it("should throw error when provider does not have send method (line 132)", async () => {
+    it("should throw error when provider does not have send method", async () => {
       // #given - a provider without send method
       const mockProvider = {
         getBlock: vi.fn(),
@@ -288,7 +283,7 @@ describe("Timing Utilities", () => {
       );
     });
 
-    it("should throw error when l1BlockNumber is missing from response (line 141)", async () => {
+    it("should throw error when l1BlockNumber is missing from response", async () => {
       // #given - a provider that returns block without l1BlockNumber
       const mockProvider = {
         send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
@@ -300,7 +295,7 @@ describe("Timing Utilities", () => {
       );
     });
 
-    it("should throw error when response is null (line 141)", async () => {
+    it("should throw error when L2 block response is null", async () => {
       // #given - a provider that returns null
       const mockProvider = {
         send: vi.fn().mockResolvedValue(null),
@@ -314,7 +309,7 @@ describe("Timing Utilities", () => {
   });
 
   describe("getL1BlockForL2Block", () => {
-    it("should throw error when provider does not have send method (line 167)", async () => {
+    it("should throw error when provider does not have send method for L2 block lookup", async () => {
       // #given - a provider without send method
       const mockProvider = {
         getBlock: vi.fn(),
@@ -326,7 +321,7 @@ describe("Timing Utilities", () => {
       );
     });
 
-    it("should throw error when l1BlockNumber is missing from response (line 175)", async () => {
+    it("should throw error when l1BlockNumber is missing from specific L2 block", async () => {
       // #given - a provider that returns block without l1BlockNumber
       const mockProvider = {
         send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
@@ -338,7 +333,7 @@ describe("Timing Utilities", () => {
       );
     });
 
-    it("should throw error when response is null (line 175)", async () => {
+    it("should throw error when specific L2 block response is null", async () => {
       // #given - a provider that returns null
       const mockProvider = {
         send: vi.fn().mockResolvedValue(null),
@@ -352,7 +347,7 @@ describe("Timing Utilities", () => {
   });
 
   describe("blockAfterDelay", () => {
-    it("should throw error when start block cannot be fetched (line 254)", async () => {
+    it("should throw error when start block cannot be fetched", async () => {
       // #given - a provider that returns null for startBlock
       const mockProvider = {
         getBlock: vi.fn().mockResolvedValue(null),
@@ -364,7 +359,7 @@ describe("Timing Utilities", () => {
       );
     });
 
-    it("should return startBlock when delay not yet passed (line 264-269)", async () => {
+    it("should return startBlock when delay not yet passed", async () => {
       // #given - current timestamp is before target timestamp
       const startBlockTimestamp = 1700000000;
       const currentTimestamp = startBlockTimestamp + 1800; // Only 30 min passed
@@ -384,7 +379,7 @@ describe("Timing Utilities", () => {
       expect(result).toBe(1000);
     });
 
-    it("should break loop when block fetch fails during iteration (line 287-288)", async () => {
+    it("should break loop when block fetch fails during iteration", async () => {
       // #given - startBlock exists but iteration block fails
       const startBlockTimestamp = 1700000000;
       const delaySeconds = 3600;
@@ -405,7 +400,7 @@ describe("Timing Utilities", () => {
       expect(result).toBeGreaterThan(1000);
     });
 
-    it("should return startBlock+1 when cannot backtrack further (line 320-322)", async () => {
+    it("should return startBlock+1 when cannot backtrack further", async () => {
       // #given - scenario where backtracking keeps hitting startBlock+1
       const startBlockTimestamp = 1700000000;
       const delaySeconds = 12; // Very short delay (1 block)

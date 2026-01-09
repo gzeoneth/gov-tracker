@@ -624,7 +624,7 @@ describe("trackFromCheckpoint Edge Cases", () => {
   const mockL2Provider = {} as ethers.providers.Provider;
 
   describe("governor checkpoint missing creationTxHash", () => {
-    it("should throw error when creationTxHash is missing (line 621-622)", async () => {
+    it("should throw error when creationTxHash is missing", async () => {
       // #given - tracker with governor checkpoint missing creationTxHash
       const tracker = createTracker({
         l1Provider: mockL1Provider,
@@ -655,7 +655,7 @@ describe("trackFromCheckpoint Edge Cases", () => {
   });
 
   describe("timelock checkpoint missing scheduledTxHash", () => {
-    it("should throw error when scheduledTxHash is missing (line 638-639)", async () => {
+    it("should throw error when scheduledTxHash is missing", async () => {
       // #given - tracker with timelock checkpoint missing scheduledTxHash
       const tracker = createTracker({
         l1Provider: mockL1Provider,
@@ -686,7 +686,7 @@ describe("trackFromCheckpoint Edge Cases", () => {
   });
 
   describe("unsupported checkpoint input type", () => {
-    it("should throw error for unsupported input type (line 655)", async () => {
+    it("should throw error for unsupported input type", async () => {
       // #given - tracker with unsupported checkpoint type
       const tracker = createTracker({
         l1Provider: mockL1Provider,
@@ -760,7 +760,7 @@ describe("trackByTxHash Error Handling (Mocked)", () => {
     expect(savedCheckpoint!.metadata?.errorCount).toBe(1);
   });
 
-  it("should NOT increment error count for gas estimation errors (line 378-379)", async () => {
+  it("should NOT increment error count for gas estimation errors", async () => {
     // #given - tracker with cache and mock provider that throws gas error
     const mockCache = createMockCache();
     const mockL2Provider = {

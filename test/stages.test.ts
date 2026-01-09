@@ -445,7 +445,7 @@ describe("Stage Base Functions", () => {
       expect(mockProvider.getBlock).toHaveBeenCalledWith(12345);
     });
 
-    it("should throw error when block is not found (line 224)", async () => {
+    it("should throw error when block is not found", async () => {
       // #given
       const mockProvider = {
         getBlock: vi.fn().mockResolvedValue(null),

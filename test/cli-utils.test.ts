@@ -397,7 +397,7 @@ describe("CLI Utilities", () => {
       expect(output).toContain("[2 tickets: 2 Arb1 - all redeemed]");
     });
 
-    it("should show expected ETA for NOT_STARTED stages (line 385-388)", () => {
+    it("should show expected ETA for NOT_STARTED stages", () => {
       // #given - a completed stage followed by NOT_STARTED stage
       const completedBuilder = new StageBuilder("PROPOSAL_CREATED", "arb1", "COMPLETED");
       completedBuilder.tx("0xabc", 100, "arb1", 42161, {
@@ -418,7 +418,7 @@ describe("CLI Utilities", () => {
       expect(output).toContain("Expected:");
     });
 
-    it("should show retryable info without pending count (line 414)", () => {
+    it("should show retryable info without pending count", () => {
       // #given - retryable stage with tickets but no pending count (edge case)
       const result = createMockTrackingResult([
         createMockStage("RETRYABLE_EXECUTED", "READY", "arb1", {
@@ -488,7 +488,7 @@ describe("CLI Utilities", () => {
       expect(output).toContain("Active: 1");
     });
 
-    it("should count failed timelock operations (line 458)", () => {
+    it("should count failed timelock operations", () => {
       // #given - a failed timelock operation (isFailed = true)
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("t1", createMockCheckpoint("timelock", false, true));

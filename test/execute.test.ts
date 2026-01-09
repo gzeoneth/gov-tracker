@@ -351,7 +351,7 @@ describe("Tracker Execute Module", () => {
       }
     });
 
-    it("should fail for PROPOSAL_QUEUED with mismatched stage data type (line 67)", async () => {
+    it("should fail for PROPOSAL_QUEUED with mismatched stage data type", async () => {
       // #given - a PROPOSAL_QUEUED stage with mismatched data
       const stage = {
         type: "PROPOSAL_QUEUED",
@@ -371,7 +371,7 @@ describe("Tracker Execute Module", () => {
       expect(result.success).toBe(false);
     });
 
-    it("should fail for RETRYABLE_EXECUTED with nova target but no nova provider (line 133-134)", async () => {
+    it("should fail for RETRYABLE_EXECUTED with nova target but no nova provider", async () => {
       // #given - context without nova provider and stage targeting nova
       const contextNoNova: ExecuteContext = {
         l1Provider: mockL1Provider,
@@ -411,7 +411,7 @@ describe("Tracker Execute Module", () => {
       vi.restoreAllMocks();
     });
 
-    describe("PROPOSAL_QUEUED with valid data (lines 76-86)", () => {
+    describe("PROPOSAL_QUEUED with valid data", () => {
       it("should call prepareGovernorQueue with correct params", async () => {
         // #given - mocked prepareGovernorQueue and valid stage data
         const successResult: PrepareResult = {
@@ -454,7 +454,7 @@ describe("Tracker Execute Module", () => {
     });
 
     describe("L2_TO_L1_MESSAGE edge cases", () => {
-      it("should return first failed result when all messages fail (line 122)", async () => {
+      it("should return first failed result when all messages fail", async () => {
         // #given - mocked prepareL2ToL1MessageStage that returns all failures
         const failedResult: PrepareResult = {
           success: false,
@@ -492,7 +492,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should add warning for multiple messages (lines 108-117)", async () => {
+      it("should add warning for multiple messages", async () => {
         // #given - mocked prepareL2ToL1MessageStage with multiple messages
         const successResult: PrepareResult = {
           success: true,
@@ -538,7 +538,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should return success result directly when single message (line 119)", async () => {
+      it("should return success result directly when single message", async () => {
         // #given - mocked prepareL2ToL1MessageStage with single message
         const successResult: PrepareResult = {
           success: true,
@@ -583,7 +583,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should fail when no messages to prepare (line 102)", async () => {
+      it("should fail when no messages to prepare", async () => {
         // #given - mocked prepareL2ToL1MessageStage with no messages
         const mockBulkResult: BulkPrepareResult = {
           total: 0,
@@ -619,7 +619,7 @@ describe("Tracker Execute Module", () => {
     });
 
     describe("RETRYABLE_EXECUTED edge cases", () => {
-      it("should fail when no tickets to prepare (line 140)", async () => {
+      it("should fail when no tickets to prepare", async () => {
         // #given - a RETRYABLE_EXECUTED stage with zero tickets
         const mockBulkResult: BulkPrepareResult = {
           total: 0,
@@ -695,7 +695,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should return success result directly when single ticket (line 157)", async () => {
+      it("should return success result directly when single ticket", async () => {
         // #given - a RETRYABLE_EXECUTED stage with a single ticket
         const successResult: PrepareResult = {
           success: true,
@@ -738,7 +738,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should return first failed result when all tickets fail (line 160)", async () => {
+      it("should return first failed result when all tickets fail", async () => {
         // #given - a RETRYABLE_EXECUTED stage where all tickets fail preparation
         const failedResult: PrepareResult = {
           success: false,
@@ -774,7 +774,7 @@ describe("Tracker Execute Module", () => {
         }
       });
 
-      it("should use nova provider for nova target chain (line 132)", async () => {
+      it("should use nova provider for nova target chain", async () => {
         // #given - a RETRYABLE_EXECUTED stage targeting Nova chain
         const successResult: PrepareResult = {
           success: true,

@@ -4,7 +4,7 @@
  * Tests for serialization, validation, and helper utilities.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import {
   serialize,
@@ -749,7 +749,11 @@ describe("calculateTimelockEta", () => {
 });
 
 describe("searchAndCompleteTimelockExecution", () => {
-  it("should return completed stage with note when event not found (line 226)", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should return completed stage with note when event not found", async () => {
     // #given - a stage and mocked provider where findCallExecutedEvent returns null
     vi.spyOn(timelockDiscovery, "findCallExecutedEvent").mockResolvedValue(null);
 
@@ -777,8 +781,6 @@ describe("searchAndCompleteTimelockExecution", () => {
     expect(result.stage.data?.note).toBe("Execution confirmed by state, event not found");
     expect(result.executionTxHash).toBeNull();
     expect(result.executionBlock).toBeNull();
-
-    vi.restoreAllMocks();
   });
 
   it("should return completed stage with event details when event found", async () => {
@@ -819,13 +821,11 @@ describe("searchAndCompleteTimelockExecution", () => {
     expect(result.stage.status).toBe("COMPLETED");
     expect(result.executionTxHash).toBe("0x" + "f".repeat(64));
     expect(result.executionBlock).toBe(12345);
-
-    vi.restoreAllMocks();
   });
 });
 
 describe("findL1OperationIdFromTx", () => {
-  it("should return null operationId when receipt not found (line 166)", async () => {
+  it("should return null operationId when receipt not found", async () => {
     // #given - mocked provider that returns null receipt
     const mockProvider = {
       getTransactionReceipt: vi.fn().mockResolvedValue(null),
@@ -846,7 +846,7 @@ describe("findL1OperationIdFromTx", () => {
     expect(result.l1ScheduleBlock).toBe(outboxTxBlock);
   });
 
-  it("should return null operationId when no CallScheduled event found (line 185)", async () => {
+  it("should return null operationId when no CallScheduled event found", async () => {
     // #given - mocked provider with receipt but no matching events
     const mockProvider = {
       getTransactionReceipt: vi.fn().mockResolvedValue({

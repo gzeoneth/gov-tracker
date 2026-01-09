@@ -21,7 +21,7 @@ describe("Log Search Utilities", () => {
   });
 
   describe("searchLogsInChunks", () => {
-    it("should return empty result when totalBlocks <= 0 (line 103)", async () => {
+    it("should return empty result when totalBlocks <= 0", async () => {
       // #given - fromBlock > toBlock (negative range)
       const filter = {
         topics: ["0x" + "a".repeat(64)],
@@ -40,7 +40,7 @@ describe("Log Search Utilities", () => {
       expect(getLogsMock).not.toHaveBeenCalled();
     });
 
-    it("should search in reverse direction when searchDirection is backward (lines 111-113)", async () => {
+    it("should search in reverse direction when searchDirection is backward", async () => {
       // #given - a block range and reverse direction option
       const filter = {
         topics: ["0x" + "b".repeat(64)],
@@ -72,7 +72,7 @@ describe("Log Search Utilities", () => {
       expect(calls[2].fromBlock).toBe(1000);
     });
 
-    it("should stop at maxChunks limit (line 128)", async () => {
+    it("should stop at maxChunks limit", async () => {
       // #given - a large block range with maxChunks limit
       const filter = {
         topics: ["0x" + "c".repeat(64)],

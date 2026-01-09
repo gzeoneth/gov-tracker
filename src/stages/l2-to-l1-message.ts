@@ -287,11 +287,54 @@ export async function trackL2ToL1Message(
     );
   }
 
-  // Check status of ALL messages - they may have different states
+  // Optimized status detection: call getFirstExecutableBlock first to avoid redundant status() calls
+  // - Returns BigNumber → UNCONFIRMED (we have the ETA)
+  // - Returns null → EXECUTED or CONFIRMED (use isSpent to distinguish)
   const messageStatuses: ChildToParentMessageStatus[] = [];
-  for (const message of messages) {
-    const status = await queryWithRetry(() => message.status(l2Provider));
-    messageStatuses.push(status);
+  let firstExecutableBlock: number | undefined;
+
+  // Get outbox contract for isSpent checks
+  let outboxAddress: string;
+  try {
+    const network = await getArbitrumNetwork(l2Provider);
+    outboxAddress = network.ethBridge.outbox;
+  } catch {
+    outboxAddress = ADDRESSES.ARB1_OUTBOX;
+  }
+  const outbox = new ethers.Contract(outboxAddress, outboxInterface, l1Provider);
+
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    const position = messagePositions[i];
+
+    try {
+      // Try getFirstExecutableBlock first - avoids redundant status() call for UNCONFIRMED
+      const blockBN = await queryWithRetry(() => message.getFirstExecutableBlock(l2Provider));
+
+      if (blockBN) {
+        // Returns BigNumber → UNCONFIRMED
+        messageStatuses.push(ChildToParentMessageStatus.UNCONFIRMED);
+        const blockNum = blockBN.toNumber();
+        if (!firstExecutableBlock || blockNum < firstExecutableBlock) {
+          firstExecutableBlock = blockNum;
+        }
+      } else {
+        // Returns null → EXECUTED or CONFIRMED, use fast isSpent check
+        const isSpent = await queryWithRetry(() => outbox.callStatic.isSpent(position));
+        messageStatuses.push(
+          isSpent ? ChildToParentMessageStatus.EXECUTED : ChildToParentMessageStatus.CONFIRMED
+        );
+      }
+    } catch (err) {
+      // Fallback to status() if getFirstExecutableBlock fails
+      logStage(
+        "Warning: getFirstExecutableBlock failed for message %d, falling back to status(): %s",
+        i,
+        err instanceof Error ? err.message : String(err)
+      );
+      const status = await queryWithRetry(() => message.status(l2Provider));
+      messageStatuses.push(status);
+    }
   }
 
   const { blockNumber: currentL1Block, timestamp: currentTimestamp } =
@@ -300,34 +343,6 @@ export async function trackL2ToL1Message(
   // Determine aggregate status: EXECUTED only if all executed, UNCONFIRMED if any unconfirmed,
   // CONFIRMED if all confirmed/executed, else use first message's status
   const aggregateStatus = determineAggregateStatus(messageStatuses);
-
-  // Get first executable block from unconfirmed messages
-  let firstExecutableBlock: number | undefined;
-  const hasUnconfirmed = aggregateStatus === ChildToParentMessageStatus.UNCONFIRMED;
-  if (hasUnconfirmed) {
-    for (let i = 0; i < messages.length; i++) {
-      if (messageStatuses[i] === ChildToParentMessageStatus.UNCONFIRMED) {
-        try {
-          const blockBN = await queryWithRetry(() =>
-            messages[i].getFirstExecutableBlock(l2Provider)
-          );
-          if (blockBN) {
-            const blockNum = blockBN.toNumber();
-            if (!firstExecutableBlock || blockNum < firstExecutableBlock) {
-              firstExecutableBlock = blockNum;
-            }
-          }
-        } catch (err) {
-          // Log the error to help distinguish RPC failures from "not available yet"
-          logStage(
-            "Warning: failed to get first executable block for message %d: %s",
-            i,
-            err instanceof Error ? err.message : String(err)
-          );
-        }
-      }
-    }
-  }
 
   // Build per-message status details
   const messageDetails = messageStatuses.map((status, i) => ({

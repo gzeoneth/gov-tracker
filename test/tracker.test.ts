@@ -21,6 +21,7 @@ import {
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
   CONSTITUTIONAL_GOVERNOR_IN_PROGRESS,
   DIRECT_TIMELOCK_OPERATION,
+  CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
 } from "./fixtures";
 
 import {
@@ -1328,6 +1329,98 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       expect(result).toBeDefined();
       expect(result.status).toBeDefined();
     });
+  });
+});
+
+/**
+ * Tests for proposals that FAILED voting
+ * Covers pipeline early exit path when voting is not successful
+ */
+describe.skipIf(process.env.NO_RPC === "1")("Failed Voting Proposals", () => {
+  let l1Provider: ethers.providers.JsonRpcProvider;
+  let l2Provider: ethers.providers.JsonRpcProvider;
+  let novaProvider: ethers.providers.JsonRpcProvider;
+  let tracker: ProposalStageTracker;
+  let failedVotingResult: TrackingResult;
+
+  beforeAll(async () => {
+    const ethRpc = process.env.ETH_RPC;
+    if (!ethRpc) {
+      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
+    }
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+
+    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
+    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
+    tracker = createTracker({
+      l1Provider,
+      l2Provider,
+      novaProvider,
+    });
+
+    // Track failed voting proposal once
+    console.log("Tracking FAILED voting proposal...");
+    const results = await tracker.trackByTxHash(
+      CONSTITUTIONAL_GOVERNOR_FAILED_VOTING.creationTxHash
+    );
+    failedVotingResult = results[0];
+    console.log("✓ FAILED voting proposal tracked");
+  }, 120000);
+
+  it("should track proposal with FAILED voting status", async () => {
+    // #given a proposal that failed voting
+    const result = failedVotingResult;
+
+    // #then should have correct structure
+    expect(result).toBeDefined();
+    expect(result.input.type).toBe("governor");
+    expect(result.proposalType).toBe("CONSTITUTIONAL");
+  });
+
+  it("should have COMPLETED PROPOSAL_CREATED stage", async () => {
+    // #given tracked result
+    const createdStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_CREATED");
+
+    // #then should be completed
+    expect(createdStage).toBeDefined();
+    expect(createdStage!.status).toBe("COMPLETED");
+  });
+
+  it("should have FAILED VOTING_ACTIVE stage", async () => {
+    // #given tracked result
+    const votingStage = failedVotingResult.stages.find((s) => s.type === "VOTING_ACTIVE");
+
+    // #then should be FAILED (defeated)
+    expect(votingStage).toBeDefined();
+    expect(votingStage!.status).toBe("FAILED");
+  });
+
+  it("should stop at FAILED voting - no PROPOSAL_QUEUED stage completed", async () => {
+    // #given proposal failed voting
+    const queuedStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_QUEUED");
+
+    // #then PROPOSAL_QUEUED should not be completed (voting failed)
+    if (queuedStage) {
+      expect(queuedStage.status).not.toBe("COMPLETED");
+    }
+  });
+
+  it("should not have L2_TIMELOCK stage completed when voting fails", async () => {
+    // #given proposal failed voting
+    const l2TimelockStage = failedVotingResult.stages.find((s) => s.type === "L2_TIMELOCK");
+
+    // #then L2_TIMELOCK should not be completed
+    if (l2TimelockStage) {
+      expect(l2TimelockStage.status).not.toBe("COMPLETED");
+    }
+  });
+
+  it("should mark proposal as not complete when voting fails", async () => {
+    // #given proposal failed voting
+    // #then should not be complete
+    expect(failedVotingResult.isComplete).toBe(false);
   });
 });
 

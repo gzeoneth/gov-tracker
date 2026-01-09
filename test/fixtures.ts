@@ -213,6 +213,42 @@ export const NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY_2 = {
 };
 
 /**
+ * Test Case 8: Core Governor - FAILED Voting
+ * Use for: Testing early exit when voting fails (Defeated)
+ * From cache: tx:0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e
+ */
+export const CONSTITUTIONAL_GOVERNOR_FAILED_VOTING = {
+  proposalId: "60371879178081104082641012273221287927865067413661362234634146098631763379427",
+  governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+  creationTxHash: "0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e",
+
+  // Expected: Voting FAILED, no queued stages
+  expectedStages: {
+    PROPOSAL_CREATED: { status: "COMPLETED" as const },
+    VOTING_ACTIVE: { status: "FAILED" as const },
+    PROPOSAL_QUEUED: { status: "NOT_STARTED" as const },
+    L2_TIMELOCK: { status: "NOT_STARTED" as const },
+  },
+};
+
+/**
+ * Test Case 9: Treasury Governor - FAILED Voting
+ * From cache: tx:0x73d981550bc38454ec89d6437d607b2166ecdce1b187a4288f20367cad21a730
+ */
+export const NON_CONSTITUTIONAL_GOVERNOR_FAILED_VOTING = {
+  proposalId: "110793123084980773896129216551445203207286848914653873956746115694475823589450",
+  governorAddress: ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
+  creationTxHash: "0x73d981550bc38454ec89d6437d607b2166ecdce1b187a4288f20367cad21a730",
+
+  expectedStages: {
+    PROPOSAL_CREATED: { status: "COMPLETED" as const },
+    VOTING_ACTIVE: { status: "FAILED" as const },
+    PROPOSAL_QUEUED: { status: "NOT_STARTED" as const },
+    L2_TIMELOCK: { status: "NOT_STARTED" as const },
+  },
+};
+
+/**
  * Default chunking configuration - re-exported from main constants
  */
 export const DEFAULT_CHUNKING_CONFIG = {

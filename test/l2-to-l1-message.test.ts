@@ -20,7 +20,10 @@ import {
 } from "../src/stages/l2-to-l1-message";
 import { arbSysInterface } from "../src/abis";
 import { ADDRESSES, DEFAULT_RPC_URLS } from "../src/constants";
-import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
+import {
+  CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
+  NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
+} from "./fixtures";
 import { createTracker, TrackingResult } from "../src";
 
 dotenv.config({ quiet: true });
@@ -536,6 +539,22 @@ describe.skipIf(process.env.NO_RPC === "1")(
         const result = await trackL2ToL1Message(fakeTxHash, l2Provider, l1Provider);
         expect(result.stage.status).toBe("NOT_STARTED");
         expect(result.stage.data.reason).toBeDefined();
+      });
+
+      it("should return SKIPPED for Treasury L2 timelock execution (no L2→L1 messages)", async () => {
+        // #given Treasury Governor L2 timelock execution tx (L2-only path, no L1 round-trip)
+        const treasuryL2ExecutionTxHash =
+          NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash;
+
+        // #when tracking L2→L1 message
+        const result = await trackL2ToL1Message(treasuryL2ExecutionTxHash, l2Provider, l1Provider);
+
+        // #then should return SKIPPED status (no L2→L1 messages in transaction)
+        expect(result.stage.status).toBe("SKIPPED");
+        expect(result.messages).toHaveLength(0);
+        expect(result.messagePositions).toHaveLength(0);
+        expect(result.isConfirmed).toBe(false);
+        expect(result.isExecuted).toBe(false);
       });
 
       it("should include message details in stage data", async () => {

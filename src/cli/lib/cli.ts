@@ -94,6 +94,8 @@ export const cacheOptions = {
   cache: (defaultPath: string) => new Option("--cache <path>", "Cache file").default(defaultPath),
   /** Force flag to bypass cache and re-track from scratch */
   force: new Option("--force", "Force refresh, ignoring cached data"),
+  /** Disable cache entirely */
+  noCache: new Option("--no-cache", "Disable cache (don't read or write)"),
 };
 
 /**

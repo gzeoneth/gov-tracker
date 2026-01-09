@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r data dist/",
     "test": "NO_RPC=1 vitest run",
     "test:integration": "vitest run test/integration.test.ts test/tracker.test.ts test/retryables.test.ts",
     "test:fork": "vitest run --config vitest.config.fork.mts",

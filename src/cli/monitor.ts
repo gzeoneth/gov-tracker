@@ -21,6 +21,21 @@ import * as path from "path";
 import * as fs from "fs";
 import debug from "debug";
 import { Command, Option } from "commander";
+
+// Read version from package.json
+function getPackageVersion(): string {
+  const candidates = [
+    path.join(__dirname, "..", "..", "package.json"), // dist/cli -> package.json
+    path.join(__dirname, "..", "..", "..", "package.json"), // src/cli -> package.json
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      return pkg.version || "unknown";
+    }
+  }
+  return "unknown";
+}
 import {
   createTracker,
   ProposalStageTracker,
@@ -29,6 +44,7 @@ import {
   CHUNK_SIZES,
   ChunkingConfig,
   extractAllSimulationsFromDecoded,
+  getBundledCachePath,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
@@ -170,7 +186,8 @@ function getAppDataDir(): string {
 }
 
 /**
- * Get the default cache path and ensure the directory exists
+ * Get the default cache path and ensure the directory exists.
+ * If user cache doesn't exist, copies bundled cache (if available) to bootstrap.
  */
 function getDefaultCachePath(): string {
   const appDataDir = getAppDataDir();
@@ -188,7 +205,23 @@ function getDefaultCachePath(): string {
     return "./gov-tracker-cache.json";
   }
 
-  return path.join(appDataDir, "gov-tracker-cache.json");
+  const userCachePath = path.join(appDataDir, "gov-tracker-cache.json");
+
+  // If user cache doesn't exist, try to copy bundled cache
+  if (!fs.existsSync(userCachePath)) {
+    const bundledPath = getBundledCachePath();
+    if (bundledPath) {
+      try {
+        fs.copyFileSync(bundledPath, userCachePath);
+        console.log(`Initialized cache from bundled data (${bundledPath})`);
+      } catch (err) {
+        // Non-fatal: just start with empty cache
+        console.warn(`Warning: Could not copy bundled cache: ${err}`);
+      }
+    }
+  }
+
+  return userCachePath;
 }
 
 // Default cache path in OS-specific application data directory
@@ -206,9 +239,9 @@ function createProgressCallback() {
 }
 
 const program = new Command()
-  .name("monitor")
-  .description("Monitor Arbitrum governance proposals")
-  .version("0.1.0");
+  .name("gov-tracker")
+  .description("Track and execute Arbitrum DAO governance proposal lifecycle stages")
+  .version(getPackageVersion());
 
 // ============================================================================
 // Run Command
@@ -225,6 +258,7 @@ addOptions(runCmd, loopOptions);
 runCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
+  .addOption(cacheOptions.noCache)
   .addOption(verboseOption)
   .option("--start-block <block>", "Start block for discovery (skips cache)")
   .option(
@@ -246,9 +280,11 @@ runCmd
 
     const providers = createProvidersFromOptions(opts);
     const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
+    // --no-cache disables cache entirely
+    const cachePath = opts.noCache ? undefined : opts.cache;
     const tracker = createTracker({
       ...providers,
-      cachePath: opts.cache,
+      cachePath,
       chunkingConfig,
       onProgress: createProgressCallback(),
     });
@@ -403,6 +439,7 @@ addOptions(trackCmd, gasOptions);
 trackCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
+  .addOption(cacheOptions.noCache)
   .addOption(verboseOption)
   .option("--inspect-only", "Decode and inspect calldata without tracking")
   .option("--show-simulation", "Show simulation data for each call")
@@ -424,10 +461,11 @@ trackCmd
         if (opts.force) console.log(`Force: ignoring cached data`);
       }
 
-      // Use cache unless --force is specified
+      // Use cache unless --force or --no-cache is specified
+      const cachePath = opts.noCache ? undefined : opts.force ? undefined : opts.cache;
       const tracker = createTracker({
         ...providers,
-        cachePath: opts.force ? undefined : opts.cache,
+        cachePath,
         chunkingConfig,
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });

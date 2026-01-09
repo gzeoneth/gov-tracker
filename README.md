@@ -115,7 +115,12 @@ npx @gzeoneth/gov-tracker track 0x... --write --private-key $PRIVATE_KEY
 
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
+
+# Disable caching (useful for one-off checks)
+npx @gzeoneth/gov-tracker track 0x... --no-cache
 ```
+
+**Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
 ## Environment
 

@@ -14,6 +14,7 @@ import {
   LocalStorageCache,
   txHashCacheKey,
   readCacheStatus,
+  getBundledCachePath,
 } from "../src/tracker/cache";
 import { WATERMARKS_KEY } from "../src/tracker/discovery";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
@@ -540,6 +541,62 @@ describe("Cache State Module", () => {
       // #then - should return empty data without throwing
       expect(watermarks).toEqual({});
       expect(checkpoints.size).toBe(0);
+    });
+  });
+
+  describe("getBundledCachePath", () => {
+    it("should return a valid path when bundled cache exists", () => {
+      // #given - the bundled cache exists in the data directory
+
+      // #when - calling getBundledCachePath
+      const result = getBundledCachePath();
+
+      // #then - should return a path to an existing file
+      expect(result).toBeDefined();
+      expect(typeof result).toBe("string");
+      if (result) {
+        expect(fs.existsSync(result)).toBe(true);
+      }
+    });
+
+    it("should return path ending with bundled-cache.json", () => {
+      // #given - the bundled cache exists
+
+      // #when - calling getBundledCachePath
+      const result = getBundledCachePath();
+
+      // #then - should return a path with correct filename
+      expect(result).toBeDefined();
+      expect(result).toMatch(/bundled-cache\.json$/);
+    });
+
+    it("should return path containing data directory", () => {
+      // #given - the bundled cache exists
+
+      // #when - calling getBundledCachePath
+      const result = getBundledCachePath();
+
+      // #then - should return a path containing /data/
+      expect(result).toBeDefined();
+      expect(result).toMatch(/[/\\]data[/\\]/);
+    });
+
+    it("should return valid JSON cache file", () => {
+      // #given - the bundled cache exists
+
+      // #when - reading the bundled cache file
+      const cachePath = getBundledCachePath();
+      expect(cachePath).toBeDefined();
+
+      // #then - should contain valid JSON with expected structure
+      const content = fs.readFileSync(cachePath!, "utf8");
+      const data = JSON.parse(content);
+
+      // Should have discovery watermarks key
+      expect(data).toHaveProperty(WATERMARKS_KEY);
+      // Should have at least one tx: checkpoint
+      const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
+      expect(txKeys.length).toBeGreaterThan(0);
     });
   });
 });

@@ -312,7 +312,7 @@ export {
 // TIER 8: Cache Implementations
 // ============================================================================
 
-export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/cache";
+export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "./tracker/cache";
 
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)

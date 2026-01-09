@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-01-09
+
+### Added
+
+- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `yarn monitor run --cache data/bundled-cache.json` to regenerate.
+
+- **`getBundledCachePath()` export** - New utility function to get the path to the bundled cache for SDK users who want to bootstrap their app's cache.
+
+- **CLI: `--no-cache` flag** - Added `--no-cache` option to `run` and `track` commands to disable caching entirely (don't read or write). Cleaner alternative to `--cache /dev/null`.
+
 ### Changed
 
 - **Performance: Extend block info cache TTL to 60s** - Increased `getCurrentBlockInfo()` cache TTL from 2s to 60s. Governance tracking doesn't need real-time block data. Added `invalidateBlockInfoCache()` function for external applications to force refresh (e.g., at start of monitoring loop). CLI loop mode now calls this automatically.
@@ -334,6 +344,7 @@ Initial release of governance proposal lifecycle tracking SDK with support for 7
 
 ---
 
+[0.2.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.0...v0.1.1

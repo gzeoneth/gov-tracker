@@ -90,6 +90,26 @@ const incomplete = await tracker.queryIncompleteCheckpoints({
 });
 ```
 
+### Bundled Cache
+
+The npm package includes a pre-built cache of completed proposals. Use `getBundledCachePath()` to access it:
+
+```typescript
+import { getBundledCachePath } from "@gzeoneth/gov-tracker";
+
+// Get path to bundled cache (returns undefined if not found)
+const bundledPath = getBundledCachePath();
+if (bundledPath) {
+  // Option 1: Copy to your app's cache location
+  fs.copyFileSync(bundledPath, "./my-app-cache.json");
+
+  // Option 2: Use directly (updates won't persist)
+  const tracker = createTracker({ ...providers, cachePath: bundledPath });
+}
+```
+
+See [Bundled Cache](./EXAMPLES.md#bundled-cache-bootstrap) for more examples.
+
 ---
 
 ### Elections
@@ -508,4 +528,7 @@ npx gov-tracker track 0x... --show-simulation
 
 # Execute ready stages
 npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY
+
+# Disable caching (don't read or write)
+npx gov-tracker track 0x... --no-cache
 ```

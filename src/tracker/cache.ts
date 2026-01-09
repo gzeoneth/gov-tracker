@@ -11,6 +11,7 @@
  */
 
 import * as fs from "fs";
+import * as path from "path";
 import { TrackingCheckpoint, DiscoveryWatermarks, CacheAdapter } from "../types";
 import { WATERMARKS_KEY } from "./discovery";
 
@@ -286,4 +287,47 @@ export async function readCacheStatus(cachePath: string): Promise<{
   }
 
   return { watermarks, checkpoints };
+}
+
+/**
+ * Get the path to the bundled cache shipped with the npm package.
+ *
+ * The bundled cache contains pre-tracked completed proposals, eliminating
+ * the need for initial discovery RPC calls. Use this to initialize your
+ * app's cache or to point the tracker directly at the bundled data.
+ *
+ * @returns Path to bundled cache, or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * import { getBundledCachePath, createTracker } from "@gzeoneth/gov-tracker";
+ * import * as fs from "fs";
+ *
+ * // Option 1: Copy bundled cache to your app's cache location
+ * const bundledPath = getBundledCachePath();
+ * const appCachePath = "./my-app-cache.json";
+ * if (bundledPath && !fs.existsSync(appCachePath)) {
+ *   fs.copyFileSync(bundledPath, appCachePath);
+ * }
+ * const tracker = createTracker({ ...providers, cachePath: appCachePath });
+ *
+ * // Option 2: Use bundled cache directly (read-only, updates won't persist)
+ * const tracker = createTracker({ ...providers, cachePath: getBundledCachePath() });
+ * ```
+ */
+export function getBundledCachePath(): string | undefined {
+  // Try multiple paths to support different module resolution scenarios
+  // When installed: node_modules/@gzeoneth/gov-tracker/dist/data/bundled-cache.json
+  // In monorepo: packages/gov-tracker/dist/data/bundled-cache.json
+  const candidates = [
+    path.join(__dirname, "..", "data", "bundled-cache.json"), // dist/tracker -> dist/data
+    path.join(__dirname, "..", "..", "data", "bundled-cache.json"), // src/tracker -> data (dev)
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
 }

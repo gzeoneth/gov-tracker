@@ -195,10 +195,11 @@ export function createProvidersFromOptions(opts: {
     throw new Error("L1 RPC URL required (--l1-rpc or ETH_RPC env var)");
   }
 
+  // Use StaticJsonRpcProvider to avoid automatic chainId detection on every call
   return {
-    l2Provider: new ethers.providers.JsonRpcProvider(l2Rpc),
-    l1Provider: new ethers.providers.JsonRpcProvider(l1Rpc),
-    novaProvider: new ethers.providers.JsonRpcProvider(novaRpc),
+    l2Provider: new ethers.providers.StaticJsonRpcProvider(l2Rpc),
+    l1Provider: new ethers.providers.StaticJsonRpcProvider(l1Rpc),
+    novaProvider: new ethers.providers.StaticJsonRpcProvider(novaRpc),
   };
 }
 

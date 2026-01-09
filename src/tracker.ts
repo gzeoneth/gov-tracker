@@ -115,8 +115,8 @@ export function extractTimelockLink(stages: TrackedStage[]): TimelockLink | unde
  * @example
  * ```typescript
  * const tracker = new ProposalStageTracker({
- *   l2Provider: new ethers.providers.JsonRpcProvider(ARB1_RPC),
- *   l1Provider: new ethers.providers.JsonRpcProvider(ETH_RPC),
+ *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
+ *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
  * });
  *
  * // Track by transaction hash (recommended)
@@ -150,10 +150,11 @@ export class ProposalStageTracker {
       throw new Error("l1Provider is required");
     }
     this.l1Provider = options.l1Provider;
+    // Use StaticJsonRpcProvider for defaults to avoid automatic chainId detection
     this.l2Provider =
-      options.l2Provider ?? new ethers.providers.JsonRpcProvider(DEFAULT_RPC_URLS.ARB_ONE);
+      options.l2Provider ?? new ethers.providers.StaticJsonRpcProvider(DEFAULT_RPC_URLS.ARB_ONE);
     this.novaProvider =
-      options.novaProvider ?? new ethers.providers.JsonRpcProvider(DEFAULT_RPC_URLS.NOVA);
+      options.novaProvider ?? new ethers.providers.StaticJsonRpcProvider(DEFAULT_RPC_URLS.NOVA);
     this.onProgress = options.onProgress;
     this.chunkingConfig = options.chunkingConfig ?? DEFAULT_CHUNKING_CONFIG;
 

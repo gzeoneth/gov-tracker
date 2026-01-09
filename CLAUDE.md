@@ -58,7 +58,7 @@ npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY  # Execute ready 
 
 **Prepare-only SDK**: This library tracks governance lifecycle stages and prepares transaction data, but **never executes transactions**. Your application is responsible for signing and sending prepared transactions.
 
-**Functional pipeline**: Immutable `TrackingContext` flows through pure tracking functions. Each stage tracker is a pure function that takes context and returns updated stages.
+**Functional pipeline**: Immutable `TrackingState` flows through pure tracking functions. Each stage tracker is a pure function that takes state and returns updated stages.
 
 **Multi-chain flow**: Tracks proposals across Ethereum L1, Arbitrum One L2, and Arbitrum Nova L2.
 
@@ -68,14 +68,15 @@ npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY  # Execute ready 
 src/
 ├── tracker.ts              # Main ProposalStageTracker class (public API)
 ├── tracker/
-│   ├── context.ts          # TrackingContext creation and management
+│   ├── state.ts            # TrackingState creation and management
 │   ├── pipeline.ts         # Pure stage tracking pipeline
 │   ├── discovery.ts        # Discover proposals from multiple governors/timelocks
 │   ├── execute.ts          # Transaction preparation (never execution)
 │   ├── query.ts            # Cache query operations
-│   └── state.ts            # State management helpers
+│   └── cache.ts            # Cache implementations (FileCache, MemoryCache, etc.)
 ├── stages/                 # Individual stage implementations
-│   ├── base.ts             # Base stage utilities
+│   ├── utils.ts            # Stage utilities and helpers
+│   ├── builder.ts          # Stage builder functions
 │   ├── proposal-created.ts # Stage 1: Proposal created
 │   ├── voting.ts           # Stage 2: Voting period
 │   ├── proposal-queued.ts  # Stage 3: Queued in timelock
@@ -113,24 +114,24 @@ Every Arbitrum DAO governance proposal flows through up to 7 stages:
 
 **Stage statuses**: `NOT_STARTED` → `PENDING` → `READY` → `COMPLETED` (or `FAILED`/`SKIPPED`)
 
-### Tracking Context Pattern
+### Tracking State Pattern
 
-The core tracking mechanism uses an immutable `TrackingContext` that flows through stage tracking functions:
+The core tracking mechanism uses an immutable `TrackingState` that flows through stage tracking functions:
 
 ```typescript
-// Context creation (tracker/context.ts)
-const context = await createTrackingContext(input, options);
+// State creation (tracker/state.ts)
+const state = await createTrackingState(input, options);
 
 // Pipeline execution (tracker/pipeline.ts)
-const stages = await trackAllStages(context, checkpoint);
+const stages = await trackAllStages(state, checkpoint);
 
 // Each stage tracker is a pure function
-async function trackProposalCreated(context: TrackingContext): Promise<TrackedStage>
-async function trackVoting(context: TrackingContext): Promise<TrackedStage>
+async function trackProposalCreated(state: TrackingState): Promise<TrackedStage>
+async function trackVoting(state: TrackingState): Promise<TrackedStage>
 // ... etc
 ```
 
-**Key insight**: Context contains all providers, addresses, and configuration. Stage tracking functions are stateless and pure.
+**Key insight**: State contains all providers, addresses, and configuration. Stage tracking functions are stateless and pure.
 
 ### Caching & Checkpoints
 
@@ -298,9 +299,9 @@ Uses `husky` + `lint-staged` to run:
 - **Constants**: `SCREAMING_SNAKE_CASE`
   - Examples: `ADDRESSES`, `TIMING`, `DEFAULT_CHUNKING_CONFIG`
 - **Types/Interfaces**: `PascalCase`
-  - Examples: `TrackingContext`, `TrackedStage`, `ProposalData`
+  - Examples: `TrackingState`, `TrackedStage`, `ProposalData`
 - **Functions**: `camelCase`
-  - Examples: `createTrackingContext`, `trackAllStages`, `hashOperation`
+  - Examples: `createTrackingState`, `trackAllStages`, `hashOperation`
 - **Variables**: `camelCase`
   - Examples: `proposalId`, `timelockAddress`, `currentBlock`
 - **Private/Unused Parameters**: Prefix with underscore `_paramName`
@@ -311,7 +312,7 @@ Uses `husky` + `lint-staged` to run:
 **Pure functions preferred**: Stage tracking and utility functions should be pure (no side effects, deterministic):
 ```typescript
 // Good: pure function
-async function trackProposalCreated(context: TrackingContext): Promise<TrackedStage>
+async function trackProposalCreated(state: TrackingState): Promise<TrackedStage>
 
 // Avoid: stateful classes for core logic (use for public API only)
 ```
@@ -424,7 +425,7 @@ export function isStageType<T extends StageType>(
 
 **Serialization**: Use helper functions for BigNumber serialization:
 ```typescript
-// In stages/base.ts
+// In stages/utils.ts
 export const serializeCallScheduledData = (data: CallScheduledData) =>
   serialize(data, CALL_SCHEDULED_BIGNUM_FIELDS);
 ```
@@ -507,7 +508,7 @@ Cache interface is in `src/types/cache.ts`. Default implementation is `FileCache
 
 1. Implement `CacheAdapter` interface
 2. Pass via `cache` option in `createTracker()`
-3. Test with `MemoryCache` pattern from `src/tracker/state.ts`
+3. Test with `MemoryCache` pattern from `src/tracker/cache.ts`
 
 ## Environment Setup
 

@@ -4,12 +4,15 @@
  * Tests for block-based timing calculations across L1 and L2.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { ethers } from "ethers";
 import {
   estimateTimestampFromBlock,
   calculateEta,
   calculateRemainingSeconds,
   calculateExpectedEta,
+  getL1BlockNumberFromL2,
+  getL1BlockForL2Block,
 } from "../src/utils/timing";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
 import { StageBuilder } from "../src/stages/stage-builder";
@@ -268,6 +271,82 @@ describe("Timing Utilities", () => {
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.CHALLENGE_PERIOD;
       const expectedEta = 1700100000 + expectedDays * 24 * 60 * 60;
       expect(eta).toBe(expectedEta);
+    });
+  });
+
+  describe("getL1BlockNumberFromL2", () => {
+    it("should throw error when provider does not have send method (line 132)", async () => {
+      // #given - a provider without send method
+      const mockProvider = {
+        getBlock: vi.fn(),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Provider does not support direct RPC calls (send method required)"
+      );
+    });
+
+    it("should throw error when l1BlockNumber is missing from response (line 141)", async () => {
+      // #given - a provider that returns block without l1BlockNumber
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Could not get L1 block number from latest L2 block"
+      );
+    });
+
+    it("should throw error when response is null (line 141)", async () => {
+      // #given - a provider that returns null
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Could not get L1 block number from latest L2 block"
+      );
+    });
+  });
+
+  describe("getL1BlockForL2Block", () => {
+    it("should throw error when provider does not have send method (line 167)", async () => {
+      // #given - a provider without send method
+      const mockProvider = {
+        getBlock: vi.fn(),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Provider does not support direct RPC calls (send method required)"
+      );
+    });
+
+    it("should throw error when l1BlockNumber is missing from response (line 175)", async () => {
+      // #given - a provider that returns block without l1BlockNumber
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Could not get L1 block number for L2 block 12345"
+      );
+    });
+
+    it("should throw error when response is null (line 175)", async () => {
+      // #given - a provider that returns null
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Could not get L1 block number for L2 block 12345"
+      );
     });
   });
 });

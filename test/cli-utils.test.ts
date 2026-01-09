@@ -488,6 +488,19 @@ describe("CLI Utilities", () => {
       expect(output).toContain("Active: 1");
     });
 
+    it("should count failed timelock operations (line 458)", () => {
+      // #given - a failed timelock operation (isFailed = true)
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("t1", createMockCheckpoint("timelock", false, true));
+
+      // #when
+      const output = formatCacheStatus(checkpoints);
+
+      // #then - should show failed count
+      expect(output).toContain("Timelock Ops: 1");
+      expect(output).toContain("Failed: 1");
+    });
+
     it("should count elections separately", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("e1", createMockCheckpoint("governor", true, false, true));

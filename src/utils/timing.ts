@@ -213,7 +213,7 @@ export async function getFirstL2BlockForL1Block(
 
   // Try exact block (offset=0) then nearby L1 blocks (offset=1..5)
   // L1 blocks can be skipped on L2, but adjacent blocks usually have L2 blocks
-  for (let offset = 0; offset <= NEARBY_L1_BLOCK_ATTEMPTS; offset++) {
+  for (let offset = 0; offset < NEARBY_L1_BLOCK_ATTEMPTS; offset++) {
     const l1Block = targetL1Block - offset;
     if (l1Block <= 0) break;
 

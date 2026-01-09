@@ -313,17 +313,35 @@ export function isTimelockStage(type: StageType | string): boolean {
 // Section 5: Block & Timing Utilities
 // ============================================================================
 
+// Block timestamp cache - timestamps are immutable so cache indefinitely
+// Uses WeakMap keyed by provider so cache is GC'd when provider is dereferenced
+const blockTimestampCache = new WeakMap<ethers.providers.Provider, Map<number, number>>();
+
 /**
- * Get block timestamp from provider
+ * Get block timestamp from provider with caching.
+ * Block timestamps are immutable, so we cache them indefinitely to avoid redundant RPC calls.
  */
 export async function getBlockTimestamp(
   blockNumber: number,
   provider: ethers.providers.Provider
 ): Promise<number> {
+  let providerCache = blockTimestampCache.get(provider);
+  if (!providerCache) {
+    providerCache = new Map();
+    blockTimestampCache.set(provider, providerCache);
+  }
+
+  const cached = providerCache.get(blockNumber);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const block = await queryWithRetry(() => provider.getBlock(blockNumber));
   if (!block) {
     throw new Error(`Block ${blockNumber} not found`);
   }
+
+  providerCache.set(blockNumber, block.timestamp);
   return block.timestamp;
 }
 

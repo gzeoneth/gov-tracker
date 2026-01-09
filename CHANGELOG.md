@@ -5,9 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-> Commits: 487334b..HEAD (refactor-trackedstage + improve-coverage branches)
+## [0.2.0] - 2026-01-09
 
 ### Added
 
@@ -19,10 +17,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `isRetryable(decoded)` type guard for retryable ticket calldata
   - Added `getChainDisplayName(chain)` for human-readable chain names ("ethereum" → "Ethereum Mainnet", "arb1" → "Arbitrum One", "nova" → "Arbitrum Nova")
 
+- **New exports**:
+  - `NETWORK_IDS` - Tenderly network IDs (`{ ethereum: "1", arb1: "42161", nova: "42170" }`)
+  - `TIMELOCK_SELECTORS` - Function selectors for schedule/execute operations
+  - `FileCache`, `LocalStorageCache`, `MemoryCache` - Cache adapter implementations
+  - `getChain(provider)` - Get chain name from provider
+  - `getChainId(provider)` - Get chain ID from provider
+
 - **Test Coverage Infrastructure**:
   - Added `vitest.config.fork.mts` for fork-based tests with separate coverage output
   - Added `yarn test:coverage:fork` and `yarn test:coverage:all` scripts
   - Added Codecov integration with coverage flags for regular and fork tests
+
+- **Type improvements**:
+  - `isStageType()` now properly narrows to `TypedTrackedStage<T>`
+  - Added `KnownChain` type (chains excluding "unknown")
 
 ### Changed
 
@@ -34,9 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added discovery module coverage (`detectGovernorCapabilities`, `discoverAll`)
   - Added election check coverage (`formatElectionStatus`, `prepareMemberElectionTrigger`)
 
+- **Constants consolidated** - Moved URL utilities (`getTxUrl`, `getStageTransactionUrl`) to `constants.ts`
+- **Calldata module consolidated** - Merged `address-utils.ts` and `extraction.ts` into main modules
+- **Logger consolidated** - Merged `scoped-logger.ts` into `logger.ts`
+- **Improved type safety** - Added strict typing throughout
+
 ### Fixed
 
 - **Security**: `extractCalldataFromStage` now throws an error when `value` is missing from `callScheduledData` instead of silently defaulting to "0". This prevents users from approving proposals that appear to transfer no ETH when the actual calldata sends funds.
+- `getRetryableChainName("nova")` now returns "Nova" instead of "nova"
 
 ### Breaking Changes
 
@@ -62,12 +77,12 @@ const fullAddress = param.rawValue as string; // For programmatic access (full v
 ```typescript
 // Before: data was a loose intersection type
 if (stage.type === "VOTING_ACTIVE") {
-  const votes = stage.data.forVotes; // ❌ TypeScript didn't know this exists
+  const votes = stage.data.forVotes; // TypeScript didn't know this exists
 }
 
 // After: data is properly typed per stage type
 if (stage.type === "VOTING_ACTIVE") {
-  const votes = stage.data.forVotes; // ✓ TypeScript knows VotingActiveData
+  const votes = stage.data.forVotes; // TypeScript knows VotingActiveData
 }
 ```
 
@@ -75,7 +90,7 @@ if (stage.type === "VOTING_ACTIVE") {
 ```typescript
 // trackVotingStage returns TypedTrackedStage<"VOTING_ACTIVE">
 const { stage } = await trackVotingStage(...);
-stage.data.forVotes; // ✓ No cast needed
+stage.data.forVotes; // No cast needed
 
 // trackProposalCreated returns TypedTrackedStage<"PROPOSAL_CREATED">
 // trackProposalQueued returns TypedTrackedStage<"PROPOSAL_QUEUED">
@@ -91,7 +106,7 @@ builder.data({ anyField: "value" }); // No type checking
 
 // After
 const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
-builder.data({ forVotes: "100" }); // ✓ Type-checked against VotingActiveData
+builder.data({ forVotes: "100" }); // Type-checked against VotingActiveData
 ```
 
 #### Chain Type Refactoring
@@ -177,30 +192,6 @@ interface PreparedTransaction {
   - `clearSignatureCache()` - Internal utility
   - `chainTypeToId()` - Replaced by `chainToChainId()`
   - `getChainType()` - Replaced by `getChain()`
-
-### Added
-
-- **New exports**:
-  - `NETWORK_IDS` - Tenderly network IDs (`{ ethereum: "1", arb1: "42161", nova: "42170" }`)
-  - `TIMELOCK_SELECTORS` - Function selectors for schedule/execute operations
-  - `FileCache`, `LocalStorageCache`, `MemoryCache` - Cache adapter implementations
-  - `getChain(provider)` - Get chain name from provider
-  - `getChainId(provider)` - Get chain ID from provider
-
-- **Type improvements**:
-  - `isStageType()` now properly narrows to `TypedTrackedStage<T>`
-  - Added `KnownChain` type (chains excluding "unknown")
-
-### Changed
-
-- **Constants consolidated** - Moved URL utilities (`getTxUrl`, `getStageTransactionUrl`) to `constants.ts`
-- **Calldata module consolidated** - Merged `address-utils.ts` and `extraction.ts` into main modules
-- **Logger consolidated** - Merged `scoped-logger.ts` into `logger.ts`
-- **Improved type safety** - Added strict typing throughout
-
-### Fixed
-
-- `getRetryableChainName("nova")` now returns "Nova" instead of "nova"
 
 ### Development
 
@@ -323,7 +314,7 @@ Initial release of governance proposal lifecycle tracking SDK with support for 7
 
 ---
 
-[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...HEAD
+[0.2.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gzeoneth/gov-tracker/releases/tag/v0.1.0

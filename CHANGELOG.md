@@ -179,6 +179,8 @@ interface PreparedTransaction {
 - Added `knip` for dead code detection
 - Added `check:unused` script to pre-commit hooks
 - Added `public-api.test.ts` to verify export stability
+- Consolidated duplicate tests between `stages.test.ts` and `base-stages.test.ts`
+- Removed `tracker-state.test.ts` (duplicated by `state.test.ts`)
 
 ## [0.1.2] - 2026-01-07
 

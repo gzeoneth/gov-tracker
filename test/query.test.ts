@@ -217,6 +217,25 @@ describe("Tracker Query Module", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("should skip checkpoints with failed voting even with non-terminal stages", async () => {
+      // #given - checkpoint with failed voting AND non-terminal stage
+      // because areAllStagesComplete returns false due to PENDING stage
+      const failedVotingWithPending = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "FAILED"),
+          createStage("PROPOSAL_QUEUED", "PENDING"), // Non-terminal, so not "complete"
+        ],
+      });
+      await cache.set("tx:0x111", failedVotingWithPending);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - should still skip because voting failed
+      expect(result).toHaveLength(0);
+    });
+
     it("should skip checkpoints exceeding error threshold", async () => {
       const tooManyErrors = createCheckpoint({
         stages: [createStage("PROPOSAL_CREATED", "COMPLETED")],

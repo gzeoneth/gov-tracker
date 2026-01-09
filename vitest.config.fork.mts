@@ -12,5 +12,18 @@ export default defineConfig({
     fileParallelism: false,
     // Fork tests need longer timeout for network setup
     testTimeout: 120000,
+    coverage: {
+      provider: "v8",
+      reporter: ["json", "lcov"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        "test/**",
+        "dist/**",
+        "*.config.*",
+        "src/cli/monitor.ts",
+      ],
+      // Output to separate directory for merging
+      reportsDirectory: "coverage-fork",
+    },
   },
 });

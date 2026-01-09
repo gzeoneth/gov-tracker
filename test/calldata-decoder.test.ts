@@ -191,8 +191,104 @@ describe("Calldata Decoder", () => {
     });
   });
 
-  describe("extractCalldataFromStage - additional cases", () => {
+  describe("extractCalldataFromStage", () => {
+    it("should extract calldata from PROPOSAL_CREATED stage", () => {
+      // #given - a PROPOSAL_CREATED stage with calldata
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1234"],
+          targets: ["0xABCD"],
+          values: ["100"],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should extract all fields correctly
+      expect(result.calldatas).toEqual(["0x1234"]);
+      expect(result.targets).toEqual(["0xABCD"]);
+      expect(result.values).toEqual(["100"]);
+    });
+
+    it("should handle multiple calldatas in PROPOSAL_CREATED", () => {
+      // #given - a PROPOSAL_CREATED stage with multiple calldatas
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2"],
+          targets: ["0xT1", "0xT2"],
+          values: ["0", "0"],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should handle multiple items correctly
+      expect(result.calldatas).toEqual(["0x1", "0x2"]);
+      expect(result.targets).toEqual(["0xT1", "0xT2"]);
+      expect(result.values).toEqual(["0", "0"]);
+    });
+
+    it("should extract calldata from L2_TIMELOCK stage with callScheduledData", () => {
+      // #given - an L2_TIMELOCK stage with callScheduledData
+      const stage = {
+        type: "L2_TIMELOCK" as const,
+        status: "READY" as const,
+        chain: "arb1" as const,
+        chainId: 42161,
+        transactions: [],
+        data: {
+          operationId: "0xop",
+          timelockAddress: "0xTL",
+          callScheduledData: [
+            { target: "0xTarget1", value: "100", data: "0xData1" },
+            { target: "0xTarget2", value: "0", data: "0xData2" },
+          ],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should extract from callScheduledData
+      expect(result.calldatas).toEqual(["0xData1", "0xData2"]);
+      expect(result.targets).toEqual(["0xTarget1", "0xTarget2"]);
+      expect(result.values).toEqual(["100", "0"]);
+    });
+
+    it("should return empty arrays when stage has empty data", () => {
+      // #given - a stage with empty data
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {},
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should return empty arrays
+      expect(result.calldatas).toEqual([]);
+      expect(result.targets).toEqual([]);
+      expect(result.values).toEqual([]);
+    });
+
     it("should handle empty callScheduledData array", () => {
+      // #given - a timelock stage with empty callScheduledData
       const stage = {
         type: "L2_TIMELOCK" as const,
         status: "READY" as const,
@@ -204,13 +300,59 @@ describe("Calldata Decoder", () => {
         },
       };
 
+      // #when - extracting calldata
       const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should return empty arrays
       expect(result.calldatas).toEqual([]);
       expect(result.targets).toEqual([]);
       expect(result.values).toEqual([]);
     });
 
+    it("should throw for mismatched targets array length", () => {
+      // #given - a stage with mismatched targets length
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2", "0x3"],
+          targets: ["0xT1"], // Too short
+          values: ["0", "0", "0"],
+        },
+      };
+
+      // #when/#then - should throw error for mismatch
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in targets length/
+      );
+    });
+
+    it("should throw for mismatched values array length", () => {
+      // #given - a stage with mismatched values length
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2"],
+          targets: ["0xT1", "0xT2"],
+          values: ["0"], // Only one value for two calldatas
+        },
+      };
+
+      // #when/#then - should throw error for mismatch
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in values length/
+      );
+    });
+
     it("should throw when value is missing in callScheduledData", () => {
+      // #given - a timelock stage with missing value field
       const stage = {
         type: "L1_TIMELOCK" as const,
         status: "READY" as const,
@@ -228,27 +370,9 @@ describe("Calldata Decoder", () => {
         },
       };
 
+      // #when/#then - should throw error for missing value
       expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
         /Missing value in callScheduledData at index 0/
-      );
-    });
-
-    it("should throw for mismatched values array length", () => {
-      const stage = {
-        type: "PROPOSAL_CREATED" as const,
-        status: "COMPLETED" as const,
-        chain: "arb1" as const,
-        chainId: 42161,
-        transactions: [],
-        data: {
-          calldatas: ["0x1", "0x2"],
-          targets: ["0xT1", "0xT2"],
-          values: ["0"], // Only one value for two calldatas
-        },
-      };
-
-      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
-        /Mismatch in values length/
       );
     });
   });
@@ -457,5 +581,117 @@ describe("Nested Array Parameter Decoding", () => {
     expect(bytesArrayParam).toBeDefined();
     // Empty array should not create nestedArray
     expect(bytesArrayParam?.nestedArray).toBeUndefined();
+  });
+
+  it("should decode bytes[] with retryable ticket magic target (lines 154-229)", async () => {
+    // #given - batch calldata with retryable ticket magic address as target
+    // Encode a retryable ticket payload: (inbox, l2Target, l2Value, gasLimit, maxFeePerGas, l2Calldata)
+    const retryablePayload = ethers.utils.defaultAbiCoder.encode(
+      ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+      [
+        ADDRESSES.ARB1_DELAYED_INBOX, // inbox
+        "0x1234567890123456789012345678901234567890", // l2Target
+        "1000000000000000000", // l2Value
+        "100000", // gasLimit
+        "1000000000", // maxFeePerGas
+        "0xabcdef", // l2Calldata (simple bytes)
+      ]
+    );
+
+    // Create scheduleBatch calldata with retryable ticket magic as target
+    const targets = [ADDRESSES.RETRYABLE_TICKET_MAGIC];
+    const values = ["0"];
+    const payloads = [retryablePayload];
+
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [
+        targets,
+        values,
+        payloads,
+        ethers.constants.HashZero, // predecessor
+        ethers.constants.HashZero, // salt
+        0, // delay
+      ]
+    );
+
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    // #when - decoding the calldata
+    const result = await decodeCalldata(calldata);
+
+    // #then - should decode with retryable ticket structure
+    expect(result.signature).toContain("scheduleBatch");
+
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    expect(bytesArrayParam).toBeDefined();
+    expect(bytesArrayParam?.nestedArray).toBeDefined();
+    expect(bytesArrayParam?.nestedArray?.length).toBe(1);
+
+    // Verify retryable ticket structure
+    const retryableDecoded = bytesArrayParam?.nestedArray?.[0];
+    expect(retryableDecoded?.isRetryable).toBe(true);
+
+    // Check retryable parameters
+    const inboxParam = retryableDecoded?.parameters?.find((p) => p.name === "inbox");
+    expect(inboxParam?.value.toLowerCase()).toBe(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase());
+
+    const l2TargetParam = retryableDecoded?.parameters?.find((p) => p.name === "l2Target");
+    expect(l2TargetParam?.value.toLowerCase()).toBe(
+      "0x1234567890123456789012345678901234567890".toLowerCase()
+    );
+  });
+
+  it("should decode retryable with nested l2Calldata when chain is known", async () => {
+    // #given - retryable ticket with valid nested l2Calldata (a transfer call)
+    const transferIface = new ethers.utils.Interface([
+      "function transfer(address to, uint256 amount)",
+    ]);
+    const innerCalldata = transferIface.encodeFunctionData("transfer", [
+      "0x2222222222222222222222222222222222222222",
+      ethers.utils.parseEther("1.0"),
+    ]);
+
+    const retryablePayload = ethers.utils.defaultAbiCoder.encode(
+      ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+      [
+        ADDRESSES.ARB1_DELAYED_INBOX, // inbox (arb1)
+        "0x3333333333333333333333333333333333333333", // l2Target
+        "0", // l2Value
+        "200000", // gasLimit
+        "500000000", // maxFeePerGas
+        innerCalldata, // nested l2Calldata
+      ]
+    );
+
+    // Create scheduleBatch with retryable
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [
+        [ADDRESSES.RETRYABLE_TICKET_MAGIC],
+        ["0"],
+        [retryablePayload],
+        ethers.constants.HashZero,
+        ethers.constants.HashZero,
+        0,
+      ]
+    );
+
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    // #when - decoding
+    const result = await decodeCalldata(calldata);
+
+    // #then - should have nested l2Calldata decoded
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    const retryableDecoded = bytesArrayParam?.nestedArray?.[0];
+    expect(retryableDecoded?.isRetryable).toBe(true);
+
+    // Check l2Calldata parameter
+    const l2CalldataParam = retryableDecoded?.parameters?.find((p) => p.name === "l2Calldata");
+    expect(l2CalldataParam).toBeDefined();
+    expect(l2CalldataParam?.isNested).toBe(true);
+    expect(l2CalldataParam?.nested).toBeDefined();
+    expect(l2CalldataParam?.nested?.signature).toContain("transfer");
   });
 });

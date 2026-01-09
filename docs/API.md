@@ -116,6 +116,8 @@ if (election.canCreate) {
 | `areAllStagesComplete(stages)` | Check if all complete |
 | `isStageType(stage, type)` | Type guard for stage type |
 | `getStageData(stage, type)` | Get typed stage data |
+| `extractTimelockLink(stages)` | Extract timelock info from PROPOSAL_QUEUED stage |
+| `prepareGovernorQueue(stage, provider)` | Prepare queue transaction for governor |
 
 ### Discovery
 
@@ -126,6 +128,16 @@ if (election.canCreate) {
 | `getTimelockOperationState(timelock, id, provider)` | Get timelock state |
 | `isKnownL2Timelock(address)` | Check if known L2 timelock |
 | `isL1Timelock(address)` | Check if L1 timelock |
+
+### Chain Utilities
+
+| Function | Description |
+|----------|-------------|
+| `getChain(provider)` | Get chain name from provider |
+| `chainIdToChain(chainId)` | Convert chain ID to chain name |
+| `chainToChainId(chain)` | Convert chain name to chain ID |
+| `addressEquals(a, b)` | Case-insensitive address comparison |
+| `isAddressIn(address, list)` | Check if address in list |
 
 ### Timing
 
@@ -141,6 +153,19 @@ if (election.canCreate) {
 |----------|-------------|
 | `getTxUrl(hash, chain)` | Get explorer URL for tx |
 | `getStageTransactionUrl(stage)` | Get URL for stage tx |
+
+### Error Utilities
+
+| Function | Description |
+|----------|-------------|
+| `isGasEstimationError(error)` | Check if error is gas estimation failure |
+
+### Advanced Context
+
+| Function | Description |
+|----------|-------------|
+| `createTrackingContext(input, options)` | Create tracking context manually |
+| `createCheckpoint(input, stages)` | Create checkpoint from stages |
 
 ---
 
@@ -173,6 +198,27 @@ TIMING.CHALLENGE_PERIOD_BLOCKS_L1                   // 45,818 (~6.4 days)
 CHUNK_SIZES.L1        // 10,000 blocks
 CHUNK_SIZES.L2        // 10,000,000 blocks
 CHUNK_SIZES.DELAY_MS  // 100ms
+```
+
+### `NETWORK_IDS`
+
+Tenderly network identifiers:
+
+```typescript
+NETWORK_IDS.ethereum  // "1"
+NETWORK_IDS.arb1      // "42161"
+NETWORK_IDS.nova      // "42170"
+```
+
+### `TIMELOCK_SELECTORS`
+
+Function selectors for timelock operations:
+
+```typescript
+TIMELOCK_SELECTORS.schedule         // "0x01d5062a"
+TIMELOCK_SELECTORS.scheduleBatch    // "0x8f2a0bb0"
+TIMELOCK_SELECTORS.execute          // "0x134008d3"
+TIMELOCK_SELECTORS.executeBatch     // "0xe38335e5"
 ```
 
 ---

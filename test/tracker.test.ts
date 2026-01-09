@@ -21,6 +21,7 @@ import {
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
   CONSTITUTIONAL_GOVERNOR_IN_PROGRESS,
   DIRECT_TIMELOCK_OPERATION,
+  CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
 } from "./fixtures";
 
 import {
@@ -35,9 +36,798 @@ import {
   TrackingResult,
   TrackedStage,
   StageTransaction,
+  TrackingCheckpoint,
 } from "../src";
+import { extractTimelockLink } from "../src/tracker";
 
 dotenv.config({ quiet: true });
+
+describe("extractTimelockLink (Unit Tests)", () => {
+  it("should return undefined for empty stages array", () => {
+    // #given - empty stages array
+    const stages: TrackedStage[] = [];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when PROPOSAL_QUEUED stage is not completed", () => {
+    // #given - stages with PROPOSAL_QUEUED not completed
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "READY" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [],
+        data: { proposalState: "Succeeded" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when transactions are missing", () => {
+    // #given - completed stage without transactions
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [],
+        data: { proposalState: "Queued", operationId: "0x123", timelockAddress: "0x456" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when operationId is missing", () => {
+    // #given - completed stage without operationId
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [{ hash: "0xabc", blockNumber: 100, chain: "arb1" as const, chainId: 42161 }],
+        data: { proposalState: "Queued", timelockAddress: "0x456" },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return undefined
+    expect(result).toBeUndefined();
+  });
+
+  it("should extract timelock link from completed PROPOSAL_QUEUED stage", () => {
+    // #given - valid completed PROPOSAL_QUEUED stage
+    const stages = [
+      {
+        type: "PROPOSAL_QUEUED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161 as const,
+        transactions: [
+          { hash: "0xabc123", blockNumber: 100000, chain: "arb1" as const, chainId: 42161 },
+        ],
+        data: {
+          proposalState: "Queued",
+          operationId: "0xoperation456",
+          timelockAddress: "0x789timelock",
+        },
+      },
+    ];
+
+    // #when - extracting timelock link
+    const result = extractTimelockLink(stages as TrackedStage[]);
+
+    // #then - should return valid timelock link
+    expect(result).toBeDefined();
+    expect(result?.txHash).toBe("0xabc123");
+    expect(result?.operationId).toBe("0xoperation456");
+    expect(result?.timelockAddress).toBe("0x789timelock");
+    expect(result?.queueBlockNumber).toBe(100000);
+  });
+});
+
+describe("Tracker Cache Methods (Mocked)", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  describe("loadWatermarks", () => {
+    it("should return empty object when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - loading watermarks
+      const watermarks = await tracker.loadWatermarks();
+
+      // #then - should return empty object
+      expect(watermarks).toEqual({});
+    });
+  });
+
+  describe("saveWatermarks", () => {
+    it("should complete without error when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - saving watermarks
+      await tracker.saveWatermarks({});
+
+      // #then - should not throw
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("listCheckpointKeys", () => {
+    it("should return empty array when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - listing checkpoint keys
+      const keys = await tracker.listCheckpointKeys();
+
+      // #then - should return empty array
+      expect(keys).toEqual([]);
+    });
+  });
+
+  describe("getCheckpoint", () => {
+    it("should return null when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting a checkpoint
+      const checkpoint = await tracker.getCheckpoint("tx:0x123");
+
+      // #then - should return null
+      expect(checkpoint).toBeNull();
+    });
+  });
+
+  describe("getAllCheckpoints", () => {
+    it("should return empty map when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting all checkpoints
+      const checkpoints = await tracker.getAllCheckpoints();
+
+      // #then - should return empty map
+      expect(checkpoints.size).toBe(0);
+    });
+  });
+
+  describe("queryIncompleteCheckpoints", () => {
+    it("should return empty array when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - querying incomplete checkpoints
+      const incomplete = await tracker.queryIncompleteCheckpoints();
+
+      // #then - should return empty array
+      expect(incomplete).toEqual([]);
+    });
+  });
+
+  describe("getStats", () => {
+    it("should return zero stats when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting stats
+      const stats = await tracker.getStats();
+
+      // #then - should return zeroed stats
+      expect(stats.total).toBe(0);
+      expect(stats.proposals.total).toBe(0);
+      expect(stats.timelocks.total).toBe(0);
+      expect(stats.elections.total).toBe(0);
+    });
+  });
+
+  describe("readCacheStatus", () => {
+    it("should read cache status from file path", async () => {
+      // #given - a cache file with checkpoints
+      const os = await import("os");
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      const tmpDir = os.tmpdir();
+      const cachePath = path.join(tmpDir, `test-cache-${Date.now()}.json`);
+
+      // Create cache file with test data
+      const cacheData: Record<string, unknown> = {
+        "discovery:watermarks": {
+          version: 1,
+          createdAt: Date.now(),
+          input: { type: "discovery", id: "watermarks" },
+          lastProcessedStage: null,
+          lastProcessedBlock: { l1: 0, l2: 100000 },
+          cachedData: {
+            discoveryWatermarks: {
+              constitutionalGovernor: 100000,
+            },
+          },
+          metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+        },
+        "tx:0xabc": {
+          version: 1,
+          createdAt: Date.now(),
+          input: {
+            type: "governor",
+            governorAddress: "0x123",
+            proposalId: "456",
+            creationTxHash: "0xabc",
+          },
+          lastProcessedStage: null,
+          lastProcessedBlock: { l1: 0, l2: 50000 },
+          cachedData: {},
+          metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+        },
+      };
+
+      await fs.writeFile(cachePath, JSON.stringify(cacheData), "utf-8");
+
+      try {
+        // #when - reading cache status
+        const { watermarks, checkpoints } = await ProposalStageTracker.readCacheStatus(cachePath);
+
+        // #then - should return watermarks and checkpoints
+        // Note: readCacheStatus only returns tx: prefixed keys as checkpoints
+        expect(watermarks.constitutionalGovernor).toBe(100000);
+        expect(checkpoints.size).toBe(1); // Only tx:0xabc, not discovery:watermarks
+        expect(checkpoints.has("tx:0xabc")).toBe(true);
+      } finally {
+        // Cleanup
+        await fs.unlink(cachePath).catch(() => {});
+      }
+    });
+  });
+
+  describe("FileCache initialization", () => {
+    it("should initialize FileCache when cachePath option is provided", async () => {
+      // #given - a valid cache path
+      const os = await import("os");
+      const path = await import("path");
+      const fs = await import("fs/promises");
+
+      const tmpDir = os.tmpdir();
+      const cachePath = path.join(tmpDir, `tracker-cache-${Date.now()}.json`);
+
+      // Create empty cache file
+      await fs.writeFile(cachePath, "{}", "utf-8");
+
+      try {
+        // #when - creating tracker with cachePath (not cache adapter)
+        const tracker = createTracker({
+          l1Provider: mockL1Provider,
+          l2Provider: mockL2Provider,
+          cachePath, // This triggers FileCache initialization (line 164)
+        });
+
+        // #then - tracker should have cache initialized
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cache = (tracker as any).cache;
+        expect(cache).toBeDefined();
+
+        // Verify cache works by saving watermarks
+        await tracker.saveWatermarks({ constitutionalGovernor: 12345 });
+        const loaded = await tracker.loadWatermarks();
+        expect(loaded.constitutionalGovernor).toBe(12345);
+      } finally {
+        // Cleanup
+        await fs.unlink(cachePath).catch(() => {});
+      }
+    });
+  });
+});
+
+describe("Tracker Cache Methods (With Mock Cache)", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  function createMockCache() {
+    const storage = new Map<string, unknown>();
+    return {
+      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
+      set: async <T>(key: string, value: T): Promise<void> => {
+        storage.set(key, value);
+      },
+      delete: async (key: string): Promise<void> => {
+        storage.delete(key);
+      },
+      clear: async (): Promise<void> => {
+        storage.clear();
+      },
+      has: async (key: string): Promise<boolean> => storage.has(key),
+      keys: (prefix?: string): string[] =>
+        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
+      _storage: storage,
+    };
+  }
+
+  describe("loadWatermarks with cache", () => {
+    it("should return watermarks from cache when stored", async () => {
+      // #given - cache with stored watermarks using valid DiscoveryKey values
+      const mockCache = createMockCache();
+      const storedWatermarks = {
+        constitutionalGovernor: 100,
+        l2ConstitutionalTimelock: 200,
+      };
+      await mockCache.set("discovery:watermarks", {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "watermarks" },
+        cachedData: {
+          discoveryWatermarks: storedWatermarks,
+        },
+        metadata: { errorCount: 0 },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - loading watermarks
+      const watermarks = await tracker.loadWatermarks();
+
+      // #then - should return stored watermarks
+      expect(watermarks).toEqual(storedWatermarks);
+    });
+  });
+
+  describe("saveWatermarks with cache", () => {
+    it("should save watermarks to cache", async () => {
+      // #given - empty cache
+      const mockCache = createMockCache();
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - saving watermarks with valid DiscoveryKey
+      const watermarksToSave = { constitutionalGovernor: 500 };
+      await tracker.saveWatermarks(watermarksToSave);
+
+      // #then - should be retrievable
+      const retrieved = await tracker.loadWatermarks();
+      expect(retrieved).toEqual(watermarksToSave);
+    });
+  });
+
+  describe("listCheckpointKeys with cache", () => {
+    it("should return keys from cache", async () => {
+      // #given - cache with stored checkpoints
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xabc", { version: 1 });
+      await mockCache.set("tx:0xdef", { version: 1 });
+      await mockCache.set("other:key", { version: 1 });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - listing checkpoint keys
+      const keys = await tracker.listCheckpointKeys();
+
+      // #then - should return tx: prefixed keys
+      expect(keys).toContain("tx:0xabc");
+      expect(keys).toContain("tx:0xdef");
+    });
+  });
+
+  describe("getCheckpoint with cache", () => {
+    it("should return checkpoint from cache when exists", async () => {
+      // #given - cache with stored checkpoint
+      const mockCache = createMockCache();
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "governor", proposalId: "123" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      };
+      await mockCache.set("tx:0xtest123", checkpoint);
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting the checkpoint
+      const result = await tracker.getCheckpoint("tx:0xtest123");
+
+      // #then - should return stored checkpoint
+      expect(result).toEqual(checkpoint);
+    });
+  });
+
+  describe("getAllCheckpoints with cache", () => {
+    it("should return all checkpoints from cache", async () => {
+      // #given - cache with multiple checkpoints
+      const mockCache = createMockCache();
+      const checkpoint1 = {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      };
+      const checkpoint2 = {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "timelock", operationId: "2" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      };
+      await mockCache.set("tx:0xaaa", checkpoint1);
+      await mockCache.set("tx:0xbbb", checkpoint2);
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting all checkpoints
+      const checkpoints = await tracker.getAllCheckpoints();
+
+      // #then - should return map with all checkpoints
+      expect(checkpoints.size).toBe(2);
+      expect(checkpoints.get("tx:0xaaa")).toEqual(checkpoint1);
+      expect(checkpoints.get("tx:0xbbb")).toEqual(checkpoint2);
+    });
+  });
+
+  describe("queryIncompleteCheckpoints with cache", () => {
+    it("should return incomplete checkpoints", async () => {
+      // #given - cache with complete and incomplete checkpoints
+      const mockCache = createMockCache();
+      const recentDate = Date.now() - 86400000; // 1 day ago
+
+      // Incomplete: has PENDING stage (not all stages are complete)
+      const incompleteCheckpoint = {
+        version: 1,
+        createdAt: recentDate,
+        lastTrackedAt: recentDate,
+        input: { type: "governor", proposalId: "1" },
+        cachedData: {
+          completedStages: [
+            { type: "PROPOSAL_CREATED", status: "COMPLETED" },
+            { type: "VOTING_ACTIVE", status: "PENDING" },
+          ],
+        },
+        metadata: { errorCount: 0 },
+      };
+      // Complete: all stages are COMPLETED (areAllStagesComplete returns true)
+      const completeCheckpoint = {
+        version: 1,
+        createdAt: recentDate,
+        lastTrackedAt: recentDate,
+        input: { type: "governor", proposalId: "2" },
+        cachedData: {
+          completedStages: [
+            { type: "PROPOSAL_CREATED", status: "COMPLETED" },
+            { type: "VOTING_ACTIVE", status: "COMPLETED" },
+            { type: "L2_TIMELOCK", status: "COMPLETED" },
+          ],
+        },
+        metadata: { errorCount: 0 },
+      };
+      await mockCache.set("tx:0xinc", incompleteCheckpoint);
+      await mockCache.set("tx:0xcomp", completeCheckpoint);
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - querying incomplete checkpoints
+      const incomplete = await tracker.queryIncompleteCheckpoints();
+
+      // #then - should only return incomplete checkpoint (PENDING stage)
+      expect(incomplete.length).toBe(1);
+      expect(incomplete[0].key).toBe("tx:0xinc");
+    });
+  });
+
+  describe("getStats with cache", () => {
+    it("should return stats from cache", async () => {
+      // #given - cache with mixed checkpoints
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xgov1", {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0, isComplete: true },
+      });
+      await mockCache.set("tx:0xtl1", {
+        version: 1,
+        createdAt: Date.now(),
+        lastTrackedAt: Date.now(),
+        input: { type: "timelock", operationId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0, isComplete: false },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting stats
+      const stats = await tracker.getStats();
+
+      // #then - should return correct counts
+      expect(stats.total).toBe(2);
+      expect(stats.proposals.total).toBe(1);
+      expect(stats.timelocks.total).toBe(1);
+    });
+  });
+});
+
+describe("trackFromCheckpoint Edge Cases", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  describe("governor checkpoint missing creationTxHash", () => {
+    it("should throw error when creationTxHash is missing", async () => {
+      // #given - tracker with governor checkpoint missing creationTxHash
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint from cache/JSON that lacks creationTxHash
+      const checkpointMissingTxHash = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: {
+          type: "governor" as const,
+          governorAddress: "0x123",
+          proposalId: "123",
+          creationTxHash: "", // Empty string triggers the check
+        },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointMissingTxHash)).rejects.toThrow(
+        "Governor checkpoint missing creationTxHash"
+      );
+    });
+  });
+
+  describe("timelock checkpoint missing scheduledTxHash", () => {
+    it("should throw error when scheduledTxHash is missing", async () => {
+      // #given - tracker with timelock checkpoint missing scheduledTxHash
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint from cache/JSON that lacks scheduledTxHash
+      const checkpointMissingTxHash = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock" as const,
+          timelockAddress: "0x456",
+          operationId: "0x123",
+          scheduledTxHash: "", // Empty string triggers the check
+        },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointMissingTxHash)).rejects.toThrow(
+        "Timelock checkpoint missing scheduledTxHash"
+      );
+    });
+  });
+
+  describe("unsupported checkpoint input type", () => {
+    it("should throw error for unsupported input type", async () => {
+      // #given - tracker with unsupported checkpoint type
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint with an unknown type (e.g., from future version)
+      const checkpointUnsupported = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: { type: "unknown" },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointUnsupported)).rejects.toThrow(
+        "Unsupported checkpoint input type"
+      );
+    });
+  });
+});
+
+describe("trackByTxHash Error Handling (Mocked)", () => {
+  // Helper to create a mock cache
+  function createMockCache() {
+    const storage = new Map<string, unknown>();
+    return {
+      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
+      set: async <T>(key: string, value: T): Promise<void> => {
+        storage.set(key, value);
+      },
+      delete: async (key: string): Promise<void> => {
+        storage.delete(key);
+      },
+      clear: async (): Promise<void> => {
+        storage.clear();
+      },
+      has: async (key: string): Promise<boolean> => storage.has(key),
+      keys: (prefix?: string): string[] =>
+        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
+      _storage: storage,
+    };
+  }
+
+  it("should save checkpoint with incremented error count on tracking failure (lines 370-398)", async () => {
+    // #given - tracker with cache and mock provider that throws
+    const mockCache = createMockCache();
+    const mockL2Provider = {
+      getTransactionReceipt: () => Promise.reject(new Error("RPC connection failed")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    const txHash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+    // #when - tracking throws an error
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("RPC connection failed");
+
+    // #then - checkpoint should be saved with error count = 1
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(1);
+  });
+
+  it("should NOT increment error count for gas estimation errors", async () => {
+    // #given - tracker with cache and mock provider that throws gas error
+    const mockCache = createMockCache();
+    const mockL2Provider = {
+      getTransactionReceipt: () =>
+        Promise.reject(new Error("execution reverted: gas required exceeds allowance")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    const txHash = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+
+    // #when - tracking throws a gas estimation error
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("execution reverted");
+
+    // #then - checkpoint should be saved with error count = 0 (not incremented for gas errors)
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(0);
+  });
+
+  it("should increment error count on consecutive failures", async () => {
+    // #given - tracker with cache containing a discovery checkpoint (not governor/timelock)
+    // Using discovery type means it won't resume and will go through normal tracking
+    const mockCache = createMockCache();
+    const txHash = "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321";
+    const cacheKey = `tx:${txHash.toLowerCase()}`;
+
+    // Pre-populate with existing checkpoint that has error count = 2
+    // Use discovery type which is not a resume-able type for trackByTxHash
+    await mockCache.set(cacheKey, {
+      version: 1,
+      createdAt: Date.now(),
+      input: {
+        type: "discovery", // Not governor/timelock, so won't resume
+      },
+      lastProcessedStage: null,
+      lastProcessedBlock: { l1: 0, l2: 0 },
+      cachedData: {},
+      metadata: { errorCount: 2, lastTrackedAt: Date.now() },
+    });
+
+    const mockL2Provider = {
+      getTransactionReceipt: () => Promise.reject(new Error("Network timeout")),
+    } as unknown as ethers.providers.Provider;
+    const mockL1Provider = {} as ethers.providers.Provider;
+
+    const tracker = createTracker({
+      l1Provider: mockL1Provider,
+      l2Provider: mockL2Provider,
+      cache: mockCache,
+    });
+
+    // #when - tracking fails (goes through new tracking since discovery type doesn't resume)
+    await expect(tracker.trackByTxHash(txHash)).rejects.toThrow("Network timeout");
+
+    // #then - error count should be incremented to 3
+    const savedCheckpoint = await mockCache.get<TrackingCheckpoint>(cacheKey);
+    expect(savedCheckpoint).not.toBeNull();
+    expect(savedCheckpoint!.metadata?.errorCount).toBe(3);
+  });
+});
 
 describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;
@@ -98,6 +888,14 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
     it("should use default chunking config when not provided", () => {
       expect(tracker.chunkingConfig).toBeDefined();
       expect(tracker.chunkingConfig.l2ChunkSize).toBe(10_000_000);
+    });
+
+    it("should return providers via getProviders()", () => {
+      const providers = tracker.getProviders();
+
+      expect(providers.l1).toBe(l1Provider);
+      expect(providers.l2).toBe(l2Provider);
+      expect(providers.nova).toBe(novaProvider);
     });
   });
 
@@ -230,6 +1028,39 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
       const l2Executed = result.stages.find((s: TrackedStage) => s.type === "L2_TIMELOCK");
       expect(l2Executed).toBeDefined();
       expect(l2Executed!.status).toBe("COMPLETED");
+    });
+
+    it("should have L2_TO_L1_MESSAGE stage with appropriate status", async () => {
+      // #given - in-progress proposal that passed L2 timelock
+      const result = inProgressResult;
+
+      // #when - checking L2_TO_L1_MESSAGE stage
+      const l2ToL1Stage = result.stages.find((s: TrackedStage) => s.type === "L2_TO_L1_MESSAGE");
+
+      // #then - stage should exist and be PENDING, READY, or COMPLETED depending on chain state
+      expect(l2ToL1Stage).toBeDefined();
+      expect(["PENDING", "READY", "COMPLETED"]).toContain(l2ToL1Stage!.status);
+    });
+
+    it("should have placeholder stages when L2→L1 not executed (pipeline early exit)", async () => {
+      // #given - in-progress proposal
+      const result = inProgressResult;
+
+      // #when - checking for downstream stages
+      const l1TimelockStage = result.stages.find((s: TrackedStage) => s.type === "L1_TIMELOCK");
+      const retryableStage = result.stages.find(
+        (s: TrackedStage) => s.type === "RETRYABLE_EXECUTED"
+      );
+
+      // #then - if L2→L1 message is not executed, downstream stages should be NOT_STARTED
+      const l2ToL1Stage = result.stages.find((s: TrackedStage) => s.type === "L2_TO_L1_MESSAGE");
+      if (l2ToL1Stage?.status !== "COMPLETED") {
+        // Pipeline should add placeholders for unexecuted downstream stages (lines 437-438, 444-445)
+        expect(l1TimelockStage).toBeDefined();
+        expect(["NOT_STARTED", "PENDING"]).toContain(l1TimelockStage!.status);
+        expect(retryableStage).toBeDefined();
+        expect(["NOT_STARTED", "PENDING"]).toContain(retryableStage!.status);
+      }
     });
   });
 
@@ -416,6 +1247,213 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
         }
       }
     });
+  });
+
+  describe("trackFromCheckpoint", () => {
+    it("should resume governor checkpoint with creationTxHash", async () => {
+      // #given a valid governor checkpoint
+      const checkpoint = fullRoundtripResult.checkpoint;
+
+      // #when resuming from checkpoint
+      const result = await tracker.trackFromCheckpoint(checkpoint);
+
+      // #then should return valid tracking result
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("governor");
+      expect(result.stages.length).toBeGreaterThan(0);
+    });
+
+    it("should resume timelock checkpoint with scheduledTxHash", async () => {
+      // #given a valid timelock checkpoint
+      const checkpoint = timelockResult.checkpoint;
+
+      // #when resuming from checkpoint
+      const result = await tracker.trackFromCheckpoint(checkpoint);
+
+      // #then should return valid tracking result
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("timelock");
+      expect(result.stages.length).toBeGreaterThan(0);
+    });
+
+    it("should throw error for governor checkpoint missing creationTxHash", async () => {
+      // #given a governor checkpoint without creationTxHash
+      // Use type assertion since we're intentionally creating invalid input for testing
+      const checkpoint = {
+        ...fullRoundtripResult.checkpoint,
+        input: {
+          type: "governor" as const,
+          governorAddress: "0x123",
+          proposalId: "123",
+          creationTxHash: undefined,
+        } as unknown as typeof fullRoundtripResult.checkpoint.input,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Governor checkpoint missing creationTxHash"
+      );
+    });
+
+    it("should throw error for timelock checkpoint missing scheduledTxHash", async () => {
+      // #given a timelock checkpoint without scheduledTxHash
+      // Use type assertion since we're intentionally creating invalid input for testing
+      const checkpoint = {
+        ...timelockResult.checkpoint,
+        input: {
+          type: "timelock" as const,
+          operationId: "0x123",
+          timelockAddress: "0x456",
+          scheduledTxHash: undefined,
+        } as unknown as typeof timelockResult.checkpoint.input,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Timelock checkpoint missing scheduledTxHash"
+      );
+    });
+
+    it("should throw error for unsupported checkpoint input type", async () => {
+      // #given a checkpoint with unsupported type
+      const checkpoint = {
+        ...fullRoundtripResult.checkpoint,
+        input: { type: "unsupported" as unknown } as never,
+      };
+
+      // #when/then resuming should throw
+      await expect(tracker.trackFromCheckpoint(checkpoint)).rejects.toThrow(
+        "Unsupported checkpoint input type"
+      );
+    });
+  });
+
+  describe("checkElection", () => {
+    it("should return election status with canCreate flag", async () => {
+      // #when checking election status
+      const result = await tracker.checkElection();
+
+      // #then should return valid result with status
+      expect(result).toBeDefined();
+      expect(result.status).toBeDefined();
+      expect(typeof result.canCreate).toBe("boolean");
+      expect(typeof result.canTriggerMember).toBe("boolean");
+      expect(result.prepared).toBeDefined();
+    });
+
+    it("should include current election info if elections exist", async () => {
+      // #when checking election status
+      const result = await tracker.checkElection();
+
+      // #then if elections exist, should include current election
+      if (result.status.electionCount > 0) {
+        expect(result.currentElection).toBeDefined();
+        expect(result.currentElection?.electionIndex).toBe(result.status.electionCount - 1);
+      }
+    });
+
+    it("should allow custom nominee governor address", async () => {
+      // #when checking with custom address (using default address for test)
+      const result = await tracker.checkElection({
+        nomineeGovernorAddress: "0x8a1cDA8dee421cD06023470608605934c16A05a0",
+      });
+
+      // #then should return valid result
+      expect(result).toBeDefined();
+      expect(result.status).toBeDefined();
+    });
+  });
+});
+
+/**
+ * Tests for proposals that FAILED voting
+ * Covers pipeline early exit path when voting is not successful
+ */
+describe.skipIf(process.env.NO_RPC === "1")("Failed Voting Proposals", () => {
+  let l1Provider: ethers.providers.JsonRpcProvider;
+  let l2Provider: ethers.providers.JsonRpcProvider;
+  let novaProvider: ethers.providers.JsonRpcProvider;
+  let tracker: ProposalStageTracker;
+  let failedVotingResult: TrackingResult;
+
+  beforeAll(async () => {
+    const ethRpc = process.env.ETH_RPC;
+    if (!ethRpc) {
+      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
+    }
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+
+    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
+    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
+    tracker = createTracker({
+      l1Provider,
+      l2Provider,
+      novaProvider,
+    });
+
+    // Track failed voting proposal once
+    console.log("Tracking FAILED voting proposal...");
+    const results = await tracker.trackByTxHash(
+      CONSTITUTIONAL_GOVERNOR_FAILED_VOTING.creationTxHash
+    );
+    failedVotingResult = results[0];
+    console.log("✓ FAILED voting proposal tracked");
+  }, 120000);
+
+  it("should track proposal with FAILED voting status", async () => {
+    // #given a proposal that failed voting
+    const result = failedVotingResult;
+
+    // #then should have correct structure
+    expect(result).toBeDefined();
+    expect(result.input.type).toBe("governor");
+    expect(result.proposalType).toBe("CONSTITUTIONAL");
+  });
+
+  it("should have COMPLETED PROPOSAL_CREATED stage", async () => {
+    // #given tracked result
+    const createdStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_CREATED");
+
+    // #then should be completed
+    expect(createdStage).toBeDefined();
+    expect(createdStage!.status).toBe("COMPLETED");
+  });
+
+  it("should have FAILED VOTING_ACTIVE stage", async () => {
+    // #given tracked result
+    const votingStage = failedVotingResult.stages.find((s) => s.type === "VOTING_ACTIVE");
+
+    // #then should be FAILED (defeated)
+    expect(votingStage).toBeDefined();
+    expect(votingStage!.status).toBe("FAILED");
+  });
+
+  it("should stop at FAILED voting - no PROPOSAL_QUEUED stage completed", async () => {
+    // #given proposal failed voting
+    const queuedStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_QUEUED");
+
+    // #then PROPOSAL_QUEUED should not be completed (voting failed)
+    if (queuedStage) {
+      expect(queuedStage.status).not.toBe("COMPLETED");
+    }
+  });
+
+  it("should not have L2_TIMELOCK stage completed when voting fails", async () => {
+    // #given proposal failed voting
+    const l2TimelockStage = failedVotingResult.stages.find((s) => s.type === "L2_TIMELOCK");
+
+    // #then L2_TIMELOCK should not be completed
+    if (l2TimelockStage) {
+      expect(l2TimelockStage.status).not.toBe("COMPLETED");
+    }
+  });
+
+  it("should mark proposal as not complete when voting fails", async () => {
+    // #given proposal failed voting
+    // #then should not be complete
+    expect(failedVotingResult.isComplete).toBe(false);
   });
 });
 

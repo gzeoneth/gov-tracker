@@ -32,7 +32,7 @@ import {
   prepareAllRetryables,
 } from "../src/stages/retryables";
 
-import { ParentToChildMessageReader } from "@arbitrum/sdk";
+import { ParentToChildMessageReader, ParentToChildMessageStatus } from "@arbitrum/sdk";
 
 import {
   createTracker,
@@ -62,7 +62,7 @@ const L1_TX_WITH_RETRYABLE = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.expectedStag
 describe.skipIf(process.env.NO_RPC === "1")(
   "Retryable Lifecycle Tests",
   {
-    timeout: 180000, // 3 minutes for slow retryable tests
+    timeout: 300000, // 5 minutes for slow retryable tests
   },
   () => {
     let l1Provider: ethers.providers.JsonRpcProvider;
@@ -101,7 +101,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       fullProposalResult = fullResults[0];
       l2OnlyProposalResult = l2Results[0];
       console.log("✓ All retryables and proposals tracked and cached");
-    }, 180000); // 3 minute timeout for initial tracking
+    }, 300000); // 5 minute timeout for initial tracking
 
     describe("detectAllRetryableTargetChains", () => {
       it("should detect Arb1 as target chain for known retryable", async () => {
@@ -388,5 +388,70 @@ describe("Retryable Edge Cases (No RPC)", () => {
         expect(typeof emptyHash).toBe("string");
       }).not.toThrow();
     });
+  });
+});
+
+/**
+ * Retryable Preparation Status Edge Cases
+ *
+ * Tests for prepareRetryableRedemption status validation paths using mocked message objects.
+ * These cover lines 372-377 in retryables.ts for EXPIRED and not-ready status handling.
+ */
+describe("Retryable Preparation Status Checks", () => {
+  // Mock provider with minimal interface for chain detection
+  const mockL2Provider = {
+    getNetwork: async () => ({ chainId: 42161, name: "arb1" }),
+  } as unknown as ethers.providers.Provider;
+
+  // Factory for mock ParentToChildMessageReader with custom status
+  function createMockMessage(status: ParentToChildMessageStatus): ParentToChildMessageReader {
+    return {
+      retryableCreationId: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      status: async () => status,
+    } as unknown as ParentToChildMessageReader;
+  }
+
+  it("should reject EXPIRED retryable tickets (covers line 372-374)", async () => {
+    // #given - mock message with EXPIRED status
+    const expiredMessage = createMockMessage(ParentToChildMessageStatus.EXPIRED);
+
+    // #when - attempt to prepare the expired retryable
+    const result = await prepareRetryableRedemption(expiredMessage, mockL2Provider);
+
+    // #then - should fail with appropriate message
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("expired");
+    }
+  });
+
+  it("should reject NOT_YET_CREATED retryable tickets (covers line 376-377)", async () => {
+    // #given - mock message with NOT_YET_CREATED status
+    const notCreatedMessage = createMockMessage(ParentToChildMessageStatus.NOT_YET_CREATED);
+
+    // #when - attempt to prepare the not-yet-created retryable
+    const result = await prepareRetryableRedemption(notCreatedMessage, mockL2Provider);
+
+    // #then - should fail with not ready message
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("not ready");
+      expect(result.error).toContain("NOT_YET_CREATED");
+    }
+  });
+
+  it("should reject CREATION_FAILED retryable tickets (covers line 376-377)", async () => {
+    // #given - mock message with CREATION_FAILED status
+    const failedMessage = createMockMessage(ParentToChildMessageStatus.CREATION_FAILED);
+
+    // #when - attempt to prepare the failed retryable
+    const result = await prepareRetryableRedemption(failedMessage, mockL2Provider);
+
+    // #then - should fail with not ready message
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("not ready");
+      expect(result.error).toContain("CREATION_FAILED");
+    }
   });
 });

@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Commits: 487334b..257dd82 (refactor-trackedstage branch)
+> Commits: 487334b..HEAD (refactor-trackedstage + improve-coverage branches)
+
+### Added
+
+- **Test Coverage Infrastructure**:
+  - Added `vitest.config.fork.mts` for fork-based tests with separate coverage output
+  - Added `yarn test:coverage:fork` and `yarn test:coverage:all` scripts
+  - Added Codecov integration with coverage flags for regular and fork tests
+
+### Changed
+
+- **Test Suite Expansion**: Increased test count from 319 to 1050+ tests (928 unit + 122 fork/integration)
+  - Added fork tests using Anvil at historical blocks for deterministic testing
+  - Added mocked unit tests for edge cases (EXPIRED retryables, FAILED voting, etc.)
+  - Added CLI utility coverage tests (`formatDryRun`, `formatTrackingResult`, etc.)
+  - Added tracker cache methods coverage (`loadWatermarks`, `saveWatermarks`, etc.)
+  - Added discovery module coverage (`detectGovernorCapabilities`, `discoverAll`)
+  - Added election check coverage (`formatElectionStatus`, `prepareMemberElectionTrigger`)
 
 ### Fixed
 
@@ -162,6 +179,8 @@ interface PreparedTransaction {
 - Added `knip` for dead code detection
 - Added `check:unused` script to pre-commit hooks
 - Added `public-api.test.ts` to verify export stability
+- Consolidated duplicate tests between `stages.test.ts` and `base-stages.test.ts`
+- Removed `tracker-state.test.ts` (duplicated by `state.test.ts`)
 
 ## [0.1.2] - 2026-01-07
 

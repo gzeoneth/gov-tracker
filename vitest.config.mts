@@ -8,12 +8,13 @@ export default defineConfig({
     exclude: ["test/*-fork.test.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "json-summary", "html"],
+      reporter: ["text", "json", "json-summary", "html", "lcov"],
+      include: ["src/**/*.ts"],
       exclude: [
         "test/**",
         "dist/**",
         "*.config.*",
-        "src/cli/**",
+        "src/cli/monitor.ts", // CLI entrypoint - not library code
       ],
     },
     // 2 minute timeout covers 99% of tests

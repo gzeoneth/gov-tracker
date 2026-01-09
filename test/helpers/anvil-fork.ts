@@ -264,11 +264,13 @@ export async function startDualForksAtL2Block(options: {
   l2BlockNumber: number;
   l1Port?: number;
   l2Port?: number;
+  /** Override the L1 block instead of auto-detecting from L2 block */
+  l1BlockOverride?: number;
 }): Promise<DualForkResult> {
-  const { l1Url, l2Url, l2BlockNumber } = options;
+  const { l1Url, l2Url, l2BlockNumber, l1BlockOverride } = options;
 
-  // Query the REAL L2 archive RPC to get the L1 block embedded in the L2 block
-  const l1BlockNumber = await getL1BlockForL2Block(l2Url, l2BlockNumber);
+  // Use override or query the REAL L2 archive RPC to get the L1 block embedded in the L2 block
+  const l1BlockNumber = l1BlockOverride ?? (await getL1BlockForL2Block(l2Url, l2BlockNumber));
 
   // Start forks with the correct L1 block
   return startDualForks({

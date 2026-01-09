@@ -120,3 +120,38 @@ L2 (Arb1/Nova): ArbRetryableTx.redeem()
 - **Retry**: Exponential backoff (1s → 2s → 4s)
 - **Error tracking**: `errorCount` in checkpoint metadata
 - **Graceful degradation**: Missing data = NOT_STARTED (not FAILED)
+
+---
+
+## Testing Strategy
+
+### Test Categories
+
+| Category | Config | Description |
+|----------|--------|-------------|
+| Unit Tests | `vitest.config.mts` | No RPC, mocked dependencies |
+| Fork Tests | `vitest.config.fork.mts` | Anvil forks at historical blocks |
+| Integration | `NO_RPC=1` skip | Real RPC with fixtures |
+
+### Fork Testing Pattern
+
+Fork tests use Anvil at historical L2 blocks for deterministic state:
+
+```typescript
+const forks = await startDualForksAtL2Block({
+  l2BlockNumber: 371_840_000,  // L2 timelock READY
+  l1Url: rpcUrls.l1,
+  l2Url: rpcUrls.l2Archive,
+});
+
+// Track proposal at exact historical state
+const result = await tracker.trackByTxHash(fixture.creationTxHash);
+```
+
+### Coverage Commands
+
+```bash
+yarn test:coverage       # Unit tests only
+yarn test:coverage:fork  # Fork tests (needs archive RPC)
+yarn test:coverage:all   # Merge all coverage
+```

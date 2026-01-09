@@ -4,12 +4,16 @@
  * Tests for block-based timing calculations across L1 and L2.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { ethers } from "ethers";
 import {
   estimateTimestampFromBlock,
   calculateEta,
   calculateRemainingSeconds,
   calculateExpectedEta,
+  getL1BlockNumberFromL2,
+  getL1BlockForL2Block,
+  blockAfterDelay,
 } from "../src/utils/timing";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
 import { StageBuilder } from "../src/stages/stage-builder";
@@ -161,7 +165,6 @@ describe("Timing Utilities", () => {
       // L2_TO_L1_MESSAGE is index 4, should base off L2_TIMELOCK ETA (index 3)
       const eta = calculateExpectedEta(stages, 4);
 
-      expect(eta).toBeDefined();
       // Should add L2_TO_L1_MESSAGE duration to L2_TIMELOCK ETA
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.CHALLENGE_PERIOD;
       const expectedEta = 1701296000 + expectedDays * 24 * 60 * 60;
@@ -179,7 +182,6 @@ describe("Timing Utilities", () => {
 
       const eta = calculateExpectedEta(stages, 1);
 
-      expect(eta).toBeDefined();
       // Should add VOTING_ACTIVE duration to PROPOSAL_CREATED completion time
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.VOTING;
       const expectedEta = 1700000000 + expectedDays * 24 * 60 * 60;
@@ -211,7 +213,6 @@ describe("Timing Utilities", () => {
       // Calculate ETA for L2_TIMELOCK (index 3)
       const eta = calculateExpectedEta(stages, 3);
 
-      expect(eta).toBeDefined();
       // Should accumulate: VOTING + L2_TIMELOCK durations
       // PROPOSAL_QUEUED doesn't have a defined duration in GOVERNANCE_STAGE_DURATION_DAYS
       const votingDays = GOVERNANCE_STAGE_DURATION_DAYS.VOTING;
@@ -237,7 +238,6 @@ describe("Timing Utilities", () => {
       // Should use VOTING_ACTIVE eta (1701209600) not PROPOSAL_CREATED timestamp
       const eta = calculateExpectedEta(stages, 2);
 
-      expect(eta).toBeDefined();
       // PROPOSAL_QUEUED doesn't have duration, so should just be VOTING_ACTIVE eta
       expect(eta).toBe(1701209600);
     });
@@ -263,11 +263,184 @@ describe("Timing Utilities", () => {
 
       const eta = calculateExpectedEta(stages, 1);
 
-      expect(eta).toBeDefined();
       // Should use execution timestamp (1700100000)
       const expectedDays = GOVERNANCE_STAGE_DURATION_DAYS.CHALLENGE_PERIOD;
       const expectedEta = 1700100000 + expectedDays * 24 * 60 * 60;
       expect(eta).toBe(expectedEta);
+    });
+  });
+
+  describe("getL1BlockNumberFromL2", () => {
+    it("should throw error when provider does not have send method", async () => {
+      // #given - a provider without send method
+      const mockProvider = {
+        getBlock: vi.fn(),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Provider does not support direct RPC calls (send method required)"
+      );
+    });
+
+    it("should throw error when l1BlockNumber is missing from response", async () => {
+      // #given - a provider that returns block without l1BlockNumber
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Could not get L1 block number from latest L2 block"
+      );
+    });
+
+    it("should throw error when L2 block response is null", async () => {
+      // #given - a provider that returns null
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
+        "Could not get L1 block number from latest L2 block"
+      );
+    });
+  });
+
+  describe("getL1BlockForL2Block", () => {
+    it("should throw error when provider does not have send method for L2 block lookup", async () => {
+      // #given - a provider without send method
+      const mockProvider = {
+        getBlock: vi.fn(),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Provider does not support direct RPC calls (send method required)"
+      );
+    });
+
+    it("should throw error when l1BlockNumber is missing from specific L2 block", async () => {
+      // #given - a provider that returns block without l1BlockNumber
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({ number: "0x100" }), // Missing l1BlockNumber
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Could not get L1 block number for L2 block 12345"
+      );
+    });
+
+    it("should throw error when specific L2 block response is null", async () => {
+      // #given - a provider that returns null
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when / #then - should throw
+      await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
+        "Could not get L1 block number for L2 block 12345"
+      );
+    });
+  });
+
+  describe("blockAfterDelay", () => {
+    it("should throw error when start block cannot be fetched", async () => {
+      // #given - a provider that returns null for startBlock
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(blockAfterDelay(mockProvider, 1000, 3600)).rejects.toThrow(
+        "Could not fetch block 1000"
+      );
+    });
+
+    it("should return startBlock when delay not yet passed", async () => {
+      // #given - current timestamp is before target timestamp
+      const startBlockTimestamp = 1700000000;
+      const currentTimestamp = startBlockTimestamp + 1800; // Only 30 min passed
+      const delaySeconds = 3600; // 1 hour delay
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1100, timestamp: currentTimestamp }), // latestBlock
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns startBlock since delay hasn't passed
+      expect(result).toBe(1000);
+    });
+
+    it("should break loop when block fetch fails during iteration", async () => {
+      // #given - startBlock exists but iteration block fails
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 3600;
+      const currentTimestamp = startBlockTimestamp + delaySeconds + 1000;
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1500, timestamp: currentTimestamp }) // latestBlock
+          .mockResolvedValueOnce(null), // iteration block - fails
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns estimate since block fetch failed
+      expect(result).toBeGreaterThan(1000);
+    });
+
+    it("should return startBlock+1 when cannot backtrack further", async () => {
+      // #given - scenario where backtracking keeps hitting startBlock+1
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 12; // Very short delay (1 block)
+      const currentTimestamp = startBlockTimestamp + 100; // Way past delay
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock=1000
+          .mockResolvedValueOnce({ number: 1002, timestamp: currentTimestamp }) // current (just 2 blocks ahead)
+          .mockResolvedValueOnce({ timestamp: currentTimestamp }), // block 1001: after target, triggers backtrack to 1001
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns startBlock+1 when can't backtrack further
+      expect(result).toBe(1001);
+    });
+
+    it("should find block before target after backtracking (happy path)", async () => {
+      // #given - normal case where we find a block before target
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 3600;
+      const targetTimestamp = startBlockTimestamp + delaySeconds;
+      const currentTimestamp = targetTimestamp + 1200;
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1500, timestamp: currentTimestamp }) // latestBlock
+          .mockResolvedValueOnce({ timestamp: targetTimestamp - 100 }), // iteration: before target
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns the block that is before target
+      expect(result).toBeGreaterThan(1000);
     });
   });
 });

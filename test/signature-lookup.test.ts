@@ -11,103 +11,112 @@ import { TIMELOCK_SELECTORS } from "../src/constants";
 
 describe("Signature Lookup", () => {
   describe("lookupLocalSignature", () => {
-    it("should find schedule selector", () => {
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.schedule);
-      expect(result).toBe("schedule(address,uint256,bytes,bytes32,bytes32,uint256)");
-    });
+    // Known selector/signature pairs in local registry
+    const knownSelectors = [
+      {
+        name: "schedule",
+        selector: TIMELOCK_SELECTORS.schedule,
+        signature: "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+      },
+      {
+        name: "scheduleBatch",
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+      },
+      {
+        name: "execute",
+        selector: TIMELOCK_SELECTORS.execute,
+        signature: "execute(address,uint256,bytes,bytes32,bytes32)",
+      },
+      {
+        name: "executeBatch",
+        selector: TIMELOCK_SELECTORS.executeBatch,
+        signature: "executeBatch(address[],uint256[],bytes[],bytes32,bytes32)",
+      },
+      { name: "sendTxToL1", selector: "0x928c169a", signature: "sendTxToL1(address,bytes)" },
+      { name: "transfer", selector: "0xa9059cbb", signature: "transfer(address,uint256)" },
+      { name: "approve", selector: "0x095ea7b3", signature: "approve(address,uint256)" },
+      { name: "upgradeTo", selector: "0x3659cfe6", signature: "upgradeTo(address)" },
+      {
+        name: "transferOwnership",
+        selector: "0xf2fde38b",
+        signature: "transferOwnership(address)",
+      },
+      {
+        name: "propose",
+        selector: "0x7d5e81e2",
+        signature: "propose(address[],uint256[],bytes[],string)",
+      },
+      { name: "castVote", selector: "0x56781388", signature: "castVote(uint256,uint8)" },
+      {
+        name: "UpgradeExecutor execute",
+        selector: "0x1cff79cd",
+        signature: "execute(address,bytes)",
+      },
+      { name: "executeCall", selector: "0x61461954", signature: "executeCall(address,bytes)" },
+      {
+        name: "replaceCohort",
+        selector: "0xbf396750",
+        signature: "replaceCohort(address[],address[])",
+      },
+    ];
 
-    it("should find scheduleBatch selector", () => {
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.scheduleBatch);
-      expect(result).toBe("scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)");
-    });
+    it.each(knownSelectors)("should find $name selector", ({ selector, signature }) => {
+      // #given - a known function selector
+      // #when - looking up the selector in the local registry
+      const result = lookupLocalSignature(selector);
 
-    it("should find execute selector", () => {
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.execute);
-      expect(result).toBe("execute(address,uint256,bytes,bytes32,bytes32)");
-    });
-
-    it("should find executeBatch selector", () => {
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.executeBatch);
-      expect(result).toBe("executeBatch(address[],uint256[],bytes[],bytes32,bytes32)");
-    });
-
-    it("should find sendTxToL1 selector", () => {
-      const result = lookupLocalSignature("0x928c169a");
-      expect(result).toBe("sendTxToL1(address,bytes)");
-    });
-
-    it("should find transfer selector", () => {
-      const result = lookupLocalSignature("0xa9059cbb");
-      expect(result).toBe("transfer(address,uint256)");
-    });
-
-    it("should find approve selector", () => {
-      const result = lookupLocalSignature("0x095ea7b3");
-      expect(result).toBe("approve(address,uint256)");
-    });
-
-    it("should find upgradeTo selector", () => {
-      const result = lookupLocalSignature("0x3659cfe6");
-      expect(result).toBe("upgradeTo(address)");
-    });
-
-    it("should find transferOwnership selector", () => {
-      const result = lookupLocalSignature("0xf2fde38b");
-      expect(result).toBe("transferOwnership(address)");
-    });
-
-    it("should find propose selector", () => {
-      const result = lookupLocalSignature("0x7d5e81e2");
-      expect(result).toBe("propose(address[],uint256[],bytes[],string)");
-    });
-
-    it("should find castVote selector", () => {
-      const result = lookupLocalSignature("0x56781388");
-      expect(result).toBe("castVote(uint256,uint8)");
+      // #then - returns the expected signature
+      expect(result).toBe(signature);
     });
 
     it("should return null for unknown selector", () => {
+      // #given - an unknown function selector not in the registry
+
+      // #when - looking up the selector in the local registry
       const result = lookupLocalSignature("0xdeadbeef");
+
+      // #then - returns null indicating no match found
       expect(result).toBeNull();
     });
 
     it("should be case-insensitive", () => {
-      const upper = lookupLocalSignature("0xA9059CBB");
-      const lower = lookupLocalSignature("0xa9059cbb");
-      const mixed = lookupLocalSignature("0xa9059cBB");
+      // #given - the same selector in different case formats
+      const upperSelector = "0xA9059CBB";
+      const lowerSelector = "0xa9059cbb";
+      const mixedSelector = "0xa9059cBB";
 
+      // #when - looking up each selector variant
+      const upper = lookupLocalSignature(upperSelector);
+      const lower = lookupLocalSignature(lowerSelector);
+      const mixed = lookupLocalSignature(mixedSelector);
+
+      // #then - all variants return the same signature
       expect(upper).toBe("transfer(address,uint256)");
       expect(lower).toBe("transfer(address,uint256)");
       expect(mixed).toBe("transfer(address,uint256)");
-    });
-
-    it("should find UpgradeExecutor execute selector", () => {
-      const result = lookupLocalSignature("0x1cff79cd");
-      expect(result).toBe("execute(address,bytes)");
-    });
-
-    it("should find executeCall selector", () => {
-      const result = lookupLocalSignature("0x61461954");
-      expect(result).toBe("executeCall(address,bytes)");
-    });
-
-    it("should find Security Council replaceCohort selector", () => {
-      const result = lookupLocalSignature("0xbf396750");
-      expect(result).toBe("replaceCohort(address[],address[])");
     });
   });
 
   describe("lookupSignature", () => {
     it("should return local source for known selector", async () => {
+      // #given - the ERC20 transfer function selector known to local registry
+
+      // #when - looking up the signature
       const result = await lookupSignature("0xa9059cbb");
 
+      // #then - returns signature from local registry without API call
       expect(result.signature).toBe("transfer(address,uint256)");
       expect(result.source).toBe("local");
     });
 
     it("should return local source for timelock selector", async () => {
+      // #given - the timelock scheduleBatch function selector
+
+      // #when - looking up the signature
       const result = await lookupSignature(TIMELOCK_SELECTORS.scheduleBatch);
 
+      // #then - returns signature from local registry
       expect(result.signature).toBe(
         "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)"
       );
@@ -115,8 +124,12 @@ describe("Signature Lookup", () => {
     });
 
     it("should be case-insensitive for local lookup", async () => {
+      // #given - an uppercase version of the transfer selector
+
+      // #when - looking up the signature
       const result = await lookupSignature("0xA9059CBB");
 
+      // #then - returns signature regardless of case
       expect(result.signature).toBe("transfer(address,uint256)");
       expect(result.source).toBe("local");
     });
@@ -126,67 +139,73 @@ describe("Signature Lookup", () => {
     const originalFetch = global.fetch;
 
     beforeEach(() => {
-      // Mock fetch for API tests
       vi.stubGlobal("fetch", vi.fn());
     });
 
     afterEach(() => {
-      // Restore original fetch
       global.fetch = originalFetch;
       vi.unstubAllGlobals();
     });
 
     it("should return failed for API error response", async () => {
-      // Mock fetch to return non-OK response
+      // #given - fetch returns a non-OK HTTP response
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
         status: 500,
       } as Response);
+      const unknownSelector = "0x12345678";
 
-      // Use an unknown selector to bypass local registry
-      const result = await lookupSignature("0x12345678");
+      // #when - looking up an unknown selector that falls through to API
+      const result = await lookupSignature(unknownSelector);
 
+      // #then - returns failed source with null signature
       expect(result.signature).toBeNull();
       expect(result.source).toBe("failed");
     });
 
     it("should return failed for fetch exception", async () => {
-      // Mock fetch to throw error
+      // #given - fetch throws a network error
       vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"));
 
+      // #when - looking up an unknown selector
       const result = await lookupSignature("0x87654321");
 
+      // #then - returns failed source with null signature
       expect(result.signature).toBeNull();
       expect(result.source).toBe("failed");
     });
 
     it("should return failed for timeout", async () => {
-      // Mock fetch to throw abort error (simulating timeout)
+      // #given - fetch throws an abort error simulating timeout
       const abortError = new Error("AbortError");
       abortError.name = "AbortError";
       vi.mocked(global.fetch).mockRejectedValueOnce(abortError);
 
+      // #when - looking up an unknown selector
       const result = await lookupSignature("0xabcdef01");
 
+      // #then - returns failed source with null signature
       expect(result.signature).toBeNull();
       expect(result.source).toBe("failed");
     });
 
     it("should return failed for empty results", async () => {
-      // Mock fetch to return empty results
+      // #given - API returns empty results array
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ results: [] }),
       } as Response);
 
+      // #when - looking up an unknown selector
       const result = await lookupSignature("0x11223344");
 
+      // #then - returns failed source with null signature
       expect(result.signature).toBeNull();
       expect(result.source).toBe("failed");
     });
 
     it("should return api source for successful API lookup", async () => {
-      // Mock fetch to return a valid signature
+      // #given - API returns a valid signature match
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -194,32 +213,33 @@ describe("Signature Lookup", () => {
         }),
       } as Response);
 
+      // #when - looking up an unknown selector
       const result = await lookupSignature("0x55667788");
 
+      // #then - returns the signature from API
       expect(result.signature).toBe("customFunction(address,uint256)");
       expect(result.source).toBe("api");
     });
 
     it("should cache API results", async () => {
-      // First call - mock successful response
+      // #given - API returns a successful response for the first call
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           results: [{ text_signature: "cachedFunction(bytes)" }],
         }),
       } as Response);
+      const selector = "0xaabbccdd";
 
-      // First lookup
-      const result1 = await lookupSignature("0xaabbccdd");
+      // #when - looking up the same selector twice
+      const result1 = await lookupSignature(selector);
+      const result2 = await lookupSignature(selector);
+
+      // #then - both return the same cached result and fetch is called only once
       expect(result1.signature).toBe("cachedFunction(bytes)");
       expect(result1.source).toBe("api");
-
-      // Second lookup - should use cache, not call fetch again
-      const result2 = await lookupSignature("0xaabbccdd");
       expect(result2.signature).toBe("cachedFunction(bytes)");
       expect(result2.source).toBe("api");
-
-      // fetch should only be called once
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
   });

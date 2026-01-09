@@ -15,6 +15,7 @@ import {
   getElectionProposalId,
   getElectionProposalParams,
   prepareMemberElectionTrigger,
+  prepareElectionCreation,
   trackElectionProposal,
   DEFAULT_RPC_URLS,
 } from "../src";
@@ -283,6 +284,75 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
         // Cohorts should alternate
         expect(election0.cohort).not.toBe(election1.cohort);
       }
+    });
+  });
+});
+
+describe("Election Module - Mocked Tests", () => {
+  describe("prepareMemberElectionTrigger", () => {
+    it("should return null when canProceedToMemberPhase is false", async () => {
+      // #given - Any provider (won't be used since function exits early)
+      const mockProvider = {} as ethers.providers.Provider;
+
+      // #when - calling with canProceedToMemberPhase=false
+      const result = await prepareMemberElectionTrigger(
+        { electionIndex: 5, canProceedToMemberPhase: false },
+        mockProvider
+      );
+
+      // #then - should return null without calling any provider methods
+      expect(result).toBeNull();
+    });
+
+    it("should build correct execute calldata structure", () => {
+      // #given - test that the governor interface encoding is correct
+      const governorInterface = new ethers.utils.Interface([
+        "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash)",
+      ]);
+
+      const targets = ["0x1111111111111111111111111111111111111111"];
+      const values = [BigNumber.from(0)];
+      const calldatas = ["0xabcdef"];
+      const descriptionHash = ethers.utils.id("Test election proposal");
+
+      // #when - encoding the execute calldata
+      const calldata = governorInterface.encodeFunctionData("execute", [
+        targets,
+        values,
+        calldatas,
+        descriptionHash,
+      ]);
+
+      // #then - should produce valid calldata
+      expect(calldata).toContain("0x");
+      expect(calldata.length).toBeGreaterThan(10); // At least selector + params
+    });
+  });
+
+  describe("prepareElectionCreation", () => {
+    it("should prepare election creation transaction", () => {
+      // #given - minimal election status with election count
+      // #when - preparing election creation
+      const result = prepareElectionCreation({ electionCount: 5 });
+
+      // #then - should return prepared transaction
+      expect(result.transaction).toBeDefined();
+      expect(result.transaction.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+      expect(result.transaction.chain).toBe("arb1");
+      expect(result.transaction.chainId).toBe(42161);
+      expect(result.transaction.value).toBe("0");
+      expect(result.electionIndex).toBe(5);
+    });
+
+    it("should use custom governor address when provided", () => {
+      // #given - custom governor address
+      const customAddress = "0x1111111111111111111111111111111111111111";
+
+      // #when - preparing with custom address
+      const result = prepareElectionCreation({ electionCount: 3 }, customAddress);
+
+      // #then - should use custom address
+      expect(result.transaction.to).toBe(customAddress);
     });
   });
 });

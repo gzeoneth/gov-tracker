@@ -4,13 +4,17 @@
  * Tests for governor-discovery, timelock-discovery, and security-council modules.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
+import * as dotenv from "dotenv";
 import type { CacheAdapter, TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
+import { DEFAULT_RPC_URLS } from "../src";
 import {
   detectProposalType,
   isElectionProposal,
   parseProposalCreatedEvent,
+  detectGovernorCapabilities,
+  getTimelockAddress,
 } from "../src/discovery/governor-discovery";
 import {
   isKnownL2Timelock,
@@ -27,12 +31,18 @@ import {
   loadWatermarks,
   saveWatermarks,
   createPendingCheckpoints,
+  discoverProposals,
+  discoverTimelockOps,
+  discoverAll,
   WATERMARKS_KEY,
   DiscoveredProposal,
   DiscoveredTimelockOp,
 } from "../src/tracker/discovery";
+
 import { ADDRESSES } from "../src/constants";
 import { proposalCreatedInterface, timelockInterface } from "../src/abis";
+
+dotenv.config({ quiet: true });
 
 describe("Governor Discovery", () => {
   describe("detectProposalType", () => {
@@ -148,6 +158,128 @@ describe("Governor Discovery", () => {
 
       const result = parseProposalCreatedEvent(invalidLog);
       expect(result).toBeNull();
+    });
+  });
+
+  describe("detectGovernorCapabilities", () => {
+    /**
+     * Create a mock provider using Web3Provider pattern that passes ethers validation
+     */
+    function createMockProvider(options: {
+      hasTimelock?: boolean;
+      hasVetting?: boolean;
+      timelockAddress?: string;
+    }): ethers.providers.Provider {
+      // Use a proper mock that satisfies ethers.Contract constructor
+      const mockSend = async (method: string, params: unknown[]) => {
+        if (method === "eth_chainId") {
+          return "0xa4b1"; // Arbitrum chainId
+        }
+        if (method === "eth_call") {
+          const callParams = params[0] as { data?: string };
+          const timelockSelector = "0xd33219b4"; // timelock()
+          const nomineeVetterSelector = "0x0298ad49"; // nomineeVetter()
+
+          if (callParams.data?.startsWith(timelockSelector)) {
+            if (options.hasTimelock) {
+              return ethers.utils.defaultAbiCoder.encode(
+                ["address"],
+                [options.timelockAddress || "0x1234567890123456789012345678901234567890"]
+              );
+            }
+            throw { code: "CALL_EXCEPTION", message: "No timelock" };
+          }
+
+          if (callParams.data?.startsWith(nomineeVetterSelector)) {
+            if (options.hasVetting) {
+              return ethers.utils.defaultAbiCoder.encode(
+                ["address"],
+                ["0x1234567890123456789012345678901234567890"]
+              );
+            }
+            throw { code: "CALL_EXCEPTION", message: "No nomineeVetter" };
+          }
+
+          throw { code: "CALL_EXCEPTION", message: "Function not found" };
+        }
+        throw new Error(`Unsupported method: ${method}`);
+      };
+
+      // Create a JsonRpcProvider-like object
+      return new ethers.providers.Web3Provider({
+        request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+          return mockSend(method, params || []);
+        },
+      });
+    }
+
+    it("should detect WITH_TIMELOCK for governors with timelock()", async () => {
+      // #given a mock provider that returns success for timelock()
+      const mockProvider = createMockProvider({ hasTimelock: true });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return WITH_TIMELOCK
+      expect(result).toBe("WITH_TIMELOCK");
+    });
+
+    it("should detect WITH_VETTING for governors with nomineeVetter()", async () => {
+      // #given a mock provider that returns failure for timelock() but success for nomineeVetter()
+      const mockProvider = createMockProvider({ hasTimelock: false, hasVetting: true });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return WITH_VETTING
+      expect(result).toBe("WITH_VETTING");
+    });
+
+    it("should detect NO_TIMELOCK for governors without timelock or vetting", async () => {
+      // #given a mock provider that returns failure for both
+      const mockProvider = createMockProvider({ hasTimelock: false, hasVetting: false });
+
+      // #when detecting capabilities
+      const result = await detectGovernorCapabilities(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return NO_TIMELOCK
+      expect(result).toBe("NO_TIMELOCK");
+    });
+  });
+
+  describe("getTimelockAddress", () => {
+    it("should return timelock address from governor", async () => {
+      // #given a mock provider that returns a timelock address (use proper checksum)
+      const expectedTimelock = ethers.utils.getAddress(
+        "0xabcdef1234567890abcdef1234567890abcdef12"
+      );
+      const mockProvider = new ethers.providers.Web3Provider({
+        request: async ({ method }: { method: string; params?: unknown[] }) => {
+          if (method === "eth_chainId") return "0xa4b1";
+          if (method === "eth_call") {
+            return ethers.utils.defaultAbiCoder.encode(["address"], [expectedTimelock]);
+          }
+          throw new Error(`Unsupported method: ${method}`);
+        },
+      });
+
+      // #when getting timelock address
+      const result = await getTimelockAddress(
+        "0x1234567890123456789012345678901234567890",
+        mockProvider
+      );
+
+      // #then should return the timelock address
+      expect(result.toLowerCase()).toBe(expectedTimelock.toLowerCase());
     });
   });
 });
@@ -709,5 +841,215 @@ describe("Tracker Discovery Module", () => {
     it("should have correct format", () => {
       expect(WATERMARKS_KEY).toBe("discovery:watermarks");
     });
+  });
+});
+
+/**
+ * RPC-based discovery tests
+ *
+ * Tests discoverProposals, discoverTimelockOps, and discoverAll with real RPC.
+ * Uses block range 369846189-389241837 which contains elections, proposals, and timelock ops.
+ */
+describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
+  let l2Provider: ethers.providers.JsonRpcProvider;
+  let cache: MockCache;
+
+  // Block range known to contain elections, constitutional & non-constitutional proposals
+  // Per user: 369846189-389241837 has elections, both types of proposals, and timelock operations
+  // Start one block before to ensure boundary inclusion (369846189 is exact creation block)
+  const TEST_FROM_BLOCK = 369_846_188;
+  const TEST_TO_BLOCK = 389_241_837;
+
+  beforeAll(() => {
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+  });
+
+  beforeEach(() => {
+    cache = new MockCache();
+  });
+
+  describe("discoverProposals", () => {
+    it("should discover constitutional proposals in block range", async () => {
+      // #given a block range with constitutional proposals
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering proposals
+      const proposals = await discoverProposals(
+        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then should find at least one proposal
+      expect(proposals.length).toBeGreaterThan(0);
+      if (proposals.length > 0) {
+        expect(proposals[0].governorAddress.toLowerCase()).toBe(
+          ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase()
+        );
+        expect(proposals[0].proposalId).toBeDefined();
+        expect(proposals[0].creationTxHash).toBeDefined();
+        expect(proposals[0].creationBlock).toBeGreaterThan(fromBlock);
+      }
+    }, 60000);
+
+    it("should discover election proposals in block range", async () => {
+      // #given a block range with election proposals
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering proposals from nominee governor
+      const proposals = await discoverProposals(
+        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then may find election proposals
+      expect(Array.isArray(proposals)).toBe(true);
+      if (proposals.length > 0) {
+        expect(proposals[0].governorAddress.toLowerCase()).toBe(
+          ADDRESSES.ELECTION_NOMINEE_GOVERNOR.toLowerCase()
+        );
+      }
+    }, 60000);
+  });
+
+  describe("discoverTimelockOps", () => {
+    it("should discover timelock operations in block range", async () => {
+      // #given a block range with timelock operations
+      const fromBlock = TEST_FROM_BLOCK;
+      const toBlock = TEST_TO_BLOCK;
+
+      // #when discovering timelock ops
+      const ops = await discoverTimelockOps(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        fromBlock,
+        toBlock,
+        l2Provider
+      );
+
+      // #then should find operations
+      expect(Array.isArray(ops)).toBe(true);
+      if (ops.length > 0) {
+        expect(ops[0].timelockAddress.toLowerCase()).toBe(
+          ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK.toLowerCase()
+        );
+        expect(ops[0].operationId).toBeDefined();
+        expect(ops[0].scheduledTxHash).toBeDefined();
+      }
+    }, 60000);
+  });
+
+  describe("discoverAll", () => {
+    it("should discover from all enabled targets", async () => {
+      // #given targets for all governors and timelocks
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: true,
+        electionNomineeGovernor: true,
+        electionMemberGovernor: true,
+        l2ConstitutionalTimelock: true,
+        l2NonConstitutionalTimelock: true,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+        nonConstitutionalGovernor: TEST_FROM_BLOCK,
+        electionNomineeGovernor: TEST_FROM_BLOCK,
+        electionMemberGovernor: TEST_FROM_BLOCK,
+        l2ConstitutionalTimelock: TEST_FROM_BLOCK,
+        l2NonConstitutionalTimelock: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering all
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then should return proposals, timelockOps, and updated watermarks
+      expect(result.proposals).toBeDefined();
+      expect(result.timelockOps).toBeDefined();
+      expect(result.watermarks).toBeDefined();
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
+      expect(result.watermarks.nonConstitutionalGovernor).toBe(TEST_TO_BLOCK);
+    }, 120000);
+
+    it("should create pending checkpoints for discovered proposals", async () => {
+      // #given targets for constitutional governor only
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then if proposals found, pending checkpoints should be created
+      if (result.proposals.length > 0) {
+        const keys = await cache.keys();
+        const txKeys = keys.filter((k) => k.startsWith("tx:"));
+        expect(txKeys.length).toBeGreaterThan(0);
+      }
+    }, 60000);
+
+    it("should skip disabled targets", async () => {
+      // #given only constitutional governor enabled
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+
+      // #then only constitutional watermark should be updated
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
+      expect(result.watermarks.nonConstitutionalGovernor).toBeUndefined();
+      expect(result.watermarks.l2ConstitutionalTimelock).toBeUndefined();
+    }, 60000);
+
+    it("should work with empty watermarks (start from default)", async () => {
+      // #given empty watermarks - will use GOVERNANCE_START_BLOCKS
+      // Using a narrow range to avoid huge scan
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks: DiscoveryWatermarks = {
+        // Pre-set to avoid scanning from genesis
+        constitutionalGovernor: TEST_FROM_BLOCK,
+      };
+
+      // #when discovering
+      const result = await discoverAll(
+        targets,
+        TEST_FROM_BLOCK + 1_000_000,
+        l2Provider,
+        cache,
+        watermarks
+      );
+
+      // #then should succeed with updated watermarks
+      expect(result.watermarks.constitutionalGovernor).toBe(TEST_FROM_BLOCK + 1_000_000);
+    }, 60000);
   });
 });

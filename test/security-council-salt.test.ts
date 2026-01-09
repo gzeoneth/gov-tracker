@@ -72,18 +72,34 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
   });
 
   it("should detect SC operation", () => {
-    expect(isSecurityCouncilOperation(receipt)).toBe(true);
+    // #given - a transaction receipt from a known SC rotation transaction
+
+    // #when - checking if the receipt contains SC operation
+    const result = isSecurityCouncilOperation(receipt);
+
+    // #then - it should be detected as a security council operation
+    expect(result).toBe(true);
   });
 
   it("should extract SC params (returns last operation)", () => {
+    // #given - a transaction receipt containing multiple SC operations
+
+    // #when - extracting SC params (which returns the last operation)
     const params = extractSecurityCouncilParams(receipt);
+
+    // #then - should return the last operation with 12 members and nonce 6
     expect(params).not.toBeNull();
     expect(params!.members.length).toBe(12);
     expect(params!.nonce.toNumber()).toBe(6); // Last nonce
   });
 
   it("should extract all SC operations", () => {
+    // #given - a transaction receipt containing 4 SC rotation operations
+
+    // #when - extracting all SC operations from the receipt
     const allParams = extractAllSecurityCouncilParams(receipt);
+
+    // #then - should return all 4 operations with incrementing nonces 3-6
     expect(allParams).not.toBeNull();
     expect(allParams!.operations.length).toBe(4);
     expect(allParams!.operations.map((op) => op.nonce.toNumber())).toEqual([3, 4, 5, 6]);
@@ -91,9 +107,14 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
   });
 
   it("should extract params for specific operation by ID", () => {
+    // #given - callScheduled logs from the SC rotation transaction
     for (let i = 0; i < callScheduledLogs.length; i++) {
       const parsed = parseCallScheduledEvent(callScheduledLogs[i])!;
+
+      // #when - extracting params for a specific operation ID
       const params = extractSecurityCouncilParamsForOperation(receipt, parsed.operationId);
+
+      // #then - should match the nonce extracted directly from calldata
       expect(params).not.toBeNull();
       const expected = extractMembersAndNonceFromCallData(parsed.data);
       expect(params!.nonce.eq(expected!.nonce)).toBe(true);
@@ -102,11 +123,12 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
 
   it("should validate salt computation for all operations", async () => {
     for (const log of callScheduledLogs) {
+      // #given - a callScheduled log with members and nonce extracted from calldata
       const parsed = parseCallScheduledEvent(log)!;
       const extracted = extractMembersAndNonceFromCallData(parsed.data);
       expect(extracted).not.toBeNull();
 
-      // Use on-chain SC salt generation for 100% accuracy
+      // #when - computing salt on-chain and validating the operation hash
       const computedSalt = await generateSecurityCouncilSalt(
         extracted!.members,
         extracted!.nonce,
@@ -119,6 +141,8 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
         predecessor: parsed.predecessor,
         salt: computedSalt,
       });
+
+      // #then - the computed salt should produce a valid operation hash
       expect(validation.isValid).toBe(true);
     }
   });
@@ -143,29 +167,31 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking"
   });
 
   it("should detect SC update in transaction receipt", async () => {
+    // #given - a transaction receipt fetched from a known SC rotation tx hash
     const receipt = await queryWithRetry(() => l2Provider.getTransactionReceipt(TX_HASH));
+
+    // #when - checking if it's a security council operation
+
+    // #then - it should be detected as a security council operation
     expect(isSecurityCouncilOperation(receipt)).toBe(true);
   });
 
   it("should track SC rotation operation from tx hash", async () => {
+    // #given - a tracker configured with L1, L2, and Nova providers
     const tracker = createTracker({
       l2Provider,
       l1Provider,
       novaProvider,
     });
 
-    // Track all operations from the SC rotation TX
+    // #when - tracking all operations from the SC rotation TX
     const results = await tracker.trackByTxHash(TX_HASH);
 
-    // Should find all 4 operations from SC rotation
+    // #then - should find all 4 operations with L2 timelock stages
     expect(results.length).toBe(4);
-
-    // First result should have timelock stages
     const result = results[0];
     expect(result.stages.length).toBeGreaterThan(0);
-
-    // L2 timelock should be present
     const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
     expect(l2TimelockStage).toBeDefined();
-  });
+  }, 300000); // 5 minute timeout for slow SC tracking
 });

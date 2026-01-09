@@ -108,7 +108,6 @@ const MEMBER_SYNC_ACTION_ABI = [
  */
 const OUTBOX_ABI = [
   "event OutBoxTransactionExecuted(address indexed to, address indexed l2Sender, uint256 indexed zero, uint256 transactionIndex)",
-  "function isSpent(uint256 index) external view returns (bool)",
 ];
 
 /**

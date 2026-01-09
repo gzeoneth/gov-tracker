@@ -287,54 +287,11 @@ export async function trackL2ToL1Message(
     );
   }
 
-  // Optimized status detection: call getFirstExecutableBlock first to avoid redundant status() calls
-  // - Returns BigNumber → UNCONFIRMED (we have the ETA)
-  // - Returns null → EXECUTED or CONFIRMED (use isSpent to distinguish)
+  // Check status of ALL messages - they may have different states
   const messageStatuses: ChildToParentMessageStatus[] = [];
-  let firstExecutableBlock: number | undefined;
-
-  // Get outbox contract for isSpent checks
-  let outboxAddress: string;
-  try {
-    const network = await getArbitrumNetwork(l2Provider);
-    outboxAddress = network.ethBridge.outbox;
-  } catch {
-    outboxAddress = ADDRESSES.ARB1_OUTBOX;
-  }
-  const outbox = new ethers.Contract(outboxAddress, outboxInterface, l1Provider);
-
-  for (let i = 0; i < messages.length; i++) {
-    const message = messages[i];
-    const position = messagePositions[i];
-
-    try {
-      // Try getFirstExecutableBlock first - avoids redundant status() call for UNCONFIRMED
-      const blockBN = await queryWithRetry(() => message.getFirstExecutableBlock(l2Provider));
-
-      if (blockBN) {
-        // Returns BigNumber → UNCONFIRMED
-        messageStatuses.push(ChildToParentMessageStatus.UNCONFIRMED);
-        const blockNum = blockBN.toNumber();
-        if (!firstExecutableBlock || blockNum < firstExecutableBlock) {
-          firstExecutableBlock = blockNum;
-        }
-      } else {
-        // Returns null → EXECUTED or CONFIRMED, use fast isSpent check
-        const isSpent = await queryWithRetry(() => outbox.callStatic.isSpent(position));
-        messageStatuses.push(
-          isSpent ? ChildToParentMessageStatus.EXECUTED : ChildToParentMessageStatus.CONFIRMED
-        );
-      }
-    } catch (err) {
-      // Fallback to status() if getFirstExecutableBlock fails
-      logStage(
-        "Warning: getFirstExecutableBlock failed for message %d, falling back to status(): %s",
-        i,
-        err instanceof Error ? err.message : String(err)
-      );
-      const status = await queryWithRetry(() => message.status(l2Provider));
-      messageStatuses.push(status);
-    }
+  for (const message of messages) {
+    const status = await queryWithRetry(() => message.status(l2Provider));
+    messageStatuses.push(status);
   }
 
   const { blockNumber: currentL1Block, timestamp: currentTimestamp } =
@@ -343,6 +300,12 @@ export async function trackL2ToL1Message(
   // Determine aggregate status: EXECUTED only if all executed, UNCONFIRMED if any unconfirmed,
   // CONFIRMED if all confirmed/executed, else use first message's status
   const aggregateStatus = determineAggregateStatus(messageStatuses);
+
+  // Calculate first executable block using simple formula instead of expensive SDK call
+  // getFirstExecutableBlock() is very slow (~10s) due to SDK's binary search through assertion events
+  // For ETA display purposes, the simple calculation is accurate enough
+  const l1BlockAtL2Execution = await getL1BlockForL2Block(l2Provider, l2ExecutionBlock);
+  const firstExecutableBlock = l1BlockAtL2Execution + TIMING.CHALLENGE_PERIOD_BLOCKS_L1;
 
   // Build per-message status details
   const messageDetails = messageStatuses.map((status, i) => ({
@@ -357,15 +320,8 @@ export async function trackL2ToL1Message(
     currentL1Block,
   });
 
-  // Calculate L1 search block for OutBox execution
-  const l1BlockAtL2Execution = await getL1BlockForL2Block(l2Provider, l2ExecutionBlock);
-  let l1SearchFromBlock = l1BlockAtL2Execution + TIMING.CHALLENGE_PERIOD_BLOCKS_L1;
-
-  // Use firstExecutableBlock if more accurate
-  if (firstExecutableBlock && firstExecutableBlock <= currentL1Block) {
-    l1SearchFromBlock = firstExecutableBlock;
-    logStage("L1 search hint from firstExecutableBlock=%d", firstExecutableBlock);
-  }
+  // Use firstExecutableBlock as L1 search start (already calculated above)
+  const l1SearchFromBlock = firstExecutableBlock;
 
   let outboxExecutionTx: { hash: string; blockNumber: number } | undefined;
 
@@ -416,30 +372,24 @@ export async function trackL2ToL1Message(
       }
       break;
 
-    case ChildToParentMessageStatus.UNCONFIRMED:
+    case ChildToParentMessageStatus.UNCONFIRMED: {
       // Still in challenge period
       builder.status("PENDING").tx(executionTxHash, receipt.blockNumber, "arb1", 42161, {
         timestamp: l2Timestamp,
         description: "L2 sent",
       });
 
-      if (firstExecutableBlock) {
-        // Ensure remaining time is non-negative (message may already be executable)
-        const remainingBlocks = Math.max(0, firstExecutableBlock - currentL1Block);
-        const remainingSeconds = remainingBlocks * BLOCK_TIMES.L1;
+      // Calculate remaining time until executable
+      const remainingBlocks = Math.max(0, firstExecutableBlock - currentL1Block);
+      const remainingSeconds = remainingBlocks * BLOCK_TIMES.L1;
 
-        builder.timing({
-          startedAt: l2Timestamp,
-          eta: remainingSeconds > 0 ? currentTimestamp + remainingSeconds : undefined,
-          delaySeconds: remainingSeconds,
-        });
-      } else {
-        builder.timing({
-          startedAt: l2Timestamp,
-          delaySeconds: TIMING.CHALLENGE_PERIOD_BLOCKS_L1 * BLOCK_TIMES.L1,
-        });
-      }
+      builder.timing({
+        startedAt: l2Timestamp,
+        eta: remainingSeconds > 0 ? currentTimestamp + remainingSeconds : undefined,
+        delaySeconds: remainingSeconds,
+      });
       break;
+    }
 
     default:
       builder.status("NOT_STARTED");

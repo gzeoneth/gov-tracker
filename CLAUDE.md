@@ -455,13 +455,11 @@ describe.skipIf(process.env.NO_RPC === "1")("integration tests", () => {
 **Calldata Decoding Module** (`src/calldata/`):
 - **decoder.ts**: Recursive calldata decoder with max depth limit (MAX_DEPTH = 3)
 - **signature-lookup.ts**: Two-tier signature resolution (local registry → 4byte.directory API)
-- **parameter-decoder.ts**: ABI parameter decoding with type-aware formatting
+- **parameter-decoder.ts**: ABI parameter decoding with type-aware formatting + address labeling
 - **retryable-ticket.ts**: Arbitrum retryable ticket parsing and chain detection
-- **address-utils.ts**: Chain-aware address labeling for known governance contracts
 
 **Simulation Data Module** (`src/simulation/`):
-- **simulation-data.ts**: Extracts Tenderly/Foundry-ready simulation data from decoded calldata
-- **address-alias.ts**: L1→L2 address aliasing for cross-chain message simulation
+- **simulation-data.ts**: Tenderly/Foundry data extraction + L1→L2 address aliasing
 
 ### Security Considerations
 

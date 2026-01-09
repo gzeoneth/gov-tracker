@@ -88,5 +88,61 @@ describe("Timelock Module", () => {
       expect(result.timelockState).toBeNull();
       expect(result.operationState).toBeNull();
     });
+
+    it("should use cachedExecutionTxHash when provided and receipt exists (line 360-373)", async () => {
+      // #given - valid operationId with cached execution tx hash
+      const operationId = "0x" + "b".repeat(64);
+      const cachedTxHash = "0x" + "c".repeat(64);
+      const mockReceipt = {
+        blockNumber: 12345,
+        transactionHash: cachedTxHash,
+        logs: [],
+      };
+
+      // Mock operation state as DONE (already executed)
+      vi.spyOn(timelockDiscovery, "getTimelockOperationState").mockResolvedValue({
+        state: "DONE" as TimelockOperationState,
+        isOperation: true,
+        isPending: false,
+        isReady: false,
+        isDone: true,
+        timestamp: BigNumber.from(1700000000),
+      });
+
+      // Mock getTimelockState to return scheduled data with all required fields
+      vi.spyOn(timelockDiscovery, "getTimelockState").mockResolvedValue({
+        operationId: operationId,
+        state: "DONE" as TimelockOperationState,
+        isReady: false,
+        isDone: true,
+        scheduledData: mockCallScheduledData,
+        executedData: undefined,
+      });
+
+      // Mock provider methods
+      const mockGetTxReceipt = vi.fn().mockResolvedValue(mockReceipt);
+      const mockGetBlock = vi.fn().mockResolvedValue({ timestamp: 1700000000 });
+      const mockProviderWithMethods = {
+        ...mockProvider,
+        getTransactionReceipt: mockGetTxReceipt,
+        getBlock: mockGetBlock,
+      } as unknown as ethers.providers.Provider;
+
+      // #when - track with cachedExecutionTxHash option
+      const result = await trackL2Timelock(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId,
+        mockProviderWithMethods,
+        1,
+        mockCallScheduledData,
+        { cachedExecutionTxHash: cachedTxHash }
+      );
+
+      // #then - should use cached tx and return COMPLETED
+      expect(result.stage.status).toBe("COMPLETED");
+      expect(result.executionTxHash).toBe(cachedTxHash);
+      expect(result.executionBlock).toBe(12345);
+      expect(mockGetTxReceipt).toHaveBeenCalledWith(cachedTxHash);
+    });
   });
 });

@@ -823,3 +823,54 @@ describe("searchAndCompleteTimelockExecution", () => {
     vi.restoreAllMocks();
   });
 });
+
+describe("findL1OperationIdFromTx", () => {
+  it("should return null operationId when receipt not found (line 166)", async () => {
+    // #given - mocked provider that returns null receipt
+    const mockProvider = {
+      getTransactionReceipt: vi.fn().mockResolvedValue(null),
+    } as unknown as ethers.providers.Provider;
+
+    const outboxTxHash = "0x" + "a".repeat(64);
+    const outboxTxBlock = 12345;
+
+    // Import the function dynamically to use real implementation
+    const { findL1OperationIdFromTx } = await import("../src/stages/timelock");
+
+    // #when - calling findL1OperationIdFromTx with null receipt
+    const result = await findL1OperationIdFromTx(outboxTxHash, outboxTxBlock, mockProvider);
+
+    // #then - should return null operationId with original tx hash/block
+    expect(result.l1OperationId).toBeNull();
+    expect(result.l1ScheduleTxHash).toBe(outboxTxHash);
+    expect(result.l1ScheduleBlock).toBe(outboxTxBlock);
+  });
+
+  it("should return null operationId when no CallScheduled event found (line 185)", async () => {
+    // #given - mocked provider with receipt but no matching events
+    const mockProvider = {
+      getTransactionReceipt: vi.fn().mockResolvedValue({
+        logs: [
+          {
+            address: "0x0000000000000000000000000000000000000000",
+            topics: ["0x" + "0".repeat(64)],
+            data: "0x",
+          },
+        ],
+      }),
+    } as unknown as ethers.providers.Provider;
+
+    const outboxTxHash = "0x" + "b".repeat(64);
+    const outboxTxBlock = 23456;
+
+    const { findL1OperationIdFromTx } = await import("../src/stages/timelock");
+
+    // #when - calling findL1OperationIdFromTx with no matching events
+    const result = await findL1OperationIdFromTx(outboxTxHash, outboxTxBlock, mockProvider);
+
+    // #then - should return null operationId
+    expect(result.l1OperationId).toBeNull();
+    expect(result.l1ScheduleTxHash).toBe(outboxTxHash);
+    expect(result.l1ScheduleBlock).toBe(outboxTxBlock);
+  });
+});

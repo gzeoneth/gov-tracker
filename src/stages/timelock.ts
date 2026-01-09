@@ -121,15 +121,37 @@ export interface L1TimelockResult extends TimelockStageResult {
 // L2-Specific: Security Council Handling
 // ============================================================================
 
+// Proposal types from governor contracts (not Security Council operations)
+const GOVERNOR_PROPOSAL_TYPES = new Set(["CONSTITUTIONAL", "NON_CONSTITUTIONAL"]);
+
+/**
+ * Check if proposal is from a known governor (not a Security Council operation).
+ * Governor proposals have proposalType of CONSTITUTIONAL or NON_CONSTITUTIONAL.
+ */
+function isKnownGovernorProposal(allStages?: TrackedStage[]): boolean {
+  if (!allStages) return false;
+  const proposalStage = allStages.find((s) => s.type === "PROPOSAL_CREATED");
+  const proposalType = proposalStage?.data.proposalType as string | undefined;
+  return proposalType ? GOVERNOR_PROPOSAL_TYPES.has(proposalType) : false;
+}
+
 /**
  * Get Security Council enrichment data if applicable.
  * Returns data to merge into stage, or null if not a SC operation.
+ *
+ * Skips the check for known governor proposals to avoid unnecessary RPC call.
  */
 async function getSecurityCouncilData(
   timelockState: TimelockState,
   operationId: string,
-  provider: ethers.providers.Provider
+  provider: ethers.providers.Provider,
+  allStages?: TrackedStage[]
 ): Promise<Record<string, unknown> | null> {
+  // Skip for known governor proposals - they are never SC operations
+  if (isKnownGovernorProposal(allStages)) {
+    return null;
+  }
+
   const queueTxHash = timelockState.scheduledData?.txHash;
   if (!queueTxHash) return null;
 
@@ -234,6 +256,8 @@ async function trackTimelock(
     fromBlock,
     scheduledData: options.callScheduledData,
     skipLogSearch: false,
+    // Skip CallExecuted search here - we do an optimized search below starting after the delay
+    skipExecutedSearch: true,
   });
 
   const { timestamp: currentTimestamp } = await getCurrentBlockInfo(provider);
@@ -248,8 +272,14 @@ async function trackTimelock(
   }
 
   // Check for Security Council enrichment (L2 only)
+  // Skip for known governor proposals to avoid unnecessary RPC call
   if (options.checkSecurityCouncil) {
-    const scData = await getSecurityCouncilData(timelockState, operationId, provider);
+    const scData = await getSecurityCouncilData(
+      timelockState,
+      operationId,
+      provider,
+      options.allStages
+    );
     if (scData) {
       builder.data(scData);
     }

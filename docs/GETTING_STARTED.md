@@ -12,13 +12,16 @@ yarn add @gzeoneth/gov-tracker ethers@^5.7.2
 import { ethers } from "ethers";
 import { createTracker } from "@gzeoneth/gov-tracker";
 
+// Use StaticJsonRpcProvider for better performance (avoids redundant chainId calls)
 const tracker = createTracker({
-  l2Provider: new ethers.providers.JsonRpcProvider(process.env.ARB1_RPC),
-  l1Provider: new ethers.providers.JsonRpcProvider(process.env.ETH_RPC),
-  novaProvider: new ethers.providers.JsonRpcProvider(process.env.NOVA_RPC),
+  l2Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ARB1_RPC),
+  l1Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ETH_RPC),
+  novaProvider: new ethers.providers.StaticJsonRpcProvider(process.env.NOVA_RPC),
   cachePath: "./gov-tracker-cache.json", // Optional: enables caching
 });
 ```
+
+> **Performance tip:** `StaticJsonRpcProvider` caches the network/chainId information, avoiding redundant `eth_chainId` calls on every RPC interaction. This can significantly reduce tracking time.
 
 Environment variables:
 ```bash

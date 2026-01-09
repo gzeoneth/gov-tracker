@@ -9,8 +9,8 @@
  * import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
  *
  * const tracker = createTracker({
- *   l2Provider: new ethers.providers.JsonRpcProvider(ARB1_RPC),
- *   l1Provider: new ethers.providers.JsonRpcProvider(ETH_RPC),
+ *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
+ *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
  * });
  *
  * const results = await tracker.trackByTxHash(proposalCreationTxHash);

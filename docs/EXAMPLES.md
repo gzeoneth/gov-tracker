@@ -8,10 +8,11 @@ Practical examples for the `@gzeoneth/gov-tracker` SDK.
 import { ethers } from "ethers";
 import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
 
+// Use StaticJsonRpcProvider for better performance
 const tracker = createTracker({
-  l2Provider: new ethers.providers.JsonRpcProvider(process.env.ARB1_RPC),
-  l1Provider: new ethers.providers.JsonRpcProvider(process.env.ETH_RPC),
-  novaProvider: new ethers.providers.JsonRpcProvider(process.env.NOVA_RPC),
+  l2Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ARB1_RPC),
+  l1Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ETH_RPC),
+  novaProvider: new ethers.providers.StaticJsonRpcProvider(process.env.NOVA_RPC),
   cachePath: "./gov-tracker-cache.json", // Optional: enables caching
 });
 

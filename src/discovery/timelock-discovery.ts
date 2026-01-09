@@ -265,6 +265,8 @@ export async function getTimelockState(
     fromBlock?: number;
     toBlock?: number;
     skipLogSearch?: boolean;
+    /** Skip CallExecuted search - use when caller handles execution search separately */
+    skipExecutedSearch?: boolean;
     /** Pre-fetched scheduled data - skips CallScheduled search if provided */
     scheduledData?: CallScheduledData;
     /** All scheduled data for batch operations */
@@ -327,8 +329,9 @@ export async function getTimelockState(
     }
   }
 
-  // Only search for executed data if the operation is done
-  if (!options.skipLogSearch && contractState.isDone) {
+  // Only search for executed data if the operation is done and caller wants it
+  // Note: Caller may skip this to do an optimized search starting after the delay
+  if (!options.skipLogSearch && !options.skipExecutedSearch && contractState.isDone) {
     // fromBlock is required for log searches
     if (options.fromBlock === undefined) {
       throw new Error("fromBlock is required when searching logs in getTimelockState");

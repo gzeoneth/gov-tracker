@@ -143,6 +143,126 @@ describe("extractTimelockLink (Unit Tests)", () => {
   });
 });
 
+describe("Tracker Cache Methods (Mocked)", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  describe("loadWatermarks", () => {
+    it("should return empty object when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - loading watermarks
+      const watermarks = await tracker.loadWatermarks();
+
+      // #then - should return empty object
+      expect(watermarks).toEqual({});
+    });
+  });
+
+  describe("saveWatermarks", () => {
+    it("should complete without error when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - saving watermarks
+      await tracker.saveWatermarks({});
+
+      // #then - should not throw
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("listCheckpointKeys", () => {
+    it("should return empty array when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - listing checkpoint keys
+      const keys = await tracker.listCheckpointKeys();
+
+      // #then - should return empty array
+      expect(keys).toEqual([]);
+    });
+  });
+
+  describe("getCheckpoint", () => {
+    it("should return null when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting a checkpoint
+      const checkpoint = await tracker.getCheckpoint("tx:0x123");
+
+      // #then - should return null
+      expect(checkpoint).toBeNull();
+    });
+  });
+
+  describe("getAllCheckpoints", () => {
+    it("should return empty map when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting all checkpoints
+      const checkpoints = await tracker.getAllCheckpoints();
+
+      // #then - should return empty map
+      expect(checkpoints.size).toBe(0);
+    });
+  });
+
+  describe("queryIncompleteCheckpoints", () => {
+    it("should return empty array when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - querying incomplete checkpoints
+      const incomplete = await tracker.queryIncompleteCheckpoints();
+
+      // #then - should return empty array
+      expect(incomplete).toEqual([]);
+    });
+  });
+
+  describe("getStats", () => {
+    it("should return zero stats when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting stats
+      const stats = await tracker.getStats();
+
+      // #then - should return zeroed stats
+      expect(stats.total).toBe(0);
+      expect(stats.proposals.total).toBe(0);
+      expect(stats.timelocks.total).toBe(0);
+      expect(stats.elections.total).toBe(0);
+    });
+  });
+});
+
 describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;

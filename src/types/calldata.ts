@@ -76,6 +76,13 @@ interface RetryableCalldata extends DecodedCalldataBase {
 export type DecodedCalldata = RegularCalldata | RetryableCalldata;
 
 /**
+ * Type guard for retryable ticket calldata
+ */
+export function isRetryable(decoded: DecodedCalldata): decoded is RetryableCalldata {
+  return decoded.isRetryable === true;
+}
+
+/**
  * Decoded parameter with optional nested calldata
  */
 export interface DecodedParameter {
@@ -85,10 +92,18 @@ export interface DecodedParameter {
   /** Solidity type (e.g., "address", "uint256", "bytes") */
   type: string;
 
-  /** Decoded value as string (formatted for display) */
-  value: string;
+  /**
+   * Human-readable display string (may be truncated).
+   * Use for UI display only. For programmatic access, use `rawValue`.
+   * @example "0xE6841D92B0C34...ECf5103aC7f49" (truncated address)
+   */
+  displayValue: string;
 
-  /** Original decoded value before formatting (array, BigNumber, etc.) */
+  /**
+   * Original decoded value in its native type.
+   * Use for API calls, simulations, and any programmatic access.
+   * @example "0xE6841D92B0C345149534E833...ECf5103aC7f49" (full address)
+   */
   rawValue: unknown;
 
   /** Whether this parameter contains nested calldata */

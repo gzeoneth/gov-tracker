@@ -131,7 +131,7 @@ describe("Calldata Decoder", () => {
       // The first parameter should have L1 address context
       if (result.parameters && result.parameters[0]?.type === "address") {
         // Address labeling should use L1 context
-        expect(result.parameters[0].value).toBeTruthy();
+        expect(result.parameters[0].displayValue).toBeTruthy();
       }
     });
   });
@@ -634,10 +634,10 @@ describe("Nested Array Parameter Decoding", () => {
 
     // Check retryable parameters
     const inboxParam = retryableDecoded?.parameters?.find((p) => p.name === "inbox");
-    expect(inboxParam?.value.toLowerCase()).toBe(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase());
+    expect(inboxParam?.displayValue.toLowerCase()).toBe(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase());
 
     const l2TargetParam = retryableDecoded?.parameters?.find((p) => p.name === "l2Target");
-    expect(l2TargetParam?.value.toLowerCase()).toBe(
+    expect(l2TargetParam?.displayValue.toLowerCase()).toBe(
       "0x1234567890123456789012345678901234567890".toLowerCase()
     );
   });

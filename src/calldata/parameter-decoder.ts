@@ -184,7 +184,7 @@ export function decodeParameters(
     const param: DecodedParameter = {
       name,
       type,
-      value: formatDecodedValue(rawValue, type),
+      displayValue: formatDecodedValue(rawValue, type),
       rawValue: rawValue,
       isNested: false,
     };
@@ -202,7 +202,7 @@ export function decodeParameters(
       if (isLikelyCalldata(bytesValue)) {
         param.isNested = true;
       }
-      param.value = bytesValue;
+      param.displayValue = bytesValue;
     }
 
     // Handle bytes[] - store raw array for nested processing

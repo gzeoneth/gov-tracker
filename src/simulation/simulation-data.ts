@@ -248,7 +248,7 @@ function processTimelockBatch(
 
     // Use explicit decodingTarget when present, otherwise fall back to the first address arg
     // for non-batch schedule() calls as described above.
-    const timelockAddress = targetAddress || targetParam?.value;
+    const timelockAddress = targetAddress || (targetParam?.rawValue as string | undefined);
 
     if (timelockAddress && decoded.raw) {
       const sim = prepareTimelockSimulation(timelockAddress, decoded.raw, chainContext);
@@ -282,9 +282,9 @@ function processRetryableTicket(
       // Only create simulation if chain is known (arb1 or nova)
       if (chain === "arb1" || chain === "nova") {
         const sim = prepareRetryableSimulation(
-          l2TargetParam.value,
-          l2CalldataParam.value,
-          l2ValueParam?.value || "0",
+          l2TargetParam.rawValue as string,
+          l2CalldataParam.rawValue as string,
+          (l2ValueParam?.rawValue as string | undefined) || "0",
           chain
         );
 

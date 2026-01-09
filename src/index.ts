@@ -38,6 +38,8 @@ export type {
   StageType,
   StageStatus,
   Chain,
+  KnownChain,
+  L2Chain,
   ChainId,
   TrackedStage,
   StageTransaction,
@@ -108,7 +110,7 @@ export type {
 } from "./types";
 
 // Type guards
-export { isStageType, getStageData } from "./types";
+export { isStageType, getStageData, isKnownChain, isL2Chain, isRetryable } from "./types";
 
 // Constants
 export {
@@ -250,7 +252,7 @@ export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
 export { addressEquals, isAddressIn, getChain } from "./utils/chain";
-export { chainIdToChain, chainToChainId } from "./types";
+export { chainIdToChain, chainToChainId, getChainDisplayName } from "./types";
 
 // Error classification
 export { isGasEstimationError } from "./utils/rpc-utils";

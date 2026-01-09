@@ -92,9 +92,9 @@ function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string {
 
       // For addresses, show label if available
       if (param.addressLabel) {
-        paramLine += `${param.value} [${param.addressLabel}]`;
+        paramLine += `${param.displayValue} [${param.addressLabel}]`;
       } else {
-        paramLine += param.value;
+        paramLine += param.displayValue;
       }
 
       lines.push(paramLine);

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Performance: Use `StaticJsonRpcProvider`** - Default providers now use `StaticJsonRpcProvider` instead of `JsonRpcProvider` to avoid redundant `eth_chainId` calls on every RPC request. This improves performance especially for batch operations. (a6ea213)
+
+- **Performance: Skip Security Council check for governor proposals** - `trackTimelock()` now skips the Security Council membership check for proposals from known governors (CONSTITUTIONAL, NON_CONSTITUTIONAL) since they are never SC operations. Saves 1 RPC call per L2 timelock tracking. (469a51a)
+
+- **Performance: Cache block timestamps** - `getBlockTimestamp()` now caches results using a WeakMap keyed by provider. Block timestamps are immutable, so this eliminates redundant `eth_getBlockByNumber` calls. (0a7ab4b)
+
+- **Performance: Skip redundant CallExecuted search** - Added `skipExecutedSearch` option to `getTimelockState()` to skip CallExecuted log search when caller handles execution search separately with optimized block range. (cac036c)
+
+- **Performance: Fast-path L1→L2 block conversion** - `getFirstL2BlockForL1Block()` now tries `NodeInterface.l2BlockRangeForL1()` directly (1 RPC call) before falling back to SDK binary search (~23 RPC calls). Falls back only when 5 consecutive L1 blocks have no L2 blocks (rare).
+
+### Documentation
+
+- Updated examples to recommend `StaticJsonRpcProvider` for better performance (fa77488)
+
 ## [0.2.0] - 2026-01-09
 
 ### Added

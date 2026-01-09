@@ -237,7 +237,7 @@ export async function getFirstL2BlockForL1Block(
   }
 
   // Slow path: SDK binary search fallback
-  // This should rarely be reached - only when 6 consecutive L1 blocks have no L2 blocks
+  // This should rarely be reached - only when 5 consecutive L1 blocks have no L2 blocks
   log(
     "getFirstL2BlockForL1Block: L1=%d falling back to SDK binary search (%dms)",
     targetL1Block,

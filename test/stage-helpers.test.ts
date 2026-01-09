@@ -24,7 +24,9 @@ import {
   validateStageForBulkPrepare,
   validateStageForSimpleBulk,
   calculateTimelockEta,
+  searchAndCompleteTimelockExecution,
 } from "../src/utils/stage-helpers";
+import * as timelockDiscovery from "../src/discovery/timelock-discovery";
 import { StageBuilder } from "../src/stages/stage-builder";
 import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
 
@@ -743,5 +745,81 @@ describe("calculateTimelockEta", () => {
 
     // Should return block timestamp + delay = 1700000000 + 86400 = 1700086400
     expect(result).toBe(1700086400);
+  });
+});
+
+describe("searchAndCompleteTimelockExecution", () => {
+  it("should return completed stage with note when event not found (line 226)", async () => {
+    // #given - a stage and mocked provider where findCallExecutedEvent returns null
+    vi.spyOn(timelockDiscovery, "findCallExecutedEvent").mockResolvedValue(null);
+
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+      .status("PENDING")
+      .data({ operationId: "0xabc123" })
+      .build();
+
+    const mockProvider = {} as ethers.providers.Provider;
+    const timelockAddress = "0x3333333333333333333333333333333333333333";
+    const operationId = "0xabc123";
+
+    // #when - calling searchAndCompleteTimelockExecution with no event found
+    const result = await searchAndCompleteTimelockExecution(
+      stage,
+      timelockAddress,
+      operationId,
+      mockProvider,
+      "arb1",
+      12345
+    );
+
+    // #then - should return completed stage with note and null tx hash
+    expect(result.stage.status).toBe("COMPLETED");
+    expect(result.stage.data?.note).toBe("Execution confirmed by state, event not found");
+    expect(result.executionTxHash).toBeNull();
+    expect(result.executionBlock).toBeNull();
+
+    vi.restoreAllMocks();
+  });
+
+  it("should return completed stage with event details when event found", async () => {
+    // #given - findCallExecutedEvent returns an event
+    vi.spyOn(timelockDiscovery, "findCallExecutedEvent").mockResolvedValue({
+      operationId: "0xabc123",
+      index: BigNumber.from(0),
+      target: "0x1111111111111111111111111111111111111111",
+      value: BigNumber.from(0),
+      data: "0x",
+      txHash: "0x" + "f".repeat(64),
+      blockNumber: 12345,
+      logIndex: 0,
+    });
+
+    const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+      .status("PENDING")
+      .data({ operationId: "0xabc123" })
+      .build();
+
+    const mockProvider = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+    } as unknown as ethers.providers.Provider;
+    const timelockAddress = "0x3333333333333333333333333333333333333333";
+    const operationId = "0xabc123";
+
+    // #when - calling searchAndCompleteTimelockExecution with event found
+    const result = await searchAndCompleteTimelockExecution(
+      stage,
+      timelockAddress,
+      operationId,
+      mockProvider,
+      "arb1",
+      12345
+    );
+
+    // #then - should return completed stage with event tx hash
+    expect(result.stage.status).toBe("COMPLETED");
+    expect(result.executionTxHash).toBe("0x" + "f".repeat(64));
+    expect(result.executionBlock).toBe(12345);
+
+    vi.restoreAllMocks();
   });
 });

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Performance: Extend block info cache TTL to 60s** - Increased `getCurrentBlockInfo()` cache TTL from 2s to 60s. Governance tracking doesn't need real-time block data. Added `invalidateBlockInfoCache()` function for external applications to force refresh (e.g., at start of monitoring loop). CLI loop mode now calls this automatically.
+
 - **Performance: Use `StaticJsonRpcProvider`** - Default providers now use `StaticJsonRpcProvider` instead of `JsonRpcProvider` to avoid redundant `eth_chainId` calls on every RPC request. This improves performance especially for batch operations. (a6ea213)
 
 - **Performance: Skip Security Council check for governor proposals** - `trackTimelock()` now skips the Security Council membership check for proposals from known governors (CONSTITUTIONAL, NON_CONSTITUTIONAL) since they are never SC operations. Saves 1 RPC call per L2 timelock tracking. (469a51a)

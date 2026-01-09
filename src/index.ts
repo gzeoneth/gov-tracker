@@ -182,6 +182,7 @@ export {
   calculateRemainingSeconds,
   estimateTimestampFromBlock,
   getL1BlockNumberFromL2,
+  invalidateBlockInfoCache,
 } from "./utils/timing";
 
 // Salt utilities

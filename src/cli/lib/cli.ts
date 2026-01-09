@@ -34,6 +34,7 @@ import {
   prepareRetryableStage,
   prepareL2ToL1MessageStage,
   getStageData,
+  invalidateBlockInfoCache,
 } from "../../index";
 import { withScope } from "../../utils/logger";
 
@@ -526,6 +527,9 @@ export async function runWithLoop(
   });
 
   while (running) {
+    // Invalidate block cache at start of each cycle to ensure fresh data
+    invalidateBlockInfoCache();
+
     try {
       await cycleFn();
       consecutiveErrors = 0;

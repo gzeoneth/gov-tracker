@@ -396,6 +396,44 @@ describe("CLI Utilities", () => {
 
       expect(output).toContain("[2 tickets: 2 Arb1 - all redeemed]");
     });
+
+    it("should show expected ETA for NOT_STARTED stages (line 385-388)", () => {
+      // #given - a completed stage followed by NOT_STARTED stage
+      const completedBuilder = new StageBuilder("PROPOSAL_CREATED", "arb1", "COMPLETED");
+      completedBuilder.tx("0xabc", 100, "arb1", 42161, {
+        timestamp: 1700000000,
+        description: "executed",
+      });
+      const completedStage = completedBuilder.build();
+
+      const notStartedBuilder = new StageBuilder("VOTING_ACTIVE", "arb1", "NOT_STARTED");
+      const notStartedStage = notStartedBuilder.build();
+
+      const result = createMockTrackingResult([completedStage, notStartedStage]);
+
+      // #when
+      const output = formatTrackingResult(result);
+
+      // #then - should include Expected ETA
+      expect(output).toContain("Expected:");
+    });
+
+    it("should show retryable info without pending count (line 414)", () => {
+      // #given - retryable stage with tickets but no pending count (edge case)
+      const result = createMockTrackingResult([
+        createMockStage("RETRYABLE_EXECUTED", "READY", "arb1", {
+          ticketCount: 2,
+          creationDetails: [{ targetChain: "arb1" }, { targetChain: "nova" }],
+          // No pendingCount or redeemedCount
+        }),
+      ]);
+
+      // #when
+      const output = formatTrackingResult(result);
+
+      // #then - should show basic ticket info without pending/redeemed counts
+      expect(output).toContain("[2 tickets: 1 Arb1, 1 Nova]");
+    });
   });
 
   describe("formatCacheStatus", () => {

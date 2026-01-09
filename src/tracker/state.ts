@@ -1,289 +1,364 @@
 /**
- * Cache utilities for tracker state
+ * TrackingState - Functional state management for pipeline tracking
  *
- * Provides cache implementations and utility functions.
- * All other state management is handled directly in tracker.ts.
+ * This module provides a purely functional approach to tracking context:
+ * - TrackingState interface defines the immutable state shape
+ * - Pure functions transform state and derive values
+ * - No classes, no mutation, no hidden state
  *
- * Available cache adapters:
- * - FileCache: File-based persistence (Node.js only)
- * - LocalStorageCache: Browser localStorage (web only)
- * - MemoryCache: In-memory, no persistence (universal)
+ * Benefits:
+ * - Easy testing: just create plain objects
+ * - Transparent: can log/inspect full state anytime
+ * - Predictable: same input → same output
+ * - Composable: mix and match functions freely
+ * - Debuggable: save/restore state snapshots
  */
 
-import * as fs from "fs";
-import { TrackingCheckpoint, DiscoveryWatermarks, CacheAdapter } from "../types";
-import { WATERMARKS_KEY } from "./discovery";
+import { BigNumber, ethers } from "ethers";
+import { loggers } from "../utils/logger";
+import {
+  TrackedStage,
+  TrackingCheckpoint,
+  TrackingInput,
+  StageType,
+  Chain,
+  CallScheduledData,
+  ProposalData,
+  ProposalType,
+  ProposalState,
+  OnProgressCallback,
+  ChunkingConfig,
+  ProposalCreatedData,
+  VotingActiveData,
+  ProposalQueuedData,
+  TimelockStageData,
+  L2ToL1MessageStageData,
+} from "../types";
+import {
+  initializeStagesForPath,
+  updateStageInList,
+  areAllStagesComplete,
+  deserializeCallScheduledDataArray,
+} from "../stages/utils";
+import { isElectionProposal, detectProposalType } from "../discovery/governor-discovery";
+import { DEFAULT_CHUNKING_CONFIG } from "../constants";
+
+const { tracker: logTracker } = loggers;
+
+// Types
 
 /**
- * File-based cache that persists to JSON file.
- * Synchronously loads on construction, persists on every write.
- * Uses a write queue to prevent race conditions from concurrent writes.
+ * Providers for multi-chain operations
  */
-export class FileCache implements CacheAdapter {
-  private readonly path: string;
-  private cache: Map<string, unknown>;
-  private writeQueue: Promise<void> = Promise.resolve();
-
-  constructor(path: string) {
-    this.path = path;
-    this.cache = this.load();
-  }
-
-  private load(): Map<string, unknown> {
-    try {
-      const data = JSON.parse(fs.readFileSync(this.path, "utf8"));
-      return new Map(Object.entries(data));
-    } catch {
-      return new Map();
-    }
-  }
-
-  private persistSync(): void {
-    const obj = Object.fromEntries(this.cache);
-    fs.writeFileSync(this.path, JSON.stringify(obj, null, 2));
-  }
-
-  private async persist(): Promise<void> {
-    // Chain writes to prevent race conditions
-    // Create the write promise that may reject on error
-    const writePromise = this.writeQueue.then(() => {
-      this.persistSync();
-    });
-
-    // Update the queue with error recovery to prevent getting stuck
-    // This ensures future writes can proceed even if this one fails
-    this.writeQueue = writePromise.catch(() => {
-      // Silently recover the queue - error is propagated via writePromise
-    });
-
-    // Return the original promise so errors propagate to caller
-    return writePromise;
-  }
-
-  async get<T>(key: string): Promise<T | null> {
-    return (this.cache.get(key) as T) ?? null;
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    this.cache.set(key, value);
-    await this.persist();
-  }
-
-  async delete(key: string): Promise<void> {
-    this.cache.delete(key);
-    await this.persist();
-  }
-
-  async clear(): Promise<void> {
-    this.cache.clear();
-    await this.persist();
-  }
-
-  async has(key: string): Promise<boolean> {
-    return this.cache.has(key);
-  }
-
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
+export interface Providers {
+  readonly l2: ethers.providers.Provider;
+  readonly l1: ethers.providers.Provider;
+  readonly nova: ethers.providers.Provider;
 }
 
 /**
- * Minimal interface for browser localStorage API
+ * Options for creating a TrackingState
  */
-interface WebStorage {
-  readonly length: number;
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-  key(index: number): string | null;
+export interface CreateTrackingStateOptions {
+  providers: Providers;
+  input: TrackingInput;
+  onProgress?: OnProgressCallback;
+  chunkingConfig?: ChunkingConfig;
+  checkpoint?: TrackingCheckpoint;
+  cacheKey?: string;
+  /** Bootstrap data for timelock-only tracking */
+  callScheduledData?: CallScheduledData[];
 }
 
 /**
- * Get localStorage if available (browser environment)
- */
-function getLocalStorage(): WebStorage | null {
-  // Check for browser environment with localStorage
-  if (typeof globalThis !== "undefined") {
-    const global = globalThis as unknown as { localStorage?: WebStorage };
-    if (typeof global.localStorage !== "undefined") {
-      return global.localStorage;
-    }
-  }
-  return null;
-}
-
-/**
- * Browser localStorage-based cache adapter.
- * Persists to localStorage with a configurable key prefix.
+ * TrackingState - Immutable state for pipeline tracking
  *
- * Limitations:
- * - 5MB storage limit (varies by browser)
- * - Synchronous API (blocks main thread, usually negligible)
- * - String-only storage (JSON serialization handled internally)
+ * All values are derived from stages. This interface represents
+ * a snapshot of the pipeline at a point in time.
  *
  * @example
  * ```typescript
- * import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
- *
- * const tracker = createTracker({
- *   l2Provider,
- *   l1Provider,
- *   cache: new LocalStorageCache("arb-gov:"),
- * });
+ * let ctx = createTrackingState({ providers, input });
+ * ctx = await addStage(ctx, proposalCreatedStage);
+ * const opId = getOperationId(ctx);
  * ```
  */
-export class LocalStorageCache implements CacheAdapter {
-  private readonly prefix: string;
+export interface TrackingState {
+  // === Providers ===
+  readonly providers: Providers;
 
-  constructor(prefix: string = "tracker:") {
-    this.prefix = prefix;
+  // === Configuration ===
+  readonly chunkingConfig: ChunkingConfig;
+  readonly onProgress?: OnProgressCallback;
+  readonly cacheKey?: string;
+
+  // === Input (immutable) ===
+  readonly input: TrackingInput;
+
+  // === Bootstrap data ===
+  readonly callScheduledData?: CallScheduledData[];
+
+  // === Stages (source of truth) ===
+  readonly stages: TrackedStage[];
+  readonly stageIndex: number;
+}
+
+// State Creation
+
+/**
+ * Create a new TrackingState.
+ */
+export function createTrackingState(options: CreateTrackingStateOptions): TrackingState {
+  // Initialize stages based on tracking path
+  const includeProposal = options.input.type === "governor";
+  const addressForPath =
+    options.input.type === "governor"
+      ? options.input.governorAddress
+      : options.input.type === "timelock"
+        ? options.input.timelockAddress
+        : "";
+
+  const initialStages = initializeStagesForPath(addressForPath, includeProposal);
+
+  let ctx: TrackingState = {
+    providers: options.providers,
+    chunkingConfig: options.chunkingConfig ?? DEFAULT_CHUNKING_CONFIG,
+    onProgress: options.onProgress,
+    cacheKey: options.cacheKey,
+    input: options.input,
+    callScheduledData: options.callScheduledData,
+    stages: initialStages,
+    stageIndex: 0,
+  };
+
+  // Load from checkpoint if provided
+  if (options.checkpoint?.cachedData.completedStages?.length) {
+    ctx = loadFromCheckpoint(ctx, options.checkpoint);
   }
 
-  private fullKey(key: string): string {
-    return `${this.prefix}${key}`;
-  }
-
-  async get<T>(key: string): Promise<T | null> {
-    const storage = getLocalStorage();
-    if (!storage) return null;
-    const data = storage.getItem(this.fullKey(key));
-    if (data === null) return null;
-    try {
-      return JSON.parse(data) as T;
-    } catch {
-      return null;
-    }
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    const storage = getLocalStorage();
-    if (!storage) return;
-    storage.setItem(this.fullKey(key), JSON.stringify(value));
-  }
-
-  async delete(key: string): Promise<void> {
-    const storage = getLocalStorage();
-    if (!storage) return;
-    storage.removeItem(this.fullKey(key));
-  }
-
-  async clear(): Promise<void> {
-    const storage = getLocalStorage();
-    if (!storage) return;
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < storage.length; i++) {
-      const key = storage.key(i);
-      if (key?.startsWith(this.prefix)) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((k) => storage.removeItem(k));
-  }
-
-  async has(key: string): Promise<boolean> {
-    const storage = getLocalStorage();
-    if (!storage) return false;
-    return storage.getItem(this.fullKey(key)) !== null;
-  }
-
-  async keys(prefix?: string): Promise<string[]> {
-    const storage = getLocalStorage();
-    if (!storage) return [];
-    const result: string[] = [];
-    for (let i = 0; i < storage.length; i++) {
-      const fullKey = storage.key(i);
-      if (fullKey?.startsWith(this.prefix)) {
-        const key = fullKey.slice(this.prefix.length);
-        if (!prefix || key.startsWith(prefix)) {
-          result.push(key);
-        }
-      }
-    }
-    return result;
-  }
+  return ctx;
 }
 
 /**
- * In-memory cache adapter with no persistence.
- * Useful for testing, short-lived sessions, or as a fallback.
- *
- * Data is lost when the page is refreshed or the process exits.
- *
- * @example
- * ```typescript
- * import { createTracker, MemoryCache } from "@gzeoneth/gov-tracker";
- *
- * const tracker = createTracker({
- *   l2Provider,
- *   l1Provider,
- *   cache: new MemoryCache(),
- * });
- * ```
+ * Load stages from a checkpoint.
  */
-export class MemoryCache implements CacheAdapter {
-  private cache: Map<string, unknown> = new Map();
+function loadFromCheckpoint(ctx: TrackingState, checkpoint: TrackingCheckpoint): TrackingState {
+  const completedStages = checkpoint.cachedData.completedStages;
+  if (!completedStages?.length) return ctx;
 
-  async get<T>(key: string): Promise<T | null> {
-    return (this.cache.get(key) as T) ?? null;
+  logTracker("RESUME: loading %d completed stages from checkpoint", completedStages.length);
+
+  let stages = ctx.stages;
+  for (const stage of completedStages) {
+    stages = updateStageInList(stages, stage);
   }
 
-  async set<T>(key: string, value: T): Promise<void> {
-    this.cache.set(key, value);
-  }
+  return { ...ctx, stages, stageIndex: completedStages.length };
+}
 
-  async delete(key: string): Promise<void> {
-    this.cache.delete(key);
-  }
+// Stage Management
 
-  async clear(): Promise<void> {
-    this.cache.clear();
-  }
+/**
+ * Add or update a stage. Returns new context.
+ */
+export async function addStage(ctx: TrackingState, stage: TrackedStage): Promise<TrackingState> {
+  const newStages = updateStageInList(ctx.stages, stage);
+  const newCtx: TrackingState = {
+    ...ctx,
+    stages: newStages,
+    stageIndex: ctx.stageIndex + 1,
+  };
 
-  async has(key: string): Promise<boolean> {
-    return this.cache.has(key);
-  }
+  await emitProgress(newCtx, stage);
+  return newCtx;
+}
 
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
+// Stage lookup helper (defined early for use in stage management functions)
+const findStage = (ctx: TrackingState, type: StageType) => ctx.stages.find((s) => s.type === type);
+
+/** Check if a stage is completed (COMPLETED or SKIPPED). */
+export function isStageCompleted(ctx: TrackingState, type: StageType): boolean {
+  const s = findStage(ctx, type);
+  return s?.status === "COMPLETED" || s?.status === "SKIPPED";
+}
+
+/** Get a completed stage for zero-RPC resume. */
+export function getCompletedStage(ctx: TrackingState, type: StageType): TrackedStage | undefined {
+  const s = findStage(ctx, type);
+  return s?.status === "COMPLETED" || s?.status === "SKIPPED" ? s : undefined;
+}
+
+/** Get a cached stage (any status). */
+export function getCachedStage(ctx: TrackingState, type: StageType): TrackedStage | undefined {
+  return findStage(ctx, type);
 }
 
 /**
- * Generate cache key from transaction hash (primary cache key format)
+ * Check if all stages are complete.
  */
-export function txHashCacheKey(txHash: string): string {
-  return `tx:${txHash.toLowerCase()}`;
+export function isComplete(ctx: TrackingState): boolean {
+  return areAllStagesComplete(ctx.stages);
 }
 
-/**
- * Read all cache data without requiring RPC providers.
- * Use this for status/dashboard views that only need cached data.
- *
- * @param cachePath - Path to the cache file
- */
-export async function readCacheStatus(cachePath: string): Promise<{
-  watermarks: DiscoveryWatermarks;
-  checkpoints: Map<string, TrackingCheckpoint>;
-}> {
-  const cache = new FileCache(cachePath);
+// Stage data helpers
+const stageData = <T>(ctx: TrackingState, type: StageType) =>
+  findStage(ctx, type)?.data as T | undefined;
+const execTx = (s: TrackedStage | undefined) =>
+  s?.transactions?.find((tx) => tx.description === "executed");
+const chainTx = (s: TrackedStage | undefined, chain: Chain) =>
+  s?.transactions?.find((tx) => tx.chain === chain);
 
-  // Load watermarks from discovery checkpoint (unified format)
-  const discoveryCheckpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
-  const watermarks = discoveryCheckpoint?.cachedData.discoveryWatermarks ?? {};
+// Derived Getters - Input-based
+export const getGovernorAddress = (ctx: TrackingState) =>
+  ctx.input.type === "governor" ? ctx.input.governorAddress : undefined;
+export const getProposalId = (ctx: TrackingState) =>
+  ctx.input.type === "governor" ? ctx.input.proposalId : undefined;
 
-  const checkpoints = new Map<string, TrackingCheckpoint>();
-  const allKeys = cache.keys();
-  const keys = Array.from(allKeys as Iterable<string>);
+// Derived Getters - Multi-source lookups
+export function getTimelockAddress(ctx: TrackingState): string | undefined {
+  if (ctx.input.type === "timelock") return ctx.input.timelockAddress;
+  return (
+    stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.timelockAddress ??
+    stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.timelockAddress
+  );
+}
 
-  for (const key of keys) {
-    if (key.startsWith("tx:")) {
-      const checkpoint = await cache.get<TrackingCheckpoint>(key);
-      if (checkpoint) {
-        checkpoints.set(key, checkpoint);
-      }
-    }
-  }
+export function getOperationId(ctx: TrackingState): string | undefined {
+  if (ctx.input.type === "timelock") return ctx.input.operationId;
+  return (
+    stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.operationId ??
+    stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.operationId
+  );
+}
 
-  return { watermarks, checkpoints };
+export function getCallScheduledData(ctx: TrackingState): CallScheduledData[] | undefined {
+  if (ctx.callScheduledData) return ctx.callScheduledData;
+  const qData = stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.callScheduledData;
+  if (qData?.length) return deserializeCallScheduledDataArray(qData);
+  const l2Data = stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.callScheduledData;
+  return l2Data?.length ? deserializeCallScheduledDataArray(l2Data) : undefined;
+}
+
+export const getFirstCallScheduledData = (ctx: TrackingState) => getCallScheduledData(ctx)?.[0];
+export const getQueueBlockNumber = (ctx: TrackingState) =>
+  getFirstCallScheduledData(ctx)?.blockNumber;
+
+/** Proposal data from PROPOSAL_CREATED stage */
+export function getProposalData(ctx: TrackingState): ProposalData | undefined {
+  const s = findStage(ctx, "PROPOSAL_CREATED");
+  if (!s || s.status === "NOT_STARTED") return undefined;
+  const data = s.data as ProposalCreatedData;
+  const tx = s.transactions?.[0];
+  if (
+    !data.proposalId ||
+    !data.startBlock ||
+    !data.endBlock ||
+    !data.proposer ||
+    !data.targets ||
+    !data.values ||
+    !data.signatures ||
+    !data.calldatas ||
+    !tx
+  )
+    return undefined;
+  return {
+    proposalId: data.proposalId,
+    proposer: data.proposer,
+    description: data.description,
+    targets: data.targets,
+    values: data.values.map((v) => BigNumber.from(v)),
+    signatures: data.signatures,
+    calldatas: data.calldatas,
+    startBlock: BigNumber.from(data.startBlock),
+    endBlock: BigNumber.from(data.endBlock),
+    creationBlock: tx.blockNumber,
+    creationTxHash: tx.hash,
+  };
+}
+
+export function getProposalType(ctx: TrackingState): ProposalType | undefined {
+  const data = stageData<ProposalCreatedData>(ctx, "PROPOSAL_CREATED");
+  if (data?.proposalType) return data.proposalType as ProposalType;
+  const addr = getGovernorAddress(ctx);
+  return addr ? detectProposalType(addr) : undefined;
+}
+
+export const getIsElection = (ctx: TrackingState) => {
+  const type = getProposalType(ctx);
+  return type ? isElectionProposal(type) : false;
+};
+
+export const getProposalState = (ctx: TrackingState) =>
+  stageData<VotingActiveData>(ctx, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined;
+
+export function getVotingEndBlock(ctx: TrackingState): number | undefined {
+  const data = stageData<VotingActiveData>(ctx, "VOTING_ACTIVE");
+  if (!data?.deadline) return undefined;
+  const deadline = parseInt(data.deadline, 10);
+  const extended = data.extendedDeadline ? parseInt(data.extendedDeadline, 10) : 0;
+  return extended > deadline ? extended : deadline;
+}
+
+export function getL2ExecutionTxHash(ctx: TrackingState): string | undefined {
+  const s = findStage(ctx, "L2_TIMELOCK");
+  return s?.status === "COMPLETED" ? execTx(s)?.hash : undefined;
+}
+
+export const getFirstExecutableBlock = (ctx: TrackingState) =>
+  stageData<L2ToL1MessageStageData>(ctx, "L2_TO_L1_MESSAGE")?.firstExecutableBlock;
+
+export function getOutboxExecutionTx(
+  ctx: TrackingState
+): { hash: string; blockNumber: number } | undefined {
+  const s = findStage(ctx, "L2_TO_L1_MESSAGE");
+  if (s?.status !== "COMPLETED") return undefined;
+  const tx = chainTx(s, "ethereum");
+  return tx ? { hash: tx.hash, blockNumber: tx.blockNumber } : undefined;
+}
+
+export function getL1ExecutionTxHash(ctx: TrackingState): string | undefined {
+  const s = findStage(ctx, "L1_TIMELOCK");
+  return s?.status === "COMPLETED" ? execTx(s)?.hash : undefined;
+}
+
+// Checkpoint & Result
+
+export function createCheckpoint(ctx: TrackingState): TrackingCheckpoint {
+  const completedStages = ctx.stages.filter((s) => s.status !== "NOT_STARTED");
+  const lastProcessedStage =
+    [...ctx.stages].reverse().find((s) => s.status !== "NOT_STARTED")?.type ?? null;
+  return {
+    version: 1,
+    createdAt: Date.now(),
+    input: ctx.input,
+    lastProcessedStage,
+    lastProcessedBlock: { l1: 0, l2: 0, nova: 0 },
+    cachedData: { completedStages },
+    metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+  };
+}
+
+async function emitProgress(ctx: TrackingState, s: TrackedStage): Promise<void> {
+  if (!ctx.onProgress) return;
+  const idx = ctx.stages.findIndex((x) => x.type === s.type);
+  await ctx.onProgress({
+    stage: s,
+    stages: ctx.stages,
+    currentIndex: idx >= 0 ? idx : ctx.stageIndex,
+    totalStages: ctx.stages.length,
+    isComplete: isComplete(ctx),
+  });
+}
+
+export function toResult(ctx: TrackingState) {
+  return {
+    input: ctx.input,
+    stages: ctx.stages,
+    checkpoint: createCheckpoint(ctx),
+    isComplete: isComplete(ctx),
+    proposalType: getProposalType(ctx),
+    proposalData: getProposalData(ctx),
+    currentState: getProposalState(ctx),
+    isElection: getIsElection(ctx),
+  };
 }

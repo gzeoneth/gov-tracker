@@ -63,6 +63,37 @@ export function chainToChainId(chain: Chain): ChainId | undefined {
   return CHAIN_ID_MAP[chain];
 }
 
+/**
+ * Type guard for known chains (ethereum, arb1, nova)
+ */
+export function isKnownChain(chain: Chain): chain is KnownChain {
+  return chain !== "unknown";
+}
+
+/**
+ * Type guard for L2 chains (arb1, nova)
+ */
+export function isL2Chain(chain: Chain): chain is L2Chain {
+  return chain === "arb1" || chain === "nova";
+}
+
+/**
+ * Human-readable display names for chains
+ */
+const CHAIN_DISPLAY_NAMES: Record<Chain, string> = {
+  ethereum: "Ethereum Mainnet",
+  arb1: "Arbitrum One",
+  nova: "Arbitrum Nova",
+  unknown: "Unknown Chain",
+};
+
+/**
+ * Get human-readable display name for a chain
+ */
+export function getChainDisplayName(chain: Chain): string {
+  return CHAIN_DISPLAY_NAMES[chain];
+}
+
 // Stage Types
 
 export type StageType =

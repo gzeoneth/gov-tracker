@@ -20,7 +20,7 @@ import { createTracker, ProposalStageTracker, ADDRESSES, getStageData, TrackedSt
 import { prepareTransaction, ExecuteContext } from "../src/tracker/execute";
 import { prepareL2ToL1MessageStage } from "../src/stages/l2-to-l1-message";
 import { prepareRetryableStage } from "../src/stages/retryables";
-import { checkOperationReady } from "../src/stages/base";
+import { checkOperationReady } from "../src/stages/utils";
 import { executeTransaction, ProviderBundle } from "../src/cli/lib/cli";
 import {
   CONSTITUTIONAL_GOVERNOR_COMPLETED,

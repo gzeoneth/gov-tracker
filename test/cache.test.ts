@@ -1,5 +1,5 @@
 /**
- * Cache State Module Tests
+ * Cache Module Tests
  *
  * Tests for FileCache, MemoryCache, LocalStorageCache, and utility functions.
  * No RPC calls required.
@@ -14,7 +14,7 @@ import {
   LocalStorageCache,
   txHashCacheKey,
   readCacheStatus,
-} from "../src/tracker/state";
+} from "../src/tracker/cache";
 import { WATERMARKS_KEY } from "../src/tracker/discovery";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
 

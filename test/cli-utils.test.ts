@@ -38,7 +38,7 @@ import {
   ProposalStageTracker,
 } from "../src/index";
 import { ADDRESSES } from "../src/constants";
-import { StageBuilder } from "../src/stages/stage-builder";
+import { StageBuilder } from "../src/stages/builder";
 
 type MockStageType =
   | "PROPOSAL_CREATED"

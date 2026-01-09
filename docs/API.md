@@ -164,7 +164,7 @@ if (election.canCreate) {
 
 | Function | Description |
 |----------|-------------|
-| `createTrackingContext(input, options)` | Create tracking context manually |
+| `createTrackingState(input, options)` | Create tracking state manually |
 | `createCheckpoint(input, stages)` | Create checkpoint from stages |
 
 ---

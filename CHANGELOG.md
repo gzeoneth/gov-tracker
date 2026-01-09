@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Chain Utility Types & Guards**:
+  - Exported `KnownChain` type (excludes "unknown" from `Chain`)
+  - Exported `L2Chain` type (only "arb1" | "nova")
+  - Added `isKnownChain(chain)` type guard for known chains
+  - Added `isL2Chain(chain)` type guard for L2 chains
+  - Added `isRetryable(decoded)` type guard for retryable ticket calldata
+  - Added `getChainDisplayName(chain)` for human-readable chain names ("ethereum" → "Ethereum Mainnet", "arb1" → "Arbitrum One", "nova" → "Arbitrum Nova")
+
 - **Test Coverage Infrastructure**:
   - Added `vitest.config.fork.mts` for fork-based tests with separate coverage output
   - Added `yarn test:coverage:fork` and `yarn test:coverage:all` scripts
@@ -31,6 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: `extractCalldataFromStage` now throws an error when `value` is missing from `callScheduledData` instead of silently defaulting to "0". This prevents users from approving proposals that appear to transfer no ETH when the actual calldata sends funds.
 
 ### Breaking Changes
+
+#### DecodedParameter: `value` renamed to `displayValue`
+
+The `value` field in `DecodedParameter` has been renamed to `displayValue` to clarify that it contains a truncated display-only string. Use `rawValue` for programmatic access (API calls, simulations, etc.).
+
+```typescript
+// Before
+const address = param.value; // Might be truncated "0xE6841D92...7f49"
+
+// After
+const displayStr = param.displayValue; // For UI display only (may be truncated)
+const fullAddress = param.rawValue as string; // For programmatic access (full value)
+```
+
+**Migration**: Replace all `param.value` with `param.displayValue` or `param.rawValue` depending on use case.
 
 #### TrackedStage Discriminated Union
 
@@ -142,6 +165,11 @@ interface PreparedTransaction {
   - `StageTrackResultWith` - Internal only
   - `SimulationChainType` - Use `Chain` instead
   - `GovernorProposalState` - Use `ProposalState` instead
+  - `TrackedStageData` - Use `StageDataMap[StageType]` directly
+
+- **Renamed exports**:
+  - `TrackingContext` → `TrackingState`
+  - `createTrackingContext()` → `createTrackingState()`
 
 - **Removed exports**:
   - `getKnownAddresses()` - Internal utility
@@ -181,6 +209,14 @@ interface PreparedTransaction {
 - Added `public-api.test.ts` to verify export stability
 - Consolidated duplicate tests between `stages.test.ts` and `base-stages.test.ts`
 - Removed `tracker-state.test.ts` (duplicated by `state.test.ts`)
+- **Codebase restructuring**:
+  - Merged `stages/base.ts` + `utils/stage-helpers.ts` → `stages/utils.ts`
+  - Renamed `stages/stage-builder.ts` → `stages/builder.ts`
+  - Renamed `tracker/state.ts` → `tracker/cache.ts` (file contains cache implementations)
+  - Renamed `tracker/context.ts` → `tracker/state.ts` (better reflects content)
+  - Renamed `TrackingContext` type → `TrackingState`
+  - Renamed `createTrackingContext()` → `createTrackingState()`
+  - Removed `TrackedStageData` type (use `StageDataMap[StageType]` directly)
 
 ## [0.1.2] - 2026-01-07
 

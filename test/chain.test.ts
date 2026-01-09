@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import { getChain, getChainId, addressEquals, isAddressIn } from "../src/utils/chain";
 import { CHAIN_IDS } from "../src/constants";
+import { isKnownChain, isL2Chain, getChainDisplayName, Chain } from "../src/types/core";
 
 describe("Chain Utilities", () => {
   describe("addressEquals", () => {
@@ -308,5 +309,117 @@ describe("buildDefaultTargets", () => {
     expect(targets.electionMemberGovernor).toBe(false);
     expect(targets.l2ConstitutionalTimelock).toBe(false);
     expect(targets.l2NonConstitutionalTimelock).toBe(false);
+  });
+});
+
+describe("Chain Type Guards", () => {
+  describe("isKnownChain", () => {
+    it("should return true for ethereum", () => {
+      // #given - ethereum chain
+      const chain: Chain = "ethereum";
+
+      // #when - checking if known
+      const result = isKnownChain(chain);
+
+      // #then - should return true
+      expect(result).toBe(true);
+    });
+
+    it("should return true for arb1", () => {
+      // #given - arb1 chain
+      const chain: Chain = "arb1";
+
+      // #when - checking if known
+      const result = isKnownChain(chain);
+
+      // #then - should return true
+      expect(result).toBe(true);
+    });
+
+    it("should return true for nova", () => {
+      // #given - nova chain
+      const chain: Chain = "nova";
+
+      // #when - checking if known
+      const result = isKnownChain(chain);
+
+      // #then - should return true
+      expect(result).toBe(true);
+    });
+
+    it("should return false for unknown", () => {
+      // #given - unknown chain
+      const chain: Chain = "unknown";
+
+      // #when - checking if known
+      const result = isKnownChain(chain);
+
+      // #then - should return false
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("isL2Chain", () => {
+    it("should return true for arb1", () => {
+      // #given - arb1 chain
+      const chain: Chain = "arb1";
+
+      // #when - checking if L2
+      const result = isL2Chain(chain);
+
+      // #then - should return true
+      expect(result).toBe(true);
+    });
+
+    it("should return true for nova", () => {
+      // #given - nova chain
+      const chain: Chain = "nova";
+
+      // #when - checking if L2
+      const result = isL2Chain(chain);
+
+      // #then - should return true
+      expect(result).toBe(true);
+    });
+
+    it("should return false for ethereum", () => {
+      // #given - ethereum chain
+      const chain: Chain = "ethereum";
+
+      // #when - checking if L2
+      const result = isL2Chain(chain);
+
+      // #then - should return false
+      expect(result).toBe(false);
+    });
+
+    it("should return false for unknown", () => {
+      // #given - unknown chain
+      const chain: Chain = "unknown";
+
+      // #when - checking if L2
+      const result = isL2Chain(chain);
+
+      // #then - should return false
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("getChainDisplayName", () => {
+    it("should return 'Ethereum Mainnet' for ethereum", () => {
+      expect(getChainDisplayName("ethereum")).toBe("Ethereum Mainnet");
+    });
+
+    it("should return 'Arbitrum One' for arb1", () => {
+      expect(getChainDisplayName("arb1")).toBe("Arbitrum One");
+    });
+
+    it("should return 'Arbitrum Nova' for nova", () => {
+      expect(getChainDisplayName("nova")).toBe("Arbitrum Nova");
+    });
+
+    it("should return 'Unknown Chain' for unknown", () => {
+      expect(getChainDisplayName("unknown")).toBe("Unknown Chain");
+    });
   });
 });

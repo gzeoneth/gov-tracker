@@ -4,7 +4,7 @@
 
 **Prepare-only SDK**: Tracks stages and prepares transactions but doesn't execute them. Your app handles signing/sending.
 
-**Functional pipeline**: Immutable `TrackingContext` flows through pure stage tracking functions.
+**Functional pipeline**: Immutable `TrackingState` flows through pure stage tracking functions.
 
 ---
 
@@ -30,7 +30,7 @@ trackByTxHash("0x...")
         ↓
 Discovery: detect governor/timelock from tx
         ↓
-Create TrackingContext (immutable state)
+Create TrackingState (immutable state)
         ↓
 Pipeline: track each stage sequentially
   1. PROPOSAL_CREATED → 2. VOTING → 3. QUEUED → 4. L2_TIMELOCK

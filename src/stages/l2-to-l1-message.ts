@@ -28,14 +28,15 @@ import { loggers } from "../utils/logger";
 
 const logStage = loggers.stage.l2ToL1;
 const logExecution = loggers.execution;
-import { getBlockTimestamp, failPrepare } from "./base";
-import { StageBuilder } from "./stage-builder";
-import { queryWithRetry } from "../utils/rpc-utils";
 import {
+  getBlockTimestamp,
+  failPrepare,
   validateStageForSimpleBulk,
   simpleBulkError,
   SimpleBulkResult,
-} from "../utils/stage-helpers";
+} from "./utils";
+import { StageBuilder } from "./builder";
+import { queryWithRetry } from "../utils/rpc-utils";
 import { searchLogsInChunks } from "../utils/log-search";
 import { filterLogs, parseLogsSafe } from "../utils/log-filters";
 import { getCurrentBlockInfo, getL1BlockForL2Block } from "../utils/timing";

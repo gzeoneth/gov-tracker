@@ -12,8 +12,8 @@ import {
   findProposalByTxHash,
   detectProposalType,
 } from "../discovery/governor-discovery";
-import { getBlockTimestamp } from "./base";
-import { StageBuilder } from "./stage-builder";
+import { getBlockTimestamp } from "./utils";
+import { StageBuilder } from "./builder";
 
 /**
  * Track proposal creation stage

@@ -13,8 +13,6 @@ import {
   deserializeCallScheduledData,
   serializeCallScheduledDataArray,
   deserializeCallScheduledDataArray,
-} from "../src/stages/base";
-import {
   createTimelockStageData,
   collectAllScheduledData,
   buildExecutionPayloadData,
@@ -25,9 +23,9 @@ import {
   validateStageForSimpleBulk,
   calculateTimelockEta,
   searchAndCompleteTimelockExecution,
-} from "../src/utils/stage-helpers";
+} from "../src/stages/utils";
 import * as timelockDiscovery from "../src/discovery/timelock-discovery";
-import { StageBuilder } from "../src/stages/stage-builder";
+import { StageBuilder } from "../src/stages/builder";
 import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
 
 describe("Serialization Utilities", () => {

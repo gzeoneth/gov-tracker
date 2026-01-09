@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { decodeCalldata, decodeCalldataArray, extractCalldataFromStage } from "../src/calldata";
+import { isRetryable } from "../src/types/calldata";
 import { ethers } from "ethers";
 import { TIMELOCK_SELECTORS, ADDRESSES } from "../src/constants";
 import type { TrackedStage } from "../src/types";
@@ -131,7 +132,7 @@ describe("Calldata Decoder", () => {
       // The first parameter should have L1 address context
       if (result.parameters && result.parameters[0]?.type === "address") {
         // Address labeling should use L1 context
-        expect(result.parameters[0].value).toBeTruthy();
+        expect(result.parameters[0].displayValue).toBeTruthy();
       }
     });
   });
@@ -634,10 +635,10 @@ describe("Nested Array Parameter Decoding", () => {
 
     // Check retryable parameters
     const inboxParam = retryableDecoded?.parameters?.find((p) => p.name === "inbox");
-    expect(inboxParam?.value.toLowerCase()).toBe(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase());
+    expect(inboxParam?.displayValue.toLowerCase()).toBe(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase());
 
     const l2TargetParam = retryableDecoded?.parameters?.find((p) => p.name === "l2Target");
-    expect(l2TargetParam?.value.toLowerCase()).toBe(
+    expect(l2TargetParam?.displayValue.toLowerCase()).toBe(
       "0x1234567890123456789012345678901234567890".toLowerCase()
     );
   });
@@ -693,5 +694,69 @@ describe("Nested Array Parameter Decoding", () => {
     expect(l2CalldataParam?.isNested).toBe(true);
     expect(l2CalldataParam?.nested).toBeDefined();
     expect(l2CalldataParam?.nested?.signature).toContain("transfer");
+  });
+});
+
+describe("isRetryable type guard", () => {
+  it("should return true for retryable calldata", async () => {
+    // #given - a retryable ticket payload
+    const innerCalldata = "0x";
+    const retryablePayload = ethers.utils.defaultAbiCoder.encode(
+      ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+      [
+        ADDRESSES.ARB1_DELAYED_INBOX,
+        "0x3333333333333333333333333333333333333333",
+        "0",
+        "200000",
+        "500000000",
+        innerCalldata,
+      ]
+    );
+
+    const encoded = ethers.utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      [
+        [ADDRESSES.RETRYABLE_TICKET_MAGIC],
+        ["0"],
+        [retryablePayload],
+        ethers.constants.HashZero,
+        ethers.constants.HashZero,
+        0,
+      ]
+    );
+
+    const calldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+    // #when - decoding and extracting nested retryable
+    const result = await decodeCalldata(calldata);
+    const bytesArrayParam = result.parameters?.find((p) => p.type === "bytes[]");
+    const retryableDecoded = bytesArrayParam?.nestedArray?.[0];
+
+    // #then - isRetryable should return true
+    expect(retryableDecoded).toBeDefined();
+    expect(isRetryable(retryableDecoded!)).toBe(true);
+  });
+
+  it("should return false for regular calldata", async () => {
+    // #given - a regular function call
+    const iface = new ethers.utils.Interface(["function transfer(address to, uint256 amount)"]);
+    const calldata = iface.encodeFunctionData("transfer", [
+      "0x1111111111111111111111111111111111111111",
+      ethers.utils.parseEther("1.0"),
+    ]);
+
+    // #when - decoding
+    const result = await decodeCalldata(calldata);
+
+    // #then - isRetryable should return false
+    expect(isRetryable(result)).toBe(false);
+  });
+
+  it("should return false when isRetryable field is undefined", async () => {
+    // #given - empty calldata
+    const result = await decodeCalldata("");
+
+    // #then - isRetryable should return false
+    expect(isRetryable(result)).toBe(false);
   });
 });

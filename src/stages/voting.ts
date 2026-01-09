@@ -15,7 +15,7 @@ import {
   detectProposalType,
 } from "../discovery/governor-discovery";
 import { checkVettingPeriod } from "../discovery/security-council";
-import { StageBuilder } from "./stage-builder";
+import { StageBuilder } from "./builder";
 import {
   getCurrentBlockInfo,
   calculateRemainingSeconds,

@@ -214,12 +214,6 @@ export type TrackedStage = TrackedStageVariants[StageType];
 export type TypedTrackedStage<T extends StageType> = TrackedStageVariants[T];
 
 /**
- * Union of all stage data types.
- * Useful for functions that accept any stage data without knowing the type.
- */
-export type TrackedStageData = StageDataMap[StageType];
-
-/**
  * Type guard to check if a stage is of a specific type.
  * When used in conditionals, narrows the stage to TypedTrackedStage<T>.
  *

@@ -38,6 +38,8 @@ export type {
   StageType,
   StageStatus,
   Chain,
+  KnownChain,
+  L2Chain,
   ChainId,
   TrackedStage,
   StageTransaction,
@@ -108,7 +110,7 @@ export type {
 } from "./types";
 
 // Type guards
-export { isStageType, getStageData } from "./types";
+export { isStageType, getStageData, isKnownChain, isL2Chain, isRetryable } from "./types";
 
 // Constants
 export {
@@ -133,7 +135,7 @@ export {
   extractOperationId,
   isTimelockStage,
   findStage,
-} from "./stages/base";
+} from "./stages/utils";
 
 // ============================================================================
 // TIER 2: Advanced API - Power user functions
@@ -250,7 +252,7 @@ export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
 export { addressEquals, isAddressIn, getChain } from "./utils/chain";
-export { chainIdToChain, chainToChainId } from "./types";
+export { chainIdToChain, chainToChainId, getChainDisplayName } from "./types";
 
 // Error classification
 export { isGasEstimationError } from "./utils/rpc-utils";
@@ -309,10 +311,10 @@ export {
 // TIER 8: Cache Implementations
 // ============================================================================
 
-export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/state";
+export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/cache";
 
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)
 // ============================================================================
 
-export { createCheckpoint, createTrackingContext } from "./tracker/context";
+export { createCheckpoint, createTrackingState } from "./tracker/state";

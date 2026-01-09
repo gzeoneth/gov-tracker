@@ -21,6 +21,21 @@ import * as path from "path";
 import * as fs from "fs";
 import debug from "debug";
 import { Command, Option } from "commander";
+
+// Read version from package.json
+function getPackageVersion(): string {
+  const candidates = [
+    path.join(__dirname, "..", "..", "package.json"), // dist/cli -> package.json
+    path.join(__dirname, "..", "..", "..", "package.json"), // src/cli -> package.json
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      return pkg.version || "unknown";
+    }
+  }
+  return "unknown";
+}
 import {
   createTracker,
   ProposalStageTracker,
@@ -224,9 +239,9 @@ function createProgressCallback() {
 }
 
 const program = new Command()
-  .name("monitor")
-  .description("Monitor Arbitrum governance proposals")
-  .version("0.1.0");
+  .name("gov-tracker")
+  .description("Track and execute Arbitrum DAO governance proposal lifecycle stages")
+  .version(getPackageVersion());
 
 // ============================================================================
 // Run Command

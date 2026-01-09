@@ -51,43 +51,50 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
 
   describe("Deterministic Salt Computation", () => {
     it("should compute and cache L1 timelock salt from L2→L1 message", async () => {
+      // #given - stages tracked from a constitutional proposal with L1 timelock
       const l2ToL1Stage = governorStages.find((s) => s.type === "L2_TO_L1_MESSAGE");
       const l1TimelockStage = governorStages.find((s) => s.type === "L1_TIMELOCK");
 
+      // #then - both stages should be found
       expect(l2ToL1Stage).toBeDefined();
       expect(l1TimelockStage).toBeDefined();
 
-      // L2→L1 message should store the raw event
+      // #then - L2→L1 message should store the raw event
       expect(l2ToL1Stage!.data.l2ToL1TxEvent).toBeDefined();
       expect(l2ToL1Stage!.data.l2ToL1TxEvent.data).toBeDefined();
 
-      // L1 timelock should have salt and predecessor decoded from event
+      // #then - L1 timelock should have salt and predecessor decoded from event
       expect(l1TimelockStage!.data.salt).toMatch(/^0x[a-fA-F0-9]{64}$/);
       expect(l1TimelockStage!.data.predecessor).toMatch(/^0x[a-fA-F0-9]{64}$/);
 
-      // Should successfully prepare with cached salt
+      // #when - preparing transaction with cached salt
       const prepResult = await tracker.prepareTransaction(l1TimelockStage!, {
         prepareCompleted: true,
       });
+
+      // #then - preparation should succeed
       expect(prepResult.success).toBe(true);
 
       console.log("✓ L1 timelock salt cached from L2→L1 message:", l1TimelockStage!.data.salt);
     });
 
     it("should compute and cache L2 governor salt from description", async () => {
+      // #given - stages tracked from a governor proposal with description
       const proposalStage = governorStages.find((s) => s.type === "PROPOSAL_CREATED");
       const l2TimelockStage = governorStages.find((s) => s.type === "L2_TIMELOCK");
 
+      // #then - both stages should be found
       expect(proposalStage).toBeDefined();
       expect(l2TimelockStage).toBeDefined();
 
+      // #given - expected salt computed from proposal description
       const description = proposalStage!.data.description as string;
       const expectedSalt = saltFromDescription(description);
 
-      // L2 timelock should cache salt computed from description
+      // #then - L2 timelock should cache salt computed from description
       expect(l2TimelockStage!.data.salt).toBe(expectedSalt);
 
-      // Should successfully prepare with cached salt
+      // #when - preparing transaction with cached salt
       const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
         prepareCompleted: true,
       });
@@ -97,6 +104,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
         console.error("Stage data:", JSON.stringify(l2TimelockStage!.data, null, 2));
       }
 
+      // #then - preparation should succeed
       expect(prepResult.success).toBe(true);
 
       console.log(
@@ -106,41 +114,49 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
     });
 
     it("should compute and cache Security Council salt from members and nonce", async () => {
+      // #given - L2 timelock stage from a Security Council rotation proposal
       const l2TimelockStage = scStages.find((s) => s.type === "L2_TIMELOCK");
+
+      // #then - stage should be found
       expect(l2TimelockStage).toBeDefined();
 
-      // Should detect as Security Council operation
+      // #then - should detect as Security Council operation with 12 members
       expect(l2TimelockStage!.data.isSecurityCouncilOperation).toBe(true);
       expect(l2TimelockStage!.data.securityCouncilMembers).toHaveLength(12);
       expect(l2TimelockStage!.data.securityCouncilNonce).toBeDefined();
 
-      // Should cache SC-specific salt
+      // #then - should cache SC-specific salt (non-zero)
       const cachedSalt = l2TimelockStage!.data.salt as string;
       expect(cachedSalt).toMatch(/^0x[a-fA-F0-9]{64}$/);
       expect(cachedSalt).not.toBe(ethers.constants.HashZero);
 
-      // Should successfully prepare with cached SC salt
+      // #when - preparing transaction with cached SC salt
       const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
         prepareCompleted: true,
       });
+
+      // #then - preparation should succeed
       expect(prepResult.success).toBe(true);
 
       console.log("✓ Security Council salt cached from on-chain:", cachedSalt.slice(0, 10) + "...");
     });
 
     it("should allow user to override cached salt via options", async () => {
+      // #given - L1 timelock stage with cached salt from L2→L1 message
       const l1TimelockStage = governorStages.find((s) => s.type === "L1_TIMELOCK");
       expect(l1TimelockStage).toBeDefined();
 
+      // #given - a custom salt to override the cached value
       const customSalt = "0x1234567890123456789012345678901234567890123456789012345678901234";
 
-      // Should accept custom salt with skipSaltValidation
+      // #when - preparing transaction with custom salt override and skip validation
       const prepResult = await tracker.prepareTransaction(l1TimelockStage!, {
         salt: customSalt,
         skipSaltValidation: true,
         prepareCompleted: true,
       });
 
+      // #then - preparation should succeed with custom salt
       expect(prepResult.success).toBe(true);
       console.log("✓ User salt override accepted");
     });

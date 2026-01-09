@@ -39,6 +39,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
     });
 
     it("should restore completed stages from cache without RPC calls", async () => {
+      // #given - RPC providers and a tracker with file cache configured
       const ethRpc = process.env.ETH_RPC;
       if (!ethRpc) {
         throw new Error("RPC URLs required: Set ETH_RPC environment variables");
@@ -50,7 +51,6 @@ describe.skipIf(process.env.NO_RPC === "1")(
       const l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
       const novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
 
-      // First track: Fresh (requires RPC calls)
       const tracker1 = createTracker({
         l1Provider,
         l2Provider,
@@ -58,6 +58,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         cachePath: TEST_CACHE_PATH,
       });
 
+      // #when - tracking a completed proposal for the first time (populates cache)
       const start1 = Date.now();
       const results1 = await tracker1.trackByTxHash(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
@@ -65,17 +66,15 @@ describe.skipIf(process.env.NO_RPC === "1")(
       const result1 = results1[0];
       const time1 = Date.now() - start1;
 
-      // Verify first track completed all stages
+      // #then - first track completes all stages and writes cache
       expect(result1.isComplete).toBe(true);
       expect(result1.stages.every((s) => s.status === "COMPLETED" || s.status === "SKIPPED")).toBe(
         true
       );
       console.log(`First track: ${time1}ms, ${result1.stages.length} stages`);
-
-      // Verify cache was written
       expect(fs.existsSync(TEST_CACHE_PATH)).toBe(true);
 
-      // Second track: Should be zero-RPC (all from cache)
+      // #given - a second tracker instance with same cache path
       const tracker2 = createTracker({
         l1Provider,
         l2Provider,
@@ -83,6 +82,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         cachePath: TEST_CACHE_PATH,
       });
 
+      // #when - tracking the same proposal again (should use cache)
       const start2 = Date.now();
       const results2 = await tracker2.trackByTxHash(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
@@ -90,22 +90,16 @@ describe.skipIf(process.env.NO_RPC === "1")(
       const result2 = results2[0];
       const time2 = Date.now() - start2;
 
-      // Verify second track is fast (zero-RPC)
+      // #then - second track is fast (< 100ms) with identical results
       console.log(`Second track: ${time2}ms (speedup: ${(time1 / time2).toFixed(0)}x)`);
-
-      // Second track should be much faster (< 100ms for zero-RPC)
       expect(time2).toBeLessThan(100);
-
-      // Results should be identical
       expect(result2.isComplete).toBe(true);
       expect(result2.stages.length).toBe(result1.stages.length);
 
-      // All stages should be COMPLETED or SKIPPED
       for (const stage of result2.stages) {
         expect(["COMPLETED", "SKIPPED"]).toContain(stage.status);
       }
 
-      // Verify stage data matches
       for (let i = 0; i < result1.stages.length; i++) {
         expect(result2.stages[i].type).toBe(result1.stages[i].type);
         expect(result2.stages[i].status).toBe(result1.stages[i].status);
@@ -116,7 +110,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
     });
 
     it("should use unified cache format for all checkpoint types", async () => {
-      // Create a mock cache with checkpoints (using tx: key format)
+      // #given - a mock cache file with both discovery watermarks and tx checkpoint entries
       const mockCache = {
         "discovery:watermarks": {
           version: 1,
@@ -159,17 +153,15 @@ describe.skipIf(process.env.NO_RPC === "1")(
         } as TrackingCheckpoint,
       };
 
-      // Write mock cache
       fs.writeFileSync(TEST_CACHE_PATH, JSON.stringify(mockCache, null, 2));
 
-      // Read it back using the static method
+      // #when - reading cache status using the static method
       const { watermarks, checkpoints } =
         await ProposalStageTracker.readCacheStatus(TEST_CACHE_PATH);
 
-      // Verify unified format
-      // Watermarks returned separately, checkpoints only includes tx: keys
+      // #then - watermarks and checkpoints are parsed separately in unified format
       expect(watermarks.constitutionalGovernor).toBe(12345678);
-      expect(checkpoints.size).toBe(1); // Only tx: checkpoint (watermarks returned separately)
+      expect(checkpoints.size).toBe(1);
 
       const govCheckpoint = checkpoints.get("tx:0xtest123");
       expect(govCheckpoint).toBeDefined();
@@ -180,18 +172,11 @@ describe.skipIf(process.env.NO_RPC === "1")(
     });
 
     it("should preserve PENDING stages with their data across cache resume", async () => {
-      // This test verifies the fix for the bug where PENDING stages were not saved
-      // to the checkpoint, causing data loss (like callScheduledData, ETA) on resume.
-      //
-      // Previously: only COMPLETED/SKIPPED stages were saved
-      // Now: all tracked stages (not NOT_STARTED) are saved
-
-      // Create mock providers (we won't actually call them in this unit test)
+      // #given - a tracking context with a PENDING L2_TIMELOCK stage containing critical data
       const mockProvider = {
         getBlockNumber: async () => 12345678,
       } as unknown as ethers.providers.Provider;
 
-      // Create a tracking context with PENDING stage data
       const pendingStage: TrackedStage = {
         type: "L2_TIMELOCK",
         status: "PENDING",
@@ -236,7 +221,6 @@ describe.skipIf(process.env.NO_RPC === "1")(
         },
       };
 
-      // Create context with the pending stage
       const ctx = createTrackingContext({
         providers: {
           l1: mockProvider,
@@ -251,16 +235,15 @@ describe.skipIf(process.env.NO_RPC === "1")(
         },
       });
 
-      // Manually add the PENDING stage to the context's stages
       const ctxWithPendingStage = {
         ...ctx,
         stages: ctx.stages.map((s) => (s.type === "L2_TIMELOCK" ? pendingStage : s)),
       };
 
-      // Create checkpoint
+      // #when - creating a checkpoint from context with PENDING stage
       const checkpoint = createCheckpoint(ctxWithPendingStage);
 
-      // Verify PENDING stage is included in completedStages
+      // #then - PENDING stage is included in checkpoint with all critical data preserved
       expect(checkpoint.cachedData.completedStages?.length).toBeGreaterThan(0);
 
       const savedPendingStage = checkpoint.cachedData.completedStages?.find(
@@ -268,8 +251,6 @@ describe.skipIf(process.env.NO_RPC === "1")(
       );
       expect(savedPendingStage).toBeDefined();
       expect(savedPendingStage?.status).toBe("PENDING");
-
-      // Verify critical data is preserved
       expect(savedPendingStage?.data.operationId).toBe("0xtest-operation-id");
       expect(savedPendingStage?.data.callScheduledData).toBeDefined();
       expect(savedPendingStage?.data.isSecurityCouncilOperation).toBe(true);
@@ -278,7 +259,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       expect(savedPendingStage?.transactions?.length).toBe(1);
       expect(savedPendingStage?.transactions?.[0].hash).toBe("0xtest-queued-hash");
 
-      // Now verify that loading from this checkpoint restores the data
+      // #when - creating a new context from the checkpoint
       const restoredCtx = createTrackingContext({
         providers: {
           l1: mockProvider,
@@ -294,7 +275,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         checkpoint,
       });
 
-      // Verify the PENDING stage is restored with all data
+      // #then - PENDING stage is restored with all data intact
       const restoredStage = restoredCtx.stages.find((s) => s.type === "L2_TIMELOCK");
       expect(restoredStage).toBeDefined();
       expect(restoredStage?.status).toBe("PENDING");

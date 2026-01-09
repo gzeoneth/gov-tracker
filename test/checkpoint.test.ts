@@ -59,6 +59,7 @@ class MemoryCache implements CacheAdapter {
 describe("Checkpoint Module (Unit Tests)", () => {
   describe("Checkpoint structure validation", () => {
     it("should have required checkpoint fields", () => {
+      // #given - a checkpoint with governor input type and all required fields
       const checkpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -79,6 +80,9 @@ describe("Checkpoint Module (Unit Tests)", () => {
         },
       };
 
+      // #when - accessing checkpoint properties (no action, structure validation)
+
+      // #then - all required fields should be present and correctly typed
       expect(checkpoint.version).toBe(1);
       expect(checkpoint.input.type).toBe("governor");
       expect(checkpoint.lastProcessedStage).toBe("PROPOSAL_CREATED");
@@ -86,6 +90,7 @@ describe("Checkpoint Module (Unit Tests)", () => {
     });
 
     it("should support timelock input type", () => {
+      // #given - a checkpoint with timelock input type
       const checkpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -104,6 +109,9 @@ describe("Checkpoint Module (Unit Tests)", () => {
         },
       };
 
+      // #when - checking input type and accessing timelock-specific fields
+
+      // #then - timelock input fields should be accessible via type narrowing
       expect(checkpoint.input.type).toBe("timelock");
       if (checkpoint.input.type === "timelock") {
         expect(checkpoint.input.operationId).toBe("0x" + "b".repeat(64));
@@ -111,6 +119,7 @@ describe("Checkpoint Module (Unit Tests)", () => {
     });
 
     it("should support discovery input type", () => {
+      // #given - a checkpoint with discovery input type and watermarks
       const checkpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -132,6 +141,9 @@ describe("Checkpoint Module (Unit Tests)", () => {
         },
       };
 
+      // #when - checking discovery input and cached watermarks
+
+      // #then - discovery input type and watermarks should be present
       expect(checkpoint.input.type).toBe("discovery");
       expect(checkpoint.cachedData.discoveryWatermarks).toBeDefined();
     });
@@ -139,9 +151,13 @@ describe("Checkpoint Module (Unit Tests)", () => {
 
   describe("Checkpoint cache key generation", () => {
     it("should use lowercase tx hash for cache key", () => {
+      // #given - a transaction hash with uppercase characters
       const txHash = "0xABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890";
+
+      // #when - generating a cache key from the tx hash
       const expectedKey = `tx:${txHash.toLowerCase()}`;
 
+      // #then - the cache key should be lowercase for consistent lookups
       expect(expectedKey).toBe(
         "tx:0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
       );
@@ -156,6 +172,7 @@ describe("Checkpoint Module (Unit Tests)", () => {
     });
 
     it("should store and retrieve values", async () => {
+      // #given - a checkpoint object to store
       const checkpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -166,39 +183,58 @@ describe("Checkpoint Module (Unit Tests)", () => {
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
 
+      // #when - storing and retrieving the checkpoint from cache
       await cache.set("test-key", checkpoint);
       const retrieved = await cache.get<TrackingCheckpoint>("test-key");
 
+      // #then - the retrieved value should match the stored checkpoint
       expect(retrieved).not.toBeNull();
       expect(retrieved!.version).toBe(1);
     });
 
     it("should return null for non-existent key", async () => {
+      // #given - an empty cache (from beforeEach)
+
+      // #when - attempting to get a key that doesn't exist
       const result = await cache.get("non-existent");
+
+      // #then - should return null
       expect(result).toBeNull();
     });
 
     it("should check key existence", async () => {
+      // #given - a cache with one existing key
       await cache.set("existing-key", { value: 1 });
 
+      // #when - checking existence of existing and non-existing keys
+
+      // #then - has() should return true for existing key, false for missing
       expect(await cache.has("existing-key")).toBe(true);
       expect(await cache.has("non-existing-key")).toBe(false);
     });
 
     it("should delete keys", async () => {
+      // #given - a cache with a key to be deleted
       await cache.set("delete-me", { value: 1 });
       expect(await cache.has("delete-me")).toBe(true);
 
+      // #when - deleting the key
       await cache.delete("delete-me");
+
+      // #then - the key should no longer exist
       expect(await cache.has("delete-me")).toBe(false);
     });
 
     it("should list all keys", async () => {
+      // #given - a cache with multiple keys
       await cache.set("key1", { value: 1 });
       await cache.set("key2", { value: 2 });
       await cache.set("key3", { value: 3 });
 
+      // #when - listing all keys
       const keys = await cache.keys();
+
+      // #then - all stored keys should be returned
       expect(keys).toContain("key1");
       expect(keys).toContain("key2");
       expect(keys).toContain("key3");
@@ -206,11 +242,14 @@ describe("Checkpoint Module (Unit Tests)", () => {
     });
 
     it("should clear all data", async () => {
+      // #given - a cache with multiple entries
       await cache.set("key1", { value: 1 });
       await cache.set("key2", { value: 2 });
 
+      // #when - clearing the cache
       await cache.clear();
 
+      // #then - the cache should be empty
       const keys = await cache.keys();
       expect(keys.length).toBe(0);
     });
@@ -249,8 +288,12 @@ describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () =
 
   describe("Checkpoint generation", () => {
     it("should generate valid checkpoint from tracking result", () => {
+      // #given - an initial tracking result from beforeAll
+
+      // #when - extracting the checkpoint from the result
       const checkpoint = initialResult.checkpoint;
 
+      // #then - checkpoint should have valid structure and version
       expect(checkpoint).toBeDefined();
       expect(checkpoint.version).toBe(1);
       expect(checkpoint.createdAt).toBeGreaterThan(0);
@@ -258,15 +301,23 @@ describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () =
     });
 
     it("should include completed stages in checkpoint", () => {
+      // #given - an initial tracking result from beforeAll
+
+      // #when - extracting cached data from the checkpoint
       const checkpoint = initialResult.checkpoint;
 
+      // #then - completed stages should be cached for resume
       expect(checkpoint.cachedData.completedStages).toBeDefined();
       expect(checkpoint.cachedData.completedStages!.length).toBeGreaterThan(0);
     });
 
     it("should have defined lastProcessedBlock", () => {
+      // #given - an initial tracking result from beforeAll
+
+      // #when - extracting block information from checkpoint
       const checkpoint = initialResult.checkpoint;
 
+      // #then - both L1 and L2 block numbers should be tracked
       expect(checkpoint.lastProcessedBlock).toBeDefined();
       expect(typeof checkpoint.lastProcessedBlock.l1).toBe("number");
       expect(typeof checkpoint.lastProcessedBlock.l2).toBe("number");
@@ -275,35 +326,36 @@ describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () =
 
   describe("Resume from checkpoint", () => {
     it("should resume tracking from checkpoint", async () => {
+      // #given - a checkpoint from the initial tracking result
       const checkpoint = initialResult.checkpoint;
 
+      // #when - resuming tracking from the checkpoint
       const resumed = await tracker.trackFromCheckpoint(checkpoint);
 
+      // #then - resumed result should have same input type and stages
       expect(resumed).toBeDefined();
       expect(resumed.input.type).toBe(checkpoint.input.type);
       expect(resumed.stages.length).toBeGreaterThan(0);
     });
 
     it("should use cached stages when resuming", async () => {
+      // #given - a checkpoint stored in the cache
       const checkpoint = initialResult.checkpoint;
-
-      // Store checkpoint in cache
       const cacheKey = `tx:${CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash.toLowerCase()}`;
       await cache.set(cacheKey, checkpoint);
 
-      // Create a tracker with the cache
+      // #when - tracking with a cache-enabled tracker
       const trackerWithCache = createTracker({
         l1Provider,
         l2Provider,
         novaProvider,
         cache,
       });
-
-      // Track again with cached tracker
       const results = await trackerWithCache.trackByTxHash(
         CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
       );
 
+      // #then - tracking should complete using cached data
       expect(results.length).toBe(1);
       expect(results[0].isComplete).toBe(true);
     });
@@ -311,6 +363,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () =
 
   describe("Cache persistence", () => {
     it("should store checkpoint in cache after tracking", async () => {
+      // #given - a fresh tracker with an empty cache
       const ethRpc = process.env.ETH_RPC;
       if (!ethRpc) {
         throw new Error("ETH_RPC environment variable required");
@@ -330,8 +383,10 @@ describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () =
         cache: newCache,
       });
 
+      // #when - tracking a proposal by transaction hash
       await newTracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash);
 
+      // #then - checkpoint should be automatically stored in the cache
       const cacheKey = `tx:${NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash.toLowerCase()}`;
       const stored = await newCache.get<TrackingCheckpoint>(cacheKey);
 

@@ -94,9 +94,13 @@ function createMockTimelockCheckpoint(
 describe("JSON Dashboard State", () => {
   describe("buildDashboardState", () => {
     it("should return empty state for empty checkpoints", () => {
+      // #given - an empty checkpoints map
       const checkpoints = new Map<string, TrackingCheckpoint>();
+
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should return empty state with zero counts
       expect(state.version).toBe("1.0");
       expect(state.monitorStats.totalTracked).toBe(0);
       expect(state.monitorStats.complete).toBe(0);
@@ -107,6 +111,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should categorize complete proposals correctly", () => {
+      // #given - a checkpoint with all stages completed or skipped
       const stages: TrackedStage[] = [
         createMockStage("PROPOSAL_CREATED", "COMPLETED"),
         createMockStage("VOTING_ACTIVE", "COMPLETED"),
@@ -121,8 +126,10 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-1", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should categorize as complete
       expect(state.monitorStats.totalTracked).toBe(1);
       expect(state.monitorStats.complete).toBe(1);
       expect(state.monitorStats.inProgress).toBe(0);
@@ -131,6 +138,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should categorize in-progress proposals correctly", () => {
+      // #given - a checkpoint with pending stage
       const stages: TrackedStage[] = [
         createMockStage("PROPOSAL_CREATED", "COMPLETED"),
         createMockStage("VOTING_ACTIVE", "PENDING"),
@@ -141,8 +149,10 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-2", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should categorize as in-progress
       expect(state.monitorStats.totalTracked).toBe(1);
       expect(state.monitorStats.complete).toBe(0);
       expect(state.monitorStats.inProgress).toBe(1);
@@ -151,6 +161,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should categorize failed items based on error count", () => {
+      // #given - a checkpoint with high error count
       const stages: TrackedStage[] = [
         createMockStage("PROPOSAL_CREATED", "COMPLETED"),
         createMockStage("VOTING_ACTIVE", "PENDING"),
@@ -160,13 +171,16 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-3", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should categorize as failed
       expect(state.monitorStats.failed).toBe(1);
       expect(state.monitorStats.inProgress).toBe(0);
     });
 
     it("should categorize failed items based on failed stages", () => {
+      // #given - a checkpoint with a FAILED stage
       // To count as "failed" in monitorStats, a proposal must:
       // 1. NOT be complete (i.e., have at least one NOT_STARTED stage)
       // 2. Have at least one FAILED stage
@@ -180,12 +194,15 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-4", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should categorize as failed
       expect(state.monitorStats.failed).toBe(1);
     });
 
     it("should separate proposals and timelock operations", () => {
+      // #given - a mix of governor and timelock checkpoints
       const proposalStages: TrackedStage[] = [createMockStage("PROPOSAL_CREATED", "COMPLETED")];
       const timelockStages: TrackedStage[] = [createMockStage("L2_TIMELOCK", "COMPLETED")];
 
@@ -193,8 +210,10 @@ describe("JSON Dashboard State", () => {
       checkpoints.set("gov-1", createMockGovernorCheckpoint("p1", proposalStages));
       checkpoints.set("tl-1", createMockTimelockCheckpoint("op1", timelockStages));
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should separate into proposals and timelockOps
       expect(state.proposals).toHaveLength(1);
       expect(state.timelockOps).toHaveLength(1);
       expect(state.proposals[0].type).toBe("governor");
@@ -202,6 +221,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should include stage data fields in JSON output", () => {
+      // #given - stages with data fields
       const stages: TrackedStage[] = [
         createMockStage("L2_TIMELOCK", "COMPLETED", "arb1", {
           operationId: "0x123",
@@ -218,9 +238,11 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-1", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
       const entry = state.timelockOps[0];
 
+      // #then - should include all stage data fields
       expect(entry.stages[0].data?.operationId).toBe("0x123");
       expect(entry.stages[0].data?.isSecurityCouncil).toBe(true);
       expect(entry.stages[1].data?.ticketCount).toBe(2);
@@ -229,6 +251,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should include transaction info in stage JSON", () => {
+      // #given - a stage with transaction info
       const builder = new StageBuilder("L2_TIMELOCK", "arb1", "COMPLETED");
       builder.tx("0xabc123", 12345, "arb1", 42161, { timestamp: 1700000000 });
       const stage = builder.build();
@@ -238,9 +261,11 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-tx", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
       const stageJson = state.timelockOps[0].stages[0];
 
+      // #then - should include transaction details
       expect(stageJson.txHash).toBe("0xabc123");
       expect(stageJson.blockNumber).toBe(12345);
       expect(stageJson.timestamp).toBe(1700000000);
@@ -248,6 +273,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should include timing ETA when available", () => {
+      // #given - a stage with timing ETA
       const eta = Math.floor(Date.now() / 1000) + 3600;
       const builder = new StageBuilder("L2_TIMELOCK", "arb1", "PENDING");
       builder.timing({ eta });
@@ -258,12 +284,15 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-eta", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should include ETA in stage JSON
       expect(state.timelockOps[0].stages[0].eta).toBe(eta);
     });
 
     it("should include executable flag when stage is ready", () => {
+      // #given - a READY stage marked as executable
       const builder = new StageBuilder("L2_TIMELOCK", "arb1", "READY");
       builder.executable(true);
       const stage = builder.build();
@@ -273,12 +302,15 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-exec", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should include executable flag
       expect(state.timelockOps[0].stages[0].executable).toBe(true);
     });
 
     it("should calculate summary stats correctly", () => {
+      // #given - stages with various statuses
       const stages: TrackedStage[] = [
         createMockStage("PROPOSAL_CREATED", "COMPLETED"),
         createMockStage("VOTING_ACTIVE", "COMPLETED"),
@@ -293,9 +325,11 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("key-stats", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
       const summary = state.proposals[0].summary;
 
+      // #then - should count each status correctly
       expect(summary.total).toBe(7);
       expect(summary.completed).toBe(2);
       expect(summary.pending).toBe(1);
@@ -304,6 +338,7 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should set governor-specific fields for proposal entries", () => {
+      // #given - a governor checkpoint
       const stages: TrackedStage[] = [createMockStage("PROPOSAL_CREATED", "COMPLETED")];
       const checkpoint: TrackingCheckpoint = {
         version: 1,
@@ -323,15 +358,18 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("gov-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
       const entry = state.proposals[0];
 
+      // #then - should include governor-specific fields
       expect(entry.governorAddress).toBe("0xGOVERNOR");
       expect(entry.proposalId).toBe("12345");
       expect(entry.timelockAddress).toBeUndefined();
     });
 
     it("should set timelock-specific fields for timelock entries", () => {
+      // #given - a timelock checkpoint
       const stages: TrackedStage[] = [createMockStage("L2_TIMELOCK", "COMPLETED")];
       const checkpoint: TrackingCheckpoint = {
         version: 1,
@@ -351,22 +389,27 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("tl-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
       const entry = state.timelockOps[0];
 
+      // #then - should include timelock-specific fields
       expect(entry.timelockAddress).toBe("0xTIMELOCK");
       expect(entry.operationId).toBe("0xOPID");
       expect(entry.governorAddress).toBeUndefined();
     });
 
     it("should handle checkpoint with empty stages array", () => {
+      // #given - a checkpoint with no stages
       const checkpoint = createMockGovernorCheckpoint("empty-stages", []);
 
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("empty-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should handle gracefully
       expect(state.proposals).toHaveLength(1);
       expect(state.proposals[0].isComplete).toBe(false);
       expect(state.proposals[0].stages).toHaveLength(0);
@@ -374,9 +417,8 @@ describe("JSON Dashboard State", () => {
     });
 
     it("should skip non-governor/timelock input types", () => {
+      // #given - a checkpoint with unknown input type
       const checkpoints = new Map<string, TrackingCheckpoint>();
-      // Test with a properly shaped checkpoint that has an "unexpected" type
-      // The function skips anything that's not governor or timelock
       checkpoints.set("unknown-key", {
         version: 1,
         createdAt: Date.now(),
@@ -387,14 +429,17 @@ describe("JSON Dashboard State", () => {
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       });
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should skip the unknown type
       expect(state.proposals).toHaveLength(0);
       expect(state.timelockOps).toHaveLength(0);
       expect(state.monitorStats.totalTracked).toBe(0);
     });
 
     it("should set currentStage to the active stage", () => {
+      // #given - a checkpoint with an active PENDING stage
       const stages: TrackedStage[] = [
         createMockStage("PROPOSAL_CREATED", "COMPLETED"),
         createMockStage("VOTING_ACTIVE", "COMPLETED"),
@@ -406,39 +451,48 @@ describe("JSON Dashboard State", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("active-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should identify the current active stage
       expect(state.proposals[0].currentStage).toBe("PROPOSAL_QUEUED");
       expect(state.proposals[0].currentStatus).toBe("PENDING");
     });
 
     it("should include error info for checkpoints with errors", () => {
+      // #given - a checkpoint with error count > 0
       const stages: TrackedStage[] = [createMockStage("PROPOSAL_CREATED", "COMPLETED")];
       const checkpoint = createMockGovernorCheckpoint("error-checkpoint", stages, 3);
 
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("error-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should include error info
       expect(state.proposals[0].error).toBe("3 consecutive errors");
     });
 
     it("should not include error info when errorCount is 0", () => {
+      // #given - a checkpoint with no errors
       const stages: TrackedStage[] = [createMockStage("PROPOSAL_CREATED", "COMPLETED")];
       const checkpoint = createMockGovernorCheckpoint("no-error", stages, 0);
 
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("no-error-key", checkpoint);
 
+      // #when - building dashboard state
       const state = buildDashboardState(checkpoints);
 
+      // #then - should not include error info
       expect(state.proposals[0].error).toBeUndefined();
     });
   });
 
   describe("writeDashboardState", () => {
     it("should write JSON state to file", () => {
+      // #given - a valid dashboard state
       const state: JsonDashboardState = {
         version: "1.0",
         generatedAt: "2024-01-01T00:00:00.000Z",
@@ -456,8 +510,10 @@ describe("JSON Dashboard State", () => {
       const testFile = path.join(tmpDir, `test-dashboard-state-${Date.now()}.json`);
 
       try {
+        // #when - writing state to file
         writeDashboardState(state, testFile);
 
+        // #then - should write valid JSON
         const content = fs.readFileSync(testFile, "utf-8");
         const parsed = JSON.parse(content);
 

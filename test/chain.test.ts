@@ -10,34 +10,52 @@ import { CHAIN_IDS } from "../src/constants";
 describe("Chain Utilities", () => {
   describe("addressEquals", () => {
     it("should return true for identical addresses", () => {
+      // #given - an Ethereum address
       const addr = "0x1234567890123456789012345678901234567890";
-      expect(addressEquals(addr, addr)).toBe(true);
+
+      // #when - comparing the address to itself
+      const result = addressEquals(addr, addr);
+
+      // #then - should return true
+      expect(result).toBe(true);
     });
 
     it("should be case-insensitive", () => {
+      // #given - the same address in different case formats
       const lower = "0xabcdef0123456789abcdef0123456789abcdef01";
       const upper = "0xABCDEF0123456789ABCDEF0123456789ABCDEF01";
       const mixed = "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01";
 
+      // #when - comparing addresses with different cases
+      // #then - all comparisons should return true
       expect(addressEquals(lower, upper)).toBe(true);
       expect(addressEquals(lower, mixed)).toBe(true);
       expect(addressEquals(upper, mixed)).toBe(true);
     });
 
     it("should return false for different addresses", () => {
+      // #given - two different addresses
       const addr1 = "0x1111111111111111111111111111111111111111";
       const addr2 = "0x2222222222222222222222222222222222222222";
 
-      expect(addressEquals(addr1, addr2)).toBe(false);
+      // #when - comparing different addresses
+      const result = addressEquals(addr1, addr2);
+
+      // #then - should return false
+      expect(result).toBe(false);
     });
 
     it("should handle empty strings", () => {
+      // #given - empty strings and a non-empty address
+      // #when - comparing empty strings to each other and to an address
+      // #then - empty equals empty, but empty does not equal non-empty
       expect(addressEquals("", "")).toBe(true);
       expect(addressEquals("0x123", "")).toBe(false);
     });
   });
 
   describe("isAddressIn", () => {
+    // #given - a list of addresses to search within
     const addresses = [
       "0x1111111111111111111111111111111111111111",
       "0x2222222222222222222222222222222222222222",
@@ -45,25 +63,43 @@ describe("Chain Utilities", () => {
     ];
 
     it("should return true when address is in array", () => {
+      // #given - addresses that exist in the array
+      // #when - checking if they are in the array
+      // #then - should return true for each
       expect(isAddressIn("0x1111111111111111111111111111111111111111", addresses)).toBe(true);
       expect(isAddressIn("0x2222222222222222222222222222222222222222", addresses)).toBe(true);
     });
 
     it("should return false when address is not in array", () => {
-      expect(isAddressIn("0x4444444444444444444444444444444444444444", addresses)).toBe(false);
+      // #given - an address not in the array
+      const notInArray = "0x4444444444444444444444444444444444444444";
+
+      // #when - checking if it is in the array
+      const result = isAddressIn(notInArray, addresses);
+
+      // #then - should return false
+      expect(result).toBe(false);
     });
 
     it("should be case insensitive", () => {
-      expect(
-        isAddressIn("0x1111111111111111111111111111111111111111".toUpperCase(), addresses)
-      ).toBe(true);
-      expect(
-        isAddressIn("0x1111111111111111111111111111111111111111".toLowerCase(), addresses)
-      ).toBe(true);
+      // #given - an address in uppercase and lowercase
+      const addr = "0x1111111111111111111111111111111111111111";
+
+      // #when - checking with different case variations
+      // #then - should return true regardless of case
+      expect(isAddressIn(addr.toUpperCase(), addresses)).toBe(true);
+      expect(isAddressIn(addr.toLowerCase(), addresses)).toBe(true);
     });
 
     it("should return false for empty array", () => {
-      expect(isAddressIn("0x1111111111111111111111111111111111111111", [])).toBe(false);
+      // #given - an empty array
+      const emptyArray: string[] = [];
+
+      // #when - checking if any address is in the empty array
+      const result = isAddressIn("0x1111111111111111111111111111111111111111", emptyArray);
+
+      // #then - should return false
+      expect(result).toBe(false);
     });
   });
 
@@ -75,26 +111,46 @@ describe("Chain Utilities", () => {
     }
 
     it("should return L1 for Ethereum mainnet", async () => {
+      // #given - a provider connected to Ethereum mainnet (chain ID 1)
       const provider = createMockProvider(1);
+
+      // #when - getting the chain name
       const result = await getChain(provider);
+
+      // #then - should return "ethereum"
       expect(result).toBe("ethereum");
     });
 
     it("should return L2 for Arbitrum One", async () => {
+      // #given - a provider connected to Arbitrum One
       const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
+
+      // #when - getting the chain name
       const result = await getChain(provider);
+
+      // #then - should return "arb1"
       expect(result).toBe("arb1");
     });
 
     it("should return NOVA for Arbitrum Nova", async () => {
+      // #given - a provider connected to Arbitrum Nova
       const provider = createMockProvider(CHAIN_IDS.NOVA);
+
+      // #when - getting the chain name
       const result = await getChain(provider);
+
+      // #then - should return "nova"
       expect(result).toBe("nova");
     });
 
     it("should return unknown for unknown chains", async () => {
+      // #given - a provider connected to an unknown chain
       const provider = createMockProvider(999);
+
+      // #when - getting the chain name
       const result = await getChain(provider);
+
+      // #then - should return "unknown"
       expect(result).toBe("unknown");
     });
   });
@@ -107,26 +163,46 @@ describe("Chain Utilities", () => {
     }
 
     it("should return chain ID for Ethereum mainnet", async () => {
+      // #given - a provider connected to Ethereum mainnet
       const provider = createMockProvider(1);
+
+      // #when - getting the chain ID
       const result = await getChainId(provider);
+
+      // #then - should return 1
       expect(result).toBe(1);
     });
 
     it("should return chain ID for Arbitrum One", async () => {
+      // #given - a provider connected to Arbitrum One
       const provider = createMockProvider(CHAIN_IDS.ARB_ONE);
+
+      // #when - getting the chain ID
       const result = await getChainId(provider);
+
+      // #then - should return the Arbitrum One chain ID
       expect(result).toBe(CHAIN_IDS.ARB_ONE);
     });
 
     it("should return chain ID for Arbitrum Nova", async () => {
+      // #given - a provider connected to Arbitrum Nova
       const provider = createMockProvider(CHAIN_IDS.NOVA);
+
+      // #when - getting the chain ID
       const result = await getChainId(provider);
+
+      // #then - should return the Nova chain ID
       expect(result).toBe(CHAIN_IDS.NOVA);
     });
 
     it("should return chain ID for unknown chains", async () => {
+      // #given - a provider connected to an unknown chain
       const provider = createMockProvider(999);
+
+      // #when - getting the chain ID
       const result = await getChainId(provider);
+
+      // #then - should return the chain ID as-is
       expect(result).toBe(999);
     });
   });
@@ -134,14 +210,23 @@ describe("Chain Utilities", () => {
 
 describe("Chain Constants", () => {
   it("should have correct Ethereum chain ID", () => {
+    // #given - the CHAIN_IDS constant
+    // #when - accessing the ETHEREUM chain ID
+    // #then - should be 1 (mainnet)
     expect(CHAIN_IDS.ETHEREUM).toBe(1);
   });
 
   it("should have correct Arbitrum One chain ID", () => {
+    // #given - the CHAIN_IDS constant
+    // #when - accessing the ARB_ONE chain ID
+    // #then - should be 42161
     expect(CHAIN_IDS.ARB_ONE).toBe(42161);
   });
 
   it("should have correct Nova chain ID", () => {
+    // #given - the CHAIN_IDS constant
+    // #when - accessing the NOVA chain ID
+    // #then - should be 42170
     expect(CHAIN_IDS.NOVA).toBe(42170);
   });
 });
@@ -156,8 +241,11 @@ describe("buildDefaultTargets", () => {
   });
 
   it("should include all targets by default", () => {
+    // #given - no options provided
+    // #when - building default targets
     const targets = buildDefaultTargets();
 
+    // #then - all targets should be enabled
     expect(targets.constitutionalGovernor).toBe(true);
     expect(targets.nonConstitutionalGovernor).toBe(true);
     expect(targets.electionNomineeGovernor).toBe(true);
@@ -167,8 +255,11 @@ describe("buildDefaultTargets", () => {
   });
 
   it("should exclude elections when includeElections is false", () => {
+    // #given - includeElections option set to false
+    // #when - building targets
     const targets = buildDefaultTargets({ includeElections: false });
 
+    // #then - election governors should be disabled, others enabled
     expect(targets.constitutionalGovernor).toBe(true);
     expect(targets.nonConstitutionalGovernor).toBe(true);
     expect(targets.electionNomineeGovernor).toBe(false);
@@ -178,8 +269,11 @@ describe("buildDefaultTargets", () => {
   });
 
   it("should include only governors when governorsOnly is true", () => {
+    // #given - governorsOnly option set to true
+    // #when - building targets
     const targets = buildDefaultTargets({ governorsOnly: true });
 
+    // #then - only governor targets should be enabled
     expect(targets.constitutionalGovernor).toBe(true);
     expect(targets.nonConstitutionalGovernor).toBe(true);
     expect(targets.electionNomineeGovernor).toBe(true);
@@ -189,8 +283,11 @@ describe("buildDefaultTargets", () => {
   });
 
   it("should include only timelocks when timelocksOnly is true", () => {
+    // #given - timelocksOnly option set to true
+    // #when - building targets
     const targets = buildDefaultTargets({ timelocksOnly: true });
 
+    // #then - only timelock targets should be enabled
     expect(targets.constitutionalGovernor).toBe(false);
     expect(targets.nonConstitutionalGovernor).toBe(false);
     expect(targets.electionNomineeGovernor).toBe(false);
@@ -200,8 +297,11 @@ describe("buildDefaultTargets", () => {
   });
 
   it("should combine governorsOnly and includeElections options", () => {
+    // #given - governorsOnly true and includeElections false
+    // #when - building targets
     const targets = buildDefaultTargets({ governorsOnly: true, includeElections: false });
 
+    // #then - only non-election governors should be enabled
     expect(targets.constitutionalGovernor).toBe(true);
     expect(targets.nonConstitutionalGovernor).toBe(true);
     expect(targets.electionNomineeGovernor).toBe(false);

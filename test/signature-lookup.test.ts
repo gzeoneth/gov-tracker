@@ -11,114 +11,63 @@ import { TIMELOCK_SELECTORS } from "../src/constants";
 
 describe("Signature Lookup", () => {
   describe("lookupLocalSignature", () => {
-    it("should find schedule selector", () => {
-      // #given - the schedule function selector from timelock constants
+    // Known selector/signature pairs in local registry
+    const knownSelectors = [
+      {
+        name: "schedule",
+        selector: TIMELOCK_SELECTORS.schedule,
+        signature: "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+      },
+      {
+        name: "scheduleBatch",
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+      },
+      {
+        name: "execute",
+        selector: TIMELOCK_SELECTORS.execute,
+        signature: "execute(address,uint256,bytes,bytes32,bytes32)",
+      },
+      {
+        name: "executeBatch",
+        selector: TIMELOCK_SELECTORS.executeBatch,
+        signature: "executeBatch(address[],uint256[],bytes[],bytes32,bytes32)",
+      },
+      { name: "sendTxToL1", selector: "0x928c169a", signature: "sendTxToL1(address,bytes)" },
+      { name: "transfer", selector: "0xa9059cbb", signature: "transfer(address,uint256)" },
+      { name: "approve", selector: "0x095ea7b3", signature: "approve(address,uint256)" },
+      { name: "upgradeTo", selector: "0x3659cfe6", signature: "upgradeTo(address)" },
+      {
+        name: "transferOwnership",
+        selector: "0xf2fde38b",
+        signature: "transferOwnership(address)",
+      },
+      {
+        name: "propose",
+        selector: "0x7d5e81e2",
+        signature: "propose(address[],uint256[],bytes[],string)",
+      },
+      { name: "castVote", selector: "0x56781388", signature: "castVote(uint256,uint8)" },
+      {
+        name: "UpgradeExecutor execute",
+        selector: "0x1cff79cd",
+        signature: "execute(address,bytes)",
+      },
+      { name: "executeCall", selector: "0x61461954", signature: "executeCall(address,bytes)" },
+      {
+        name: "replaceCohort",
+        selector: "0xbf396750",
+        signature: "replaceCohort(address[],address[])",
+      },
+    ];
 
+    it.each(knownSelectors)("should find $name selector", ({ selector, signature }) => {
+      // #given - a known function selector
       // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.schedule);
+      const result = lookupLocalSignature(selector);
 
-      // #then - returns the full function signature
-      expect(result).toBe("schedule(address,uint256,bytes,bytes32,bytes32,uint256)");
-    });
-
-    it("should find scheduleBatch selector", () => {
-      // #given - the scheduleBatch function selector from timelock constants
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.scheduleBatch);
-
-      // #then - returns the full function signature with array types
-      expect(result).toBe("scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)");
-    });
-
-    it("should find execute selector", () => {
-      // #given - the execute function selector from timelock constants
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.execute);
-
-      // #then - returns the full function signature
-      expect(result).toBe("execute(address,uint256,bytes,bytes32,bytes32)");
-    });
-
-    it("should find executeBatch selector", () => {
-      // #given - the executeBatch function selector from timelock constants
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature(TIMELOCK_SELECTORS.executeBatch);
-
-      // #then - returns the full function signature with array types
-      expect(result).toBe("executeBatch(address[],uint256[],bytes[],bytes32,bytes32)");
-    });
-
-    it("should find sendTxToL1 selector", () => {
-      // #given - the ArbSys sendTxToL1 function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x928c169a");
-
-      // #then - returns the full function signature
-      expect(result).toBe("sendTxToL1(address,bytes)");
-    });
-
-    it("should find transfer selector", () => {
-      // #given - the ERC20 transfer function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0xa9059cbb");
-
-      // #then - returns the full function signature
-      expect(result).toBe("transfer(address,uint256)");
-    });
-
-    it("should find approve selector", () => {
-      // #given - the ERC20 approve function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x095ea7b3");
-
-      // #then - returns the full function signature
-      expect(result).toBe("approve(address,uint256)");
-    });
-
-    it("should find upgradeTo selector", () => {
-      // #given - the UUPS proxy upgradeTo function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x3659cfe6");
-
-      // #then - returns the full function signature
-      expect(result).toBe("upgradeTo(address)");
-    });
-
-    it("should find transferOwnership selector", () => {
-      // #given - the Ownable transferOwnership function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0xf2fde38b");
-
-      // #then - returns the full function signature
-      expect(result).toBe("transferOwnership(address)");
-    });
-
-    it("should find propose selector", () => {
-      // #given - the Governor propose function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x7d5e81e2");
-
-      // #then - returns the full function signature
-      expect(result).toBe("propose(address[],uint256[],bytes[],string)");
-    });
-
-    it("should find castVote selector", () => {
-      // #given - the Governor castVote function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x56781388");
-
-      // #then - returns the full function signature
-      expect(result).toBe("castVote(uint256,uint8)");
+      // #then - returns the expected signature
+      expect(result).toBe(signature);
     });
 
     it("should return null for unknown selector", () => {
@@ -146,36 +95,6 @@ describe("Signature Lookup", () => {
       expect(upper).toBe("transfer(address,uint256)");
       expect(lower).toBe("transfer(address,uint256)");
       expect(mixed).toBe("transfer(address,uint256)");
-    });
-
-    it("should find UpgradeExecutor execute selector", () => {
-      // #given - the UpgradeExecutor execute function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x1cff79cd");
-
-      // #then - returns the full function signature
-      expect(result).toBe("execute(address,bytes)");
-    });
-
-    it("should find executeCall selector", () => {
-      // #given - the executeCall function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0x61461954");
-
-      // #then - returns the full function signature
-      expect(result).toBe("executeCall(address,bytes)");
-    });
-
-    it("should find Security Council replaceCohort selector", () => {
-      // #given - the SecurityCouncilManager replaceCohort function selector
-
-      // #when - looking up the selector in the local registry
-      const result = lookupLocalSignature("0xbf396750");
-
-      // #then - returns the full function signature
-      expect(result).toBe("replaceCohort(address[],address[])");
     });
   });
 

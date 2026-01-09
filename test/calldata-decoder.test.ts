@@ -191,8 +191,104 @@ describe("Calldata Decoder", () => {
     });
   });
 
-  describe("extractCalldataFromStage - additional cases", () => {
+  describe("extractCalldataFromStage", () => {
+    it("should extract calldata from PROPOSAL_CREATED stage", () => {
+      // #given - a PROPOSAL_CREATED stage with calldata
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1234"],
+          targets: ["0xABCD"],
+          values: ["100"],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should extract all fields correctly
+      expect(result.calldatas).toEqual(["0x1234"]);
+      expect(result.targets).toEqual(["0xABCD"]);
+      expect(result.values).toEqual(["100"]);
+    });
+
+    it("should handle multiple calldatas in PROPOSAL_CREATED", () => {
+      // #given - a PROPOSAL_CREATED stage with multiple calldatas
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2"],
+          targets: ["0xT1", "0xT2"],
+          values: ["0", "0"],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should handle multiple items correctly
+      expect(result.calldatas).toEqual(["0x1", "0x2"]);
+      expect(result.targets).toEqual(["0xT1", "0xT2"]);
+      expect(result.values).toEqual(["0", "0"]);
+    });
+
+    it("should extract calldata from L2_TIMELOCK stage with callScheduledData", () => {
+      // #given - an L2_TIMELOCK stage with callScheduledData
+      const stage = {
+        type: "L2_TIMELOCK" as const,
+        status: "READY" as const,
+        chain: "arb1" as const,
+        chainId: 42161,
+        transactions: [],
+        data: {
+          operationId: "0xop",
+          timelockAddress: "0xTL",
+          callScheduledData: [
+            { target: "0xTarget1", value: "100", data: "0xData1" },
+            { target: "0xTarget2", value: "0", data: "0xData2" },
+          ],
+        },
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should extract from callScheduledData
+      expect(result.calldatas).toEqual(["0xData1", "0xData2"]);
+      expect(result.targets).toEqual(["0xTarget1", "0xTarget2"]);
+      expect(result.values).toEqual(["100", "0"]);
+    });
+
+    it("should return empty arrays when stage has empty data", () => {
+      // #given - a stage with empty data
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {},
+      };
+
+      // #when - extracting calldata
+      const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should return empty arrays
+      expect(result.calldatas).toEqual([]);
+      expect(result.targets).toEqual([]);
+      expect(result.values).toEqual([]);
+    });
+
     it("should handle empty callScheduledData array", () => {
+      // #given - a timelock stage with empty callScheduledData
       const stage = {
         type: "L2_TIMELOCK" as const,
         status: "READY" as const,
@@ -204,13 +300,59 @@ describe("Calldata Decoder", () => {
         },
       };
 
+      // #when - extracting calldata
       const result = extractCalldataFromStage(stage as unknown as TrackedStage);
+
+      // #then - should return empty arrays
       expect(result.calldatas).toEqual([]);
       expect(result.targets).toEqual([]);
       expect(result.values).toEqual([]);
     });
 
+    it("should throw for mismatched targets array length", () => {
+      // #given - a stage with mismatched targets length
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "ethereum" as const,
+        chainId: 1,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2", "0x3"],
+          targets: ["0xT1"], // Too short
+          values: ["0", "0", "0"],
+        },
+      };
+
+      // #when/#then - should throw error for mismatch
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in targets length/
+      );
+    });
+
+    it("should throw for mismatched values array length", () => {
+      // #given - a stage with mismatched values length
+      const stage = {
+        type: "PROPOSAL_CREATED" as const,
+        status: "COMPLETED" as const,
+        chain: "arb1" as const,
+        chainId: 42161,
+        transactions: [],
+        data: {
+          calldatas: ["0x1", "0x2"],
+          targets: ["0xT1", "0xT2"],
+          values: ["0"], // Only one value for two calldatas
+        },
+      };
+
+      // #when/#then - should throw error for mismatch
+      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
+        /Mismatch in values length/
+      );
+    });
+
     it("should throw when value is missing in callScheduledData", () => {
+      // #given - a timelock stage with missing value field
       const stage = {
         type: "L1_TIMELOCK" as const,
         status: "READY" as const,
@@ -228,27 +370,9 @@ describe("Calldata Decoder", () => {
         },
       };
 
+      // #when/#then - should throw error for missing value
       expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
         /Missing value in callScheduledData at index 0/
-      );
-    });
-
-    it("should throw for mismatched values array length", () => {
-      const stage = {
-        type: "PROPOSAL_CREATED" as const,
-        status: "COMPLETED" as const,
-        chain: "arb1" as const,
-        chainId: 42161,
-        transactions: [],
-        data: {
-          calldatas: ["0x1", "0x2"],
-          targets: ["0xT1", "0xT2"],
-          values: ["0"], // Only one value for two calldatas
-        },
-      };
-
-      expect(() => extractCalldataFromStage(stage as unknown as TrackedStage)).toThrow(
-        /Mismatch in values length/
       );
     });
   });

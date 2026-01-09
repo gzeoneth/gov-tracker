@@ -84,12 +84,9 @@ export async function trackVotingStage(
     !votingData.extendedDeadline.eq(votingData.deadline);
   const extensionPossible = !votingData.isVotingPeriodOver && !votingData.hasReachedQuorum;
 
-  // Format vote amounts for display (ARB tokens)
-  const formatVotes = (votes: ethers.BigNumber): string => {
-    const formatted = ethers.utils.formatEther(votes);
-    // Remove trailing zeros and unnecessary decimal point
-    return formatted.replace(/\.?0+$/, "") + " ARB";
-  };
+  // Format vote amounts for display (ARB tokens) - removes trailing zeros
+  const formatVotes = (votes: ethers.BigNumber): string =>
+    ethers.utils.formatEther(votes).replace(/\.?0+$/, "") + " ARB";
 
   // Add voting statistics
   builder.data({

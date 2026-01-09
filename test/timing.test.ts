@@ -15,6 +15,8 @@ import {
   getL1BlockForL2Block,
   getFirstL2BlockForL1Block,
   blockAfterDelay,
+  getCurrentBlockInfo,
+  invalidateBlockInfoCache,
 } from "../src/utils/timing";
 import { BigNumber } from "ethers";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
@@ -575,6 +577,121 @@ describe("Timing Utilities", () => {
 
       // #then - returns the block that is before target
       expect(result).toBeGreaterThan(1000);
+    });
+  });
+
+  describe("getCurrentBlockInfo", () => {
+    it("should fetch block info from provider on first call", async () => {
+      // #given - fresh provider with no cached data
+      invalidateBlockInfoCache(); // Ensure clean state
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue({ number: 12345, timestamp: 1700000000 }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await getCurrentBlockInfo(mockProvider);
+
+      // #then
+      expect(result.blockNumber).toBe(12345);
+      expect(result.timestamp).toBe(1700000000);
+      expect(mockProvider.getBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return cached result on subsequent calls within TTL", async () => {
+      // #given - provider that was recently called
+      invalidateBlockInfoCache();
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue({ number: 12345, timestamp: 1700000000 }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - first call populates cache
+      const result1 = await getCurrentBlockInfo(mockProvider);
+      // second call should use cache
+      const result2 = await getCurrentBlockInfo(mockProvider);
+
+      // #then - should only call getBlock once
+      expect(result1).toEqual(result2);
+      expect(mockProvider.getBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it("should use separate cache for different providers", async () => {
+      // #given - two different providers
+      invalidateBlockInfoCache();
+      const mockProvider1 = {
+        getBlock: vi.fn().mockResolvedValue({ number: 11111, timestamp: 1700000000 }),
+      } as unknown as ethers.providers.Provider;
+      const mockProvider2 = {
+        getBlock: vi.fn().mockResolvedValue({ number: 22222, timestamp: 1700000001 }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result1 = await getCurrentBlockInfo(mockProvider1);
+      const result2 = await getCurrentBlockInfo(mockProvider2);
+
+      // #then - both providers should be called
+      expect(result1.blockNumber).toBe(11111);
+      expect(result2.blockNumber).toBe(22222);
+      expect(mockProvider1.getBlock).toHaveBeenCalledTimes(1);
+      expect(mockProvider2.getBlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("invalidateBlockInfoCache", () => {
+    it("should clear cached data for all providers", async () => {
+      // #given - multiple providers with cached data
+      invalidateBlockInfoCache(); // Start fresh
+      const mockProvider1 = {
+        getBlock: vi.fn().mockResolvedValue({ number: 11111, timestamp: 1700000000 }),
+      } as unknown as ethers.providers.Provider;
+      const mockProvider2 = {
+        getBlock: vi.fn().mockResolvedValue({ number: 22222, timestamp: 1700000001 }),
+      } as unknown as ethers.providers.Provider;
+
+      // Populate cache
+      await getCurrentBlockInfo(mockProvider1);
+      await getCurrentBlockInfo(mockProvider2);
+      expect(mockProvider1.getBlock).toHaveBeenCalledTimes(1);
+      expect(mockProvider2.getBlock).toHaveBeenCalledTimes(1);
+
+      // #when - invalidate cache
+      invalidateBlockInfoCache();
+
+      // #then - next calls should fetch fresh data
+      await getCurrentBlockInfo(mockProvider1);
+      await getCurrentBlockInfo(mockProvider2);
+      expect(mockProvider1.getBlock).toHaveBeenCalledTimes(2);
+      expect(mockProvider2.getBlock).toHaveBeenCalledTimes(2);
+    });
+
+    it("should handle invalidation when cache is already empty", () => {
+      // #given - empty cache
+      invalidateBlockInfoCache();
+
+      // #when / #then - should not throw
+      expect(() => invalidateBlockInfoCache()).not.toThrow();
+    });
+
+    it("should allow immediate re-caching after invalidation", async () => {
+      // #given - provider with cached data
+      invalidateBlockInfoCache();
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ number: 11111, timestamp: 1700000000 })
+          .mockResolvedValueOnce({ number: 22222, timestamp: 1700000001 }),
+      } as unknown as ethers.providers.Provider;
+
+      await getCurrentBlockInfo(mockProvider);
+      invalidateBlockInfoCache();
+
+      // #when - fetch again and use cache
+      const result1 = await getCurrentBlockInfo(mockProvider);
+      const result2 = await getCurrentBlockInfo(mockProvider);
+
+      // #then - should have new value and cache it
+      expect(result1.blockNumber).toBe(22222);
+      expect(result2.blockNumber).toBe(22222);
+      expect(mockProvider.getBlock).toHaveBeenCalledTimes(2); // Initial + after invalidation
     });
   });
 });

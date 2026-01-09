@@ -226,22 +226,33 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
   failed: number;
   skipped: number;
 } {
-  const counts = stages.reduce(
-    (acc, s) => {
-      acc[s.status]++;
-      return acc;
-    },
-    { COMPLETED: 0, PENDING: 0, READY: 0, FAILED: 0, SKIPPED: 0, NOT_STARTED: 0 }
-  );
+  let completed = 0,
+    pending = 0,
+    ready = 0,
+    failed = 0,
+    skipped = 0;
 
-  return {
-    total: stages.length,
-    completed: counts.COMPLETED,
-    pending: counts.PENDING,
-    ready: counts.READY,
-    failed: counts.FAILED,
-    skipped: counts.SKIPPED,
-  };
+  for (const stage of stages) {
+    switch (stage.status) {
+      case "COMPLETED":
+        completed++;
+        break;
+      case "PENDING":
+        pending++;
+        break;
+      case "READY":
+        ready++;
+        break;
+      case "FAILED":
+        failed++;
+        break;
+      case "SKIPPED":
+        skipped++;
+        break;
+    }
+  }
+
+  return { total: stages.length, completed, pending, ready, failed, skipped };
 }
 
 /**

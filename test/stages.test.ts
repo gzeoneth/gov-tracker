@@ -218,6 +218,62 @@ describe("getBlockTimestamp", () => {
     // #when / #then - should throw with block number in message
     await expect(getBlockTimestamp(99999, mockProvider)).rejects.toThrow("Block 99999 not found");
   });
+
+  it("should cache block timestamps within same provider", async () => {
+    // #given - mock provider
+    const mockProvider = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000000 }),
+    } as unknown as ethers.providers.Provider;
+
+    // #when - call twice for same block
+    const result1 = await getBlockTimestamp(12345, mockProvider);
+    const result2 = await getBlockTimestamp(12345, mockProvider);
+
+    // #then - should only call getBlock once (cached)
+    expect(result1).toBe(1700000000);
+    expect(result2).toBe(1700000000);
+    expect(mockProvider.getBlock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should cache different blocks independently", async () => {
+    // #given - mock provider returning different timestamps per block
+    const mockProvider = {
+      getBlock: vi.fn().mockImplementation((blockNum) => {
+        return Promise.resolve({ timestamp: 1700000000 + blockNum });
+      }),
+    } as unknown as ethers.providers.Provider;
+
+    // #when - fetch different blocks
+    const result1 = await getBlockTimestamp(100, mockProvider);
+    const result2 = await getBlockTimestamp(200, mockProvider);
+    const result3 = await getBlockTimestamp(100, mockProvider); // cached
+
+    // #then - each unique block fetched once
+    expect(result1).toBe(1700000100);
+    expect(result2).toBe(1700000200);
+    expect(result3).toBe(1700000100);
+    expect(mockProvider.getBlock).toHaveBeenCalledTimes(2);
+  });
+
+  it("should use separate cache for different providers", async () => {
+    // #given - two providers with same block returning different timestamps
+    const mockProvider1 = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000001 }),
+    } as unknown as ethers.providers.Provider;
+    const mockProvider2 = {
+      getBlock: vi.fn().mockResolvedValue({ timestamp: 1700000002 }),
+    } as unknown as ethers.providers.Provider;
+
+    // #when - get same block from different providers
+    const result1 = await getBlockTimestamp(12345, mockProvider1);
+    const result2 = await getBlockTimestamp(12345, mockProvider2);
+
+    // #then - each provider called once with correct result
+    expect(result1).toBe(1700000001);
+    expect(result2).toBe(1700000002);
+    expect(mockProvider1.getBlock).toHaveBeenCalledTimes(1);
+    expect(mockProvider2.getBlock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("Type Guards", () => {

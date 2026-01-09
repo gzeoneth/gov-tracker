@@ -11,9 +11,6 @@ import { PROPOSAL_STATE_MAP, PROPOSAL_STATE } from "../constants";
 import { GOVERNOR_ABI, governorInterface } from "../abis";
 import { checkVettingPeriod } from "../discovery/security-council";
 import { loggers } from "../utils/logger";
-
-const logStage = loggers.stage.proposalQueued;
-const logExecution = loggers.execution;
 import {
   getProposalState,
   findProposalQueuedEvent,
@@ -25,6 +22,9 @@ import {
 } from "../discovery/timelock-discovery";
 import { serializeCallScheduledDataArray, getBlockTimestamp, failPrepare } from "./utils";
 import { StageBuilder } from "./builder";
+
+const logStage = loggers.stage.proposalQueued;
+const logExecution = loggers.execution;
 
 /**
  * Track proposal queued stage

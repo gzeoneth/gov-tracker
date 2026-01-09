@@ -625,17 +625,12 @@ export async function calculateBatchRetryableValues(
   payloads: string[],
   provider: ethers.providers.Provider
 ): Promise<BigNumber[]> {
-  const calculatedValues: BigNumber[] = [];
-  for (let i = 0; i < targets.length; i++) {
-    const retryableValue = await calculateRetryableExecutionValue(
-      timelockAddress,
-      targets[i],
-      payloads[i],
-      provider
-    );
-    calculatedValues.push(retryableValue ?? values[i]);
-  }
-  return calculatedValues;
+  const results = await Promise.all(
+    targets.map((target, i) =>
+      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider)
+    )
+  );
+  return results.map((retryableValue, i) => retryableValue ?? values[i]);
 }
 
 /**

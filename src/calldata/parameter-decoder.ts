@@ -58,6 +58,21 @@ const KNOWN_ADDRESSES: Record<Exclude<Chain, "unknown">, Record<string, string>>
 };
 
 /**
+ * Known addresses registry indexed by lowercase address for O(1) lookup
+ */
+const KNOWN_ADDRESSES_INDEXED: Record<
+  Exclude<Chain, "unknown">,
+  Record<string, string>
+> = Object.fromEntries(
+  Object.entries(KNOWN_ADDRESSES).map(([chain, addresses]) => [
+    chain,
+    Object.fromEntries(
+      Object.entries(addresses).map(([addr, label]) => [addr.toLowerCase(), label])
+    ),
+  ])
+) as Record<Exclude<Chain, "unknown">, Record<string, string>>;
+
+/**
  * Get known address label
  *
  * @param address - Contract address
@@ -66,17 +81,7 @@ const KNOWN_ADDRESSES: Record<Exclude<Chain, "unknown">, Record<string, string>>
  */
 export function getAddressLabel(address: string, chain: Chain | undefined): string | undefined {
   if (!chain || chain === "unknown") return undefined;
-
-  const chainAddresses = KNOWN_ADDRESSES[chain];
-  const normalized = address.toLowerCase();
-
-  for (const [addr, label] of Object.entries(chainAddresses)) {
-    if (addr.toLowerCase() === normalized) {
-      return label;
-    }
-  }
-
-  return undefined;
+  return KNOWN_ADDRESSES_INDEXED[chain][address.toLowerCase()];
 }
 
 /**

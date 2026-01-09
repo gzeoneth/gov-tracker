@@ -80,19 +80,37 @@ export function calculateRemainingSeconds(
   return Math.floor(blockDiff * blockTime);
 }
 
-// Short-lived cache for getCurrentBlockInfo (2 seconds TTL)
+// Cache for getCurrentBlockInfo (60 seconds TTL)
 // Uses WeakMap to avoid memory leaks when providers are garbage collected
 const blockInfoCache = new WeakMap<
   ethers.providers.Provider,
   { blockNumber: number; timestamp: number; fetchedAt: number }
 >();
-const BLOCK_INFO_CACHE_TTL_MS = 2000; // 2 seconds - short enough for L2's fast blocks
+const BLOCK_INFO_CACHE_TTL_MS = 60000; // 60 seconds - governance tracking doesn't need real-time blocks
+
+// Track all providers that have been cached for invalidation
+const cachedProviders = new Set<ethers.providers.Provider>();
+
+/**
+ * Invalidate the block info cache for all providers.
+ *
+ * Call this at the start of each monitoring loop iteration to ensure
+ * fresh block data. The 60-second TTL is optimized for within a single
+ * tracking cycle; between cycles, call this to force refresh.
+ */
+export function invalidateBlockInfoCache(): void {
+  for (const provider of cachedProviders) {
+    blockInfoCache.delete(provider);
+  }
+  cachedProviders.clear();
+  log("invalidateBlockInfoCache: cleared cache for all providers");
+}
 
 /**
  * Get current block info from a provider
  *
- * Results are cached for 2 seconds to reduce redundant RPC calls during a single
- * tracking operation. The cache is per-provider.
+ * Results are cached for 60 seconds to reduce redundant RPC calls during tracking.
+ * The cache is per-provider. Use invalidateBlockInfoCache() to force refresh.
  */
 export async function getCurrentBlockInfo(
   provider: ethers.providers.Provider
@@ -115,6 +133,7 @@ export async function getCurrentBlockInfo(
     fetchedAt: now,
   };
   blockInfoCache.set(provider, result);
+  cachedProviders.add(provider);
 
   return { blockNumber: result.blockNumber, timestamp: result.timestamp };
 }

@@ -496,4 +496,82 @@ describe("Historical Tracking Fork Tests", () => {
       forks = null;
     });
   });
+
+  describe("Pipeline Fast-Path Resume", () => {
+    it("should use fast-path when resuming with cached PENDING L2→L1 message (covers pipeline.ts lines 288-304)", async () => {
+      // #given - Fork at L2 block after L2 timelock execution, L1 block in challenge period
+      // This will create a PENDING L2_TO_L1_MESSAGE stage with firstExecutableBlock
+      const L2_BLOCK_AFTER_EXECUTION = 379_000_000;
+      const L1_BLOCK_IN_CHALLENGE_PERIOD = 23_365_000;
+
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: L2_BLOCK_AFTER_EXECUTION,
+        l1BlockOverride: L1_BLOCK_IN_CHALLENGE_PERIOD,
+      });
+
+      // Use a memory cache to enable checkpoint resumption
+      const cache = new Map<string, unknown>();
+      const cacheAdapter = {
+        get: async <T>(key: string) => cache.get(key) as T | null,
+        set: async <T>(key: string, value: T) => {
+          cache.set(key, value);
+        },
+        delete: async (key: string) => {
+          cache.delete(key);
+        },
+        clear: async () => cache.clear(),
+        has: async (key: string) => cache.has(key),
+        keys: (prefix?: string) => {
+          const allKeys = [...cache.keys()];
+          return prefix ? allKeys.filter((k) => k.startsWith(prefix)) : allKeys;
+        },
+      };
+
+      tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider,
+        cache: cacheAdapter,
+      });
+
+      // #when - First track: creates checkpoint with PENDING L2_TO_L1_MESSAGE
+      const results1 = await tracker.trackByTxHash(
+        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
+      );
+      const result1 = results1[0];
+
+      // Verify first track has PENDING L2_TO_L1_MESSAGE with firstExecutableBlock
+      const messageSentStage1 = result1.stages.find((s) => s.type === "L2_TO_L1_MESSAGE");
+      expect(messageSentStage1).toBeDefined();
+      expect(messageSentStage1!.status).toBe("PENDING");
+      expect(messageSentStage1!.data.firstExecutableBlock).toBeDefined();
+      expect(messageSentStage1!.data.firstExecutableBlock).toBeGreaterThan(
+        L1_BLOCK_IN_CHALLENGE_PERIOD
+      );
+
+      // #when - Second track: should use fast-path since L1 block < firstExecutableBlock
+      const results2 = await tracker.trackByTxHash(
+        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
+      );
+      const result2 = results2[0];
+
+      // #then - Should still have PENDING L2_TO_L1_MESSAGE with timing updated via fast-path
+      const messageSentStage2 = result2.stages.find((s) => s.type === "L2_TO_L1_MESSAGE");
+      expect(messageSentStage2).toBeDefined();
+      expect(messageSentStage2!.status).toBe("PENDING");
+
+      // Fast-path adds `fastPath: true` to the stage data
+      expect(messageSentStage2!.data.fastPath).toBe(true);
+      expect(messageSentStage2!.data.currentL1Block).toBeDefined();
+
+      // Timing should be updated
+      expect(messageSentStage2!.timing).toBeDefined();
+      expect(messageSentStage2!.timing!.delaySeconds).toBeGreaterThan(0);
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
 });

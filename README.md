@@ -17,10 +17,11 @@ yarn add @gzeoneth/gov-tracker
 ```typescript
 import { createTracker, ADDRESSES } from "@gzeoneth/gov-tracker";
 
+// Use StaticJsonRpcProvider for better performance
 const tracker = createTracker({
-  l2Provider: new ethers.providers.JsonRpcProvider(ARB1_RPC_URL),
-  l1Provider: new ethers.providers.JsonRpcProvider(ETH_RPC_URL),
-  novaProvider: new ethers.providers.JsonRpcProvider(NOVA_RPC),
+  l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC_URL),
+  l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC_URL),
+  novaProvider: new ethers.providers.StaticJsonRpcProvider(NOVA_RPC),
 });
 
 // Track from governor proposal

@@ -520,6 +520,9 @@ interface RetryableSimulationData {
 ## CLI Options
 
 ```bash
+# Show version
+npx gov-tracker --version
+
 # Track and decode calldata
 npx gov-tracker track 0x... --inspect-only
 

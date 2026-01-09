@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI: `--no-cache` flag** - Added `--no-cache` option to `run` and `track` commands to disable caching entirely (don't read or write). Cleaner alternative to `--cache /dev/null`.
 
+- **CLI: `--version` flag** - CLI now shows version from package.json via `--version` or `-V`.
+
 ### Changed
 
 - **Performance: Extend block info cache TTL to 60s** - Increased `getCurrentBlockInfo()` cache TTL from 2s to 60s. Governance tracking doesn't need real-time block data. Added `invalidateBlockInfoCache()` function for external applications to force refresh (e.g., at start of monitoring loop). CLI loop mode now calls this automatically.

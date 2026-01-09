@@ -170,7 +170,28 @@ function getAppDataDir(): string {
 }
 
 /**
- * Get the default cache path and ensure the directory exists
+ * Get the path to the bundled cache shipped with the npm package.
+ * Returns undefined if the bundled cache doesn't exist.
+ */
+function getBundledCachePath(): string | undefined {
+  // Try multiple paths to support both development (ts-node) and production (compiled)
+  // When compiled: dist/cli/monitor.js -> dist/data/bundled-cache.json
+  // In development: src/cli/monitor.ts -> data/bundled-cache.json
+  const candidates = [
+    path.join(__dirname, "..", "data", "bundled-cache.json"), // dist/cli -> dist/data
+    path.join(__dirname, "..", "..", "data", "bundled-cache.json"), // src/cli -> data
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Get the default cache path and ensure the directory exists.
+ * If user cache doesn't exist, copies bundled cache (if available) to bootstrap.
  */
 function getDefaultCachePath(): string {
   const appDataDir = getAppDataDir();
@@ -188,7 +209,23 @@ function getDefaultCachePath(): string {
     return "./gov-tracker-cache.json";
   }
 
-  return path.join(appDataDir, "gov-tracker-cache.json");
+  const userCachePath = path.join(appDataDir, "gov-tracker-cache.json");
+
+  // If user cache doesn't exist, try to copy bundled cache
+  if (!fs.existsSync(userCachePath)) {
+    const bundledPath = getBundledCachePath();
+    if (bundledPath) {
+      try {
+        fs.copyFileSync(bundledPath, userCachePath);
+        console.log(`Initialized cache from bundled data (${bundledPath})`);
+      } catch (err) {
+        // Non-fatal: just start with empty cache
+        console.warn(`Warning: Could not copy bundled cache: ${err}`);
+      }
+    }
+  }
+
+  return userCachePath;
 }
 
 // Default cache path in OS-specific application data directory
@@ -225,6 +262,7 @@ addOptions(runCmd, loopOptions);
 runCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
+  .addOption(cacheOptions.noCache)
   .addOption(verboseOption)
   .option("--start-block <block>", "Start block for discovery (skips cache)")
   .option(
@@ -246,9 +284,11 @@ runCmd
 
     const providers = createProvidersFromOptions(opts);
     const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
+    // --no-cache disables cache entirely
+    const cachePath = opts.noCache ? undefined : opts.cache;
     const tracker = createTracker({
       ...providers,
-      cachePath: opts.cache,
+      cachePath,
       chunkingConfig,
       onProgress: createProgressCallback(),
     });
@@ -403,6 +443,7 @@ addOptions(trackCmd, gasOptions);
 trackCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(cacheOptions.force)
+  .addOption(cacheOptions.noCache)
   .addOption(verboseOption)
   .option("--inspect-only", "Decode and inspect calldata without tracking")
   .option("--show-simulation", "Show simulation data for each call")
@@ -424,10 +465,11 @@ trackCmd
         if (opts.force) console.log(`Force: ignoring cached data`);
       }
 
-      // Use cache unless --force is specified
+      // Use cache unless --force or --no-cache is specified
+      const cachePath = opts.noCache ? undefined : opts.force ? undefined : opts.cache;
       const tracker = createTracker({
         ...providers,
-        cachePath: opts.force ? undefined : opts.cache,
+        cachePath,
         chunkingConfig,
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });

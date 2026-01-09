@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CLI: Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. Run `yarn monitor run --cache data/bundled-cache.json` to regenerate.
+
+- **CLI: `--no-cache` flag** - Added `--no-cache` option to `run` and `track` commands to disable caching entirely (don't read or write). Cleaner alternative to `--cache /dev/null`.
+
 ### Changed
 
 - **Performance: Extend block info cache TTL to 60s** - Increased `getCurrentBlockInfo()` cache TTL from 2s to 60s. Governance tracking doesn't need real-time block data. Added `invalidateBlockInfoCache()` function for external applications to force refresh (e.g., at start of monitoring loop). CLI loop mode now calls this automatically.

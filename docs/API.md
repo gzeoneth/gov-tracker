@@ -166,6 +166,7 @@ if (election.canCreate) {
 | `calculateEta(blockNumber, provider)` | Calculate ETA timestamp for block |
 | `calculateExpectedEta(currentBlock, delayBlocks, timestamp, blockTime)` | Calculate expected ETA |
 | `calculateRemainingSeconds(eta)` | Calculate seconds remaining until ETA |
+| `invalidateBlockInfoCache()` | Force refresh of cached block info (call at start of monitoring loops) |
 
 ### URLs
 
@@ -520,6 +521,9 @@ interface RetryableSimulationData {
 ## CLI Options
 
 ```bash
+# Show version
+npx gov-tracker --version
+
 # Track and decode calldata
 npx gov-tracker track 0x... --inspect-only
 

@@ -13,7 +13,7 @@
 ```
 src/
 ├── tracker.ts           # ProposalStageTracker class
-├── tracker/             # Pipeline, context, discovery, execute, cache
+├── tracker/             # Pipeline, state, discovery, execute, query, cache
 ├── stages/              # Stage implementations (voting, timelock, etc.)
 ├── discovery/           # Governor & timelock introspection
 ├── utils/               # Timing, log search, operation IDs

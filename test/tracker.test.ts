@@ -35,6 +35,7 @@ import {
   TrackingResult,
   TrackedStage,
   StageTransaction,
+  TrackingCheckpoint,
 } from "../src";
 import { extractTimelockLink } from "../src/tracker";
 
@@ -517,6 +518,99 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
       expect(stats.total).toBe(2);
       expect(stats.proposals.total).toBe(1);
       expect(stats.timelocks.total).toBe(1);
+    });
+  });
+});
+
+describe("trackFromCheckpoint Edge Cases", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  describe("governor checkpoint missing creationTxHash", () => {
+    it("should throw error when creationTxHash is missing (line 621-622)", async () => {
+      // #given - tracker with governor checkpoint missing creationTxHash
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint from cache/JSON that lacks creationTxHash
+      const checkpointMissingTxHash = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: {
+          type: "governor" as const,
+          governorAddress: "0x123",
+          proposalId: "123",
+          creationTxHash: "", // Empty string triggers the check
+        },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointMissingTxHash)).rejects.toThrow(
+        "Governor checkpoint missing creationTxHash"
+      );
+    });
+  });
+
+  describe("timelock checkpoint missing scheduledTxHash", () => {
+    it("should throw error when scheduledTxHash is missing (line 638-639)", async () => {
+      // #given - tracker with timelock checkpoint missing scheduledTxHash
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint from cache/JSON that lacks scheduledTxHash
+      const checkpointMissingTxHash = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock" as const,
+          timelockAddress: "0x456",
+          operationId: "0x123",
+          scheduledTxHash: "", // Empty string triggers the check
+        },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointMissingTxHash)).rejects.toThrow(
+        "Timelock checkpoint missing scheduledTxHash"
+      );
+    });
+  });
+
+  describe("unsupported checkpoint input type", () => {
+    it("should throw error for unsupported input type (line 655)", async () => {
+      // #given - tracker with unsupported checkpoint type
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // Simulating a checkpoint with an unknown type (e.g., from future version)
+      const checkpointUnsupported = {
+        version: 1 as const,
+        createdAt: Date.now(),
+        input: { type: "unknown" },
+        cachedData: { completedStages: [] },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then - should throw error
+      await expect(tracker.trackFromCheckpoint(checkpointUnsupported)).rejects.toThrow(
+        "Unsupported checkpoint input type"
+      );
     });
   });
 });

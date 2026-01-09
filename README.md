@@ -138,6 +138,8 @@ PRIVATE_KEY=0x...  # For execution
 yarn build              # Compile TypeScript
 yarn test               # Run fast tests (no RPC)
 yarn test:coverage      # Run tests with coverage
+yarn test:coverage:fork # Run fork tests with coverage (requires archive RPC)
+yarn test:coverage:all  # Merge all coverage reports
 yarn lint               # Run ESLint
 ```
 

@@ -16,7 +16,7 @@ import {
   blockAfterDelay,
 } from "../src/utils/timing";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
-import { StageBuilder } from "../src/stages/stage-builder";
+import { StageBuilder } from "../src/stages/builder";
 import type { TrackedStage } from "../src/types";
 
 describe("Timing Utilities", () => {

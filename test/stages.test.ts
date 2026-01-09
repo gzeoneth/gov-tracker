@@ -10,8 +10,8 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { ethers } from "ethers";
-import { StageBuilder } from "../src/stages/stage-builder";
-import { getBlockTimestamp } from "../src/stages/base";
+import { StageBuilder } from "../src/stages/builder";
+import { getBlockTimestamp } from "../src/stages/utils";
 import { isStageType, getStageData } from "../src/types";
 
 describe("StageBuilder", () => {

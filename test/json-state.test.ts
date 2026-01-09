@@ -15,7 +15,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { TrackingCheckpoint, TrackedStage, StageStatus } from "../src/index";
-import { StageBuilder } from "../src/stages/stage-builder";
+import { StageBuilder } from "../src/stages/builder";
 
 type MockStageType =
   | "PROPOSAL_CREATED"

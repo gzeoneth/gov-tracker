@@ -6,7 +6,7 @@
  */
 
 import { TrackingCheckpoint, TrackerStats, CacheAdapter } from "../types";
-import { areAllStagesComplete } from "../stages/base";
+import { areAllStagesComplete } from "../stages/utils";
 import { isElectionGovernor, TIMING } from "../constants";
 
 /**

@@ -21,8 +21,8 @@ import {
   areAllStagesComplete,
   isTimelockStage,
   failPrepare,
-} from "../src/stages/base";
-import { StageBuilder } from "../src/stages/stage-builder";
+} from "../src/stages/utils";
+import { StageBuilder } from "../src/stages/builder";
 import { ADDRESSES } from "../src/constants";
 import type { TrackedStage } from "../src/types";
 

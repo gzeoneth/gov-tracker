@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Tests for TrackingContext - Pure functional state management
+ * Tests for TrackingState - Pure functional state management
  *
- * These tests verify the TrackingContext module's pure functions without RPC calls.
+ * These tests verify the TrackingState module's pure functions without RPC calls.
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import {
-  createTrackingContext,
+  createTrackingState,
   addStage,
   isStageCompleted,
   getCompletedStage,
@@ -33,8 +33,8 @@ import {
   createCheckpoint,
   toResult,
   Providers,
-} from "../src/tracker/context";
-import { StageBuilder } from "../src/stages/stage-builder";
+} from "../src/tracker/state";
+import { StageBuilder } from "../src/stages/builder";
 import { ADDRESSES } from "../src/constants";
 import type {
   TrackedStage,
@@ -72,20 +72,20 @@ function createTimelockInput(overrides: Partial<TrackingInput> = {}): TrackingIn
   } as TrackingInput;
 }
 
-describe("TrackingContext", () => {
+describe("TrackingState", () => {
   let mockProviders: Providers;
 
   beforeEach(() => {
     mockProviders = createMockProviders();
   });
 
-  describe("createTrackingContext", () => {
+  describe("createTrackingState", () => {
     it("should create context for governor input", () => {
       // #given - a governor input with proposal ID
       const input = createGovernorInput();
 
       // #when - creating a tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input,
       });
@@ -102,7 +102,7 @@ describe("TrackingContext", () => {
       const input = createTimelockInput();
 
       // #when - creating a tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input,
       });
@@ -119,7 +119,7 @@ describe("TrackingContext", () => {
       const input = createGovernorInput();
 
       // #when - creating a tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input,
       });
@@ -132,7 +132,7 @@ describe("TrackingContext", () => {
       // #given - a governor input without custom chunking config
 
       // #when - creating a tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -151,7 +151,7 @@ describe("TrackingContext", () => {
       };
 
       // #when - creating a tracking context with custom config
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
         chunkingConfig: customConfig,
@@ -166,7 +166,7 @@ describe("TrackingContext", () => {
       const onProgress = vi.fn();
 
       // #when - creating a tracking context with callback
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
         onProgress,
@@ -180,7 +180,7 @@ describe("TrackingContext", () => {
       // #given - a cache key string
 
       // #when - creating a tracking context with cache key
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
         cacheKey: "test-cache-key",
@@ -209,7 +209,7 @@ describe("TrackingContext", () => {
       ];
 
       // #when - creating a tracking context with bootstrap data
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
         callScheduledData: mockData,
@@ -238,7 +238,7 @@ describe("TrackingContext", () => {
       };
 
       // #when - creating a tracking context from checkpoint
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
         checkpoint,
@@ -254,7 +254,7 @@ describe("TrackingContext", () => {
   describe("addStage", () => {
     it("should update stage in context", async () => {
       // #given - a fresh tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -276,7 +276,7 @@ describe("TrackingContext", () => {
     it("should call onProgress callback", async () => {
       // #given - a context with an onProgress callback
       const onProgress = vi.fn();
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
         onProgress,
@@ -299,7 +299,7 @@ describe("TrackingContext", () => {
 
     it("should not mutate original context", async () => {
       // #given - a fresh tracking context
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -319,7 +319,7 @@ describe("TrackingContext", () => {
   describe("isStageCompleted", () => {
     it("should return true for COMPLETED stage", async () => {
       // #given - a context with a completed stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -336,7 +336,7 @@ describe("TrackingContext", () => {
 
     it("should return true for SKIPPED stage", async () => {
       // #given - a context with a skipped stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -353,7 +353,7 @@ describe("TrackingContext", () => {
 
     it("should return false for PENDING stage", async () => {
       // #given - a context with a pending stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -370,7 +370,7 @@ describe("TrackingContext", () => {
 
     it("should return false for NOT_STARTED stage", () => {
       // #given - a fresh context with no stage updates
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -386,7 +386,7 @@ describe("TrackingContext", () => {
   describe("getCompletedStage", () => {
     it("should return completed stage", async () => {
       // #given - a context with a completed stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -404,7 +404,7 @@ describe("TrackingContext", () => {
 
     it("should return skipped stage", async () => {
       // #given - a context with a skipped stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -422,7 +422,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined for pending stage", async () => {
       // #given - a context with a pending stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -441,7 +441,7 @@ describe("TrackingContext", () => {
   describe("getCachedStage", () => {
     it("should return stage regardless of status", async () => {
       // #given - a context with a pending stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -461,7 +461,7 @@ describe("TrackingContext", () => {
   describe("isComplete", () => {
     it("should return false when stages are not complete", () => {
       // #given - a fresh context with NOT_STARTED stages
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -475,7 +475,7 @@ describe("TrackingContext", () => {
 
     it("should return true when all stages are complete", async () => {
       // #given - a context where all stages are marked COMPLETED
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -494,7 +494,7 @@ describe("TrackingContext", () => {
 
     it("should return true when mix of COMPLETED and SKIPPED", async () => {
       // #given - a context with alternating COMPLETED and SKIPPED stages
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -518,7 +518,7 @@ describe("TrackingContext", () => {
   describe("getGovernorAddress", () => {
     it("should return governor address for governor input", () => {
       // #given - a context with governor input
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -532,7 +532,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined for timelock input", () => {
       // #given - a context with timelock input (no governor)
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
       });
@@ -548,7 +548,7 @@ describe("TrackingContext", () => {
   describe("getProposalId", () => {
     it("should return proposalId for governor input", () => {
       // #given - a context with governor input containing proposalId
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ proposalId: "67890" } as any),
       });
@@ -562,7 +562,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined for timelock input", () => {
       // #given - a context with timelock input (no proposalId)
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
       });
@@ -578,7 +578,7 @@ describe("TrackingContext", () => {
   describe("getTimelockAddress", () => {
     it("should return timelockAddress from timelock input", () => {
       // #given - a context with timelock input
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
       });
@@ -592,7 +592,7 @@ describe("TrackingContext", () => {
 
     it("should return timelockAddress from PROPOSAL_QUEUED stage", async () => {
       // #given - a context with PROPOSAL_QUEUED stage containing timelockAddress
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -612,7 +612,7 @@ describe("TrackingContext", () => {
 
     it("should fallback to L2_TIMELOCK stage data", async () => {
       // #given - a context with only L2_TIMELOCK stage containing timelockAddress
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -634,7 +634,7 @@ describe("TrackingContext", () => {
   describe("getOperationId", () => {
     it("should return operationId from timelock input", () => {
       // #given - a context with timelock input containing operationId
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput({ operationId: "0xdeadbeef" } as any),
       });
@@ -648,7 +648,7 @@ describe("TrackingContext", () => {
 
     it("should return operationId from PROPOSAL_QUEUED stage", async () => {
       // #given - a context with PROPOSAL_QUEUED stage containing operationId
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -686,7 +686,7 @@ describe("TrackingContext", () => {
         },
       ];
 
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
         callScheduledData: mockData,
@@ -732,7 +732,7 @@ describe("TrackingContext", () => {
         },
       ];
 
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
         callScheduledData: mockData,
@@ -765,7 +765,7 @@ describe("TrackingContext", () => {
         },
       ];
 
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createTimelockInput(),
         callScheduledData: mockData,
@@ -780,7 +780,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined when no callScheduledData", () => {
       // #given - a context without callScheduledData
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -796,7 +796,7 @@ describe("TrackingContext", () => {
   describe("getProposalData", () => {
     it("should return undefined for NOT_STARTED stage", () => {
       // #given - a fresh context with NOT_STARTED stages
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -810,7 +810,7 @@ describe("TrackingContext", () => {
 
     it("should return proposal data from COMPLETED stage", async () => {
       // #given - a context with COMPLETED PROPOSAL_CREATED stage with full data
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -845,7 +845,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined when required fields are missing", async () => {
       // #given - a context with stage missing required fields
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -870,7 +870,7 @@ describe("TrackingContext", () => {
 
     it("should return undefined when transaction is missing", async () => {
       // #given - a context with stage data but no transaction
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -903,7 +903,7 @@ describe("TrackingContext", () => {
   describe("getProposalType", () => {
     it("should detect CONSTITUTIONAL from governor address", () => {
       // #given - a context with constitutional governor address
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR } as any),
       });
@@ -917,7 +917,7 @@ describe("TrackingContext", () => {
 
     it("should detect NON_CONSTITUTIONAL from governor address", () => {
       // #given - a context with non-constitutional governor address
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({
           governorAddress: ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
@@ -933,7 +933,7 @@ describe("TrackingContext", () => {
 
     it("should return proposalType from stage data if available", async () => {
       // #given - a context with proposalType in stage data
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -955,7 +955,7 @@ describe("TrackingContext", () => {
   describe("getIsElection", () => {
     it("should return false for CONSTITUTIONAL", () => {
       // #given - a context with constitutional governor
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR } as any),
       });
@@ -969,7 +969,7 @@ describe("TrackingContext", () => {
 
     it("should return true for ELECTION_NOMINEE", () => {
       // #given - a context with nominee election governor
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ governorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR } as any),
       });
@@ -983,7 +983,7 @@ describe("TrackingContext", () => {
 
     it("should return true for ELECTION_MEMBER", () => {
       // #given - a context with member election governor
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ governorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR } as any),
       });
@@ -999,7 +999,7 @@ describe("TrackingContext", () => {
   describe("getProposalState", () => {
     it("should return undefined when no voting data", () => {
       // #given - a fresh context without voting data
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1013,7 +1013,7 @@ describe("TrackingContext", () => {
 
     it("should return proposalState from VOTING_ACTIVE stage", async () => {
       // #given - a context with VOTING_ACTIVE stage containing proposalState
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1035,7 +1035,7 @@ describe("TrackingContext", () => {
   describe("getVotingEndBlock", () => {
     it("should return deadline from VOTING_ACTIVE stage", async () => {
       // #given - a context with VOTING_ACTIVE stage containing deadline
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1055,7 +1055,7 @@ describe("TrackingContext", () => {
 
     it("should use extendedDeadline if greater than deadline", async () => {
       // #given - a context with extendedDeadline greater than deadline
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1075,7 +1075,7 @@ describe("TrackingContext", () => {
 
     it("should ignore extendedDeadline if not greater than deadline", async () => {
       // #given - a context with extendedDeadline less than deadline
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1097,7 +1097,7 @@ describe("TrackingContext", () => {
   describe("getL2ExecutionTxHash", () => {
     it("should return undefined when L2_TIMELOCK not complete", () => {
       // #given - a fresh context without L2_TIMELOCK stage
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1111,7 +1111,7 @@ describe("TrackingContext", () => {
 
     it("should return execution tx hash from COMPLETED L2_TIMELOCK", async () => {
       // #given - a context with COMPLETED L2_TIMELOCK stage with multiple transactions
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1134,7 +1134,7 @@ describe("TrackingContext", () => {
   describe("getFirstExecutableBlock", () => {
     it("should return firstExecutableBlock from L2_TO_L1_MESSAGE stage", async () => {
       // #given - a context with L2_TO_L1_MESSAGE stage containing firstExecutableBlock
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1156,7 +1156,7 @@ describe("TrackingContext", () => {
   describe("getOutboxExecutionTx", () => {
     it("should return undefined when L2_TO_L1_MESSAGE not complete", () => {
       // #given - a fresh context without L2_TO_L1_MESSAGE stage
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1170,7 +1170,7 @@ describe("TrackingContext", () => {
 
     it("should return L1 transaction from COMPLETED L2_TO_L1_MESSAGE", async () => {
       // #given - a context with COMPLETED L2_TO_L1_MESSAGE with L1 transaction
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1193,7 +1193,7 @@ describe("TrackingContext", () => {
   describe("getL1ExecutionTxHash", () => {
     it("should return execution tx hash from COMPLETED L1_TIMELOCK", async () => {
       // #given - a context with COMPLETED L1_TIMELOCK with multiple transactions
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1216,7 +1216,7 @@ describe("TrackingContext", () => {
   describe("createCheckpoint", () => {
     it("should create checkpoint with completed stages", async () => {
       // #given - a context with multiple stages in different states
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1238,7 +1238,7 @@ describe("TrackingContext", () => {
 
     it("should include pending stages for resume data", async () => {
       // #given - a context with a PENDING stage containing data
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput(),
       });
@@ -1262,7 +1262,7 @@ describe("TrackingContext", () => {
   describe("toResult", () => {
     it("should generate complete tracking result", async () => {
       // #given - a context with a COMPLETED PROPOSAL_CREATED stage
-      let ctx = createTrackingContext({
+      let ctx = createTrackingState({
         providers: mockProviders,
         input: createGovernorInput({ governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR } as any),
       });

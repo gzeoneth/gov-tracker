@@ -5,7 +5,7 @@
  * either a governor proposal or a timelock operation.
  *
  * This file is the public API that composes focused modules:
- * - tracker/context.ts: Functional TrackingContext for stage tracking
+ * - tracker/context.ts: Functional TrackingState for stage tracking
  * - tracker/pipeline.ts: Pure functions that track stages
  * - tracker/discovery.ts: Proposal and timelock discovery
  * - tracker/query.ts: Checkpoint query operations
@@ -41,25 +41,25 @@ import {
 } from "./election";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
-import { findStage } from "./stages/base";
+import { findStage } from "./stages/utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
 
 // Import context and pipeline from tracker modules
 import {
-  createTrackingContext,
+  createTrackingState,
   isComplete,
   getProposalType,
   getProposalData,
   getProposalState,
   getIsElection,
   createCheckpoint,
-  TrackingContext,
-} from "./tracker/context";
+  TrackingState,
+} from "./tracker/state";
 import { trackGovernorPipeline, trackTimelockPipeline } from "./tracker/pipeline";
 
 // Import from focused modules
-import { txHashCacheKey, readCacheStatus, FileCache } from "./tracker/state";
+import { txHashCacheKey, readCacheStatus, FileCache } from "./tracker/cache";
 import { loadWatermarks, saveWatermarks } from "./tracker/discovery";
 import { CacheAdapter } from "./types";
 import {
@@ -482,7 +482,7 @@ export class ProposalStageTracker {
   }
 
   /**
-   * Track governor proposal using TrackingContext (stateful tracking)
+   * Track governor proposal using TrackingState (stateful tracking)
    */
   private async trackGovernorWithPipeline(
     governorAddress: string,
@@ -499,7 +499,7 @@ export class ProposalStageTracker {
     };
 
     // Create tracking context
-    const initialState = createTrackingContext({
+    const initialState = createTrackingState({
       providers: {
         l2: this.l2Provider,
         l1: this.l1Provider,
@@ -529,7 +529,7 @@ export class ProposalStageTracker {
   }
 
   /**
-   * Track timelock operation using TrackingContext (stateful tracking)
+   * Track timelock operation using TrackingState (stateful tracking)
    */
   private async trackTimelockWithPipeline(
     timelockAddress: string,
@@ -547,7 +547,7 @@ export class ProposalStageTracker {
     };
 
     // Create tracking context with bootstrap data
-    const initialState = createTrackingContext({
+    const initialState = createTrackingState({
       providers: {
         l2: this.l2Provider,
         l1: this.l1Provider,
@@ -578,9 +578,9 @@ export class ProposalStageTracker {
   }
 
   /**
-   * Build TrackingResult from TrackingContext
+   * Build TrackingResult from TrackingState
    */
-  private buildResultFromState(state: TrackingContext): TrackingResult {
+  private buildResultFromState(state: TrackingState): TrackingResult {
     const stages = state.stages;
     const checkpoint = createCheckpoint(state);
     const timelockLink = extractTimelockLink(stages);

@@ -142,6 +142,11 @@ interface PreparedTransaction {
   - `StageTrackResultWith` - Internal only
   - `SimulationChainType` - Use `Chain` instead
   - `GovernorProposalState` - Use `ProposalState` instead
+  - `TrackedStageData` - Use `StageDataMap[StageType]` directly
+
+- **Renamed exports**:
+  - `TrackingContext` → `TrackingState`
+  - `createTrackingContext()` → `createTrackingState()`
 
 - **Removed exports**:
   - `getKnownAddresses()` - Internal utility
@@ -181,6 +186,14 @@ interface PreparedTransaction {
 - Added `public-api.test.ts` to verify export stability
 - Consolidated duplicate tests between `stages.test.ts` and `base-stages.test.ts`
 - Removed `tracker-state.test.ts` (duplicated by `state.test.ts`)
+- **Codebase restructuring**:
+  - Merged `stages/base.ts` + `utils/stage-helpers.ts` → `stages/utils.ts`
+  - Renamed `stages/stage-builder.ts` → `stages/builder.ts`
+  - Renamed `tracker/state.ts` → `tracker/cache.ts` (file contains cache implementations)
+  - Renamed `tracker/context.ts` → `tracker/state.ts` (better reflects content)
+  - Renamed `TrackingContext` type → `TrackingState`
+  - Renamed `createTrackingContext()` → `createTrackingState()`
+  - Removed `TrackedStageData` type (use `StageDataMap[StageType]` directly)
 
 ## [0.1.2] - 2026-01-07
 

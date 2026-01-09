@@ -11,7 +11,7 @@ import { prepareGovernorQueue } from "../stages/proposal-queued";
 import { prepareTimelockStage } from "../stages/timelock";
 import { prepareL2ToL1MessageStage } from "../stages/l2-to-l1-message";
 import { prepareRetryableStage } from "../stages/retryables";
-import { failPrepare } from "../stages/base";
+import { failPrepare } from "../stages/utils";
 import { loggers } from "../utils/logger";
 
 const log = loggers.execution;

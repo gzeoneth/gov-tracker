@@ -8,7 +8,7 @@
 import { loggers } from "../utils/logger";
 import { StageType, TrackedStage } from "../types";
 import {
-  TrackingContext,
+  TrackingState,
   addStage,
   getCompletedStage,
   getCachedStage,
@@ -25,8 +25,8 @@ import {
   getOutboxExecutionTx,
   getL1ExecutionTxHash,
   getVotingEndBlock,
-} from "./context";
-import { isConstitutional } from "../stages/base";
+} from "./state";
+import { isConstitutional } from "../stages/utils";
 import { trackProposalCreated } from "../stages/proposal-created";
 import { trackVotingStage } from "../stages/voting";
 import { trackProposalQueued } from "../stages/proposal-queued";
@@ -62,17 +62,17 @@ const placeholder = (
 
 // Helper: track with cache check
 async function withCache<K extends string, T>(
-  state: TrackingContext,
+  state: TrackingState,
   stageType: StageType,
   key: K,
   onCached: (cached: TrackedStage) => T,
-  onTrack: () => Promise<{ state: TrackingContext } & Record<K, T>>
-): Promise<{ state: TrackingContext } & Record<K, T>> {
+  onTrack: () => Promise<{ state: TrackingState } & Record<K, T>>
+): Promise<{ state: TrackingState } & Record<K, T>> {
   const cached = getCompletedStage(state, stageType);
   if (cached) {
     log("%s: using cached stage", stageType);
     return { state: await addStage(state, cached), [key]: onCached(cached) } as {
-      state: TrackingContext;
+      state: TrackingState;
     } & Record<K, T>;
   }
   return onTrack();
@@ -80,15 +80,15 @@ async function withCache<K extends string, T>(
 
 // Helper: track stage with error handling
 async function track<K extends string, T>(
-  state: TrackingContext,
+  state: TrackingState,
   stageType: StageType,
   key: K,
   tracker: () => Promise<{ stage: TrackedStage; result: T }>
-): Promise<{ state: TrackingContext } & Record<K, T>> {
+): Promise<{ state: TrackingState } & Record<K, T>> {
   try {
     const { stage, result } = await tracker();
     return { state: await addStage(state, stage), [key]: result } as {
-      state: TrackingContext;
+      state: TrackingState;
     } & Record<K, T>;
   } catch (error) {
     throw new Error(
@@ -100,8 +100,8 @@ async function track<K extends string, T>(
 // Governor Stages (1-3)
 
 async function pipelineTrackProposalCreated(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; found: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; found: boolean }> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
 
@@ -128,8 +128,8 @@ async function pipelineTrackProposalCreated(
 }
 
 async function pipelineTrackVoting(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; complete: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; complete: boolean }> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
   const proposalData = getProposalData(state);
@@ -157,8 +157,8 @@ async function pipelineTrackVoting(
 }
 
 async function pipelineTrackProposalQueued(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; queued: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; queued: boolean }> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
   const proposalData = getProposalData(state);
@@ -216,8 +216,8 @@ async function pipelineTrackProposalQueued(
 // Timelock Stage (4)
 
 async function pipelineTrackL2Timelock(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; executed: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; executed: boolean }> {
   const timelockAddress = getTimelockAddress(state);
   const operationId = getOperationId(state);
   const firstCallScheduledData = getFirstCallScheduledData(state);
@@ -254,7 +254,7 @@ async function pipelineTrackL2Timelock(
 
 const L1_ROUNDTRIP_STAGES: StageType[] = ["L2_TO_L1_MESSAGE", "L1_TIMELOCK", "RETRYABLE_EXECUTED"];
 
-async function addSkippedL1Stages(state: TrackingContext): Promise<TrackingContext> {
+async function addSkippedL1Stages(state: TrackingState): Promise<TrackingState> {
   let s = state;
   for (const type of L1_ROUNDTRIP_STAGES)
     s = await addStage(s, placeholder(type, "SKIPPED", "L2-only path"));
@@ -262,8 +262,8 @@ async function addSkippedL1Stages(state: TrackingContext): Promise<TrackingConte
 }
 
 async function pipelineTrackL2ToL1Message(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; executed: boolean; needsL1: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; executed: boolean; needsL1: boolean }> {
   const l2ExecutionTxHash = getL2ExecutionTxHash(state);
   const addressForPath = getGovernorAddress(state) ?? getTimelockAddress(state);
   const needsL1 = addressForPath ? isConstitutional(addressForPath) : true;
@@ -323,8 +323,8 @@ async function pipelineTrackL2ToL1Message(
 // L1 Timelock Stage (6)
 
 async function pipelineTrackL1Timelock(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; executed: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; executed: boolean }> {
   return withCache(
     state,
     "L1_TIMELOCK",
@@ -347,8 +347,8 @@ async function pipelineTrackL1Timelock(
 // Retryable Stage (7)
 
 async function pipelineTrackRetryables(
-  state: TrackingContext
-): Promise<{ state: TrackingContext; redeemed: boolean }> {
+  state: TrackingState
+): Promise<{ state: TrackingState; redeemed: boolean }> {
   const l1ExecutionTxHash = getL1ExecutionTxHash(state);
   if (!l1ExecutionTxHash) return { state, redeemed: false };
 
@@ -373,10 +373,10 @@ async function pipelineTrackRetryables(
 // Full Pipelines
 
 async function addPlaceholders(
-  state: TrackingContext,
+  state: TrackingState,
   types: StageType[],
   reason: string
-): Promise<TrackingContext> {
+): Promise<TrackingState> {
   let s = state;
   for (const type of types) s = await addStage(s, placeholder(type, "NOT_STARTED", reason));
   return s;
@@ -388,7 +388,7 @@ const RETRYABLE_STAGES: StageType[] = ["RETRYABLE_EXECUTED"];
  * Track full governor proposal pipeline.
  * Returns final state after tracking all stages.
  */
-export async function trackGovernorPipeline(state: TrackingContext): Promise<TrackingContext> {
+export async function trackGovernorPipeline(state: TrackingState): Promise<TrackingState> {
   // Stage 1: Proposal Created
   const { state: state1, found } = await pipelineTrackProposalCreated(state);
   if (!found) {
@@ -418,7 +418,7 @@ export async function trackGovernorPipeline(state: TrackingContext): Promise<Tra
  * Track timelock pipeline (stages 4-7).
  * Used by governor pipeline and direct timelock tracking.
  */
-export async function trackTimelockPipeline(state: TrackingContext): Promise<TrackingContext> {
+export async function trackTimelockPipeline(state: TrackingState): Promise<TrackingState> {
   // Stage 4: L2 Timelock (unified)
   const { state: state1, executed: l2Executed } = await pipelineTrackL2Timelock(state);
   if (!l2Executed) {

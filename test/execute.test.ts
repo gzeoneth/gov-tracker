@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prepareTransaction, ExecuteContext } from "../src/tracker/execute";
 import { TrackedStage, PrepareResult } from "../src/types";
-import { BulkPrepareResult } from "../src/utils/stage-helpers";
+import { BulkPrepareResult } from "../src/stages/utils";
 import { ethers } from "ethers";
 import * as l2ToL1MessageModule from "../src/stages/l2-to-l1-message";
 import * as retryablesModule from "../src/stages/retryables";

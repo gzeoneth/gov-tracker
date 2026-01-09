@@ -63,7 +63,6 @@ export {
   L2ToL1MessageStageData,
   RetryableStageData,
   StageDataMap,
-  TrackedStageData,
   TrackedStage,
   TypedTrackedStage,
   isStageType,

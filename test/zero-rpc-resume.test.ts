@@ -17,7 +17,7 @@ import {
   TrackedStage,
   DEFAULT_RPC_URLS,
 } from "../src";
-import { createCheckpoint, createTrackingContext } from "../src/tracker/context";
+import { createCheckpoint, createTrackingState } from "../src/tracker/state";
 
 import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
 
@@ -221,7 +221,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
         },
       };
 
-      const ctx = createTrackingContext({
+      const ctx = createTrackingState({
         providers: {
           l1: mockProvider,
           l2: mockProvider,
@@ -260,7 +260,7 @@ describe.skipIf(process.env.NO_RPC === "1")(
       expect(savedPendingStage?.transactions?.[0].hash).toBe("0xtest-queued-hash");
 
       // #when - creating a new context from the checkpoint
-      const restoredCtx = createTrackingContext({
+      const restoredCtx = createTrackingState({
         providers: {
           l1: mockProvider,
           l2: mockProvider,

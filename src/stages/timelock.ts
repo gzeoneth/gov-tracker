@@ -34,18 +34,20 @@ import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-comp
 import { INBOX_ABI, timelockInterface } from "../abis";
 import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
 import { getChain, addressEquals } from "../utils/chain";
-import { getBlockTimestamp, checkOperationReady, failPrepare } from "./base";
-import { StageBuilder } from "./stage-builder";
-import { getCurrentBlockInfo, blockAfterDelay } from "../utils/timing";
 import {
+  getBlockTimestamp,
+  checkOperationReady,
+  failPrepare,
   collectAllScheduledData,
   calculateTimelockEta,
   buildExecutionPayloadData,
   searchAndCompleteTimelockExecution,
   createTimelockStageData,
   validateStageForPrepare,
-} from "../utils/stage-helpers";
-import { serializeCallScheduledDataArray } from "../stages/base";
+  serializeCallScheduledDataArray,
+} from "./utils";
+import { StageBuilder } from "./builder";
+import { getCurrentBlockInfo, blockAfterDelay } from "../utils/timing";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { loggers } from "../utils/logger";
 

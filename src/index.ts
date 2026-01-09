@@ -133,7 +133,7 @@ export {
   extractOperationId,
   isTimelockStage,
   findStage,
-} from "./stages/base";
+} from "./stages/utils";
 
 // ============================================================================
 // TIER 2: Advanced API - Power user functions
@@ -309,10 +309,10 @@ export {
 // TIER 8: Cache Implementations
 // ============================================================================
 
-export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/state";
+export { FileCache, LocalStorageCache, MemoryCache } from "./tracker/cache";
 
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)
 // ============================================================================
 
-export { createCheckpoint, createTrackingContext } from "./tracker/context";
+export { createCheckpoint, createTrackingState } from "./tracker/state";

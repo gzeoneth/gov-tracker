@@ -13,6 +13,7 @@ import {
   calculateExpectedEta,
   getL1BlockNumberFromL2,
   getL1BlockForL2Block,
+  blockAfterDelay,
 } from "../src/utils/timing";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
 import { StageBuilder } from "../src/stages/stage-builder";
@@ -347,6 +348,104 @@ describe("Timing Utilities", () => {
       await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
         "Could not get L1 block number for L2 block 12345"
       );
+    });
+  });
+
+  describe("blockAfterDelay", () => {
+    it("should throw error when start block cannot be fetched (line 254)", async () => {
+      // #given - a provider that returns null for startBlock
+      const mockProvider = {
+        getBlock: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.Provider;
+
+      // #when / #then - should throw
+      await expect(blockAfterDelay(mockProvider, 1000, 3600)).rejects.toThrow(
+        "Could not fetch block 1000"
+      );
+    });
+
+    it("should return startBlock when delay not yet passed (line 264-269)", async () => {
+      // #given - current timestamp is before target timestamp
+      const startBlockTimestamp = 1700000000;
+      const currentTimestamp = startBlockTimestamp + 1800; // Only 30 min passed
+      const delaySeconds = 3600; // 1 hour delay
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1100, timestamp: currentTimestamp }), // latestBlock
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns startBlock since delay hasn't passed
+      expect(result).toBe(1000);
+    });
+
+    it("should break loop when block fetch fails during iteration (line 287-288)", async () => {
+      // #given - startBlock exists but iteration block fails
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 3600;
+      const currentTimestamp = startBlockTimestamp + delaySeconds + 1000;
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1500, timestamp: currentTimestamp }) // latestBlock
+          .mockResolvedValueOnce(null), // iteration block - fails
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns estimate since block fetch failed
+      expect(result).toBeGreaterThan(1000);
+    });
+
+    it("should return startBlock+1 when cannot backtrack further (line 320-322)", async () => {
+      // #given - scenario where backtracking keeps hitting startBlock+1
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 12; // Very short delay (1 block)
+      const currentTimestamp = startBlockTimestamp + 100; // Way past delay
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock=1000
+          .mockResolvedValueOnce({ number: 1002, timestamp: currentTimestamp }) // current (just 2 blocks ahead)
+          .mockResolvedValueOnce({ timestamp: currentTimestamp }), // block 1001: after target, triggers backtrack to 1001
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns startBlock+1 when can't backtrack further
+      expect(result).toBe(1001);
+    });
+
+    it("should find block before target after backtracking (happy path)", async () => {
+      // #given - normal case where we find a block before target
+      const startBlockTimestamp = 1700000000;
+      const delaySeconds = 3600;
+      const targetTimestamp = startBlockTimestamp + delaySeconds;
+      const currentTimestamp = targetTimestamp + 1200;
+
+      const mockProvider = {
+        getBlock: vi
+          .fn()
+          .mockResolvedValueOnce({ timestamp: startBlockTimestamp }) // startBlock
+          .mockResolvedValueOnce({ number: 1500, timestamp: currentTimestamp }) // latestBlock
+          .mockResolvedValueOnce({ timestamp: targetTimestamp - 100 }), // iteration: before target
+      } as unknown as ethers.providers.Provider;
+
+      // #when
+      const result = await blockAfterDelay(mockProvider, 1000, delaySeconds);
+
+      // #then - returns the block that is before target
+      expect(result).toBeGreaterThan(1000);
     });
   });
 });

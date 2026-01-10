@@ -4,7 +4,7 @@
  * A lightweight, high-performance library for tracking Arbitrum DAO
  * governance proposal lifecycle stages.
  *
- * @example
+ * @example Basic usage (Node.js)
  * ```typescript
  * import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
  *
@@ -21,6 +21,29 @@
  *     const tx = await signer.sendTransaction(prep.prepared);
  *   }
  * }
+ * ```
+ *
+ * @example Browser usage with LocalStorageCache
+ * ```typescript
+ * import {
+ *   createTracker,
+ *   LocalStorageCache,
+ *   getBundledCache,
+ * } from "@gzeoneth/gov-tracker";
+ *
+ * // Initialize cache with bundled data for faster first load
+ * const cache = new LocalStorageCache("arb-gov:");
+ * const bundledData = getBundledCache(); // Call at build time for static sites
+ *
+ * for (const [key, checkpoint] of Object.entries(bundledData)) {
+ *   await cache.set(key, checkpoint);
+ * }
+ *
+ * const tracker = createTracker({
+ *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
+ *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
+ *   cache, // Updates persist to localStorage
+ * });
  * ```
  * @packageDocumentation
  */
@@ -312,7 +335,14 @@ export {
 // TIER 8: Cache Implementations
 // ============================================================================
 
-export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "./tracker/cache";
+export {
+  FileCache,
+  LocalStorageCache,
+  MemoryCache,
+  getBundledCachePath,
+  getBundledCache,
+} from "./tracker/cache";
+export type { BundledCacheData } from "./tracker/cache";
 
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)

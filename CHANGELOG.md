@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `-w` for `--write` - Execute prepared transactions
   - `-i` for `--inspect` - Decode and inspect calldata (with tracking)
 
+- **`getBundledCache()` export** - New function that returns bundled cache data directly (not a file path). Useful for environments where file paths don't work at runtime, such as Next.js static exports, edge functions, or browser builds. Use `getBundledCachePath()` for Node.js file-based usage to avoid loading the entire cache into memory.
+
 ### Changed
 
 - **CLI: Version shown in help** - Main help page now displays version in the description ("Version: 0.2.1") instead of requiring `-V` flag. (c6c8e4c)

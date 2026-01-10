@@ -109,7 +109,11 @@ console.log(`Timelocks: ${stats.timelocks.complete}/${stats.timelocks.total} com
 
 ### Bundled Cache (Bootstrap)
 
-The npm package includes a pre-built cache of completed proposals (~2.4MB). Use this to skip initial discovery RPC calls:
+The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals). Use this to skip initial discovery RPC calls.
+
+#### Node.js: `getBundledCachePath()`
+
+For Node.js applications, use the file path:
 
 ```typescript
 import * as fs from "fs";
@@ -135,8 +139,70 @@ const tracker = createTracker({
 });
 ```
 
+#### Browser/Static Builds: `getBundledCache()`
+
+For browsers, Next.js static exports, or edge functions where file paths don't work at runtime:
+
+```typescript
+import {
+  createTracker,
+  getBundledCache,
+  LocalStorageCache,
+} from "@gzeoneth/gov-tracker";
+
+// Initialize localStorage cache with bundled data
+const cache = new LocalStorageCache("arb-gov:");
+const bundledData = getBundledCache();
+
+// Populate cache (only needed once, check if already done)
+if (!(await cache.has("tx:0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e"))) {
+  for (const [key, checkpoint] of Object.entries(bundledData)) {
+    await cache.set(key, checkpoint);
+  }
+  console.log(`Initialized cache with ${Object.keys(bundledData).length} entries`);
+}
+
+const tracker = createTracker({
+  l2Provider, l1Provider, novaProvider,
+  cache,
+});
+```
+
+#### Next.js Static Export
+
+For Next.js static exports, call `getBundledCache()` at build time:
+
+```typescript
+// pages/proposals.tsx
+import { getBundledCache, LocalStorageCache } from "@gzeoneth/gov-tracker";
+import type { BundledCacheData } from "@gzeoneth/gov-tracker";
+
+export async function getStaticProps() {
+  // This runs at build time, not in the browser
+  const bundledData = getBundledCache();
+  return {
+    props: { bundledCache: bundledData },
+  };
+}
+
+export default function ProposalsPage({ bundledCache }: { bundledCache: BundledCacheData }) {
+  // Initialize cache client-side with data passed from build
+  useEffect(() => {
+    const initCache = async () => {
+      const cache = new LocalStorageCache("arb-gov:");
+      for (const [key, checkpoint] of Object.entries(bundledCache)) {
+        await cache.set(key, checkpoint);
+      }
+    };
+    initCache();
+  }, [bundledCache]);
+
+  // ... rest of component
+}
+```
+
 The bundled cache contains:
-- All completed governor proposals (~83 proposals)
+- All completed governor proposals (~95 proposals)
 - Discovery watermarks for incremental discovery
 - Election tracking data
 

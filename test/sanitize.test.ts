@@ -122,9 +122,20 @@ describe("Sanitization Utilities", () => {
       expect(result).toBe("Hello");
     });
 
-    it("should remove OSC (Operating System Command) sequences", () => {
-      // #given - a string with OSC sequences (e.g., terminal title setting)
+    it("should remove OSC sequences with BEL terminator", () => {
+      // #given - a string with OSC sequence terminated by BEL (0x07)
       const str = "\x1B]0;Evil Title\x07Normal Text";
+
+      // #when - sanitizing for display
+      const result = sanitizeForDisplay(str);
+
+      // #then - should remove OSC sequence but preserve normal text
+      expect(result).toBe("Normal Text");
+    });
+
+    it("should remove OSC sequences with ST terminator", () => {
+      // #given - a string with OSC sequence terminated by ST (ESC \)
+      const str = "\x1B]0;Evil Title\x1B\\Normal Text";
 
       // #when - sanitizing for display
       const result = sanitizeForDisplay(str);

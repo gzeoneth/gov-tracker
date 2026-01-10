@@ -30,7 +30,7 @@ export function sanitizeForDisplay(str: string): string {
   // Remove control characters except \t (0x09), \n (0x0A), \r (0x0D)
   return str.replace(
     // eslint-disable-next-line no-control-regex
-    /\x1B\[[0-9;]*[a-zA-Z]|\x1B\][^\x07]*\x07|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,
+    /\x1B\[[0-9;]*[a-zA-Z]|\x1B\](?:[^\x07\x1B]*)(?:\x07|\x1B\\)|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,
     ""
   );
 }

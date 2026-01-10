@@ -115,6 +115,12 @@ export async function prepareTransaction(
     case "L2_TIMELOCK": {
       // L2_TIMELOCK doesn't store callScheduledData to avoid duplication with PROPOSAL_QUEUED.
       // Auto-resolve from options.stages if callScheduledData not explicitly provided.
+      if (!options.callScheduledData && !options.stages) {
+        log(
+          "L2_TIMELOCK preparation: no callScheduledData or stages provided. " +
+            "Pass options.stages to auto-resolve from PROPOSAL_QUEUED stage."
+        );
+      }
       const resolvedOptions = resolveCallScheduledData(options);
       return prepareTimelockStage(stage, l2Provider, resolvedOptions);
     }

@@ -95,8 +95,11 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       expect(l2TimelockStage!.data.salt).toBe(expectedSalt);
 
       // #when - preparing transaction with cached salt
+      // Note: L2_TIMELOCK doesn't store callScheduledData (to avoid duplication with PROPOSAL_QUEUED),
+      // so we must pass stages for auto-resolution
       const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
         prepareCompleted: true,
+        stages: governorStages,
       });
 
       if (!prepResult.success) {
@@ -131,8 +134,11 @@ describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () =>
       expect(cachedSalt).not.toBe(ethers.constants.HashZero);
 
       // #when - preparing transaction with cached SC salt
+      // Note: L2_TIMELOCK doesn't store callScheduledData (to avoid duplication with PROPOSAL_QUEUED),
+      // so we must pass stages for auto-resolution
       const prepResult = await tracker.prepareTransaction(l2TimelockStage!, {
         prepareCompleted: true,
+        stages: scStages,
       });
 
       // #then - preparation should succeed

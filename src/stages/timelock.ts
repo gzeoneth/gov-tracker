@@ -266,11 +266,11 @@ async function trackTimelock(
   // Add base data
   builder.data({ operationId, timelockAddress, state: operationState.state, eta });
 
+  // Collect scheduled data - used for predecessor caching and batch detection.
+  // Only STORE in stage.data for L1_TIMELOCK (L2_TIMELOCK skips to avoid duplication
+  // with PROPOSAL_QUEUED - callers use options.stages during preparation).
   const allData = collectAllScheduledData(timelockState);
-  // Only store callScheduledData for L1_TIMELOCK.
-  // L2_TIMELOCK skips this to avoid duplication - the same data is already
-  // stored in PROPOSAL_QUEUED stage. Callers use options.callScheduledData during preparation.
-  if (allData.length > 0 && config.stageType === "L1_TIMELOCK") {
+  if (config.stageType === "L1_TIMELOCK" && allData.length > 0) {
     builder.data({ callScheduledData: serializeCallScheduledDataArray(allData) });
   }
 

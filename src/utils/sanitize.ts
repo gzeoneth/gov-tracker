@@ -28,8 +28,8 @@ export function truncateDescription(description: string): string {
 export function sanitizeForDisplay(str: string): string {
   // Remove ANSI escape codes (e.g., color codes, cursor movement)
   // Remove control characters except \t (0x09), \n (0x0A), \r (0x0D)
-  // eslint-disable-next-line no-control-regex
   return str.replace(
+    // eslint-disable-next-line no-control-regex
     /\x1B\[[0-9;]*[a-zA-Z]|\x1B\][^\x07]*\x07|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,
     ""
   );

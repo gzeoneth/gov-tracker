@@ -10,7 +10,7 @@
       "Bash(yarn test:all:*)",
       "Bash(yarn format)",
       "Bash(yarn format:check:*)",
-      "Bash(yarn monitor:*)",
+      "Bash(yarn cli:*)",
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(npx vitest:*)",

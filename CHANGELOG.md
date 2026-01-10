@@ -21,11 +21,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI: Version shown in help** - Main help page now displays version in the description ("Version: 0.2.1") instead of requiring `-V` flag. (c6c8e4c)
 
+- **Dependencies: Reduced production footprint** - Streamlined dependencies for lighter library installation:
+  - Moved `dotenv` to devDependencies (only needed for development/testing)
+  - Moved `commander` and `p-limit` to optionalDependencies (only needed for CLI usage)
+  - Library consumers now only require `ethers`, `@arbitrum/sdk`, and `debug`
+  - CLI gracefully handles missing optional dependencies with helpful error messages
+
+- **Dependencies: Version bumps** - Updated to latest compatible versions:
+  - `ethers`: ^5.7.2 → ^5.8.0
+  - `debug`: ^4.3.4 → ^4.4.0
+  - `typescript`: ^5.0.0 → ^5.8.0
+  - `@types/node`: ^20.0.0 → ^22.0.0
+  - `@typescript-eslint/*`: ^8.51.0 → ^8.52.0
+
+- **CLI: Default L1 RPC** - Added `https://eth.llamarpc.com` as default L1 RPC URL when `ETH_RPC` environment variable is not set. This allows running the CLI without any configuration for basic usage.
+
+- **CLI: Default command is now `run`** - Running `npx gov-tracker` without arguments now executes the `run` command (discover and track proposals). Previously required explicit `npx gov-tracker run`.
+
+- **CLI: Renamed yarn scripts** - Development scripts renamed from `monitor:*` to `cli:*`:
+  - `yarn cli` - Run CLI directly
+  - `yarn cli:run` - Discover and track all proposals
+  - `yarn cli:track` - Track specific transaction
+  - `yarn cli:status` - Show cache status
+  - `yarn cli:election` - Check Security Council elections
+
+- **CLI: Renamed entry point** - CLI source file renamed from `monitor.ts` to `cli.ts` for clarity
+
 ## [0.2.1] - 2026-01-09
 
 ### Added
 
-- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `yarn monitor run --cache data/bundled-cache.json` to regenerate.
+- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `yarn cli:run --cache data/bundled-cache.json` to regenerate.
 
 - **`getBundledCachePath()` export** - New utility function to get the path to the bundled cache for SDK users who want to bootstrap their app's cache.
 

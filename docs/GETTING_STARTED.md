@@ -3,8 +3,10 @@
 ## Installation
 
 ```bash
-yarn add @gzeoneth/gov-tracker ethers@^5.7.2
+yarn add @gzeoneth/gov-tracker ethers@^5.8.0
 ```
+
+**Note:** The library has minimal dependencies (`ethers`, `@arbitrum/sdk`, `debug`). The CLI tool uses optional dependencies (`commander`, `p-limit`) that are installed automatically when using `npx`.
 
 ## Setup
 
@@ -117,8 +119,8 @@ npx gov-tracker run --concurrency 4
 
 Development (using ts-node):
 ```bash
-yarn monitor:track 0x...
-yarn monitor:run --concurrency 4
+yarn cli:track 0x...
+yarn cli:run --concurrency 4
 ```
 
 **CLI Shorthands** (v0.2.1+):

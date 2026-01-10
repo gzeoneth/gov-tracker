@@ -6,11 +6,24 @@
  *
  * Provides RPC option parsing, provider creation, transaction execution,
  * and the core monitoring cycle. This is monitor-specific code, not part of the SDK.
+ *
+ * Dependencies:
+ * - commander and p-limit are optional dependencies required for CLI usage
  */
 
 import { Command, Option } from "commander";
 import { ethers } from "ethers";
-import pLimit from "p-limit";
+
+// p-limit is an optional dependency - provide fallback for sequential execution
+type LimitFunction = (concurrency: number) => <T>(fn: () => Promise<T>) => Promise<T>;
+let pLimit: LimitFunction;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  pLimit = require("p-limit").default || require("p-limit");
+} catch {
+  // Fallback: run tasks sequentially (concurrency = 1)
+  pLimit = () => (fn) => fn();
+}
 import {
   ProposalStageTracker,
   TrackedStage,
@@ -191,12 +204,8 @@ export function createProvidersFromOptions(opts: {
   novaRpc?: string;
 }): ProviderBundle {
   const l2Rpc = opts.l2Rpc || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-  const l1Rpc = opts.l1Rpc || process.env.ETH_RPC;
+  const l1Rpc = opts.l1Rpc || process.env.ETH_RPC || DEFAULT_RPC_URLS.ETHEREUM;
   const novaRpc = opts.novaRpc || process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-  if (!l1Rpc) {
-    throw new Error("L1 RPC URL required (--l1-rpc or ETH_RPC env var)");
-  }
 
   // Use StaticJsonRpcProvider to avoid automatic chainId detection on every call
   return {

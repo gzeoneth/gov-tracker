@@ -12,15 +12,39 @@
  * - Preparing and executing transactions
  *
  * Usage: npx @gzeoneth/gov-tracker [run|track <tx-hash>|election|status] [options]
+ *
+ * Dependencies:
+ * - commander and p-limit are optional dependencies required for CLI usage
+ * - dotenv is a dev dependency; .env files are loaded if available
  */
-import * as dotenv from "dotenv";
-dotenv.config();
+
+// Load .env file if dotenv is available (dev dependency)
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const dotenv = require("dotenv");
+  dotenv.config();
+} catch {
+  // dotenv not installed - continue without .env loading
+}
 
 import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
 import debug from "debug";
-import { Command, Option } from "commander";
+
+// Check for required CLI dependencies (optional in package.json)
+let Command: typeof import("commander").Command;
+let Option: typeof import("commander").Option;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const commander = require("commander");
+  Command = commander.Command;
+  Option = commander.Option;
+} catch {
+  console.error("Error: CLI requires 'commander' package.");
+  console.error("Install it with: npm install commander");
+  process.exit(1);
+}
 
 // Read version from package.json
 function getPackageVersion(): string {
@@ -250,8 +274,8 @@ const program = new Command()
 // ============================================================================
 
 const runCmd = program
-  .command("run")
-  .description("Discover, track, and optionally prepare/execute");
+  .command("run", { isDefault: true })
+  .description("Discover, track, and optionally prepare/execute (default command)");
 addOptions(runCmd, rpcOptions);
 addOptions(runCmd, executionOptions);
 addOptions(runCmd, chunkingOptions(CHUNK_SIZES.L1, CHUNK_SIZES.L2));

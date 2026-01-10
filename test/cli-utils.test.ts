@@ -597,8 +597,12 @@ describe("CLI Utilities", () => {
       vi.unstubAllEnvs();
     });
 
-    it("should throw when L1 RPC is missing", () => {
-      expect(() => createProvidersFromOptions({})).toThrow("L1 RPC URL required");
+    it("should use default L1 RPC when not provided", () => {
+      // L1 RPC now defaults to https://eth.llamarpc.com when not provided
+      const providers = createProvidersFromOptions({});
+      expect(providers.l1Provider).toBeDefined();
+      expect(providers.l2Provider).toBeDefined();
+      expect(providers.novaProvider).toBeDefined();
     });
 
     it("should create providers with explicit options", () => {

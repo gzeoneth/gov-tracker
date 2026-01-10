@@ -15,7 +15,6 @@ import {
   txHashCacheKey,
   readCacheStatus,
   getBundledCachePath,
-  getBundledCache,
 } from "../src/tracker/cache";
 import { WATERMARKS_KEY } from "../src/tracker/discovery";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
@@ -598,88 +597,6 @@ describe("Cache State Module", () => {
       // Should have at least one tx: checkpoint
       const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
       expect(txKeys.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("getBundledCache", () => {
-    it("should return parsed bundled cache data", () => {
-      // #given - the bundled cache exists in the data directory
-
-      // #when - calling getBundledCache
-      const data = getBundledCache();
-
-      // #then - should return a non-empty object
-      expect(data).toBeDefined();
-      expect(typeof data).toBe("object");
-      expect(Object.keys(data).length).toBeGreaterThan(0);
-    });
-
-    it("should return data with tx: prefixed keys", () => {
-      // #given - the bundled cache exists
-
-      // #when - calling getBundledCache
-      const data = getBundledCache();
-
-      // #then - should have keys starting with tx:
-      const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
-      expect(txKeys.length).toBeGreaterThan(0);
-    });
-
-    it("should return data matching getBundledCachePath file content", () => {
-      // #given - both functions are available
-
-      // #when - calling both functions
-      const dataFromFunction = getBundledCache();
-      const cachePath = getBundledCachePath();
-      const dataFromFile = JSON.parse(fs.readFileSync(cachePath!, "utf8"));
-
-      // #then - both should return equivalent data
-      expect(Object.keys(dataFromFunction).length).toBe(Object.keys(dataFromFile).length);
-      expect(dataFromFunction).toEqual(dataFromFile);
-    });
-
-    it("should return valid TrackingCheckpoint objects", () => {
-      // #given - the bundled cache exists
-
-      // #when - getting a checkpoint from the cache
-      const data = getBundledCache();
-      const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
-      const firstKey = txKeys[0];
-      const checkpoint = data[firstKey] as TrackingCheckpoint;
-
-      // #then - should have valid checkpoint structure
-      expect(checkpoint).toHaveProperty("version", 1);
-      expect(checkpoint).toHaveProperty("createdAt");
-      expect(checkpoint).toHaveProperty("input");
-      expect(checkpoint).toHaveProperty("cachedData");
-      expect(checkpoint.input).toHaveProperty("type");
-    });
-
-    it("should return checkpoints with completed stages", () => {
-      // #given - the bundled cache contains completed proposals
-
-      // #when - getting a checkpoint from the cache
-      const data = getBundledCache();
-      const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
-      const firstKey = txKeys[0];
-      const checkpoint = data[firstKey] as TrackingCheckpoint;
-
-      // #then - should have cached completed stages
-      expect(checkpoint.cachedData).toHaveProperty("completedStages");
-      expect(Array.isArray(checkpoint.cachedData.completedStages)).toBe(true);
-    });
-
-    it("should return lowercase tx hash keys", () => {
-      // #given - the bundled cache exists
-
-      // #when - calling getBundledCache
-      const data = getBundledCache();
-
-      // #then - all tx: keys should be lowercase
-      const txKeys = Object.keys(data).filter((k) => k.startsWith("tx:"));
-      for (const key of txKeys) {
-        expect(key).toBe(key.toLowerCase());
-      }
     });
   });
 });

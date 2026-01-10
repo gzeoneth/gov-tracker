@@ -139,66 +139,29 @@ const tracker = createTracker({
 });
 ```
 
-#### Browser/Static Builds: `getBundledCache()`
+#### Bundlers: Direct JSON import
 
-For browsers, Next.js static exports, or edge functions where file paths don't work at runtime:
+For bundlers (webpack, vite, Next.js), import the JSON directly:
 
 ```typescript
-import {
-  createTracker,
-  getBundledCache,
-  LocalStorageCache,
-} from "@gzeoneth/gov-tracker";
+import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
 
 // Initialize localStorage cache with bundled data
 const cache = new LocalStorageCache("arb-gov:");
-const bundledData = getBundledCache();
 
 // Populate cache (only needed once, check if already done)
 if (!(await cache.has("tx:0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e"))) {
-  for (const [key, checkpoint] of Object.entries(bundledData)) {
+  for (const [key, checkpoint] of Object.entries(bundledCache)) {
     await cache.set(key, checkpoint);
   }
-  console.log(`Initialized cache with ${Object.keys(bundledData).length} entries`);
+  console.log(`Initialized cache with ${Object.keys(bundledCache).length} entries`);
 }
 
 const tracker = createTracker({
   l2Provider, l1Provider, novaProvider,
   cache,
 });
-```
-
-#### Next.js Static Export
-
-For Next.js static exports, call `getBundledCache()` at build time:
-
-```typescript
-// pages/proposals.tsx
-import { getBundledCache, LocalStorageCache } from "@gzeoneth/gov-tracker";
-import type { BundledCacheData } from "@gzeoneth/gov-tracker";
-
-export async function getStaticProps() {
-  // This runs at build time, not in the browser
-  const bundledData = getBundledCache();
-  return {
-    props: { bundledCache: bundledData },
-  };
-}
-
-export default function ProposalsPage({ bundledCache }: { bundledCache: BundledCacheData }) {
-  // Initialize cache client-side with data passed from build
-  useEffect(() => {
-    const initCache = async () => {
-      const cache = new LocalStorageCache("arb-gov:");
-      for (const [key, checkpoint] of Object.entries(bundledCache)) {
-        await cache.set(key, checkpoint);
-      }
-    };
-    initCache();
-  }, [bundledCache]);
-
-  // ... rest of component
-}
 ```
 
 The bundled cache contains:

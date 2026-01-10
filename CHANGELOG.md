@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `-w` for `--write` - Execute prepared transactions
   - `-i` for `--inspect` - Decode and inspect calldata (with tracking)
 
-- **`getBundledCache()` export** - New function that returns bundled cache data directly (not a file path). Useful for environments where file paths don't work at runtime, such as Next.js static exports, edge functions, or browser builds. Use `getBundledCachePath()` for Node.js file-based usage to avoid loading the entire cache into memory.
+- **Bundled cache JSON export** - The bundled cache is now directly importable via `import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json"`. This enables bundlers (webpack, vite, Next.js) to include the cache data at build time without runtime file system access.
 
 - **`LookupSignatureOptions` type** - New exported type for configuring signature lookup behavior via SDK.
 

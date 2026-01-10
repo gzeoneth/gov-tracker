@@ -92,9 +92,9 @@ const incomplete = await tracker.queryIncompleteCheckpoints({
 
 ### Bundled Cache
 
-The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals). Two functions are available:
+The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals).
 
-#### `getBundledCachePath()` - For Node.js file-based usage
+#### Node.js: `getBundledCachePath()`
 
 ```typescript
 import { getBundledCachePath } from "@gzeoneth/gov-tracker";
@@ -110,32 +110,20 @@ if (bundledPath) {
 }
 ```
 
-#### `getBundledCache()` - For browsers and static builds
+#### Bundlers: Direct JSON import
 
-Returns the parsed cache data directly. Use this when file paths don't work at runtime (Next.js static exports, edge functions, browsers):
+For bundlers (webpack, vite, Next.js), import the JSON directly:
 
 ```typescript
-import { getBundledCache, LocalStorageCache, createTracker } from "@gzeoneth/gov-tracker";
+import { LocalStorageCache, createTracker } from "@gzeoneth/gov-tracker";
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
 
-// Initialize browser cache with bundled data
 const cache = new LocalStorageCache("arb-gov:");
-const bundledData = getBundledCache();
-
-for (const [key, checkpoint] of Object.entries(bundledData)) {
+for (const [key, checkpoint] of Object.entries(bundledCache)) {
   await cache.set(key, checkpoint);
 }
 
 const tracker = createTracker({ ...providers, cache });
-```
-
-For Next.js static exports, call `getBundledCache()` at build time (in `getStaticProps`):
-
-```typescript
-// pages/proposals.tsx
-export async function getStaticProps() {
-  const bundledData = getBundledCache();
-  return { props: { bundledCache: bundledData } };
-}
 ```
 
 See [Bundled Cache](./EXAMPLES.md#bundled-cache-bootstrap) for more examples.

@@ -131,7 +131,7 @@ npx @gzeoneth/gov-tracker track 0x... --no-cache
 - `-w` for `--write` - Execute prepared transactions
 - `-i` for `--inspect` - Track AND decode calldata
 
-**Bundled Cache**: The CLI includes a pre-built cache of completed proposals (~95 proposals). On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` (Node.js file path) or `getBundledCache()` (parsed data for browsers/static builds) - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
+**Bundled Cache**: The CLI includes a pre-built cache of completed proposals (~95 proposals). On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` (Node.js) or direct JSON import for bundlers - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
 ## Environment
 

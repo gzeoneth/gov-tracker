@@ -25,17 +25,12 @@
  *
  * @example Browser usage with LocalStorageCache
  * ```typescript
- * import {
- *   createTracker,
- *   LocalStorageCache,
- *   getBundledCache,
- * } from "@gzeoneth/gov-tracker";
+ * import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
+ * import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
  *
  * // Initialize cache with bundled data for faster first load
  * const cache = new LocalStorageCache("arb-gov:");
- * const bundledData = getBundledCache(); // Load at build time (e.g., getStaticProps) for static sites
- *
- * for (const [key, checkpoint] of Object.entries(bundledData)) {
+ * for (const [key, checkpoint] of Object.entries(bundledCache)) {
  *   await cache.set(key, checkpoint);
  * }
  *
@@ -336,14 +331,7 @@ export {
 // TIER 8: Cache Implementations
 // ============================================================================
 
-export {
-  FileCache,
-  LocalStorageCache,
-  MemoryCache,
-  getBundledCachePath,
-  getBundledCache,
-} from "./tracker/cache";
-export type { BundledCacheData } from "./tracker/cache";
+export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "./tracker/cache";
 
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)

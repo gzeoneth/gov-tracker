@@ -22,9 +22,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `-w` for `--write` - Execute prepared transactions
   - `-i` for `--inspect` - Decode and inspect calldata (with tracking)
 
+- **Bundled cache JSON export** - The bundled cache is now directly importable via `import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json"`. This enables bundlers (webpack, vite, Next.js) to include the cache data at build time without runtime file system access.
+
+- **`LookupSignatureOptions` type** - New exported type for configuring signature lookup behavior via SDK.
+
 ### Changed
 
+- **CLI: Public RPC warning** - CLI now warns when using default public RPC URLs (when `ETH_RPC`, `ARB1_RPC`, or `NOVA_RPC` environment variables are not set). Recommends setting env vars for production use.
+
+- **CLI: Health check timeout** - Health check pings now have a 5-second timeout (via `HEALTH_CHECK_TIMEOUT_MS`) to prevent loop stalls when the health check endpoint is unresponsive.
+
 - **Cache optimization: Remove callScheduledData duplication from L2_TIMELOCK** - L2_TIMELOCK stages no longer store `callScheduledData` since it's already stored in PROPOSAL_QUEUED. This reduces cache file size by ~100KB for typical proposals. During preparation, `callScheduledData` is auto-resolved from PROPOSAL_QUEUED via `options.stages`, or can be passed explicitly via `options.callScheduledData`. Breaking change: `callScheduledData` is now optional in `TimelockStageData` type.
+
+### Security
+
+- **Graceful calldata decode failures** - `decodeParameters()` now catches ABI decoding errors and returns `null` instead of throwing. Prevents crashes when encountering malformed or truncated calldata.
+
+- **4byte.directory lookup opt-out** - Added `DISABLE_4BYTE_LOOKUP=1` environment variable to disable external API calls for unknown function selectors. Also available via SDK option `{ disableApiLookup: true }` in `lookupSignature()`. When disabled, only local governance signatures are used. See README Security & Privacy section.
 
 - **CLI: Version shown in help** - Main help page now displays version in the description ("Version: 0.2.1") instead of requiring `-V` flag. (c6c8e4c)
 

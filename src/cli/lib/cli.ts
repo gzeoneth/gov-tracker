@@ -64,6 +64,9 @@ export const DEFAULT_L2_GAS_SETTINGS = {
   maxPriorityFeePerGas: 0,
 };
 
+/** Health check timeout in milliseconds */
+export const HEALTH_CHECK_TIMEOUT_MS = 5000;
+
 /** Gas settings interface */
 export interface GasSettings {
   maxFeePerGas: number; // in gwei
@@ -196,6 +199,21 @@ export function createProvidersFromOptions(opts: {
   const l2Rpc = opts.l2Rpc || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
   const l1Rpc = opts.l1Rpc || process.env.ETH_RPC || DEFAULT_RPC_URLS.ETHEREUM;
   const novaRpc = opts.novaRpc || process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+
+  // Warn when using default public RPCs (no env var or CLI option provided)
+  const warnings: string[] = [];
+  if (!opts.l1Rpc && !process.env.ETH_RPC) {
+    warnings.push("Using public RPC URL for Ethereum (ETH_RPC not set)");
+  }
+  if (!opts.l2Rpc && !process.env.ARB1_RPC) {
+    warnings.push("Using public RPC URL for Arbitrum One (ARB1_RPC not set)");
+  }
+  if (!opts.novaRpc && !process.env.NOVA_RPC) {
+    warnings.push("Using public RPC URL for Nova (NOVA_RPC not set)");
+  }
+  if (warnings.length > 0) {
+    console.warn(`Warning: ${warnings.join("; ")}. Public RPCs may have rate limits.`);
+  }
 
   // Use StaticJsonRpcProvider to avoid automatic chainId detection on every call
   return {
@@ -546,9 +564,12 @@ export async function runWithLoop(
 
     if (options.healthCheckUrl) {
       try {
-        await fetch(options.healthCheckUrl, { method: "GET" });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
+        await fetch(options.healthCheckUrl, { method: "GET", signal: controller.signal });
+        clearTimeout(timeoutId);
       } catch {
-        // Silently ignore health check errors
+        // Silently ignore health check errors (including timeouts)
       }
     }
 

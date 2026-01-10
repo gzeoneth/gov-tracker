@@ -17,6 +17,7 @@ import {
   createSigner,
   requirePrivateKeyForWrite,
   DEFAULT_L2_GAS_SETTINGS,
+  HEALTH_CHECK_TIMEOUT_MS,
   isShuttingDown,
   addOptions,
   runWithLoop,
@@ -587,14 +588,18 @@ describe("CLI Utilities", () => {
   });
 
   describe("createProvidersFromOptions", () => {
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
     beforeEach(() => {
       vi.stubEnv("ETH_RPC", "");
       vi.stubEnv("ARB1_RPC", "");
       vi.stubEnv("NOVA_RPC", "");
+      consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     });
 
     afterEach(() => {
       vi.unstubAllEnvs();
+      consoleWarnSpy.mockRestore();
     });
 
     it("should use default L1 RPC when not provided", () => {
@@ -623,6 +628,74 @@ describe("CLI Utilities", () => {
       const providers = createProvidersFromOptions({});
 
       expect(providers.l1Provider).toBeDefined();
+    });
+
+    it("should warn when all RPCs use defaults", () => {
+      // #given - no env vars or options provided
+      // #when - creating providers with empty options
+      createProvidersFromOptions({});
+
+      // #then - console.warn is called with all three warnings
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      const warning = consoleWarnSpy.mock.calls[0][0];
+      expect(warning).toContain("ETH_RPC not set");
+      expect(warning).toContain("ARB1_RPC not set");
+      expect(warning).toContain("NOVA_RPC not set");
+      expect(warning).toContain("Public RPCs may have rate limits");
+    });
+
+    it("should not warn when all RPCs are provided via options", () => {
+      // #given - all options provided
+      // #when - creating providers with explicit URLs
+      createProvidersFromOptions({
+        l1Rpc: "https://eth.example.com",
+        l2Rpc: "https://arb.example.com",
+        novaRpc: "https://nova.example.com",
+      });
+
+      // #then - no warnings
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it("should not warn when all RPCs are provided via env vars", () => {
+      // #given - all env vars set
+      vi.stubEnv("ETH_RPC", "https://eth.example.com");
+      vi.stubEnv("ARB1_RPC", "https://arb.example.com");
+      vi.stubEnv("NOVA_RPC", "https://nova.example.com");
+
+      // #when - creating providers with empty options
+      createProvidersFromOptions({});
+
+      // #then - no warnings
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it("should warn only for RPCs using defaults", () => {
+      // #given - only L1 RPC provided via env var
+      vi.stubEnv("ETH_RPC", "https://eth.example.com");
+
+      // #when - creating providers
+      createProvidersFromOptions({});
+
+      // #then - warns only about L2 and Nova
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      const warning = consoleWarnSpy.mock.calls[0][0];
+      expect(warning).not.toContain("ETH_RPC not set");
+      expect(warning).toContain("ARB1_RPC not set");
+      expect(warning).toContain("NOVA_RPC not set");
+    });
+
+    it("should not warn when options override defaults", () => {
+      // #given - options provided (env vars empty)
+      // #when - creating providers with all options
+      createProvidersFromOptions({
+        l1Rpc: "https://eth.example.com",
+        l2Rpc: "https://arb.example.com",
+        novaRpc: "https://nova.example.com",
+      });
+
+      // #then - no warnings (options take precedence)
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -677,6 +750,15 @@ describe("CLI Utilities", () => {
       await expect(runWithLoop(cycleFn, { loop: false, intervalMs: 1000 })).rejects.toThrow(
         "Test error"
       );
+    });
+  });
+
+  describe("HEALTH_CHECK_TIMEOUT_MS", () => {
+    it("should be 5 seconds", () => {
+      // #given - the health check timeout constant
+      // #when - checking its value
+      // #then - it should be 5000ms
+      expect(HEALTH_CHECK_TIMEOUT_MS).toBe(5000);
     });
   });
 

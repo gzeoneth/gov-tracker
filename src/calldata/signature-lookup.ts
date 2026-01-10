@@ -3,11 +3,22 @@
  *
  * Resolves 4-byte function selectors to full function signatures.
  * Uses local registry first, then falls back to 4byte.directory API.
+ *
+ * Privacy note: Set DISABLE_4BYTE_LOOKUP=1 to prevent external API calls.
+ * When enabled, only local signatures will be used.
  */
 
 import Debug from "debug";
 
 const debug = Debug("gov-tracker:calldata");
+
+/**
+ * Check if 4byte.directory API lookups are disabled via environment variable.
+ * When disabled, only local signatures will be used (no external API calls).
+ */
+function is4byteLookupDisabled(): boolean {
+  return process.env.DISABLE_4BYTE_LOOKUP === "1";
+}
 
 /**
  * Local registry of common governance function signatures
@@ -132,17 +143,31 @@ async function lookup4byteDirectory(selector: string): Promise<string | null> {
 }
 
 /**
+ * Options for signature lookup
+ */
+export interface LookupSignatureOptions {
+  /**
+   * Disable external 4byte.directory API lookup.
+   * When true, only local signatures will be used.
+   * Can also be disabled globally via DISABLE_4BYTE_LOOKUP=1 env var.
+   */
+  disableApiLookup?: boolean;
+}
+
+/**
  * Look up function signature from all sources
  *
  * Priority:
  * 1. Local registry (instant)
- * 2. 4byte.directory API (with caching)
+ * 2. 4byte.directory API (with caching) - unless disabled
  *
  * @param selector - The 4-byte function selector (e.g., "0x8f2a0bb0")
+ * @param options - Optional configuration for the lookup
  * @returns Object with signature and source, or null signature if not found
  */
 export async function lookupSignature(
-  selector: string
+  selector: string,
+  options?: LookupSignatureOptions
 ): Promise<{ signature: string | null; source: "local" | "api" | "failed" }> {
   // Try local registry first
   const localResult = lookupLocalSignature(selector);
@@ -150,7 +175,15 @@ export async function lookupSignature(
     return { signature: localResult, source: "local" };
   }
 
+  // Check if external API lookups are disabled (via option or env var)
+  if (options?.disableApiLookup || is4byteLookupDisabled()) {
+    const reason = options?.disableApiLookup ? "option" : "DISABLE_4BYTE_LOOKUP env var";
+    debug("4byte.directory lookup disabled via %s for selector: %s", reason, selector);
+    return { signature: null, source: "failed" };
+  }
+
   // Fall back to 4byte.directory API
+  debug("Looking up selector via 4byte.directory API: %s", selector);
   const apiResult = await lookup4byteDirectory(selector);
   if (apiResult) {
     return { signature: apiResult, source: "api" };

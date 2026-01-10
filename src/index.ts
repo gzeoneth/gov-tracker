@@ -4,7 +4,7 @@
  * A lightweight, high-performance library for tracking Arbitrum DAO
  * governance proposal lifecycle stages.
  *
- * @example
+ * @example Basic usage (Node.js)
  * ```typescript
  * import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
  *
@@ -21,6 +21,24 @@
  *     const tx = await signer.sendTransaction(prep.prepared);
  *   }
  * }
+ * ```
+ *
+ * @example Browser usage with LocalStorageCache
+ * ```typescript
+ * import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
+ * import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+ *
+ * // Initialize cache with bundled data for faster first load
+ * const cache = new LocalStorageCache("arb-gov:");
+ * for (const [key, checkpoint] of Object.entries(bundledCache)) {
+ *   await cache.set(key, checkpoint);
+ * }
+ *
+ * const tracker = createTracker({
+ *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
+ *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
+ *   cache, // Updates persist to localStorage
+ * });
  * ```
  * @packageDocumentation
  */
@@ -292,6 +310,7 @@ export {
   // Signature lookup
   lookupSignature,
   lookupLocalSignature,
+  LookupSignatureOptions,
   // Parameter utilities
   parseParamTypes,
   isLikelyCalldata,

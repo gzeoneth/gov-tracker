@@ -109,7 +109,11 @@ console.log(`Timelocks: ${stats.timelocks.complete}/${stats.timelocks.total} com
 
 ### Bundled Cache (Bootstrap)
 
-The npm package includes a pre-built cache of completed proposals (~2.4MB). Use this to skip initial discovery RPC calls:
+The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals). Use this to skip initial discovery RPC calls.
+
+#### Node.js: `getBundledCachePath()`
+
+For Node.js applications, use the file path:
 
 ```typescript
 import * as fs from "fs";
@@ -135,8 +139,33 @@ const tracker = createTracker({
 });
 ```
 
+#### Bundlers: Direct JSON import
+
+For bundlers (webpack, vite, Next.js), import the JSON directly:
+
+```typescript
+import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+
+// Initialize localStorage cache with bundled data
+const cache = new LocalStorageCache("arb-gov:");
+
+// Populate cache (only needed once, check if already done)
+if (!(await cache.has("tx:0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e"))) {
+  for (const [key, checkpoint] of Object.entries(bundledCache)) {
+    await cache.set(key, checkpoint);
+  }
+  console.log(`Initialized cache with ${Object.keys(bundledCache).length} entries`);
+}
+
+const tracker = createTracker({
+  l2Provider, l1Provider, novaProvider,
+  cache,
+});
+```
+
 The bundled cache contains:
-- All completed governor proposals (~83 proposals)
+- All completed governor proposals (~95 proposals)
 - Discovery watermarks for incremental discovery
 - Election tracking data
 

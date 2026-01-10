@@ -92,7 +92,9 @@ const incomplete = await tracker.queryIncompleteCheckpoints({
 
 ### Bundled Cache
 
-The npm package includes a pre-built cache of completed proposals. Use `getBundledCachePath()` to access it:
+The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals).
+
+#### Node.js: `getBundledCachePath()`
 
 ```typescript
 import { getBundledCachePath } from "@gzeoneth/gov-tracker";
@@ -106,6 +108,22 @@ if (bundledPath) {
   // Option 2: Use directly (updates won't persist)
   const tracker = createTracker({ ...providers, cachePath: bundledPath });
 }
+```
+
+#### Bundlers: Direct JSON import
+
+For bundlers (webpack, vite, Next.js), import the JSON directly:
+
+```typescript
+import { LocalStorageCache, createTracker } from "@gzeoneth/gov-tracker";
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+
+const cache = new LocalStorageCache("arb-gov:");
+for (const [key, checkpoint] of Object.entries(bundledCache)) {
+  await cache.set(key, checkpoint);
+}
+
+const tracker = createTracker({ ...providers, cache });
 ```
 
 See [Bundled Cache](./EXAMPLES.md#bundled-cache-bootstrap) for more examples.

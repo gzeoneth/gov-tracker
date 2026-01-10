@@ -586,5 +586,52 @@ describe("Parameter Decoder", () => {
       expect(result!.params[0].name).toBe("arg0");
       expect(result!.params[1].name).toBe("arg1");
     });
+
+    it("should return null for malformed calldata (selector mismatch)", () => {
+      // #given - calldata with wrong selector for the signature
+      const wrongSelectorCalldata =
+        "0xdeadbeef0000000000000000000000001234567890123456789012345678901234567890";
+
+      // #when - attempting to decode with mismatched signature
+      const result = decodeParameters(wrongSelectorCalldata, "transfer(address,uint256)", "arb1");
+
+      // #then - returns null instead of throwing
+      expect(result).toBeNull();
+    });
+
+    it("should return null for truncated calldata", () => {
+      // #given - calldata that is too short for the expected parameters
+      const truncatedCalldata = "0xa9059cbb00000000"; // transfer selector but incomplete params
+
+      // #when - attempting to decode truncated calldata
+      const result = decodeParameters(truncatedCalldata, "transfer(address,uint256)", "arb1");
+
+      // #then - returns null instead of throwing
+      expect(result).toBeNull();
+    });
+
+    it("should return null for invalid hex in calldata", () => {
+      // #given - calldata with correct length but corrupted data
+      const corruptedCalldata =
+        "0xa9059cbb" + // transfer selector
+        "000000000000000000000000000000000000000000000000000000000000000g"; // invalid hex (g)
+
+      // #when - attempting to decode corrupted calldata
+      const result = decodeParameters(corruptedCalldata, "transfer(address,uint256)", "arb1");
+
+      // #then - returns null instead of throwing
+      expect(result).toBeNull();
+    });
+
+    it("should return null for empty data section", () => {
+      // #given - only a selector with no parameter data
+      const selectorOnly = "0xa9059cbb";
+
+      // #when - attempting to decode selector-only calldata expecting params
+      const result = decodeParameters(selectorOnly, "transfer(address,uint256)", "arb1");
+
+      // #then - returns null because transfer expects 2 parameters
+      expect(result).toBeNull();
+    });
   });
 });

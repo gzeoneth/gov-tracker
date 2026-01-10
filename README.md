@@ -131,7 +131,7 @@ npx @gzeoneth/gov-tracker track 0x... --no-cache
 - `-w` for `--write` - Execute prepared transactions
 - `-i` for `--inspect` - Track AND decode calldata
 
-**Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
+**Bundled Cache**: The CLI includes a pre-built cache of completed proposals (~95 proposals). On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` (Node.js) or direct JSON import for bundlers - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
 ## Environment
 
@@ -141,6 +141,26 @@ ARB1_RPC=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
 NOVA_RPC=https://nova.arbitrum.io/rpc
 PRIVATE_KEY=0x...  # For execution
 ```
+
+## Security & Privacy
+
+**RPC URLs**: The CLI warns when using default public RPCs. For production use, set `ETH_RPC`, `ARB1_RPC`, and `NOVA_RPC` environment variables to avoid rate limits and ensure reliability.
+
+**External API Lookups**: When decoding calldata, unknown function selectors are looked up via [4byte.directory](https://www.4byte.directory/). This sends selector hashes to an external API. To disable:
+
+```bash
+# Via environment variable
+DISABLE_4BYTE_LOOKUP=1 npx @gzeoneth/gov-tracker track 0x...
+```
+
+```typescript
+// Via SDK option
+import { lookupSignature } from "@gzeoneth/gov-tracker";
+
+const result = await lookupSignature("0x12345678", { disableApiLookup: true });
+```
+
+When disabled, only local signatures (governance-related functions) are available.
 
 ## Documentation
 

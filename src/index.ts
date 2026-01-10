@@ -33,7 +33,7 @@
  *
  * // Initialize cache with bundled data for faster first load
  * const cache = new LocalStorageCache("arb-gov:");
- * const bundledData = getBundledCache(); // Call at build time for static sites
+ * const bundledData = getBundledCache(); // Load at build time (e.g., getStaticProps) for static sites
  *
  * for (const [key, checkpoint] of Object.entries(bundledData)) {
  *   await cache.set(key, checkpoint);

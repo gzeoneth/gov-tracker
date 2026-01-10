@@ -104,14 +104,19 @@ See [Examples](./docs/EXAMPLES.md#calldata-decoding--simulation) for Tenderly an
 # Track a proposal by transaction hash
 npx @gzeoneth/gov-tracker track 0x...
 
-# Decode and inspect calldata
+# Track AND inspect calldata (new in v0.2.1)
+npx @gzeoneth/gov-tracker track 0x... --inspect
+npx @gzeoneth/gov-tracker track 0x... -i  # shorthand
+
+# Decode calldata only (no tracking)
 npx @gzeoneth/gov-tracker track 0x... --inspect-only
 
 # Show simulation data for Tenderly/Foundry integration
 npx @gzeoneth/gov-tracker track 0x... --show-simulation
 
-# Execute ready stages
-npx @gzeoneth/gov-tracker track 0x... --write --private-key $PRIVATE_KEY
+# Execute ready stages (with shorthands)
+npx @gzeoneth/gov-tracker track 0x... -w --private-key $PRIVATE_KEY
+npx @gzeoneth/gov-tracker track 0x... -v -p -w --private-key $PRIVATE_KEY  # verbose + prepare + write
 
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
@@ -119,6 +124,12 @@ npx @gzeoneth/gov-tracker run
 # Disable caching (useful for one-off checks)
 npx @gzeoneth/gov-tracker track 0x... --no-cache
 ```
+
+**CLI Shorthands** (v0.2.1+):
+- `-v` for `--verbose` - Enable verbose logging
+- `-p` for `--prepare` - Prepare transactions for ready stages
+- `-w` for `--write` - Execute prepared transactions
+- `-i` for `--inspect` - Track AND decode calldata
 
 **Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 

@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI: `--inspect` flag with `-i` shorthand** - New flag for `track` command that performs normal tracking AND decodes calldata (unlike `--inspect-only` which skips tracking). Allows users to get both tracking information and calldata decoding in one command. (c6c8e4c)
 
+- **Security: Sanitization utilities for untrusted data** - New `src/utils/sanitize.ts` module with utilities for handling untrusted on-chain data:
+  - `truncateDescription(description)`: Limits description strings to 100KB to prevent DoS via large strings
+  - `sanitizeForDisplay(str)`: Removes ANSI escape codes and control characters to prevent terminal injection attacks
+  - `safeJsonParse<T>(json)`: JSON parsing with prototype pollution protection (strips `__proto__`, `constructor`, `prototype` keys)
+
 - **CLI: Shorthand flags** - Added short versions for commonly used flags:
   - `-v` for `--verbose` - Enable verbose logging
   - `-p` for `--prepare` - Prepare transactions for ready stages
@@ -51,6 +56,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `yarn cli:election` - Check Security Council elections
 
 - **CLI: Renamed entry point** - CLI source file renamed from `monitor.ts` to `cli.ts` for clarity
+
+### Security
+
+- **Prototype pollution protection** - `FileCache` and `LocalStorageCache` now use `safeJsonParse()` instead of `JSON.parse()` to prevent prototype pollution attacks from malicious cache data
+- **Description size limit** - `parseProposalCreatedEvent()` now truncates proposal descriptions to 100KB using `truncateDescription()` to prevent DoS via large strings
 
 ## [0.2.1] - 2026-01-09
 

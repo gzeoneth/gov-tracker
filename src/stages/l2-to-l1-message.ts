@@ -311,13 +311,13 @@ export async function trackL2ToL1Message(
   // ============================================================================
   let cachedSendProps: { sendRootSize: string; sendRootHash: string } | undefined;
 
-  for (let i = 0; i < messages.length; i++) {
-    const message = messages[i];
+  for (const [i, message] of messages.entries()) {
     const status = await queryWithRetry(() => message.status(l2Provider));
     messageStatuses.push(status);
 
     // Extract sendProps from first message after status() populates the SDK's internal cache
     if (i === 0) {
+      // Use nitroReader when available (Nitro-style networks), otherwise the message itself
       const reader = (message as any).nitroReader ?? message;
       const sendRootSize = reader.sendRootSize;
       const sendRootHash = reader.sendRootHash;

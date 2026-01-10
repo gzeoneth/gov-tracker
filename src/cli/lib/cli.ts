@@ -93,7 +93,7 @@ export const verboseOption = new Option("-v, --verbose", "Enable verbose logging
  * Cache-related options for commands that use the tracker cache
  */
 export const cacheOptions = {
-  /** Cache file path option (default is set in monitor.ts) */
+  /** Cache file path option (default is set in cli.ts) */
   cache: (defaultPath: string) => new Option("--cache <path>", "Cache file").default(defaultPath),
   /** Force flag to bypass cache and re-track from scratch */
   force: new Option("--force", "Force refresh, ignoring cached data"),

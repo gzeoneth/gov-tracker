@@ -101,8 +101,17 @@ for (const { checkpoint } of incomplete) {
 
 Production (after `yarn build`):
 ```bash
+# Track a proposal
 npx gov-tracker track 0x...
-npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY
+
+# Track AND inspect calldata (v0.2.1+)
+npx gov-tracker track 0x... --inspect
+npx gov-tracker track 0x... -i  # shorthand
+
+# Use shorthands for common operations (v0.2.1+)
+npx gov-tracker track 0x... -v -p -w --private-key $PRIVATE_KEY
+
+# Discover and monitor all proposals
 npx gov-tracker run --concurrency 4
 ```
 
@@ -111,6 +120,12 @@ Development (using ts-node):
 yarn monitor:track 0x...
 yarn monitor:run --concurrency 4
 ```
+
+**CLI Shorthands** (v0.2.1+):
+- `-v` for `--verbose` - Enable verbose logging
+- `-p` for `--prepare` - Prepare transactions for ready stages
+- `-w` for `--write` - Execute prepared transactions
+- `-i` for `--inspect` - Track AND decode calldata
 
 ---
 

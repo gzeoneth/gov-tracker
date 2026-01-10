@@ -25,8 +25,8 @@ function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStat
 
     const isElection = stages.some((s) => {
       if (s.type === "PROPOSAL_CREATED" && s.data) {
-        const data = s.data as { isElection?: boolean };
-        return data.isElection === true;
+        const data = s.data as { proposalType?: string };
+        return data.proposalType === "ELECTION_NOMINEE" || data.proposalType === "ELECTION_MEMBER";
       }
       return false;
     });

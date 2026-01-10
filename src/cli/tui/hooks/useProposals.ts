@@ -78,8 +78,8 @@ function isElectionProposal(checkpoint: TrackingCheckpoint): boolean {
   const stages = checkpoint.cachedData.completedStages ?? [];
   const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
   if (createdStage?.data) {
-    const data = createdStage.data as { isElection?: boolean };
-    return data.isElection === true;
+    const data = createdStage.data as { proposalType?: string };
+    return data.proposalType === "ELECTION_NOMINEE" || data.proposalType === "ELECTION_MEMBER";
   }
   return false;
 }

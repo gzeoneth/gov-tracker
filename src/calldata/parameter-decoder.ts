@@ -178,7 +178,13 @@ export function decodeParameters(
   const inputs = fragment.inputs;
 
   // Decode using Interface - handles selector automatically
-  const decoded = iface.decodeFunctionData(fragment, calldata);
+  // Wrapped in try/catch to handle malformed calldata gracefully
+  let decoded: ethers.utils.Result;
+  try {
+    decoded = iface.decodeFunctionData(fragment, calldata);
+  } catch {
+    return null;
+  }
 
   // Format into DecodedParameter array
   const params: DecodedParameter[] = inputs.map((paramType, index) => {

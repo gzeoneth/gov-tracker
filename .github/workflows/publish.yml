@@ -2,39 +2,92 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: "npm dist-tag"
+        required: true
+        default: "alpha"
+        type: choice
+        options: [alpha, beta]
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Skip on: release commits (avoid double run), prerelease tags (created by this workflow)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.ref_type == 'tag' && !contains(github.ref_name, '-')) ||
+      (github.ref_type == 'branch' && !startsWith(github.event.head_commit.message, 'release:'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint && yarn format:check
+      - run: yarn build
+      - run: yarn test
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     environment: publish
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
-          cache: "yarn"
-      - name: Upgrade npm (required for OIDC)
-        run: npm i -g npm@^11.5.1
-      - name: Show versions
-        run: node -v && npm -v && yarn -v
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-      - name: Run fast tests
-        run: yarn test
-      - name: Publish to npm
+          registry-url: https://registry.npmjs.org
+          cache: yarn
+      - run: npm i -g npm@^11.5.1
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+      - name: Validate tag matches package.json
+        if: github.ref_type == 'tag'
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$PKG_VERSION" == "$TAG_VERSION" ]] || { echo "::error::Version mismatch: package.json=$PKG_VERSION tag=$GITHUB_REF_NAME"; exit 1; }
+
+      - name: Set prerelease version
+        if: github.ref_type != 'tag'
+        run: |
+          BASE=$(node -p "require('./package.json').version.split('-')[0]")
+          SHA=${GITHUB_SHA::7}
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BRANCH=$(echo "$GITHUB_REF_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+            VERSION="${BASE}-alpha.${BRANCH}.${SHA}"
+          else
+            VERSION="${BASE}-beta.${SHA}"
+          fi
+          npm version "$VERSION" --no-git-tag-version
+          echo "Version: $VERSION"
+
+      - name: Publish
+        id: publish
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if [[ "$VERSION" == *-* ]]; then
-            npm publish --access public --tag beta
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.npm_tag }}"
+          elif [[ "$VERSION" == *-* ]]; then
+            TAG="beta"
           else
-            npm publish --access public --tag latest
+            TAG="latest"
           fi
+          npm publish --access public --tag "$TAG"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create git tag for prerelease
+        if: github.ref_type != 'tag'
+        run: |
+          git tag "v${{ steps.publish.outputs.version }}"
+          git push origin "v${{ steps.publish.outputs.version }}"

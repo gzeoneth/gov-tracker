@@ -8,11 +8,21 @@ cd gov-tracker
 yarn install
 ```
 
-Create a `.env` file for integration tests:
+### Environment Variables
+
+Create a `.env` file for integration tests and CLI usage:
+
 ```bash
+# Required for integration tests
 ETH_RPC=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
 ARB1_RPC=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
 NOVA_RPC=https://nova.arbitrum.io/rpc
+
+# Required for fork tests (needs archive access)
+ARB1_ARCHIVE_RPC=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
+
+# Optional: for CLI --write mode (transaction execution)
+PRIVATE_KEY=0x...
 ```
 
 ## Development Workflow
@@ -23,21 +33,24 @@ yarn lint               # Run ESLint
 yarn lint:fix           # Auto-fix ESLint issues
 yarn format             # Format with Prettier
 yarn format:check       # Check formatting
+yarn check:unused       # Check for dead code with knip
 ```
 
 ## Testing
 
 ```bash
 yarn test               # Fast tests (no RPC, ~1.5s)
-yarn test:coverage      # Tests with coverage report
-yarn test:integration   # Full RPC tests (~10min)
+yarn test:coverage      # Fast tests with coverage
+yarn test:integration   # Integration tests with RPC (~2min)
 yarn test:all           # All tests except fork tests
+yarn test:fork          # Fork tests with Anvil (~5min)
 ```
 
 ### Test a single file
 
 ```bash
 npx vitest run test/utils.test.ts
+npx vitest run test/tracker.test.ts
 ```
 
 ### Skip RPC tests
@@ -46,55 +59,67 @@ npx vitest run test/utils.test.ts
 NO_RPC=1 yarn test:all
 ```
 
+### Fork tests
+
+Fork tests use Anvil to fork chains at historical blocks for deterministic testing. Requires:
+- Foundry installed (`curl -L https://foundry.paradigm.xyz | bash && foundryup`)
+- `ARB1_ARCHIVE_RPC` with archive node access
+
+```bash
+yarn test:fork
+```
+
 ## Code Quality
 
 Pre-commit hooks run automatically via husky + lint-staged:
 - ESLint auto-fix on staged `.ts` files
 - Prettier formatting on staged `.ts` files
+- Dead code check with knip
 
 Before committing, ensure:
 - `yarn test` passes
 - `yarn lint` shows no errors
 - `yarn format:check` passes
 
-## Publishing to npm
+## Release Process
 
-This section is for maintainers publishing new versions.
+This project uses automated npm publishing via GitHub Actions with OIDC authentication.
 
-### Prerequisites
+### npm Tags
 
-1. npm account with publish access to `@gzeoneth` scope
-2. Authenticate: `npm login`
-3. Clean working directory
+| Tag | Source | Description |
+|-----|--------|-------------|
+| `@alpha` | Manual workflow dispatch | Feature branch testing, version: `X.Y.Z-alpha.<branch>.<sha>` |
+| `@beta` | Every merge to `main` | Auto-published, version: `X.Y.Z-beta.<sha>` |
+| `@latest` | Manual git tag `v*` | Stable release |
 
-### Steps
+### Alpha Releases (Feature Branch Testing)
 
-1. **Bump version**:
-   ```bash
-   npm version patch  # 0.1.0 -> 0.1.1
-   npm version minor  # 0.1.0 -> 0.2.0
-   npm version major  # 0.1.0 -> 1.0.0
-   ```
+1. Go to **Actions** → **Publish to npm** → **Run workflow**
+2. Select your branch and npm tag (`alpha` default)
 
-2. **Run tests**:
-   ```bash
-   yarn test:all
-   ```
+```bash
+npm install @gzeoneth/gov-tracker@alpha  # X.Y.Z-alpha.<branch>.<sha>
+```
 
-3. **Dry run**:
-   ```bash
-   npm publish --dry-run
-   ```
+### Automatic Beta Releases
 
-4. **Publish**:
-   ```bash
-   npm publish --access public
-   ```
+Every push to `main` auto-publishes a beta:
 
-5. **Push tags**:
-   ```bash
-   git push && git push --tags
-   ```
+```bash
+npm install @gzeoneth/gov-tracker@beta  # X.Y.Z-beta.<sha>
+```
+
+### Stable Releases (Maintainers)
+
+```bash
+npm version patch  # or minor/major
+# Update CHANGELOG.md: move [Unreleased] to new version
+git add package.json CHANGELOG.md
+git commit -m "release: vX.Y.Z"
+git tag vX.Y.Z
+git push && git push --tags  # CI publishes automatically
+```
 
 ### Verification
 
@@ -107,7 +132,7 @@ npx @gzeoneth/gov-tracker --help
 
 | Error | Solution |
 |-------|----------|
-| 403 Forbidden | No publish access to `@gzeoneth` scope |
-| Version exists | Bump version number |
-| Build failures | Fix lint/format errors |
-| Missing files | Check `files` array in package.json |
+| 403 Forbidden | Check GitHub environment secrets for `publish` |
+| Version exists | Version already published, bump again |
+| Build failures | Fix lint/format/test errors |
+| Beta not published | Check if commit message starts with `release:` (skipped) |

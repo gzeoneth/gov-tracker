@@ -417,26 +417,37 @@ export interface TimelockExecutionPayload {
   securityCouncilNonce?: string;
 }
 
-/** Extract timelock execution payload from a stage. */
-export function createTimelockStageData(stage: TrackedStage): TimelockExecutionPayload | null {
+/**
+ * Extract timelock execution payload from a stage.
+ * Falls back to provided callScheduledData if stage doesn't contain it (L2_TIMELOCK case).
+ */
+export function createTimelockStageData(
+  stage: TrackedStage,
+  fallbackCallScheduledData?: CallScheduledData[]
+): TimelockExecutionPayload | null {
   let stageData: TimelockStageData | null = null;
   for (const stageType of TIMELOCK_STAGE_TYPES) {
     stageData = getStageData(stage, stageType);
     if (stageData) break;
   }
 
-  if (
-    !stageData?.timelockAddress ||
-    !stageData?.operationId ||
-    !stageData?.callScheduledData?.length
-  ) {
+  if (!stageData?.timelockAddress || !stageData?.operationId) {
+    return null;
+  }
+
+  // Use stage's callScheduledData if available, otherwise use fallback
+  const callScheduledData = stageData.callScheduledData?.length
+    ? deserializeCallScheduledDataArray(stageData.callScheduledData)
+    : fallbackCallScheduledData;
+
+  if (!callScheduledData?.length) {
     return null;
   }
 
   const payload: TimelockExecutionPayload = {
     timelockAddress: stageData.timelockAddress,
     operationId: stageData.operationId,
-    callScheduledData: deserializeCallScheduledDataArray(stageData.callScheduledData),
+    callScheduledData,
   };
 
   if (stageData.isSecurityCouncilOperation) {

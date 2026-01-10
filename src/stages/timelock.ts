@@ -267,7 +267,10 @@ async function trackTimelock(
   builder.data({ operationId, timelockAddress, state: operationState.state, eta });
 
   const allData = collectAllScheduledData(timelockState);
-  if (allData.length > 0) {
+  // Only store callScheduledData for L1_TIMELOCK.
+  // L2_TIMELOCK skips this to avoid duplication - the same data is already
+  // stored in PROPOSAL_QUEUED stage. Callers use options.callScheduledData during preparation.
+  if (allData.length > 0 && config.stageType === "L1_TIMELOCK") {
     builder.data({ callScheduledData: serializeCallScheduledDataArray(allData) });
   }
 
@@ -824,7 +827,9 @@ export async function prepareTimelockStage(
   if (validationError) return validationError;
 
   // Get execution payload (for targets, values, payloads)
-  const execPayload = createTimelockStageData(stage);
+  // For L2_TIMELOCK, callScheduledData may not be in the stage (to avoid duplication
+  // with PROPOSAL_QUEUED), so we accept it via options.callScheduledData
+  const execPayload = createTimelockStageData(stage, options.callScheduledData);
   if (!execPayload) {
     return failPrepare("Stage is not a timelock stage");
   }
@@ -836,7 +841,10 @@ export async function prepareTimelockStage(
 
   const { callScheduledData } = execPayload;
   if (!callScheduledData?.length) {
-    return failPrepare("Missing callScheduledData for preparation.");
+    return failPrepare(
+      "Missing callScheduledData for preparation. " +
+        "For L2_TIMELOCK stages, provide it via options.callScheduledData."
+    );
   }
 
   // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)

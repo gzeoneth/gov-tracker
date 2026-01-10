@@ -19,6 +19,10 @@ export interface PrepareOptions {
   prepareCompleted?: boolean;
   /** Proposal description (needed for salt derivation if not in stage data) */
   description?: string;
+  /** CallScheduledData for L2_TIMELOCK preparation (auto-resolved from stages if omitted) */
+  callScheduledData?: CallScheduledData[];
+  /** All stages - used to resolve callScheduledData from PROPOSAL_QUEUED for L2_TIMELOCK */
+  stages?: TrackedStage[];
 }
 
 export type PrepareResult =

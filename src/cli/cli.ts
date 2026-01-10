@@ -19,12 +19,19 @@
  */
 
 // Load .env file if dotenv is available (dev dependency)
+// Must be synchronous to ensure env vars are loaded before other imports access them
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const dotenv = require("dotenv");
-  dotenv.config();
-} catch {
-  // dotenv not installed - continue without .env loading
+  require("dotenv").config();
+} catch (err: unknown) {
+  // Only ignore if module not found; re-throw other errors
+  const isModuleNotFound =
+    err instanceof Error &&
+    "code" in err &&
+    (err as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND";
+  if (!isModuleNotFound) {
+    throw err;
+  }
 }
 
 import * as os from "os";

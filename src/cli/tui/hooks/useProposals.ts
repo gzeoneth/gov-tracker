@@ -113,7 +113,6 @@ function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
   if (filter === "all") return true;
   if (filter === "active") return item.status === "active";
   if (filter === "complete") return item.status === "complete";
-  if (filter === "elections") return item.type === "election";
   if (filter === "timelocks") return item.type === "timelock";
   return true;
 }

@@ -37,7 +37,7 @@ export interface UseNavigationResult {
   reset: () => void;
 }
 
-const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "elections", "timelocks"];
+const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
 const PAGE_SIZE = 10;
 const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 

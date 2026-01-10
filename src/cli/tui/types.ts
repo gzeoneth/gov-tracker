@@ -13,7 +13,7 @@ export type ViewType =
   | "description"
   | "election";
 
-export type FilterType = "all" | "active" | "complete" | "elections" | "timelocks";
+export type FilterType = "all" | "active" | "complete" | "timelocks";
 
 export interface ProposalListItem {
   key: string;

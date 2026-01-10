@@ -14,7 +14,7 @@ export default defineConfig({
         "test/**",
         "dist/**",
         "*.config.*",
-        "src/cli/monitor.ts", // CLI entrypoint - not library code
+        "src/cli/cli.ts", // CLI entrypoint - not library code
       ],
     },
     // 2 minute timeout covers 99% of tests

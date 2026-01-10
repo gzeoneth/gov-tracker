@@ -6,11 +6,14 @@
  *
  * Provides RPC option parsing, provider creation, transaction execution,
  * and the core monitoring cycle. This is monitor-specific code, not part of the SDK.
+ *
+ * Dependencies:
+ * - commander is an optional dependency required for CLI usage
  */
 
 import { Command, Option } from "commander";
 import { ethers } from "ethers";
-import pLimit from "p-limit";
+import { pLimit } from "./concurrency";
 import {
   ProposalStageTracker,
   TrackedStage,
@@ -90,7 +93,7 @@ export const verboseOption = new Option("-v, --verbose", "Enable verbose logging
  * Cache-related options for commands that use the tracker cache
  */
 export const cacheOptions = {
-  /** Cache file path option (default is set in monitor.ts) */
+  /** Cache file path option (default is set in cli.ts) */
   cache: (defaultPath: string) => new Option("--cache <path>", "Cache file").default(defaultPath),
   /** Force flag to bypass cache and re-track from scratch */
   force: new Option("--force", "Force refresh, ignoring cached data"),
@@ -191,12 +194,8 @@ export function createProvidersFromOptions(opts: {
   novaRpc?: string;
 }): ProviderBundle {
   const l2Rpc = opts.l2Rpc || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-  const l1Rpc = opts.l1Rpc || process.env.ETH_RPC;
+  const l1Rpc = opts.l1Rpc || process.env.ETH_RPC || DEFAULT_RPC_URLS.ETHEREUM;
   const novaRpc = opts.novaRpc || process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-  if (!l1Rpc) {
-    throw new Error("L1 RPC URL required (--l1-rpc or ETH_RPC env var)");
-  }
 
   // Use StaticJsonRpcProvider to avoid automatic chainId detection on every call
   return {

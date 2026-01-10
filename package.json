@@ -14,7 +14,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "gov-tracker": "dist/cli/monitor.js"
+    "gov-tracker": "dist/cli/cli.js"
   },
   "files": [
     "dist"
@@ -36,11 +36,11 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "prepublishOnly": "yarn lint && yarn format:check && yarn build",
     "prepare": "husky",
-    "monitor": "ts-node src/cli/monitor.ts",
-    "monitor:run": "ts-node src/cli/monitor.ts run",
-    "monitor:status": "ts-node src/cli/monitor.ts status",
-    "monitor:track": "ts-node src/cli/monitor.ts track",
-    "monitor:inspect": "ts-node src/cli/monitor.ts inspect"
+    "cli": "ts-node src/cli/cli.ts",
+    "cli:run": "ts-node src/cli/cli.ts run",
+    "cli:status": "ts-node src/cli/cli.ts status",
+    "cli:track": "ts-node src/cli/cli.ts track",
+    "cli:election": "ts-node src/cli/cli.ts election"
   },
   "lint-staged": {
     "*.ts": [
@@ -50,19 +50,20 @@
   },
   "dependencies": {
     "@arbitrum/sdk": "^4.0.0",
-    "commander": "^14.0.2",
-    "debug": "^4.3.4",
-    "dotenv": "^17.2.3",
-    "ethers": "^5.7.2",
-    "p-limit": "3"
+    "debug": "^4.4.0",
+    "ethers": "^5.8.0"
+  },
+  "optionalDependencies": {
+    "commander": "^14.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.51.0",
-    "@typescript-eslint/parser": "^8.51.0",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
     "@vitest/coverage-v8": "^4.0.0",
+    "dotenv": "^17.0.0",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "jiti": "^2.6.1",
@@ -70,7 +71,7 @@
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.0.0",
+    "typescript": "^5.8.0",
     "vitest": "^4.0.16"
   },
   "engines": {

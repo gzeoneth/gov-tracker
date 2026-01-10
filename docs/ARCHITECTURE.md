@@ -91,7 +91,7 @@ interface TrackingCheckpoint {
 3. **Checkpoint resume**: Reuse completed stages from cache
 4. **Parallel discovery**: Discover multiple governors/timelocks concurrently
 5. **Bounded L1→L2 conversion**: Narrow binary search range for block conversion
-6. **Concurrent tracking**: Use `p-limit` for bounded parallel operations
+6. **Concurrent tracking**: Built-in concurrency limiter for bounded parallel operations
 
 ```typescript
 chunkingConfig: {

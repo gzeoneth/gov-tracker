@@ -40,17 +40,21 @@ npx vitest run test/tracker.test.ts
 ### CLI Tools
 ```bash
 # Development (using ts-node)
-yarn monitor:run        # Discover and track all proposals
-yarn monitor:track      # Track specific transaction (add tx hash as argument)
-yarn monitor:status     # Show status
+yarn cli:run            # Discover and track all proposals
+yarn cli:track          # Track specific transaction (add tx hash as argument)
+yarn cli:status         # Show status
+yarn cli:election       # Check Security Council elections
 
 # Production (after yarn build)
-npx gov-tracker run                              # Discover all proposals
+npx gov-tracker                                  # Discover all proposals (default command)
+npx gov-tracker run                              # Same as above (explicit)
 npx gov-tracker track 0x...                      # Track by tx hash
 npx gov-tracker track 0x... --inspect-only       # Decode calldata only (v0.1.1+)
 npx gov-tracker track 0x... --show-simulation    # Show simulation data (v0.1.1+)
 npx gov-tracker track 0x... --write --private-key $PRIVATE_KEY  # Execute ready stages
 ```
+
+**Note:** L1 RPC now defaults to `https://eth.llamarpc.com` when `ETH_RPC` is not set.
 
 ## Architecture Overview
 
@@ -163,7 +167,7 @@ Cache adapters: `FileCache` (Node.js), `LocalStorageCache` (browsers), `MemoryCa
 
 3. **Checkpoint resume**: Reuse completed stages from cache (zero RPC calls)
 
-4. **Parallel discovery**: Discover from multiple governors/timelocks concurrently using `p-limit`
+4. **Parallel discovery**: Discover from multiple governors/timelocks concurrently
 
 5. **Bounded L1↔L2 block conversion**: Narrow binary search range for cross-chain block mapping
 
@@ -397,7 +401,7 @@ await withScope("core-gov", async () => {
 
 **Debug-only**: Logging uses the `debug` library and is disabled by default. Enable with:
 ```bash
-DEBUG=gov-tracker:* yarn monitor:run
+DEBUG=gov-tracker:* yarn cli:run
 ```
 
 ### Type Safety
@@ -486,8 +490,8 @@ describe.skipIf(process.env.NO_RPC === "1")("integration tests", () => {
 
 Use the CLI tool to decode proposal calldata:
 ```bash
-yarn monitor:track 0x0625ecb... --inspect-only
-yarn monitor:track 0x0625ecb... --show-simulation
+yarn cli:track 0x0625ecb... --inspect-only
+yarn cli:track 0x0625ecb... --show-simulation
 ```
 
 #### Performance improvement
@@ -495,7 +499,7 @@ yarn monitor:track 0x0625ecb... --show-simulation
 Use the monitoring script to debug performance issue
 
 1. Track a COMPLETED proposal with all 7 stages
-   `yarn monitor track 0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068 --verbose`
+   `yarn cli:track 0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068 --verbose`
 2. Use log to identify performance improvement opportunity
 3. Log lookups and arbitrum-sdk calls can be slow, use them intelligently
 4. Track again to see the improvement

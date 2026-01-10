@@ -20,7 +20,7 @@ export default defineConfig({
         "test/**",
         "dist/**",
         "*.config.*",
-        "src/cli/monitor.ts",
+        "src/cli/cli.ts",
       ],
       // Output to separate directory for merging
       reportsDirectory: "coverage-fork",

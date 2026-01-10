@@ -16,12 +16,19 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   React = require("react");
 } catch {
-  // Will fail at runtime if ink is not installed
+  // Dependencies loaded lazily - will be checked at runtime
+}
+
+export function checkTuiDependencies(): void {
+  if (!ink || !React) {
+    console.error("Error: TUI requires 'ink' and 'react' packages.");
+    console.error("Install them with: yarn add ink@^3.2.0 react@^17.0.2");
+    process.exit(1);
+  }
 }
 
 export { React };
-
-// Re-export ink components with proper types
+export const render = ink?.render;
 export const Box = ink?.Box;
 export const Text = ink?.Text;
 export const useInput = ink?.useInput as (

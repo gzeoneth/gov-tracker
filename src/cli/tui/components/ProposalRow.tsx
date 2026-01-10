@@ -2,9 +2,9 @@
  * Single proposal row in the list view
  */
 
-import { React, Box, Text } from "../ink-wrapper";
-import type { ProposalListItem } from "../types";
-import { StatusBadge } from "./StatusBadge";
+import { React, Box, Text } from "../ink-wrapper.js";
+import type { ProposalListItem } from "../types.js";
+import { StatusBadge } from "./StatusBadge.js";
 
 interface ProposalRowProps {
   item: ProposalListItem;

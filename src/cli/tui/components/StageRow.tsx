@@ -2,10 +2,10 @@
  * Single stage row component for proposal detail view
  */
 
-import { React, Box, Text } from "../ink-wrapper";
-import type { TrackedStage } from "../../../types";
-import { formatStageTitle } from "../../../utils/stage-metadata";
-import { StatusBadge } from "./StatusBadge";
+import { React, Box, Text } from "../ink-wrapper.js";
+import type { TrackedStage } from "../../../types/index.js";
+import { formatStageTitle } from "../../../utils/stage-metadata.js";
+import { StatusBadge } from "./StatusBadge.js";
 
 interface StageRowProps {
   stage: TrackedStage;

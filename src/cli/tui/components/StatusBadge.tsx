@@ -2,8 +2,8 @@
  * Status badge component for displaying stage/proposal status
  */
 
-import { React, Text } from "../ink-wrapper";
-import type { StageStatus } from "../../../types";
+import { React, Text } from "../ink-wrapper.js";
+import type { StageStatus } from "../../../types/index.js";
 
 interface StatusBadgeProps {
   status: StageStatus | "active" | "complete" | "failed";

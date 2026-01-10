@@ -5,9 +5,15 @@
  * Requires: ink@3.x, react@17.x (CommonJS compatible versions)
  */
 
-import type { ProviderBundle } from "../lib/cli";
+import type { ProviderBundle } from "../lib/cli.js";
+import { React, render, checkTuiDependencies } from "./ink-wrapper.js";
 
-// Check for TTY environment (required for keyboard input)
+export interface TuiOptions {
+  cachePath: string;
+  providers?: ProviderBundle;
+  verbose?: boolean;
+}
+
 function checkTtySupport(): void {
   if (!process.stdin.isTTY) {
     console.error("Error: TUI requires an interactive terminal (TTY).");
@@ -22,39 +28,11 @@ function checkTtySupport(): void {
   }
 }
 
-// Check for required TUI dependencies
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let render: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let React: any;
-
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const ink = require("ink");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  React = require("react");
-  render = ink.render;
-} catch {
-  console.error("Error: TUI requires 'ink' and 'react' packages.");
-  console.error("Install them with: yarn add ink@^3.2.0 react@^17.0.2");
-  process.exit(1);
-}
-
-export interface TuiOptions {
-  cachePath: string;
-  providers?: ProviderBundle;
-  verbose?: boolean;
-}
-
-/**
- * Launch the interactive TUI
- */
 export async function runTui(options: TuiOptions): Promise<void> {
-  // Check TTY support before attempting to render
   checkTtySupport();
+  checkTuiDependencies();
 
-  // Dynamically import App to avoid loading React until needed
-  const { App } = await import("./App");
+  const { App } = await import("./App.js");
 
   const { waitUntilExit } = render(
     React.createElement(App, {

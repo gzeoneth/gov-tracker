@@ -3,44 +3,55 @@
  */
 
 import { useMemo } from "react";
-import type { TrackingCheckpoint, StageType } from "../../../types";
-import type { ProposalListItem, FilterType, CacheData } from "../types";
+import type { TrackingCheckpoint, StageType, TrackedStage } from "../../../types/index.js";
+import type { ProposalListItem, FilterType, CacheData } from "../types.js";
 
-function truncateTitle(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 3) + "...";
+interface ProposalCreatedData {
+  description?: string;
+  proposalType?: string;
+}
+
+interface VotingData {
+  proposalState?: string;
+}
+
+function getStages(checkpoint: TrackingCheckpoint): TrackedStage[] {
+  return checkpoint.cachedData.completedStages ?? [];
+}
+
+function getCreatedStage(stages: TrackedStage[]): TrackedStage | undefined {
+  return stages.find((s) => s.type === "PROPOSAL_CREATED");
+}
+
+function getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined {
+  return getCreatedStage(stages)?.data as ProposalCreatedData | undefined;
+}
+
+function truncate(str: string, maxLen: number): string {
+  return str.length <= maxLen ? str : str.slice(0, maxLen - 3) + "...";
 }
 
 function getProposalTitle(checkpoint: TrackingCheckpoint): string {
-  const stages = checkpoint.cachedData.completedStages ?? [];
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-
-  if (createdStage?.data) {
-    const data = createdStage.data as { description?: string };
-    if (data.description) {
-      const firstLine = data.description.split("\n")[0];
-      return truncateTitle(firstLine, 60);
-    }
+  const data = getCreatedData(getStages(checkpoint));
+  if (data?.description) {
+    return truncate(data.description.split("\n")[0], 60);
   }
-
   if (checkpoint.input.type === "governor") {
     return `Proposal ${checkpoint.input.proposalId.slice(0, 12)}...`;
-  } else if (checkpoint.input.type === "timelock") {
+  }
+  if (checkpoint.input.type === "timelock") {
     return `Timelock Op ${checkpoint.input.operationId.slice(0, 12)}...`;
   }
-
   return "Unknown";
 }
 
 function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete" | "failed" {
-  const stages = checkpoint.cachedData.completedStages ?? [];
+  const stages = getStages(checkpoint);
 
   const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
-  if (votingStage?.data) {
-    const votingData = votingStage.data as { proposalState?: string };
-    if (votingData.proposalState === "Defeated" || votingData.proposalState === "Canceled") {
-      return "failed";
-    }
+  const votingData = votingStage?.data as VotingData | undefined;
+  if (votingData?.proposalState === "Defeated" || votingData?.proposalState === "Canceled") {
+    return "failed";
   }
 
   const lastStage = stages[stages.length - 1];
@@ -59,58 +70,52 @@ function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete
 }
 
 function getCurrentStageType(checkpoint: TrackingCheckpoint): StageType | null {
-  const stages = checkpoint.cachedData.completedStages ?? [];
+  const stages = getStages(checkpoint);
   for (let i = stages.length - 1; i >= 0; i--) {
-    const stage = stages[i];
-    if (stage.status !== "COMPLETED" && stage.status !== "SKIPPED") {
-      return stage.type;
+    if (stages[i].status !== "COMPLETED" && stages[i].status !== "SKIPPED") {
+      return stages[i].type;
     }
   }
   return checkpoint.lastProcessedStage;
 }
 
-function hasExecutableStage(checkpoint: TrackingCheckpoint): boolean {
-  const stages = checkpoint.cachedData.completedStages ?? [];
+function hasExecutableStage(stages: TrackedStage[]): boolean {
   return stages.some((s) => s.status === "READY" || s.executable === true);
 }
 
-function isElectionProposal(checkpoint: TrackingCheckpoint): boolean {
-  const stages = checkpoint.cachedData.completedStages ?? [];
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-  if (createdStage?.data) {
-    const data = createdStage.data as { proposalType?: string };
-    return data.proposalType === "ELECTION_NOMINEE" || data.proposalType === "ELECTION_MEMBER";
-  }
-  return false;
+function isElectionProposal(stages: TrackedStage[]): boolean {
+  const proposalType = getCreatedData(stages)?.proposalType;
+  return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
 }
 
-function getProposalType(checkpoint: TrackingCheckpoint): string | undefined {
-  const stages = checkpoint.cachedData.completedStages ?? [];
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-  if (createdStage?.data) {
-    const data = createdStage.data as { proposalType?: string };
-    return data.proposalType;
-  }
-  return undefined;
-}
-
-function getCreationTimestamp(checkpoint: TrackingCheckpoint): number | null {
-  const stages = checkpoint.cachedData.completedStages ?? [];
-
-  // For governor proposals, use PROPOSAL_CREATED stage timing
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
+function getCreationTimestamp(stages: TrackedStage[]): number | null {
+  const createdStage = getCreatedStage(stages);
   if (createdStage?.timing?.startedAt) {
-    return createdStage.timing.startedAt * 1000; // Convert seconds to milliseconds
+    return createdStage.timing.startedAt * 1000;
   }
-
-  // For timelock operations, use L2_TIMELOCK stage timing
   const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
   if (l2TimelockStage?.timing?.startedAt) {
     return l2TimelockStage.timing.startedAt * 1000;
   }
-
-  // No timestamp available - don't fallback to cache time
   return null;
+}
+
+function getItemType(
+  checkpoint: TrackingCheckpoint,
+  stages: TrackedStage[]
+): ProposalListItem["type"] {
+  if (isElectionProposal(stages)) return "election";
+  if (checkpoint.input.type === "timelock") return "timelock";
+  return "governor";
+}
+
+function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
+  if (filter === "all") return true;
+  if (filter === "active") return item.status === "active";
+  if (filter === "complete") return item.status === "complete";
+  if (filter === "elections") return item.type === "election";
+  if (filter === "timelocks") return item.type === "timelock";
+  return true;
 }
 
 export function useProposals(
@@ -125,37 +130,27 @@ export function useProposals(
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery") continue;
 
-      // Skip entries with no tracked stages (incomplete tracking)
-      const stages = checkpoint.cachedData.completedStages ?? [];
+      const stages = getStages(checkpoint);
       if (stages.length === 0) continue;
 
-      const isElection = isElectionProposal(checkpoint);
-      const status = getProposalStatus(checkpoint);
       const completedCount = stages.filter(
         (s) => s.status === "COMPLETED" || s.status === "SKIPPED"
       ).length;
 
-      const item: ProposalListItem = {
+      items.push({
         key,
         title: getProposalTitle(checkpoint),
-        type: isElection
-          ? "election"
-          : checkpoint.input.type === "timelock"
-            ? "timelock"
-            : "governor",
-        proposalType: getProposalType(checkpoint),
-        status,
+        type: getItemType(checkpoint, stages),
+        proposalType: getCreatedData(stages)?.proposalType,
+        status: getProposalStatus(checkpoint),
         stageProgress: `${completedCount}/7`,
         currentStage: getCurrentStageType(checkpoint),
-        hasExecutable: hasExecutableStage(checkpoint),
-        createdAt: getCreationTimestamp(checkpoint),
+        hasExecutable: hasExecutableStage(stages),
+        createdAt: getCreationTimestamp(stages),
         checkpoint,
-      };
-
-      items.push(item);
+      });
     }
 
-    // Sort by createdAt (newest first), null timestamps go to the end
     items.sort((a, b) => {
       if (a.createdAt === null && b.createdAt === null) return 0;
       if (a.createdAt === null) return 1;
@@ -163,23 +158,7 @@ export function useProposals(
       return b.createdAt - a.createdAt;
     });
 
-    const totalCount = items.length;
-
-    const filtered = items.filter((item) => {
-      switch (filter) {
-        case "active":
-          return item.status === "active";
-        case "complete":
-          return item.status === "complete";
-        case "elections":
-          return item.type === "election";
-        case "timelocks":
-          return item.type === "timelock";
-        default:
-          return true;
-      }
-    });
-
-    return { items: filtered, filteredCount: filtered.length, totalCount };
+    const filtered = items.filter((item) => matchesFilter(item, filter));
+    return { items: filtered, filteredCount: filtered.length, totalCount: items.length };
   }, [data, filter]);
 }

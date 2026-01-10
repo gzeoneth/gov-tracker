@@ -2,16 +2,14 @@
  * Stage detail view showing full stage information
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import type { ProposalListItem } from "../types";
-import type { UseNavigationResult } from "../hooks";
-import type { TrackedStage } from "../../../types";
-import { Header } from "../components/Header";
-import { KeyHelp } from "../components/KeyHelp";
-import { StatusBadge } from "../components/StatusBadge";
-import { formatStageTitle } from "../../../utils/stage-metadata";
-import { getTxUrl, CHAIN_IDS } from "../../../constants";
-import type { Chain } from "../../../types";
+import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import type { ProposalListItem } from "../types.js";
+import type { UseNavigationResult } from "../hooks/index.js";
+import type { TrackedStage, Chain } from "../../../types/index.js";
+import { ViewLayout } from "../components/ViewLayout.js";
+import { StatusBadge } from "../components/StatusBadge.js";
+import { formatStageTitle } from "../../../utils/stage-metadata.js";
+import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 
 function chainToChainId(chain: Chain): number {
   switch (chain) {
@@ -133,137 +131,69 @@ export function StageView({
 
   if (!stage) {
     return (
-      <Box flexDirection="column" height="100%">
-        <Header
-          view="stage"
-          filter={state.filter}
-          stats={null}
-          hasProviders={false}
-          isTracking={false}
-        />
-        <Box paddingX={1}>
-          <Text color="gray">Stage not found</Text>
-        </Box>
-        <KeyHelp view="stage" hasProviders={false} />
-      </Box>
+      <ViewLayout view="stage" title={stageTitle}>
+        <Text color="gray">Stage not found</Text>
+      </ViewLayout>
     );
   }
+
   const visibleItems = dataItems.slice(state.scrollOffset, state.scrollOffset + VISIBLE_ROWS);
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Header
-        view="stage"
-        filter={state.filter}
-        stats={null}
-        hasProviders={false}
-        isTracking={false}
-        title={stageTitle}
-      />
-
-      <Box flexDirection="column" paddingX={1} flexGrow={1}>
-        {/* Stage header */}
-        <Box flexDirection="column" marginBottom={1}>
-          <Box>
-            <Text bold>{stageTitle}</Text>
-            <Text> - </Text>
-            <StatusBadge status={stage.status} />
-          </Box>
-          <Box>
-            <Text color="gray">Chain: </Text>
-            <Text>{stage.chain} ({stage.chainId})</Text>
-          </Box>
-          {stage.executable && (
-            <Text color="green" bold>
-              Executable!
-            </Text>
-          )}
+    <ViewLayout view="stage" title={stageTitle}>
+      <Box flexDirection="column" marginBottom={1}>
+        <Box>
+          <Text bold>{stageTitle}</Text>
+          <Text> - </Text>
+          <StatusBadge status={stage.status} />
         </Box>
-
-        {/* Transactions */}
-        {stage.transactions.length > 0 && (
-          <Box flexDirection="column" marginBottom={1}>
-            <Text bold>Transactions:</Text>
-            {stage.transactions.map((tx, i) => {
-              const url = getTxUrl(chainToChainId(tx.chain), tx.hash);
-              return (
-                <Box key={i} flexDirection="column" marginLeft={1}>
-                  <Box>
-                    <Text color="gray">[{i + 1}] </Text>
-                    <Text color="blue">{tx.hash.slice(0, 18)}...</Text>
-                  </Box>
-                  <Box marginLeft={2}>
-                    <Text color="gray">
-                      Block {tx.blockNumber} on {tx.chain}
-                      {tx.timestamp && ` at ${new Date(tx.timestamp * 1000).toLocaleString()}`}
-                    </Text>
-                  </Box>
-                  {url && (
-                    <Box marginLeft={2}>
-                      <Text color="gray">URL: </Text>
-                      <Text color="blue">{url}</Text>
-                    </Box>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-        )}
-
-        {/* Timing */}
-        {stage.timing && (
-          <Box flexDirection="column" marginBottom={1}>
-            <Text bold>Timing:</Text>
-            <Box marginLeft={1} flexDirection="column">
-              {stage.timing.startedAt && (
-                <Text color="gray">
-                  Started: {new Date(stage.timing.startedAt * 1000).toLocaleString()}
-                </Text>
-              )}
-              {stage.timing.eta && (
-                <Text color="gray">
-                  ETA: {new Date(stage.timing.eta * 1000).toLocaleString()}
-                </Text>
-              )}
-              {stage.timing.delaySeconds && (
-                <Text color="gray">
-                  Delay: {Math.floor(stage.timing.delaySeconds / 3600)}h
-                </Text>
-              )}
-            </Box>
-          </Box>
-        )}
-
-        {/* Stage data */}
-        {dataItems.length > 0 && (
-          <Box flexDirection="column">
-            <Text bold>Data:</Text>
-            {state.scrollOffset > 0 && (
-              <Text color="gray">  ↑ {state.scrollOffset} items above</Text>
-            )}
-            {visibleItems.map((item, i) => (
-              <Box key={i} marginLeft={1}>
-                <Text color="cyan">{item.label}: </Text>
-                <Text>{item.value}</Text>
-              </Box>
-            ))}
-            {state.scrollOffset + VISIBLE_ROWS < dataItems.length && (
-              <Text color="gray">
-                {"  "}↓ {dataItems.length - state.scrollOffset - VISIBLE_ROWS} items below
-              </Text>
-            )}
-          </Box>
-        )}
-
-        {/* Error */}
-        {stage.error && (
-          <Box marginTop={1}>
-            <Text color="red">Error: {stage.error}</Text>
-          </Box>
-        )}
+        <Box><Text color="gray">Chain: </Text><Text>{stage.chain} ({stage.chainId})</Text></Box>
+        {stage.executable && <Text color="green" bold>Executable!</Text>}
       </Box>
 
-      <KeyHelp view="stage" hasProviders={false} />
-    </Box>
+      {stage.transactions.length > 0 && (
+        <Box flexDirection="column" marginBottom={1}>
+          <Text bold>Transactions:</Text>
+          {stage.transactions.map((tx, i) => {
+            const url = getTxUrl(chainToChainId(tx.chain), tx.hash);
+            return (
+              <Box key={i} flexDirection="column" marginLeft={1}>
+                <Box><Text color="gray">[{i + 1}] </Text><Text color="blue">{tx.hash.slice(0, 18)}...</Text></Box>
+                <Box marginLeft={2}>
+                  <Text color="gray">Block {tx.blockNumber} on {tx.chain}{tx.timestamp && ` at ${new Date(tx.timestamp * 1000).toLocaleString()}`}</Text>
+                </Box>
+                {url && <Box marginLeft={2}><Text color="gray">URL: </Text><Text color="blue">{url}</Text></Box>}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
+      {stage.timing && (
+        <Box flexDirection="column" marginBottom={1}>
+          <Text bold>Timing:</Text>
+          <Box marginLeft={1} flexDirection="column">
+            {stage.timing.startedAt && <Text color="gray">Started: {new Date(stage.timing.startedAt * 1000).toLocaleString()}</Text>}
+            {stage.timing.eta && <Text color="gray">ETA: {new Date(stage.timing.eta * 1000).toLocaleString()}</Text>}
+            {stage.timing.delaySeconds && <Text color="gray">Delay: {Math.floor(stage.timing.delaySeconds / 3600)}h</Text>}
+          </Box>
+        </Box>
+      )}
+
+      {dataItems.length > 0 && (
+        <Box flexDirection="column">
+          <Text bold>Data:</Text>
+          {state.scrollOffset > 0 && <Text color="gray">  ↑ {state.scrollOffset} items above</Text>}
+          {visibleItems.map((item, i) => (
+            <Box key={i} marginLeft={1}><Text color="cyan">{item.label}: </Text><Text>{item.value}</Text></Box>
+          ))}
+          {state.scrollOffset + VISIBLE_ROWS < dataItems.length && (
+            <Text color="gray">  ↓ {dataItems.length - state.scrollOffset - VISIBLE_ROWS} items below</Text>
+          )}
+        </Box>
+      )}
+
+      {stage.error && <Box marginTop={1}><Text color="red">Error: {stage.error}</Text></Box>}
+    </ViewLayout>
   );
 }

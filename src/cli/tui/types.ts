@@ -2,9 +2,16 @@
  * TUI-specific types
  */
 
-import type { TrackingCheckpoint, TrackerStats, StageType } from "../../types";
+import type { TrackingCheckpoint, TrackerStats, StageType } from "../../types/index.js";
 
-export type ViewType = "list" | "detail" | "calldata" | "stage" | "simulation" | "description";
+export type ViewType =
+  | "list"
+  | "detail"
+  | "calldata"
+  | "stage"
+  | "simulation"
+  | "description"
+  | "election";
 
 export type FilterType = "all" | "active" | "complete" | "elections" | "timelocks";
 

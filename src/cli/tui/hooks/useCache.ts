@@ -3,9 +3,9 @@
  */
 
 import { useState, useEffect } from "react";
-import type { TrackingCheckpoint, TrackerStats } from "../../../types";
-import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache";
-import type { CacheData } from "../types";
+import type { TrackingCheckpoint, TrackerStats } from "../../../types/index.js";
+import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
+import type { CacheData } from "../types.js";
 
 function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStats {
   const stats: TrackerStats = {

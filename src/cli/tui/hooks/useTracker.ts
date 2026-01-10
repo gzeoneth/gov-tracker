@@ -5,10 +5,14 @@
  */
 
 import { useState, useCallback } from "react";
-import type { TrackingResult, TrackingProgress, PreparedTransaction } from "../../../types";
-import { createTracker, ProposalStageTracker } from "../../../tracker";
-import type { ProposalListItem } from "../types";
-import type { ProviderBundle } from "../../lib/cli";
+import type {
+  TrackingResult,
+  TrackingProgress,
+  PreparedTransaction,
+} from "../../../types/index.js";
+import { createTracker, ProposalStageTracker } from "../../../tracker.js";
+import type { ProposalListItem } from "../types.js";
+import type { ProviderBundle } from "../../lib/cli.js";
 
 export interface UseTrackerResult {
   isTracking: boolean;

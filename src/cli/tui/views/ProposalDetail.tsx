@@ -2,16 +2,16 @@
  * Proposal detail view showing all stages
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import type { ProposalListItem } from "../types";
-import type { UseNavigationResult } from "../hooks";
-import type { UseTrackerResult } from "../hooks/useTracker";
-import { Header } from "../components/Header";
-import { KeyHelp } from "../components/KeyHelp";
-import { StageRow } from "../components/StageRow";
-import { StatusBadge } from "../components/StatusBadge";
-import { getTxUrl, CHAIN_IDS } from "../../../constants";
-import type { VotingActiveData } from "../../../types/stages";
+import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import type { ProposalListItem } from "../types.js";
+import type { UseNavigationResult } from "../hooks/index.js";
+import type { UseTrackerResult } from "../hooks/useTracker.js";
+import { Header } from "../components/Header.js";
+import { KeyHelp } from "../components/KeyHelp.js";
+import { StageRow } from "../components/StageRow.js";
+import { StatusBadge } from "../components/StatusBadge.js";
+import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
+import type { VotingActiveData } from "../../../types/stages.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;

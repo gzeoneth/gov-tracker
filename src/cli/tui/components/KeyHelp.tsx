@@ -2,13 +2,12 @@
  * Keyboard shortcuts help footer
  */
 
-import { React, Box, Text } from "../ink-wrapper";
-import type { ViewType } from "../types";
+import { React, Box, Text } from "../ink-wrapper.js";
+import type { ViewType } from "../types.js";
 
 interface KeyHelpProps {
   view: ViewType;
   hasProviders: boolean;
-  hasExecutable?: boolean;
 }
 
 interface KeyBinding {
@@ -20,6 +19,7 @@ const LIST_KEYS: KeyBinding[] = [
   { key: "↑↓/PgUp/Dn", action: "Navigate" },
   { key: "Enter", action: "View" },
   { key: "Tab", action: "Filter" },
+  { key: "e", action: "Elections" },
   { key: "d", action: "Discover" },
   { key: "q", action: "Quit" },
 ];
@@ -56,10 +56,15 @@ const DESCRIPTION_KEYS: KeyBinding[] = [
   { key: "b", action: "Back" },
 ];
 
+const ELECTION_KEYS: KeyBinding[] = [
+  { key: "↑↓", action: "Navigate" },
+  { key: "b", action: "Back" },
+];
+
 function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
   switch (view) {
     case "list":
-      return hasProviders ? LIST_KEYS : LIST_KEYS.filter((k) => k.key !== "d");
+      return hasProviders ? LIST_KEYS : LIST_KEYS.filter((k) => k.key !== "d" && k.key !== "e");
     case "detail":
       return hasProviders
         ? [...DETAIL_KEYS_BASE, DETAIL_RETRACK, DETAIL_BACK]
@@ -72,6 +77,8 @@ function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
       return SIMULATION_KEYS;
     case "description":
       return DESCRIPTION_KEYS;
+    case "election":
+      return ELECTION_KEYS;
     default:
       return [];
   }

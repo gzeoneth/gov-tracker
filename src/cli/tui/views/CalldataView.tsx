@@ -2,13 +2,12 @@
  * Decoded calldata view
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import type { ProposalListItem } from "../types";
-import type { UseNavigationResult } from "../hooks";
-import { useStageCalldata } from "../hooks";
-import { Header } from "../components/Header";
-import { KeyHelp } from "../components/KeyHelp";
-import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata";
+import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import type { ProposalListItem } from "../types.js";
+import type { UseNavigationResult } from "../hooks/index.js";
+import { useStageCalldata } from "../hooks/index.js";
+import { ViewLayout } from "../components/ViewLayout.js";
+import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata.js";
 
 interface CalldataViewProps {
   proposal: ProposalListItem;
@@ -101,70 +100,43 @@ export function CalldataView({
   const lines = getDisplayLines();
   const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + VISIBLE_LINES);
 
+  if (actions.length === 0) {
+    return (
+      <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error}>
+        <Text color="gray">No calldata to display</Text>
+      </ViewLayout>
+    );
+  }
+
   return (
-    <Box flexDirection="column" height="100%">
-      <Header
-        view="calldata"
-        filter={state.filter}
-        stats={null}
-        hasProviders={false}
-        isTracking={false}
-      />
-
-      <Box flexDirection="column" paddingX={1} flexGrow={1}>
-        {loading && <Text color="yellow">Loading calldata...</Text>}
-
-        {error && <Text color="red">Error: {error}</Text>}
-
-        {!loading && !error && actions.length === 0 && (
-          <Text color="gray">No calldata to display</Text>
-        )}
-
-        {!loading && !error && actions.length > 0 && (
-          <>
-            {/* Action navigation */}
-            <Box marginBottom={1}>
-              <Text color="cyan">
-                Action {state.calldataActionIndex + 1}/{actions.length}
-              </Text>
-              {actions.length > 1 && (
-                <Text color="gray"> (use ← → to navigate)</Text>
-              )}
-            </Box>
-
-            {/* Target and value */}
-            {currentAction && (
-              <Box flexDirection="column" marginBottom={1}>
-                <Box>
-                  <Text color="gray">Target: </Text>
-                  <Text>{currentAction.target}</Text>
-                </Box>
-                <Box>
-                  <Text color="gray">Value: </Text>
-                  <Text>{currentAction.value}</Text>
-                </Box>
-              </Box>
-            )}
-
-            {/* Decoded calldata */}
-            <Box flexDirection="column">
-              {state.scrollOffset > 0 && (
-                <Text color="gray">↑ {state.scrollOffset} lines above</Text>
-              )}
-              {visibleLines.map((line, i) => (
-                <Text key={i}>{line}</Text>
-              ))}
-              {state.scrollOffset + VISIBLE_LINES < lines.length && (
-                <Text color="gray">
-                  ↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below
-                </Text>
-              )}
-            </Box>
-          </>
-        )}
+    <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error}>
+      <Box marginBottom={1}>
+        <Text color="cyan">Action {state.calldataActionIndex + 1}/{actions.length}</Text>
+        {actions.length > 1 && <Text color="gray"> (use ← → to navigate)</Text>}
       </Box>
 
-      <KeyHelp view="calldata" hasProviders={false} />
-    </Box>
+      {currentAction && (
+        <Box flexDirection="column" marginBottom={1}>
+          <Box>
+            <Text color="gray">Target: </Text>
+            <Text>{currentAction.target}</Text>
+          </Box>
+          <Box>
+            <Text color="gray">Value: </Text>
+            <Text>{currentAction.value}</Text>
+          </Box>
+        </Box>
+      )}
+
+      <Box flexDirection="column">
+        {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
+        {visibleLines.map((line, i) => (
+          <Text key={i}>{line}</Text>
+        ))}
+        {state.scrollOffset + VISIBLE_LINES < lines.length && (
+          <Text color="gray">↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below</Text>
+        )}
+      </Box>
+    </ViewLayout>
   );
 }

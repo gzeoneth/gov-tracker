@@ -2,11 +2,10 @@
  * Full proposal description view with markdown rendering
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import type { ProposalListItem } from "../types";
-import type { UseNavigationResult } from "../hooks";
-import { Header } from "../components/Header";
-import { KeyHelp } from "../components/KeyHelp";
+import { React, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import type { ProposalListItem } from "../types.js";
+import type { UseNavigationResult } from "../hooks/index.js";
+import { ViewLayout } from "../components/ViewLayout.js";
 
 interface DescriptionViewProps {
   proposal: ProposalListItem;
@@ -176,7 +175,6 @@ export function DescriptionView({
   const description = getDescription(proposal);
   const terminalWidth = process.stdout.columns || 80;
   const lines = parseMarkdown(description, terminalWidth - 4);
-
   const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + VISIBLE_LINES);
 
   useInput((input: string, key: KeyInput) => {
@@ -194,31 +192,14 @@ export function DescriptionView({
   });
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Header
-        view="description"
-        filter={state.filter}
-        stats={null}
-        hasProviders={false}
-        isTracking={false}
-        title="Proposal Description"
-      />
-
-      <Box flexDirection="column" paddingX={1} flexGrow={1}>
-        {state.scrollOffset > 0 && (
-          <Text color="gray">↑ {state.scrollOffset} lines above</Text>
-        )}
-        {visibleLines.map((line, i) => (
-          <FormattedLineComponent key={i} line={line} />
-        ))}
-        {state.scrollOffset + VISIBLE_LINES < lines.length && (
-          <Text color="gray">
-            ↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below
-          </Text>
-        )}
-      </Box>
-
-      <KeyHelp view="description" hasProviders={false} />
-    </Box>
+    <ViewLayout view="description" title="Proposal Description">
+      {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
+      {visibleLines.map((line, i) => (
+        <FormattedLineComponent key={i} line={line} />
+      ))}
+      {state.scrollOffset + VISIBLE_LINES < lines.length && (
+        <Text color="gray">↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below</Text>
+      )}
+    </ViewLayout>
   );
 }

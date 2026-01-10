@@ -4,16 +4,17 @@
  * Routes between views and manages global state.
  */
 
-import { React, Box, Text, useApp } from "./ink-wrapper";
+import { React, Box, Text, useApp } from "./ink-wrapper.js";
 import { useEffect } from "react";
-import type { ProviderBundle } from "../lib/cli";
-import { useCache, useProposals, useNavigation, useTracker } from "./hooks";
-import { ProposalList } from "./views/ProposalList";
-import { ProposalDetail } from "./views/ProposalDetail";
-import { CalldataView } from "./views/CalldataView";
-import { StageView } from "./views/StageView";
-import { SimulationView } from "./views/SimulationView";
-import { DescriptionView } from "./views/DescriptionView";
+import type { ProviderBundle } from "../lib/cli.js";
+import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
+import { ProposalList } from "./views/ProposalList.js";
+import { ProposalDetail } from "./views/ProposalDetail.js";
+import { CalldataView } from "./views/CalldataView.js";
+import { StageView } from "./views/StageView.js";
+import { SimulationView } from "./views/SimulationView.js";
+import { DescriptionView } from "./views/DescriptionView.js";
+import { ElectionView } from "./views/ElectionView.js";
 
 export interface AppProps {
   cachePath: string;
@@ -77,6 +78,10 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
         onQuit={handleQuit}
       />
     );
+  }
+
+  if (view === "election") {
+    return <ElectionView navigation={navigation} providers={providerBundle} />;
   }
 
   if (!selectedProposal) {

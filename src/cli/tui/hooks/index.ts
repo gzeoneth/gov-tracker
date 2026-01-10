@@ -1,13 +1,13 @@
-export { useCache } from "./useCache";
-export type { UseCacheResult } from "./useCache";
+export { useCache } from "./useCache.js";
+export type { UseCacheResult } from "./useCache.js";
 
-export { useProposals } from "./useProposals";
+export { useProposals } from "./useProposals.js";
 
-export { useNavigation } from "./useNavigation";
-export type { UseNavigationResult } from "./useNavigation";
+export { useNavigation } from "./useNavigation.js";
+export type { UseNavigationResult } from "./useNavigation.js";
 
-export { useTracker } from "./useTracker";
-export type { UseTrackerResult, UseTrackerOptions } from "./useTracker";
+export { useTracker } from "./useTracker.js";
+export type { UseTrackerResult, UseTrackerOptions } from "./useTracker.js";
 
-export { useStageCalldata } from "./useStageCalldata";
-export type { UseStageCalldataResult, DecodedAction } from "./useStageCalldata";
+export { useStageCalldata } from "./useStageCalldata.js";
+export type { UseStageCalldataResult, DecodedAction } from "./useStageCalldata.js";

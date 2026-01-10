@@ -2,13 +2,13 @@
  * Main proposal list view
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import type { ProposalListItem, CacheData } from "../types";
-import type { UseNavigationResult } from "../hooks";
-import type { UseTrackerResult } from "../hooks/useTracker";
-import { Header } from "../components/Header";
-import { KeyHelp } from "../components/KeyHelp";
-import { ProposalRow } from "../components/ProposalRow";
+import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import type { ProposalListItem, CacheData } from "../types.js";
+import type { UseNavigationResult } from "../hooks/index.js";
+import type { UseTrackerResult } from "../hooks/useTracker.js";
+import { Header } from "../components/Header.js";
+import { KeyHelp } from "../components/KeyHelp.js";
+import { ProposalRow } from "../components/ProposalRow.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -65,6 +65,8 @@ export function ProposalList({
           // Reload would happen via cache hook
         }
       });
+    } else if (input === "e" && tracker.canTrack) {
+      navigation.goToElection();
     }
   });
 

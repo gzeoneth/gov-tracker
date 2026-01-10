@@ -2,9 +2,9 @@
  * Header component showing title and stats
  */
 
-import { React, Box, Text } from "../ink-wrapper";
-import type { TrackerStats } from "../../../types";
-import type { ViewType, FilterType } from "../types";
+import { React, Box, Text } from "../ink-wrapper.js";
+import type { TrackerStats } from "../../../types/index.js";
+import type { ViewType, FilterType } from "../types.js";
 
 interface HeaderProps {
   view: ViewType;

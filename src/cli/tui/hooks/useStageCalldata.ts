@@ -3,9 +3,9 @@
  */
 
 import { useState, useEffect } from "react";
-import type { TrackedStage, Chain } from "../../../types";
-import { decodeCalldata, extractCalldataFromStage } from "../../../calldata";
-import type { DecodedCalldata } from "../../../types/calldata";
+import type { TrackedStage, Chain } from "../../../types/index.js";
+import { decodeCalldata, extractCalldataFromStage } from "../../../calldata/index.js";
+import type { DecodedCalldata } from "../../../types/calldata.js";
 
 export interface DecodedAction {
   target: string;

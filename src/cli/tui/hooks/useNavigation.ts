@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { NavigationState, ProposalListItem, FilterType } from "../types";
+import type { NavigationState, ProposalListItem, FilterType, ViewType } from "../types.js";
 
 const INITIAL_STATE: NavigationState = {
   view: "list",
@@ -30,6 +30,7 @@ export interface UseNavigationResult {
   goToStage: (index: number) => void;
   goToSimulation: () => void;
   goToDescription: () => void;
+  goToElection: () => void;
   nextAction: (maxIndex: number) => void;
   prevAction: () => void;
   setScrollOffset: (offset: number) => void;
@@ -37,56 +38,37 @@ export interface UseNavigationResult {
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "elections", "timelocks"];
+const PAGE_SIZE = 10;
+const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 
 export function useNavigation(): UseNavigationResult {
   const [state, setState] = useState<NavigationState>(INITIAL_STATE);
 
   const setFilter = useCallback((filter: FilterType) => {
-    setState((prev) => ({
-      ...prev,
-      filter,
-      selectedIndex: 0,
-      scrollOffset: 0,
-    }));
+    setState((prev) => ({ ...prev, filter, selectedIndex: 0, scrollOffset: 0 }));
   }, []);
 
   const cycleFilter = useCallback(() => {
     setState((prev) => {
-      const currentIndex = FILTER_ORDER.indexOf(prev.filter);
-      const nextIndex = (currentIndex + 1) % FILTER_ORDER.length;
-      return {
-        ...prev,
-        filter: FILTER_ORDER[nextIndex],
-        selectedIndex: 0,
-        scrollOffset: 0,
-      };
+      const nextIndex = (FILTER_ORDER.indexOf(prev.filter) + 1) % FILTER_ORDER.length;
+      return { ...prev, filter: FILTER_ORDER[nextIndex], selectedIndex: 0, scrollOffset: 0 };
     });
   }, []);
 
   const selectItem = useCallback((index: number) => {
-    setState((prev) => ({
-      ...prev,
-      selectedIndex: index,
-    }));
+    setState((prev) => ({ ...prev, selectedIndex: index }));
   }, []);
 
   const moveUp = useCallback(() => {
     setState((prev) => {
       if (prev.view === "list") {
-        return {
-          ...prev,
-          selectedIndex: Math.max(0, prev.selectedIndex - 1),
-        };
-      } else if (prev.view === "detail") {
-        return {
-          ...prev,
-          selectedStageIndex: Math.max(0, prev.selectedStageIndex - 1),
-        };
-      } else if (prev.view === "calldata" || prev.view === "stage") {
-        return {
-          ...prev,
-          scrollOffset: Math.max(0, prev.scrollOffset - 1),
-        };
+        return { ...prev, selectedIndex: Math.max(0, prev.selectedIndex - 1) };
+      }
+      if (prev.view === "detail") {
+        return { ...prev, selectedStageIndex: Math.max(0, prev.selectedStageIndex - 1) };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: Math.max(0, prev.scrollOffset - 1) };
       }
       return prev;
     });
@@ -95,39 +77,25 @@ export function useNavigation(): UseNavigationResult {
   const moveDown = useCallback((maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
-        return {
-          ...prev,
-          selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + 1),
-        };
-      } else if (prev.view === "detail") {
-        return {
-          ...prev,
-          selectedStageIndex: Math.min(6, prev.selectedStageIndex + 1),
-        };
-      } else if (prev.view === "calldata" || prev.view === "stage") {
-        return {
-          ...prev,
-          scrollOffset: prev.scrollOffset + 1,
-        };
+        return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + 1) };
+      }
+      if (prev.view === "detail") {
+        return { ...prev, selectedStageIndex: Math.min(6, prev.selectedStageIndex + 1) };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: prev.scrollOffset + 1 };
       }
       return prev;
     });
   }, []);
 
-  const PAGE_SIZE = 10;
-
-  const pageUp = useCallback((_maxIndex: number) => {
+  const pageUp = useCallback(() => {
     setState((prev) => {
       if (prev.view === "list") {
-        return {
-          ...prev,
-          selectedIndex: Math.max(0, prev.selectedIndex - PAGE_SIZE),
-        };
-      } else if (prev.view === "calldata" || prev.view === "stage" || prev.view === "description") {
-        return {
-          ...prev,
-          scrollOffset: Math.max(0, prev.scrollOffset - PAGE_SIZE),
-        };
+        return { ...prev, selectedIndex: Math.max(0, prev.selectedIndex - PAGE_SIZE) };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: Math.max(0, prev.scrollOffset - PAGE_SIZE) };
       }
       return prev;
     });
@@ -136,15 +104,10 @@ export function useNavigation(): UseNavigationResult {
   const pageDown = useCallback((maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
-        return {
-          ...prev,
-          selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + PAGE_SIZE),
-        };
-      } else if (prev.view === "calldata" || prev.view === "stage" || prev.view === "description") {
-        return {
-          ...prev,
-          scrollOffset: prev.scrollOffset + PAGE_SIZE,
-        };
+        return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + PAGE_SIZE) };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: prev.scrollOffset + PAGE_SIZE };
       }
       return prev;
     });
@@ -159,12 +122,9 @@ export function useNavigation(): UseNavigationResult {
           selectedProposal: items[prev.selectedIndex],
           selectedStageIndex: 0,
         };
-      } else if (prev.view === "detail") {
-        return {
-          ...prev,
-          view: "stage",
-          scrollOffset: 0,
-        };
+      }
+      if (prev.view === "detail") {
+        return { ...prev, view: "stage", scrollOffset: 0 };
       }
       return prev;
     });
@@ -172,53 +132,30 @@ export function useNavigation(): UseNavigationResult {
 
   const back = useCallback(() => {
     setState((prev) => {
-      if (prev.view === "detail") {
-        return {
-          ...prev,
-          view: "list",
-          selectedProposal: null,
-          selectedStageIndex: 0,
-        };
-      } else if (
-        prev.view === "calldata" ||
-        prev.view === "stage" ||
-        prev.view === "simulation" ||
-        prev.view === "description"
-      ) {
-        return {
-          ...prev,
-          view: "detail",
-          scrollOffset: 0,
-          calldataActionIndex: 0,
-        };
+      if (prev.view === "detail" || prev.view === "election") {
+        return { ...prev, view: "list", selectedProposal: null, selectedStageIndex: 0 };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view) || prev.view === "simulation") {
+        return { ...prev, view: "detail", scrollOffset: 0, calldataActionIndex: 0 };
       }
       return prev;
     });
   }, []);
 
-  const goToSubView = useCallback((targetView: "calldata" | "simulation" | "description") => {
+  const goToSubView = useCallback((targetView: ViewType) => {
     setState((prev) => {
-      if (prev.view !== "detail") return prev;
-      return {
-        ...prev,
-        view: targetView,
-        scrollOffset: 0,
-        calldataActionIndex: 0,
-      };
+      if (prev.view !== "detail" && prev.view !== "list") return prev;
+      return { ...prev, view: targetView, scrollOffset: 0, calldataActionIndex: 0 };
     });
   }, []);
 
   const goToCalldata = useCallback(() => goToSubView("calldata"), [goToSubView]);
   const goToSimulation = useCallback(() => goToSubView("simulation"), [goToSubView]);
   const goToDescription = useCallback(() => goToSubView("description"), [goToSubView]);
+  const goToElection = useCallback(() => goToSubView("election"), [goToSubView]);
 
   const goToStage = useCallback((index: number) => {
-    setState((prev) => ({
-      ...prev,
-      view: "stage",
-      selectedStageIndex: index,
-      scrollOffset: 0,
-    }));
+    setState((prev) => ({ ...prev, view: "stage", selectedStageIndex: index, scrollOffset: 0 }));
   }, []);
 
   const nextAction = useCallback((maxIndex: number) => {
@@ -236,15 +173,10 @@ export function useNavigation(): UseNavigationResult {
   }, []);
 
   const setScrollOffset = useCallback((offset: number) => {
-    setState((prev) => ({
-      ...prev,
-      scrollOffset: offset,
-    }));
+    setState((prev) => ({ ...prev, scrollOffset: offset }));
   }, []);
 
-  const reset = useCallback(() => {
-    setState(INITIAL_STATE);
-  }, []);
+  const reset = useCallback(() => setState(INITIAL_STATE), []);
 
   return {
     state,
@@ -261,6 +193,7 @@ export function useNavigation(): UseNavigationResult {
     goToStage,
     goToSimulation,
     goToDescription,
+    goToElection,
     nextAction,
     prevAction,
     setScrollOffset,

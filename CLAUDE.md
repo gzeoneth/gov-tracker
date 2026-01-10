@@ -167,7 +167,7 @@ Cache adapters: `FileCache` (Node.js), `LocalStorageCache` (browsers), `MemoryCa
 
 3. **Checkpoint resume**: Reuse completed stages from cache (zero RPC calls)
 
-4. **Parallel discovery**: Discover from multiple governors/timelocks concurrently using `p-limit`
+4. **Parallel discovery**: Discover from multiple governors/timelocks concurrently
 
 5. **Bounded L1↔L2 block conversion**: Narrow binary search range for cross-chain block mapping
 

@@ -14,7 +14,7 @@
  * Usage: npx @gzeoneth/gov-tracker [run|track <tx-hash>|election|status] [options]
  *
  * Dependencies:
- * - commander and p-limit are optional dependencies required for CLI usage
+ * - commander is an optional dependency required for CLI usage
  * - dotenv is a dev dependency; .env files are loaded if available
  */
 

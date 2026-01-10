@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Dependencies: Reduced production footprint** - Streamlined dependencies for lighter library installation:
   - Moved `dotenv` to devDependencies (only needed for development/testing)
-  - Moved `commander` and `p-limit` to optionalDependencies (only needed for CLI usage)
+  - Moved `commander` to optionalDependencies (only needed for CLI usage)
+  - Removed `p-limit` dependency entirely (replaced with simple inline implementation)
   - Library consumers now only require `ethers`, `@arbitrum/sdk`, and `debug`
   - CLI gracefully handles missing optional dependencies with helpful error messages
 

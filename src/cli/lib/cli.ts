@@ -8,22 +8,12 @@
  * and the core monitoring cycle. This is monitor-specific code, not part of the SDK.
  *
  * Dependencies:
- * - commander and p-limit are optional dependencies required for CLI usage
+ * - commander is an optional dependency required for CLI usage
  */
 
 import { Command, Option } from "commander";
 import { ethers } from "ethers";
-
-// p-limit is an optional dependency - provide fallback for sequential execution
-type LimitFunction = (concurrency: number) => <T>(fn: () => Promise<T>) => Promise<T>;
-let pLimit: LimitFunction;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  pLimit = require("p-limit").default || require("p-limit");
-} catch {
-  // Fallback: run tasks sequentially (concurrency = 1)
-  pLimit = () => (fn) => fn();
-}
+import { pLimit } from "./concurrency";
 import {
   ProposalStageTracker,
   TrackedStage,

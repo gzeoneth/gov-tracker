@@ -51,6 +51,10 @@ export function ProposalList({
       navigation.moveUp();
     } else if (key.downArrow) {
       navigation.moveDown(items.length);
+    } else if (key.pageUp) {
+      navigation.pageUp(items.length);
+    } else if (key.pageDown) {
+      navigation.pageDown(items.length);
     } else if (key.return) {
       navigation.enter(items);
     } else if (key.tab) {

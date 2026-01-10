@@ -132,7 +132,11 @@ export function CalldataView({
     } else if (key.upArrow) {
       navigation.moveUp();
     } else if (key.downArrow) {
-      navigation.moveDown(100);
+      navigation.moveDown(lines.length);
+    } else if (key.pageUp) {
+      navigation.pageUp(lines.length);
+    } else if (key.pageDown) {
+      navigation.pageDown(lines.length);
     } else if (key.leftArrow) {
       navigation.prevAction();
     } else if (key.rightArrow) {

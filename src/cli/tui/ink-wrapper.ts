@@ -39,6 +39,8 @@ export interface KeyInput {
   downArrow: boolean;
   leftArrow: boolean;
   rightArrow: boolean;
+  pageUp: boolean;
+  pageDown: boolean;
   return: boolean;
   escape: boolean;
   tab: boolean;

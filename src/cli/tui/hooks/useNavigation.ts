@@ -22,6 +22,8 @@ export interface UseNavigationResult {
   selectItem: (index: number) => void;
   moveUp: () => void;
   moveDown: (maxIndex: number) => void;
+  pageUp: (maxIndex: number) => void;
+  pageDown: (maxIndex: number) => void;
   enter: (items: ProposalListItem[]) => void;
   back: () => void;
   goToCalldata: () => void;
@@ -106,6 +108,42 @@ export function useNavigation(): UseNavigationResult {
         return {
           ...prev,
           scrollOffset: prev.scrollOffset + 1,
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  const PAGE_SIZE = 10;
+
+  const pageUp = useCallback((_maxIndex: number) => {
+    setState((prev) => {
+      if (prev.view === "list") {
+        return {
+          ...prev,
+          selectedIndex: Math.max(0, prev.selectedIndex - PAGE_SIZE),
+        };
+      } else if (prev.view === "calldata" || prev.view === "stage" || prev.view === "description") {
+        return {
+          ...prev,
+          scrollOffset: Math.max(0, prev.scrollOffset - PAGE_SIZE),
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  const pageDown = useCallback((maxIndex: number) => {
+    setState((prev) => {
+      if (prev.view === "list") {
+        return {
+          ...prev,
+          selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + PAGE_SIZE),
+        };
+      } else if (prev.view === "calldata" || prev.view === "stage" || prev.view === "description") {
+        return {
+          ...prev,
+          scrollOffset: prev.scrollOffset + PAGE_SIZE,
         };
       }
       return prev;
@@ -239,6 +277,8 @@ export function useNavigation(): UseNavigationResult {
     selectItem,
     moveUp,
     moveDown,
+    pageUp,
+    pageDown,
     enter,
     back,
     goToCalldata,

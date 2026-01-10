@@ -17,7 +17,7 @@ interface KeyBinding {
 }
 
 const LIST_KEYS: KeyBinding[] = [
-  { key: "↑↓", action: "Navigate" },
+  { key: "↑↓/PgUp/Dn", action: "Navigate" },
   { key: "Enter", action: "View" },
   { key: "Tab", action: "Filter" },
   { key: "d", action: "Discover" },
@@ -45,12 +45,12 @@ const DETAIL_KEYS_NO_RPC: KeyBinding[] = [
 
 const CALLDATA_KEYS: KeyBinding[] = [
   { key: "←→", action: "Actions" },
-  { key: "↑↓", action: "Scroll" },
+  { key: "↑↓/PgUp/Dn", action: "Scroll" },
   { key: "b", action: "Back" },
 ];
 
 const STAGE_KEYS: KeyBinding[] = [
-  { key: "↑↓", action: "Scroll" },
+  { key: "↑↓/PgUp/Dn", action: "Scroll" },
   { key: "b", action: "Back" },
 ];
 
@@ -60,7 +60,7 @@ const SIMULATION_KEYS: KeyBinding[] = [
 ];
 
 const DESCRIPTION_KEYS: KeyBinding[] = [
-  { key: "↑↓", action: "Scroll" },
+  { key: "↑↓/PgUp/Dn", action: "Scroll" },
   { key: "b", action: "Back" },
 ];
 

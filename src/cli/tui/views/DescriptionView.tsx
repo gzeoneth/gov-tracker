@@ -186,6 +186,10 @@ export function DescriptionView({
       navigation.moveUp();
     } else if (key.downArrow) {
       navigation.moveDown(lines.length);
+    } else if (key.pageUp) {
+      navigation.pageUp(lines.length);
+    } else if (key.pageDown) {
+      navigation.pageDown(lines.length);
     }
   });
 

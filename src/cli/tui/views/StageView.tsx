@@ -114,13 +114,20 @@ export function StageView({
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
   const stage = stages[state.selectedStageIndex];
 
+  const stageTitle = stage ? formatStageTitle(stage.type) : "";
+  const dataItems = stage ? formatStageData(stage) : [];
+
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
     } else if (key.upArrow) {
       navigation.moveUp();
     } else if (key.downArrow) {
-      navigation.moveDown(100);
+      navigation.moveDown(dataItems.length);
+    } else if (key.pageUp) {
+      navigation.pageUp(dataItems.length);
+    } else if (key.pageDown) {
+      navigation.pageDown(dataItems.length);
     }
   });
 
@@ -141,9 +148,6 @@ export function StageView({
       </Box>
     );
   }
-
-  const stageTitle = formatStageTitle(stage.type);
-  const dataItems = formatStageData(stage);
   const visibleItems = dataItems.slice(state.scrollOffset, state.scrollOffset + VISIBLE_ROWS);
 
   return (

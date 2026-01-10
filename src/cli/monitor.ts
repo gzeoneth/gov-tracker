@@ -240,7 +240,9 @@ function createProgressCallback() {
 
 const program = new Command()
   .name("gov-tracker")
-  .description("Track and execute Arbitrum DAO governance proposal lifecycle stages")
+  .description(
+    `Track and execute Arbitrum DAO governance proposal lifecycle stages\nVersion: ${getPackageVersion()}`
+  )
   .version(getPackageVersion());
 
 // ============================================================================
@@ -441,6 +443,7 @@ trackCmd
   .addOption(cacheOptions.force)
   .addOption(cacheOptions.noCache)
   .addOption(verboseOption)
+  .option("-i, --inspect", "Decode and inspect calldata (with tracking)")
   .option("--inspect-only", "Decode and inspect calldata without tracking")
   .option("--show-simulation", "Show simulation data for each call")
   .action(async (txHash: string, opts) => {
@@ -507,52 +510,50 @@ trackCmd
         const shouldPrepare =
           opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending;
 
-        const { results, preparations, preparedTransactions } = !opts.inspectOnly
-          ? await trackAndPrepare(
-              tracker,
-              txHash,
-              {
-                prepare: shouldPrepare,
-                prepareCompleted: opts.prepareCompleted,
-                preparePending: opts.preparePending,
-              },
-              providers
-            )
-          : { results: [], preparations: [], preparedTransactions: [] };
+        const { results, preparations, preparedTransactions } = await trackAndPrepare(
+          tracker,
+          txHash,
+          {
+            prepare: shouldPrepare,
+            prepareCompleted: opts.prepareCompleted,
+            preparePending: opts.preparePending,
+          },
+          providers
+        );
 
         // Format tracking output
-        if (!opts.inspectOnly) {
-          results.forEach((r, i) => {
-            const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-            console.log(formatTrackingResult(r, label));
-          });
+        results.forEach((r, i) => {
+          const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
+          console.log(formatTrackingResult(r, label));
+        });
 
-          // Show all prepared transactions
-          if (preparedTransactions.length > 0) {
-            console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
-          }
-
-          // Show preparation errors
-          const failedPreparations = preparations.filter((p) => !p.success);
-          failedPreparations.forEach((prep) => {
-            console.log(`\n[PREPARE ERROR] ${prep.error}`);
-          });
+        // Show all prepared transactions
+        if (preparedTransactions.length > 0) {
+          console.log(`\n${formatMultiplePreparedTransactions(preparedTransactions)}`);
         }
 
-        // Extract calldata for decoding
-        if (results.length > 0 && results[0].stages.length > 0) {
-          const {
-            calldatas: extractedCalldatas,
-            targets: extractedTargets,
-            values: extractedValues,
-          } = extractCalldataFromStage(results[0].stages[0]);
-          calldatas = extractedCalldatas;
-          targets = extractedTargets;
-          values = extractedValues;
+        // Show preparation errors
+        const failedPreparations = preparations.filter((p) => !p.success);
+        failedPreparations.forEach((prep) => {
+          console.log(`\n[PREPARE ERROR] ${prep.error}`);
+        });
+
+        // Extract calldata for decoding (if --inspect or --show-simulation)
+        if (opts.inspect || opts.showSimulation) {
+          if (results.length > 0 && results[0].stages.length > 0) {
+            const {
+              calldatas: extractedCalldatas,
+              targets: extractedTargets,
+              values: extractedValues,
+            } = extractCalldataFromStage(results[0].stages[0]);
+            calldatas = extractedCalldatas;
+            targets = extractedTargets;
+            values = extractedValues;
+          }
         }
 
         // Execute if --write (only when not in inspect-only mode)
-        if (opts.write && preparedTransactions.length > 0 && !opts.inspectOnly) {
+        if (opts.write && preparedTransactions.length > 0) {
           const signer = createSigner(opts.privateKey);
           console.log(`\n=== Executing with ${signer.address} ===`);
 
@@ -603,7 +604,7 @@ trackCmd
       }
 
       // Decode and display calldata if requested
-      if (opts.showSimulation || opts.inspectOnly) {
+      if (opts.showSimulation || opts.inspectOnly || opts.inspect) {
         if (calldatas.length === 0) {
           console.error("No calldata available for decoding");
           process.exit(1);

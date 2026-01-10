@@ -84,7 +84,7 @@ export const rpcOptions = [
 /**
  * Verbose logging option - enables debug output
  */
-export const verboseOption = new Option("--verbose", "Enable verbose logging");
+export const verboseOption = new Option("-v, --verbose", "Enable verbose logging");
 
 /**
  * Cache-related options for commands that use the tracker cache
@@ -102,8 +102,8 @@ export const cacheOptions = {
  * Execution-related options for commands that can prepare/execute transactions
  */
 export const executionOptions = [
-  new Option("--prepare", "Prepare transactions for ready stages (dry-run)"),
-  new Option("--write", "Execute prepared transactions (requires --private-key)"),
+  new Option("-p, --prepare", "Prepare transactions for ready stages (dry-run)"),
+  new Option("-w, --write", "Execute prepared transactions (requires --private-key)"),
   new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"),
   new Option("--prepare-completed", "Prepare completed stages (for historical validation)"),
   new Option("--prepare-pending", "Prepare pending stages (waiting for delays)"),

@@ -19,7 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`getBundledCache()` export** - New function that returns bundled cache data directly (not a file path). Useful for environments where file paths don't work at runtime, such as Next.js static exports, edge functions, or browser builds. Use `getBundledCachePath()` for Node.js file-based usage to avoid loading the entire cache into memory.
 
+- **`LookupSignatureOptions` type** - New exported type for configuring signature lookup behavior via SDK.
+
 ### Changed
+
+- **CLI: Public RPC warning** - CLI now warns when using default public RPC URLs (when `ETH_RPC`, `ARB1_RPC`, or `NOVA_RPC` environment variables are not set). Recommends setting env vars for production use.
+
+- **CLI: Health check timeout** - Health check pings now have a 5-second timeout (via `HEALTH_CHECK_TIMEOUT_MS`) to prevent loop stalls when the health check endpoint is unresponsive.
+
+### Security
+
+- **Graceful calldata decode failures** - `decodeParameters()` now catches ABI decoding errors and returns `null` instead of throwing. Prevents crashes when encountering malformed or truncated calldata.
+
+- **4byte.directory lookup opt-out** - Added `DISABLE_4BYTE_LOOKUP=1` environment variable to disable external API calls for unknown function selectors. Also available via SDK option `{ disableApiLookup: true }` in `lookupSignature()`. When disabled, only local governance signatures are used. See README Security & Privacy section.
+
+### Changed (continued)
 
 - **CLI: Version shown in help** - Main help page now displays version in the description ("Version: 0.2.1") instead of requiring `-V` flag. (c6c8e4c)
 

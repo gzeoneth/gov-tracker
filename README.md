@@ -142,6 +142,26 @@ NOVA_RPC=https://nova.arbitrum.io/rpc
 PRIVATE_KEY=0x...  # For execution
 ```
 
+## Security & Privacy
+
+**RPC URLs**: The CLI warns when using default public RPCs. For production use, set `ETH_RPC`, `ARB1_RPC`, and `NOVA_RPC` environment variables to avoid rate limits and ensure reliability.
+
+**External API Lookups**: When decoding calldata, unknown function selectors are looked up via [4byte.directory](https://www.4byte.directory/). This sends selector hashes to an external API. To disable:
+
+```bash
+# Via environment variable
+DISABLE_4BYTE_LOOKUP=1 npx @gzeoneth/gov-tracker track 0x...
+```
+
+```typescript
+// Via SDK option
+import { lookupSignature } from "@gzeoneth/gov-tracker";
+
+const result = await lookupSignature("0x12345678", { disableApiLookup: true });
+```
+
+When disabled, only local signatures (governance-related functions) are available.
+
 ## Documentation
 
 - [Getting Started](./docs/GETTING_STARTED.md) - Installation and basic usage

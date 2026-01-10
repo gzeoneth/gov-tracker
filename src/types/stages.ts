@@ -130,6 +130,12 @@ export interface L2ToL1MessageStageData extends BaseStageData {
   /** L2ToL1Tx event from Arbitrum SDK (contains message data for salt decoding) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   l2ToL1TxEvent?: any;
+  /**
+   * Cached sendProps from tracking phase to avoid redundant getSendProps calls during preparation.
+   * This is a performance optimization that caches immutable SDK internal state.
+   * See l2-to-l1-message.ts for detailed documentation of this hack and its assumptions.
+   */
+  cachedSendProps?: { sendRootSize: string; sendRootHash: string };
 }
 
 /**

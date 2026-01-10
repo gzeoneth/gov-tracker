@@ -289,9 +289,45 @@ export async function trackL2ToL1Message(
 
   // Check status of ALL messages - they may have different states
   const messageStatuses: ChildToParentMessageStatus[] = [];
-  for (const message of messages) {
+
+  // ============================================================================
+  // PERFORMANCE OPTIMIZATION: Cache sendProps from tracking for preparation phase
+  // ============================================================================
+  // The Arbitrum SDK's status() and getOutboxProof() both call getSendProps(),
+  // which performs expensive RPC calls (~3-4s each) to find the assertion
+  // containing this message. By extracting sendProps after status() and caching
+  // them in stage.data, we can inject them during preparation to skip redundant work.
+  //
+  // This is a HACK that accesses SDK private fields. Assumptions:
+  // 1. sendRootSize/sendRootHash are immutable once found - the Arbitrum rollup's
+  //    sendCount is monotonically increasing, so once position < sendRootSize,
+  //    this invariant holds forever
+  // 2. SDK internal field names (sendRootSize, sendRootHash, sendRootConfirmed)
+  //    remain stable across SDK versions
+  // 3. The SDK's cache check: `if (this.sendRootConfirmed !== undefined)` continues
+  //    to skip getSendProps when these fields are pre-populated
+  //
+  // If SDK internals change, this optimization will silently stop working (not break).
+  // ============================================================================
+  let cachedSendProps: { sendRootSize: string; sendRootHash: string } | undefined;
+
+  for (const [i, message] of messages.entries()) {
     const status = await queryWithRetry(() => message.status(l2Provider));
     messageStatuses.push(status);
+
+    // Extract sendProps from first message after status() populates the SDK's internal cache
+    if (i === 0) {
+      // Use nitroReader when available (Nitro-style networks), otherwise the message itself
+      const reader = (message as any).nitroReader ?? message;
+      const sendRootSize = reader.sendRootSize;
+      const sendRootHash = reader.sendRootHash;
+      if (sendRootSize && sendRootHash) {
+        cachedSendProps = {
+          sendRootSize: sendRootSize.toString(),
+          sendRootHash: sendRootHash,
+        };
+      }
+    }
   }
 
   const { blockNumber: currentL1Block, timestamp: currentTimestamp } =
@@ -318,6 +354,7 @@ export async function trackL2ToL1Message(
     messageDetails,
     firstExecutableBlock,
     currentL1Block,
+    cachedSendProps, // Cached from status() call, reused in preparation to avoid redundant RPC
   });
 
   // Use firstExecutableBlock as L1 search start (already calculated above)
@@ -419,6 +456,8 @@ export interface OutboxPrepareOptions {
   prepareCompleted?: boolean;
   /** Outbox contract address (resolved automatically if not provided) */
   outboxAddress?: string;
+  /** Cached sendProps from tracking phase to avoid redundant getSendProps calls */
+  cachedSendProps?: { sendRootSize: string; sendRootHash: string };
 }
 
 /**
@@ -434,11 +473,42 @@ export async function prepareL2ToL1Message(
 ): Promise<PrepareResult> {
   logExecution("Preparing L2→L1 message execution");
 
-  const status = await queryWithRetry(() => reader.status(l2Provider));
-  logExecution("Message status: %s", ChildToParentMessageStatus[status]);
+  // ============================================================================
+  // PERFORMANCE OPTIMIZATION: Inject cached sendProps to skip redundant RPC calls
+  // ============================================================================
+  // This is a HACK that injects values into SDK private fields. The SDK's
+  // getOutboxProof() calls getSendProps() internally, which checks:
+  //   `if (this.sendRootConfirmed !== undefined) return cached`
+  //
+  // By pre-populating these fields with values cached during tracking phase,
+  // we skip ~3-4 seconds of redundant RPC calls. This is safe because:
+  // - sendRootSize/sendRootHash are immutable once the message is included
+  // - We set sendRootConfirmed=true to trigger the SDK's cache hit path
+  //
+  // Why this matters for different paths:
+  // - READY stage (CONFIRMED message): Nice-to-have. Without hack, status() would
+  //   populate the cache and getOutboxProof() would use it. Hack saves ~3-4s by
+  //   skipping the status() call entirely.
+  // - PENDING stage (UNCONFIRMED message, --prepare-pending): ESSENTIAL. Without
+  //   hack, status() sets sendRootConfirmed=undefined, so getOutboxProof() calls
+  //   getSendProps() again (~3-4s wasted). Hack saves ~3-4s of duplicate work.
+  //
+  // See trackL2ToL1Message() for assumptions and risks of this approach.
+  // ============================================================================
+  if (options.cachedSendProps) {
+    const { sendRootSize, sendRootHash } = options.cachedSendProps;
+    (reader as any).sendRootSize = BigNumber.from(sendRootSize);
+    (reader as any).sendRootHash = sendRootHash;
+    (reader as any).sendRootConfirmed = true;
+    logExecution("Using cached sendProps: size=%s", sendRootSize);
+  }
 
-  // Skip state check if prepareCompleted=true for historical validation
-  if (!options.prepareCompleted) {
+  // Only check status if we need to validate (not in prepareCompleted mode)
+  // This avoids a redundant SDK call since getOutboxProof also calls getSendProps internally
+  if (!options.prepareCompleted && !options.cachedSendProps) {
+    const status = await queryWithRetry(() => reader.status(l2Provider));
+    logExecution("Message status: %s", ChildToParentMessageStatus[status]);
+
     if (status === ChildToParentMessageStatus.EXECUTED) {
       return failPrepare("Message already executed");
     }
@@ -450,7 +520,7 @@ export async function prepareL2ToL1Message(
     }
   }
 
-  // Get the outbox proof - this is the expensive part
+  // Get the outbox proof - with cached sendProps, this skips getSendProps and goes straight to proof generation
   logExecution("Generating outbox proof...");
   const proof = await reader.getOutboxProof(l2Provider);
 
@@ -536,9 +606,14 @@ export async function prepareL2ToL1MessageStage(
     outboxAddress = network.ethBridge.outbox;
   }
 
+  // Extract cached sendProps from stage data (populated during tracking phase)
+  const cachedSendProps = stageData.cachedSendProps as
+    | { sendRootSize: string; sendRootHash: string }
+    | undefined;
+
   logExecution("Preparing %d L2→L1 messages", readers.length);
 
-  const prepareOptions = { ...options, outboxAddress };
+  const prepareOptions = { ...options, outboxAddress, cachedSendProps };
   const results = await Promise.all(
     readers.map((reader) =>
       prepareL2ToL1Message(

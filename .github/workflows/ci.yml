@@ -19,31 +19,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
+          cache: 'yarn'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Run linter
-        run: pnpm lint
+        run: yarn lint
 
       - name: Check formatting
-        run: pnpm format:check
+        run: yarn format:check
 
       - name: Build TypeScript
-        run: pnpm build
+        run: yarn build
 
       - name: Run fast tests
-        run: pnpm test
+        run: yarn test
 
   all-tests:
     name: All Tests with RPC
@@ -55,25 +50,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
+          cache: 'yarn'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Build TypeScript
-        run: pnpm build
+        run: yarn build
 
       - name: Run all tests
-        run: pnpm test:coverage:all --reporter=junit --outputFile=junit.xml
+        run: yarn test:coverage:all --reporter=junit --outputFile=junit.xml
         env:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           ARB1_RPC: ${{ secrets.ARB1_RPC }}
@@ -107,28 +97,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'pnpm'
+          cache: 'yarn'
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Build TypeScript
-        run: pnpm build
+        run: yarn build
 
       - name: Run fork tests with coverage
-        run: pnpm test:fork:coverage --reporter=junit --outputFile=junit.xml
+        run: yarn test:fork:coverage --reporter=junit --outputFile=junit.xml
         env:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           ARB1_RPC: ${{ secrets.ARB1_RPC }}

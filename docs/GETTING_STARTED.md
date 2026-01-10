@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-pnpm add @gzeoneth/gov-tracker ethers@^5.8.0
+yarn add @gzeoneth/gov-tracker ethers@^5.8.0
 ```
 
 **Note:** The library has minimal dependencies (`ethers`, `@arbitrum/sdk`, `debug`). The CLI tool uses optional dependencies (`commander`, `p-limit`) that are installed automatically when using `npx`.

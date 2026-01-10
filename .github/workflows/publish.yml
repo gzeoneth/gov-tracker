@@ -27,17 +27,14 @@ jobs:
       (github.ref_type == 'branch' && github.event.head_commit && !startsWith(github.event.head_commit.message || '', 'release:'))
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint && pnpm format:check
-      - run: pnpm build
-      - run: pnpm test
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint && yarn format:check
+      - run: yarn build
+      - run: yarn test
 
   publish:
     needs: test
@@ -45,16 +42,14 @@ jobs:
     environment: publish
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+          cache: yarn
+      - run: npm i -g npm@^11.5.1
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
 
       - name: Validate tag matches package.json
         if: github.ref_type == 'tag'
@@ -69,7 +64,8 @@ jobs:
           BASE=$(node -p "require('./package.json').version.split('-')[0]")
           SHA=${GITHUB_SHA::7}
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${BASE}-alpha.${SHA}"
+            BRANCH=$(echo "$GITHUB_REF_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+            VERSION="${BASE}-alpha.${BRANCH}.${SHA}"
           else
             VERSION="${BASE}-beta.${SHA}"
           fi

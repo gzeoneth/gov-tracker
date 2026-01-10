@@ -40,22 +40,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI: Renamed yarn scripts** - Development scripts renamed from `monitor:*` to `cli:*`:
   - `yarn cli` - Run CLI directly
-  - `pnpm cli:run` - Discover and track all proposals
-  - `pnpm cli:track` - Track specific transaction
-  - `pnpm cli:status` - Show cache status
-  - `pnpm cli:election` - Check Security Council elections
+  - `yarn cli:run` - Discover and track all proposals
+  - `yarn cli:track` - Track specific transaction
+  - `yarn cli:status` - Show cache status
+  - `yarn cli:election` - Check Security Council elections
 
 - **CLI: Renamed entry point** - CLI source file renamed from `monitor.ts` to `cli.ts` for clarity
-
-- **Build: Migrated to pnpm** - Switched from Yarn to pnpm for faster installs (2.5x improvement) and stricter dependency resolution. All CI workflows updated.
-
-- **Build: Simplified prerelease versioning** - Prerelease npm versions no longer include branch name (e.g., `0.2.2-alpha.abc1234` instead of `0.2.2-alpha.feature-branch.abc1234`)
 
 ## [0.2.1] - 2026-01-09
 
 ### Added
 
-- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `pnpm cli:run --cache data/bundled-cache.json` to regenerate.
+- **Bundled proposal cache** - npm package now includes a pre-built cache of completed proposals (~2.4MB). On first run, CLI automatically copies this to user's cache directory, eliminating the need for initial discovery RPC calls. SDK users can access via `getBundledCachePath()`. Run `yarn cli:run --cache data/bundled-cache.json` to regenerate.
 
 - **`getBundledCachePath()` export** - New utility function to get the path to the bundled cache for SDK users who want to bootstrap their app's cache.
 

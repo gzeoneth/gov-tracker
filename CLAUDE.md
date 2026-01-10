@@ -4,32 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Tools
 
-- Package Manager: pnpm
+- Package Manager: Yarn
 - TypeScript with strict configuration
 
 ## Commands
 
 ### Build & Development
 ```bash
-pnpm build              # Compile TypeScript to dist/
-pnpm lint               # Run ESLint on src and test
-pnpm lint:fix           # Auto-fix ESLint issues
-pnpm format             # Format with Prettier
-pnpm format:check       # Check formatting
+yarn build              # Compile TypeScript to dist/
+yarn lint               # Run ESLint on src and test
+yarn lint:fix           # Auto-fix ESLint issues
+yarn format             # Format with Prettier
+yarn format:check       # Check formatting
 ```
 
 ### Testing
 ```bash
-pnpm test               # Fast pre-commit tests that doest not require RPC
-pnpm test:integration   # Full integration tests
-pnpm test:all           # All tests except fork test
-pnpm test:fork          # Fork tests with custom config
+yarn test               # Fast pre-commit tests that doest not require RPC
+yarn test:monitor       # Monitor cli tool test
+yarn test:integration   # Full integration tests
+yarn test:all           # All tests except fork test
+yarn test:fork          # Fork tests with custom config
 ```
 
 **Test a single file:**
 ```bash
-pnpm vitest run test/utils.test.ts
-pnpm vitest run test/tracker.test.ts
+npx vitest run test/utils.test.ts
+npx vitest run test/tracker.test.ts
 ```
 
 **Running specific test suites:**
@@ -39,12 +40,12 @@ pnpm vitest run test/tracker.test.ts
 ### CLI Tools
 ```bash
 # Development (using ts-node)
-pnpm cli:run            # Discover and track all proposals
-pnpm cli:track          # Track specific transaction (add tx hash as argument)
-pnpm cli:status         # Show status
-pnpm cli:election       # Check Security Council elections
+yarn cli:run            # Discover and track all proposals
+yarn cli:track          # Track specific transaction (add tx hash as argument)
+yarn cli:status         # Show status
+yarn cli:election       # Check Security Council elections
 
-# Production (after pnpm build)
+# Production (after yarn build)
 npx gov-tracker                                  # Discover all proposals (default command)
 npx gov-tracker run                              # Same as above (explicit)
 npx gov-tracker track 0x...                      # Track by tx hash
@@ -278,9 +279,9 @@ Uses `husky` + `lint-staged` to run:
 2. Prettier formatting on staged `.ts` files
 
 **Before committing**, ensure:
-- `pnpm test` passes (fast tests only)
-- `pnpm lint` shows no errors
-- `pnpm format:check` passes
+- `yarn test` passes (fast tests only)
+- `yarn lint` shows no errors
+- `yarn format:check` passes
 
 ### Test Structure
 
@@ -400,7 +401,7 @@ await withScope("core-gov", async () => {
 
 **Debug-only**: Logging uses the `debug` library and is disabled by default. Enable with:
 ```bash
-DEBUG=gov-tracker:* pnpm cli:run
+DEBUG=gov-tracker:* yarn cli:run
 ```
 
 ### Type Safety
@@ -489,8 +490,8 @@ describe.skipIf(process.env.NO_RPC === "1")("integration tests", () => {
 
 Use the CLI tool to decode proposal calldata:
 ```bash
-pnpm cli:track 0x0625ecb... --inspect-only
-pnpm cli:track 0x0625ecb... --show-simulation
+yarn cli:track 0x0625ecb... --inspect-only
+yarn cli:track 0x0625ecb... --show-simulation
 ```
 
 #### Performance improvement
@@ -498,7 +499,7 @@ pnpm cli:track 0x0625ecb... --show-simulation
 Use the monitoring script to debug performance issue
 
 1. Track a COMPLETED proposal with all 7 stages
-   `pnpm cli:track 0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068 --verbose`
+   `yarn cli:track 0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068 --verbose`
 2. Use log to identify performance improvement opportunity
 3. Log lookups and arbitrum-sdk calls can be slow, use them intelligently
 4. Track again to see the improvement

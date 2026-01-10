@@ -106,16 +106,20 @@ npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
 - View proposal details, voting statistics, and stage progress
 - Inspect decoded calldata with nested parameter display
 - View simulation data for Tenderly/Foundry fork testing
+- Monitor Security Council election status (requires RPC)
 - Live tracking and discovery when RPC providers are configured
 
 **Navigation:**
 | Key | Action |
 |-----|--------|
 | `↑↓` | Navigate |
+| `PgUp/Dn` | Page navigation |
 | `Enter` | View details |
 | `Tab` | Cycle filter |
 | `c` | View calldata |
 | `s` | View simulation |
+| `d` | Discover proposals (with RPC) |
+| `e` | Election status (with RPC) |
 | `r` | Re-track (with RPC) |
 | `b`/`Esc` | Go back |
 | `q` | Quit |

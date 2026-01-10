@@ -29,6 +29,7 @@ import { getCurrentBlockInfo, getL1BlockNumberFromL2 } from "../utils/timing";
 import { GOVERNOR_ABI, proposalCreatedInterface, proposalQueuedInterface } from "../abis";
 import { hasVettingPeriod } from "../election";
 import { addressEquals } from "../utils/chain";
+import { truncateDescription } from "../utils/sanitize";
 
 // Discovery Types (merged from monitor-discovery.ts)
 
@@ -161,7 +162,7 @@ export function parseProposalCreatedEvent(log: ethers.providers.Log): ProposalDa
       calldatas: args.calldatas,
       startBlock: args.startBlock,
       endBlock: args.endBlock,
-      description: args.description,
+      description: truncateDescription(args.description),
       creationBlock: log.blockNumber,
       creationTxHash: log.transactionHash,
     };

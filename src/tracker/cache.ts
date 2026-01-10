@@ -14,6 +14,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { TrackingCheckpoint, DiscoveryWatermarks, CacheAdapter } from "../types";
 import { WATERMARKS_KEY } from "./discovery";
+import { safeJsonParse } from "../utils/sanitize";
 
 /**
  * File-based cache that persists to JSON file.
@@ -32,7 +33,7 @@ export class FileCache implements CacheAdapter {
 
   private load(): Map<string, unknown> {
     try {
-      const data = JSON.parse(fs.readFileSync(this.path, "utf8"));
+      const data = safeJsonParse<Record<string, unknown>>(fs.readFileSync(this.path, "utf8"));
       return new Map(Object.entries(data));
     } catch {
       return new Map();
@@ -151,7 +152,7 @@ export class LocalStorageCache implements CacheAdapter {
     const data = storage.getItem(this.fullKey(key));
     if (data === null) return null;
     try {
-      return JSON.parse(data) as T;
+      return safeJsonParse<T>(data);
     } catch {
       return null;
     }

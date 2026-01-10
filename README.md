@@ -9,30 +9,40 @@ Track and execute Arbitrum DAO governance proposal lifecycle stages.
 ## Installation
 
 ```bash
-yarn add @gzeoneth/gov-tracker
+yarn add @gzeoneth/gov-tracker ethers@^5.8.0
 ```
 
 ## Quick Start
 
 ```typescript
-import { createTracker, ADDRESSES } from "@gzeoneth/gov-tracker";
+import { ethers } from "ethers";
+import { createTracker, findExecutableStage, ADDRESSES } from "@gzeoneth/gov-tracker";
 
 // Use StaticJsonRpcProvider for better performance
 const tracker = createTracker({
-  l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC_URL),
-  l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC_URL),
-  novaProvider: new ethers.providers.StaticJsonRpcProvider(NOVA_RPC),
+  l2Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ARB1_RPC),
+  l1Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ETH_RPC),
+  novaProvider: new ethers.providers.StaticJsonRpcProvider(process.env.NOVA_RPC),
+  cachePath: "./gov-tracker-cache.json",
 });
-
-// Track from governor proposal
-const result = await tracker.trackFromGovernor(ADDRESSES.CONSTITUTIONAL_GOVERNOR, proposalId);
-
-for (const stage of result.stages) {
-  console.log(`${stage.type}: ${stage.status}`);
-}
 
 // Track from transaction hash
 const results = await tracker.trackByTxHash("0x...");
+for (const stage of results[0].stages) {
+  console.log(`${stage.type}: ${stage.status}`);
+}
+
+// Or track from governor
+const result = await tracker.trackFromGovernor(ADDRESSES.CONSTITUTIONAL_GOVERNOR, proposalId);
+
+// Execute ready stages
+const readyStage = findExecutableStage(results[0].stages);
+if (readyStage) {
+  const prep = await tracker.prepareTransaction(readyStage);
+  if (prep.success) {
+    await signer.sendTransaction(prep.prepared);
+  }
+}
 ```
 
 ## Stages
@@ -49,89 +59,34 @@ const results = await tracker.trackByTxHash("0x...");
 
 Statuses: `NOT_STARTED`, `PENDING`, `READY`, `COMPLETED`, `FAILED`, `SKIPPED`
 
-## Execution
-
-```typescript
-import { findExecutableStage } from "@gzeoneth/gov-tracker";
-
-const readyStage = findExecutableStage(result.stages);
-if (readyStage) {
-  const prepResult = await tracker.prepareTransaction(readyStage);
-  if (prepResult.success) {
-    const { to, data, value, chain } = prepResult.prepared;
-    const tx = await signer.sendTransaction({ to, data, value });
-    await tx.wait();
-  }
-}
-```
-
-## Calldata Decoding & Simulation
-
-Decode proposal calldata and prepare simulation data for Tenderly, Foundry, or other tools.
-
-```typescript
-import {
-  decodeCalldata,
-  extractAllSimulationsFromDecoded,
-  getAddressLabel
-} from "@gzeoneth/gov-tracker";
-
-// Decode proposal actions
-const stage = result.stages[0]; // PROPOSAL_CREATED
-const { calldatas, targets } = stage.data;
-
-for (let i = 0; i < calldatas.length; i++) {
-  const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
-
-  console.log(`${decoded.signature}`);
-  console.log(`Target: ${getAddressLabel(targets[i], "arb1")}`);
-
-  // Extract simulation data
-  const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
-  for (const sim of sims) {
-    console.log(`Network: ${sim.simulation.networkId}`);
-    console.log(`From: ${sim.simulation.from}`);
-    console.log(`To: ${sim.simulation.to}`);
-  }
-}
-```
-
-See [Examples](./docs/EXAMPLES.md#calldata-decoding--simulation) for Tenderly and Foundry integration.
-
 ## CLI
 
 ```bash
-# Track a proposal by transaction hash
+# Track a proposal
 npx @gzeoneth/gov-tracker track 0x...
 
-# Track AND inspect calldata (new in v0.2.1)
-npx @gzeoneth/gov-tracker track 0x... --inspect
-npx @gzeoneth/gov-tracker track 0x... -i  # shorthand
+# Track AND decode calldata
+npx @gzeoneth/gov-tracker track 0x... -i
 
 # Decode calldata only (no tracking)
 npx @gzeoneth/gov-tracker track 0x... --inspect-only
 
-# Show simulation data for Tenderly/Foundry integration
+# Show simulation data
 npx @gzeoneth/gov-tracker track 0x... --show-simulation
 
-# Execute ready stages (with shorthands)
+# Execute ready stages
 npx @gzeoneth/gov-tracker track 0x... -w --private-key $PRIVATE_KEY
-npx @gzeoneth/gov-tracker track 0x... -v -p -w --private-key $PRIVATE_KEY  # verbose + prepare + write
 
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
 
-# Disable caching (useful for one-off checks)
+# Disable caching
 npx @gzeoneth/gov-tracker track 0x... --no-cache
 ```
 
-**CLI Shorthands** (v0.2.1+):
-- `-v` for `--verbose` - Enable verbose logging
-- `-p` for `--prepare` - Prepare transactions for ready stages
-- `-w` for `--write` - Execute prepared transactions
-- `-i` for `--inspect` - Track AND decode calldata
+**Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
 
-**Bundled Cache**: The CLI includes a pre-built cache of completed proposals (~95 proposals). On first run, this is copied to your local cache directory, eliminating initial discovery RPC calls. SDK users can access via `getBundledCachePath()` (Node.js) or direct JSON import for bundlers - see [Bundled Cache](./docs/EXAMPLES.md#bundled-cache-bootstrap).
+**Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this eliminates initial discovery RPC calls. SDK users can access via `getBundledCachePath()` or direct JSON import - see [Examples](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
 ## Environment
 
@@ -142,29 +97,23 @@ NOVA_RPC=https://nova.arbitrum.io/rpc
 PRIVATE_KEY=0x...  # For execution
 ```
 
+The CLI warns when using default public RPCs. For production, set these environment variables.
+
 ## Security & Privacy
 
-**RPC URLs**: The CLI warns when using default public RPCs. For production use, set `ETH_RPC`, `ARB1_RPC`, and `NOVA_RPC` environment variables to avoid rate limits and ensure reliability.
-
-**External API Lookups**: When decoding calldata, unknown function selectors are looked up via [4byte.directory](https://www.4byte.directory/). This sends selector hashes to an external API. To disable:
+**External API Lookups**: When decoding calldata, unknown function selectors are looked up via [4byte.directory](https://www.4byte.directory/). To disable:
 
 ```bash
-# Via environment variable
 DISABLE_4BYTE_LOOKUP=1 npx @gzeoneth/gov-tracker track 0x...
 ```
 
 ```typescript
-// Via SDK option
 import { lookupSignature } from "@gzeoneth/gov-tracker";
-
 const result = await lookupSignature("0x12345678", { disableApiLookup: true });
 ```
 
-When disabled, only local signatures (governance-related functions) are available.
-
 ## Documentation
 
-- [Getting Started](./docs/GETTING_STARTED.md) - Installation and basic usage
 - [API Reference](./docs/API.md) - Complete API documentation
 - [Examples](./docs/EXAMPLES.md) - Common patterns and use cases
 - [Architecture](./docs/ARCHITECTURE.md) - SDK internals and design
@@ -175,12 +124,10 @@ When disabled, only local signatures (governance-related functions) are availabl
 yarn build              # Compile TypeScript
 yarn test               # Run fast tests (no RPC)
 yarn test:coverage      # Run tests with coverage
-yarn test:coverage:fork # Run fork tests with coverage (requires archive RPC)
-yarn test:coverage:all  # Merge all coverage reports
 yarn lint               # Run ESLint
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow and publishing instructions.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow.
 
 ## Terminology
 

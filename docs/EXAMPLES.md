@@ -2,38 +2,6 @@
 
 Practical examples for the `@gzeoneth/gov-tracker` SDK.
 
-## Quick Start
-
-```typescript
-import { ethers } from "ethers";
-import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
-
-// Use StaticJsonRpcProvider for better performance
-const tracker = createTracker({
-  l2Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ARB1_RPC),
-  l1Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ETH_RPC),
-  novaProvider: new ethers.providers.StaticJsonRpcProvider(process.env.NOVA_RPC),
-  cachePath: "./gov-tracker-cache.json", // Optional: enables caching
-});
-
-// Track a proposal
-const results = await tracker.trackByTxHash("0x...");
-for (const stage of results[0].stages) {
-  console.log(`${stage.type}: ${stage.status}`);
-}
-
-// Execute ready stage
-const readyStage = findExecutableStage(results[0].stages);
-if (readyStage) {
-  const prep = await tracker.prepareTransaction(readyStage);
-  if (prep.success) {
-    await signer.sendTransaction(prep.prepared);
-  }
-}
-```
-
----
-
 ## Tracking
 
 ### By Transaction Hash
@@ -107,13 +75,11 @@ console.log(`Timelocks: ${stats.timelocks.complete}/${stats.timelocks.total} com
 
 ## Caching
 
-### Bundled Cache (Bootstrap)
+### Bundled Cache Bootstrap
 
-The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals). Use this to skip initial discovery RPC calls.
+The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals).
 
-#### Node.js: `getBundledCachePath()`
-
-For Node.js applications, use the file path:
+#### Node.js
 
 ```typescript
 import * as fs from "fs";
@@ -139,9 +105,7 @@ const tracker = createTracker({
 });
 ```
 
-#### Bundlers: Direct JSON import
-
-For bundlers (webpack, vite, Next.js), import the JSON directly:
+#### Bundlers (webpack, vite, Next.js)
 
 ```typescript
 import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
@@ -164,14 +128,7 @@ const tracker = createTracker({
 });
 ```
 
-The bundled cache contains:
-- All completed governor proposals (~95 proposals)
-- Discovery watermarks for incremental discovery
-- Election tracking data
-
-**Note:** The CLI automatically initializes user cache from bundled data on first run.
-
-### Browser Usage (localStorage)
+### Browser (localStorage)
 
 ```typescript
 import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
@@ -183,17 +140,6 @@ const tracker = createTracker({
 
 // Cached stages restore automatically on page reload
 const results = await tracker.trackByTxHash(txHash);
-```
-
-### In-Memory Cache
-
-```typescript
-import { createTracker, MemoryCache } from "@gzeoneth/gov-tracker";
-
-const tracker = createTracker({
-  l2Provider, l1Provider, novaProvider,
-  cache: new MemoryCache(), // No persistence
-});
 ```
 
 ### Custom Cache Adapter

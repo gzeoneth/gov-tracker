@@ -9,7 +9,7 @@ Track and execute Arbitrum DAO governance proposal lifecycle stages.
 ## Installation
 
 ```bash
-yarn add @gzeoneth/gov-tracker
+pnpm add @gzeoneth/gov-tracker
 ```
 
 ## Quick Start
@@ -152,12 +152,12 @@ PRIVATE_KEY=0x...  # For execution
 ## Development
 
 ```bash
-yarn build              # Compile TypeScript
-yarn test               # Run fast tests (no RPC)
-yarn test:coverage      # Run tests with coverage
-yarn test:coverage:fork # Run fork tests with coverage (requires archive RPC)
-yarn test:coverage:all  # Merge all coverage reports
-yarn lint               # Run ESLint
+pnpm build              # Compile TypeScript
+pnpm test               # Run fast tests (no RPC)
+pnpm test:coverage      # Run tests with coverage
+pnpm test:coverage:fork # Run fork tests with coverage (requires archive RPC)
+pnpm test:coverage:all  # Merge all coverage reports
+pnpm lint               # Run ESLint
 ```
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow and publishing instructions.

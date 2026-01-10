@@ -102,7 +102,7 @@ npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
 ```
 
 **Features:**
-- Browse 105+ bundled proposals with filter tabs (All, Active, Complete, Elections, Timelocks)
+- Browse 105+ bundled proposals with filter tabs (All, Active, Complete, Timelocks)
 - View proposal details, voting statistics, and stage progress
 - Inspect decoded calldata with nested parameter display
 - View simulation data for Tenderly/Foundry fork testing

@@ -42,7 +42,7 @@ try {
   Option = commander.Option;
 } catch {
   console.error("Error: CLI requires 'commander' package.");
-  console.error("Install it with: npm install commander");
+  console.error("Install it with: yarn add commander");
   process.exit(1);
 }
 

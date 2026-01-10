@@ -27,6 +27,7 @@ export interface UseNavigationResult {
   goToCalldata: () => void;
   goToStage: (index: number) => void;
   goToSimulation: () => void;
+  goToDescription: () => void;
   nextAction: (maxIndex: number) => void;
   prevAction: () => void;
   setScrollOffset: (offset: number) => void;
@@ -140,7 +141,12 @@ export function useNavigation(): UseNavigationResult {
           selectedProposal: null,
           selectedStageIndex: 0,
         };
-      } else if (prev.view === "calldata" || prev.view === "stage" || prev.view === "simulation") {
+      } else if (
+        prev.view === "calldata" ||
+        prev.view === "stage" ||
+        prev.view === "simulation" ||
+        prev.view === "description"
+      ) {
         return {
           ...prev,
           view: "detail",
@@ -188,6 +194,19 @@ export function useNavigation(): UseNavigationResult {
     });
   }, []);
 
+  const goToDescription = useCallback(() => {
+    setState((prev) => {
+      if (prev.view === "detail") {
+        return {
+          ...prev,
+          view: "description",
+          scrollOffset: 0,
+        };
+      }
+      return prev;
+    });
+  }, []);
+
   const nextAction = useCallback((maxIndex: number) => {
     setState((prev) => ({
       ...prev,
@@ -225,6 +244,7 @@ export function useNavigation(): UseNavigationResult {
     goToCalldata,
     goToStage,
     goToSimulation,
+    goToDescription,
     nextAction,
     prevAction,
     setScrollOffset,

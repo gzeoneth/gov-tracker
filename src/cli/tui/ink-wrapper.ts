@@ -29,6 +29,10 @@ export const useInput = ink?.useInput as (
   options?: { isActive?: boolean }
 ) => void;
 export const useApp = ink?.useApp as () => { exit: (error?: Error) => void };
+export const useStdout = ink?.useStdout as () => {
+  stdout: NodeJS.WriteStream;
+  write: (data: string) => void;
+};
 
 export interface KeyInput {
   upArrow: boolean;

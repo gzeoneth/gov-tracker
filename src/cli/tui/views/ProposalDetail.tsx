@@ -19,7 +19,8 @@ interface ProposalDetailProps {
   tracker: UseTrackerResult;
 }
 
-function formatDate(timestamp: number): string {
+function formatDate(timestamp: number | null): string {
+  if (timestamp === null) return "Unknown";
   return new Date(timestamp).toLocaleString();
 }
 
@@ -89,6 +90,8 @@ export function ProposalDetail({
       navigation.goToCalldata();
     } else if (inputKey === "s") {
       navigation.goToSimulation();
+    } else if (inputKey === "d") {
+      navigation.goToDescription();
     } else if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) {
       tracker.track(proposal);
     }

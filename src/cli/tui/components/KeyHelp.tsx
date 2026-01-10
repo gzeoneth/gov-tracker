@@ -27,6 +27,7 @@ const LIST_KEYS: KeyBinding[] = [
 const DETAIL_KEYS: KeyBinding[] = [
   { key: "↑↓", action: "Stage" },
   { key: "Enter", action: "Details" },
+  { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },
   { key: "r", action: "Re-track" },
@@ -36,6 +37,7 @@ const DETAIL_KEYS: KeyBinding[] = [
 const DETAIL_KEYS_NO_RPC: KeyBinding[] = [
   { key: "↑↓", action: "Stage" },
   { key: "Enter", action: "Details" },
+  { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },
   { key: "b", action: "Back" },
@@ -57,6 +59,11 @@ const SIMULATION_KEYS: KeyBinding[] = [
   { key: "b", action: "Back" },
 ];
 
+const DESCRIPTION_KEYS: KeyBinding[] = [
+  { key: "↑↓", action: "Scroll" },
+  { key: "b", action: "Back" },
+];
+
 export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElement {
   let keys: KeyBinding[];
 
@@ -75,6 +82,9 @@ export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElemen
       break;
     case "simulation":
       keys = SIMULATION_KEYS;
+      break;
+    case "description":
+      keys = DESCRIPTION_KEYS;
       break;
     default:
       keys = [];

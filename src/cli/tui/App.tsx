@@ -13,6 +13,7 @@ import { ProposalDetail } from "./views/ProposalDetail";
 import { CalldataView } from "./views/CalldataView";
 import { StageView } from "./views/StageView";
 import { SimulationView } from "./views/SimulationView";
+import { DescriptionView } from "./views/DescriptionView";
 
 export interface AppProps {
   cachePath: string;
@@ -122,6 +123,18 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
       }
       return (
         <SimulationView
+          proposal={selectedProposal}
+          navigation={navigation}
+        />
+      );
+
+    case "description":
+      if (!selectedProposal) {
+        navigation.back();
+        return <Text>Returning to list...</Text>;
+      }
+      return (
+        <DescriptionView
           proposal={selectedProposal}
           navigation={navigation}
         />

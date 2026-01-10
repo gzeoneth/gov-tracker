@@ -33,6 +33,10 @@ export function Header({
         return "Decoded Calldata";
       case "stage":
         return "Stage Details";
+      case "simulation":
+        return title ?? "Simulation Data";
+      case "description":
+        return title ?? "Proposal Description";
       default:
         return "Gov-Tracker";
     }

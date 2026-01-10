@@ -4,7 +4,7 @@
 
 import type { TrackingCheckpoint, TrackerStats, StageType } from "../../types";
 
-export type ViewType = "list" | "detail" | "calldata" | "stage" | "simulation";
+export type ViewType = "list" | "detail" | "calldata" | "stage" | "simulation" | "description";
 
 export type FilterType = "all" | "active" | "complete" | "elections" | "timelocks";
 
@@ -17,7 +17,7 @@ export interface ProposalListItem {
   stageProgress: string;
   currentStage: StageType | null;
   hasExecutable: boolean;
-  createdAt: number;
+  createdAt: number | null;
   checkpoint: TrackingCheckpoint;
 }
 

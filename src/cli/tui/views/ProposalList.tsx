@@ -20,6 +20,10 @@ interface ProposalListProps {
 
 const VISIBLE_ROWS = 15;
 
+function getTerminalWidth(): number {
+  return process.stdout.columns || 80;
+}
+
 export function ProposalList({
   items,
   data,
@@ -29,6 +33,7 @@ export function ProposalList({
 }: ProposalListProps): React.ReactElement {
   const { state } = navigation;
   const selectedIndex = state.selectedIndex;
+  const terminalWidth = getTerminalWidth();
 
   const startIndex = Math.max(
     0,
@@ -96,6 +101,7 @@ export function ProposalList({
                 key={item.key}
                 item={item}
                 isSelected={startIndex + i === selectedIndex}
+                maxWidth={terminalWidth - 4}
               />
             ))}
             {startIndex + VISIBLE_ROWS < items.length && (

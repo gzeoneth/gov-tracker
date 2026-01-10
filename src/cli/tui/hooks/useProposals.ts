@@ -94,6 +94,25 @@ function getProposalType(checkpoint: TrackingCheckpoint): string | undefined {
   return undefined;
 }
 
+function getCreationTimestamp(checkpoint: TrackingCheckpoint): number | null {
+  const stages = checkpoint.cachedData.completedStages ?? [];
+
+  // For governor proposals, use PROPOSAL_CREATED stage timing
+  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
+  if (createdStage?.timing?.startedAt) {
+    return createdStage.timing.startedAt * 1000; // Convert seconds to milliseconds
+  }
+
+  // For timelock operations, use L2_TIMELOCK stage timing
+  const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
+  if (l2TimelockStage?.timing?.startedAt) {
+    return l2TimelockStage.timing.startedAt * 1000;
+  }
+
+  // No timestamp available - don't fallback to cache time
+  return null;
+}
+
 export function useProposals(
   data: CacheData | null,
   filter: FilterType
@@ -106,9 +125,12 @@ export function useProposals(
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery") continue;
 
+      // Skip entries with no tracked stages (incomplete tracking)
+      const stages = checkpoint.cachedData.completedStages ?? [];
+      if (stages.length === 0) continue;
+
       const isElection = isElectionProposal(checkpoint);
       const status = getProposalStatus(checkpoint);
-      const stages = checkpoint.cachedData.completedStages ?? [];
       const completedCount = stages.filter(
         (s) => s.status === "COMPLETED" || s.status === "SKIPPED"
       ).length;
@@ -126,14 +148,20 @@ export function useProposals(
         stageProgress: `${completedCount}/7`,
         currentStage: getCurrentStageType(checkpoint),
         hasExecutable: hasExecutableStage(checkpoint),
-        createdAt: checkpoint.createdAt,
+        createdAt: getCreationTimestamp(checkpoint),
         checkpoint,
       };
 
       items.push(item);
     }
 
-    items.sort((a, b) => b.createdAt - a.createdAt);
+    // Sort by createdAt (newest first), null timestamps go to the end
+    items.sort((a, b) => {
+      if (a.createdAt === null && b.createdAt === null) return 0;
+      if (a.createdAt === null) return 1;
+      if (b.createdAt === null) return -1;
+      return b.createdAt - a.createdAt;
+    });
 
     const totalCount = items.length;
 

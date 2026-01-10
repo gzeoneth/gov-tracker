@@ -244,7 +244,20 @@ for (const stage of result.stages) {
 ### Concurrent Tracking
 
 ```typescript
-import pLimit from "p-limit";
+// Simple concurrency limiter (built into CLI, or implement your own)
+function pLimit(concurrency: number) {
+  const queue: (() => void)[] = [];
+  let active = 0;
+  const next = () => { active--; if (queue.length > 0) queue.shift()!(); };
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise((resolve, reject) => {
+      const run = async () => {
+        active++;
+        try { resolve(await fn()); } catch (e) { reject(e); } finally { next(); }
+      };
+      if (active < concurrency) run(); else queue.push(run);
+    });
+}
 
 const limit = pLimit(4); // Max 4 concurrent operations
 

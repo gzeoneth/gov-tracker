@@ -32,6 +32,7 @@ import {
   CHAIN_IDS,
   NETWORK_IDS,
   TIMELOCK_SELECTORS,
+  DEFAULT_RPC_URLS,
   // Utilities
   addressEquals,
   isAddressIn,
@@ -210,6 +211,17 @@ describe("Public API: Constants", () => {
     expect(TIMELOCK_SELECTORS.execute).toBe("0x134008d3");
     expect(TIMELOCK_SELECTORS.scheduleBatch).toBe("0x8f2a0bb0");
     expect(TIMELOCK_SELECTORS.executeBatch).toBe("0xe38335e5");
+  });
+
+  it("exports DEFAULT_RPC_URLS for all supported chains", () => {
+    // #given - the DEFAULT_RPC_URLS constant exported from the public API
+
+    // #when - accessing RPC URL values
+
+    // #then - all supported chains should have default RPC URLs defined
+    expect(DEFAULT_RPC_URLS.ETHEREUM).toBe("https://eth.llamarpc.com");
+    expect(DEFAULT_RPC_URLS.ARB_ONE).toBe("https://arb1.arbitrum.io/rpc");
+    expect(DEFAULT_RPC_URLS.NOVA).toBe("https://nova.arbitrum.io/rpc");
   });
 });
 

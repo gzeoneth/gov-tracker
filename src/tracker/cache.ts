@@ -384,7 +384,7 @@ export function getBundledCache(): BundledCacheData {
     throw new Error(
       "Bundled cache not found. This may happen if:\n" +
         "1. The package was not installed correctly\n" +
-        "2. You're running in a browser environment (use getBundledCachePath() at build time)\n" +
+        "2. You're running in a browser-only environment. Access the bundled cache at build time or in a Node.js process using getBundledCache(), then pass the data to your client code.\n" +
         "3. The dist/data directory is missing from the package"
     );
   }

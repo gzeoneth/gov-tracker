@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Performance: Cache L2→L1 message sendProps between tracking and preparation** - When tracking L2→L1 messages, the SDK's `status()` call populates internal `sendRootSize` and `sendRootHash` values. These are now cached in `stage.data.cachedSendProps` and injected during preparation to skip the redundant ~3-4s `getSendProps()` call inside `getOutboxProof()`. This optimization exploits the immutability of Arbitrum's monotonically-increasing `sendCount` - once a message position is included in an assertion, this fact never changes. (Note: This uses SDK private field injection and may break if SDK internals change.)
+
 ## [0.2.1] - 2026-01-09
 
 ### Added

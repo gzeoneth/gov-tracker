@@ -323,6 +323,56 @@ describe("L2 to L1 Message Stage", () => {
         expect(result.prepared.to).toBe(customOutbox);
       }
     });
+
+    it("should skip status check when cachedSendProps provided", async () => {
+      // #given a message that would fail status check (UNCONFIRMED) but has cachedSendProps
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.UNCONFIRMED) as any;
+      const cachedSendProps = {
+        sendRootSize: "156638",
+        sendRootHash: "0x" + "a".repeat(64),
+      };
+
+      // #when preparing with cachedSendProps
+      const result = await prepareL2ToL1Message(mockReader, mockProvider, {
+        cachedSendProps,
+      });
+
+      // #then should succeed (bypassing status check) and NOT call status()
+      expect(result.success).toBe(true);
+      expect(mockReader.status).not.toHaveBeenCalled();
+    });
+
+    it("should inject cachedSendProps into reader private fields", async () => {
+      // #given a message with cachedSendProps
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.CONFIRMED) as any;
+      const cachedSendProps = {
+        sendRootSize: "156638",
+        sendRootHash: "0x" + "a".repeat(64),
+      };
+
+      // #when preparing with cachedSendProps
+      await prepareL2ToL1Message(mockReader, mockProvider, { cachedSendProps });
+
+      // #then should have injected the cached values into reader
+      expect(mockReader.sendRootSize).toBeDefined();
+      expect(mockReader.sendRootSize.toString()).toBe("156638");
+      expect(mockReader.sendRootHash).toBe("0x" + "a".repeat(64));
+      expect(mockReader.sendRootConfirmed).toBe(true);
+    });
+
+    it("should call status() when no cachedSendProps and not prepareCompleted", async () => {
+      // #given a confirmed message without cachedSendProps
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReader = createMockNitroReader(ChildToParentMessageStatus.CONFIRMED) as any;
+
+      // #when preparing without cachedSendProps
+      await prepareL2ToL1Message(mockReader, mockProvider);
+
+      // #then should call status() to validate
+      expect(mockReader.status).toHaveBeenCalled();
+    });
   });
 
   describe("aggregate status determination", () => {

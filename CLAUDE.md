@@ -167,6 +167,8 @@ Cache adapters: `FileCache` (Node.js), `LocalStorageCache` (browsers), `MemoryCa
 
 5. **Bounded L1↔L2 block conversion**: Narrow binary search range for cross-chain block mapping
 
+6. **L2→L1 sendProps caching**: Cache `sendRootSize`/`sendRootHash` from tracking phase in `stage.data.cachedSendProps`, inject during preparation to skip ~3-4s redundant `getSendProps()` call
+
 ### Transaction Preparation Pattern
 
 The SDK prepares transactions but **never signs or sends them**:

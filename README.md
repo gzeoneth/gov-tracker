@@ -82,9 +82,45 @@ npx @gzeoneth/gov-tracker run
 
 # Disable caching
 npx @gzeoneth/gov-tracker track 0x... --no-cache
+
+# Interactive TUI (requires ink)
+npx @gzeoneth/gov-tracker ui
 ```
 
 **Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
+
+### Interactive TUI
+
+The `ui` command launches an interactive terminal interface for browsing proposals:
+
+```bash
+# Browse bundled cache (no RPC required)
+npx @gzeoneth/gov-tracker ui
+
+# Enable live tracking with RPC
+npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
+```
+
+**Features:**
+- Browse 105+ bundled proposals with filter tabs (All, Active, Complete, Elections, Timelocks)
+- View proposal details, voting statistics, and stage progress
+- Inspect decoded calldata with nested parameter display
+- View simulation data for Tenderly/Foundry fork testing
+- Live tracking and discovery when RPC providers are configured
+
+**Navigation:**
+| Key | Action |
+|-----|--------|
+| `↑↓` | Navigate |
+| `Enter` | View details |
+| `Tab` | Cycle filter |
+| `c` | View calldata |
+| `s` | View simulation |
+| `r` | Re-track (with RPC) |
+| `b`/`Esc` | Go back |
+| `q` | Quit |
+
+**Note:** The TUI requires `ink` and `react` packages (installed as optional dependencies).
 
 **Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this eliminates initial discovery RPC calls. SDK users can access via `getBundledCachePath()` or direct JSON import - see [Examples](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 

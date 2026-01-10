@@ -747,4 +747,39 @@ electionCmd
     });
   });
 
+// ============================================================================
+// UI Command - Interactive TUI
+// ============================================================================
+
+const uiCmd = program
+  .command("ui")
+  .description("Interactive TUI for browsing and tracking proposals");
+addOptions(uiCmd, rpcOptions);
+uiCmd
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
+  .addOption(verboseOption)
+  .action(async (opts) => {
+    if (opts.verbose) debug.enable("gov-tracker:*");
+
+    try {
+      const { runTui } = await import("./tui");
+
+      // Create providers only if RPC URLs are provided
+      const providers = opts.l2Rpc ? createProvidersFromOptions(opts) : undefined;
+
+      await runTui({
+        cachePath: opts.cache,
+        providers,
+        verbose: opts.verbose,
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {
+        console.error("Error: TUI requires 'ink' and 'react' packages.");
+        console.error("Install them with: yarn add ink react");
+        process.exit(1);
+      }
+      throw error;
+    }
+  });
+
 program.parse();

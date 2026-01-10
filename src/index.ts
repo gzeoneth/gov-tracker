@@ -258,6 +258,14 @@ export { chainIdToChain, chainToChainId, getChainDisplayName } from "./types";
 // Error classification
 export { isGasEstimationError } from "./utils/rpc-utils";
 
+// Security utilities
+export {
+  truncateDescription,
+  sanitizeForDisplay,
+  safeJsonParse,
+  MAX_DESCRIPTION_LENGTH,
+} from "./utils/sanitize";
+
 // ============================================================================
 // TIER 5: Election Tracking
 // ============================================================================

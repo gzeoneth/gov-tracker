@@ -3,12 +3,12 @@
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import type { ProposalListItem } from "../types";
 import type { UseNavigationResult } from "../hooks";
+import { useStageCalldata } from "../hooks";
 import { Header } from "../components/Header";
 import { KeyHelp } from "../components/KeyHelp";
-import { decodeCalldata, extractCalldataFromStage } from "../../../calldata";
 import { extractAllSimulationsFromDecoded } from "../../../simulation";
 import type { ExtractedSimulation } from "../../../types/simulation";
 import type { Chain } from "../../../types";
@@ -23,51 +23,21 @@ export function SimulationView({
   navigation,
 }: SimulationViewProps): React.ReactElement {
   const { state } = navigation;
-  const [simulations, setSimulations] = useState<ExtractedSimulation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
-  const firstStage = stages[0];
+  const { actions, loading, error } = useStageCalldata(stages[0]);
 
-  useEffect(() => {
-    async function loadSimulations() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        if (!firstStage) {
-          setError("No stage data available");
-          return;
-        }
-
-        const { calldatas, targets } = extractCalldataFromStage(firstStage);
-
-        if (calldatas.length === 0) {
-          setError("No calldata found in proposal");
-          return;
-        }
-
-        const chainContext: Chain = "arb1";
-        const allSimulations: ExtractedSimulation[] = [];
-
-        for (let i = 0; i < calldatas.length; i++) {
-          const decoded = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
-          const sims = extractAllSimulationsFromDecoded(decoded, chainContext);
-          allSimulations.push(...sims);
-        }
-
-        setSimulations(allSimulations);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoading(false);
-      }
+  const simulations = useMemo((): ExtractedSimulation[] => {
+    if (actions.length === 0) return [];
+    const chainContext: Chain = "arb1";
+    const allSimulations: ExtractedSimulation[] = [];
+    for (const action of actions) {
+      const sims = extractAllSimulationsFromDecoded(action.decoded, chainContext);
+      allSimulations.push(...sims);
     }
-
-    loadSimulations();
-  }, [firstStage]);
+    return allSimulations;
+  }, [actions]);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {

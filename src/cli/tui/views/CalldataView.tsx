@@ -3,24 +3,16 @@
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper";
-import { useState, useEffect } from "react";
 import type { ProposalListItem } from "../types";
 import type { UseNavigationResult } from "../hooks";
+import { useStageCalldata } from "../hooks";
 import { Header } from "../components/Header";
 import { KeyHelp } from "../components/KeyHelp";
-import { decodeCalldata, extractCalldataFromStage } from "../../../calldata";
 import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata";
-import type { Chain } from "../../../types";
 
 interface CalldataViewProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
-}
-
-interface DecodedAction {
-  target: string;
-  value: string;
-  decoded: DecodedCalldata;
 }
 
 function formatParameter(param: DecodedParameter, indent: number): string[] {
@@ -78,53 +70,8 @@ export function CalldataView({
   navigation,
 }: CalldataViewProps): React.ReactElement {
   const { state } = navigation;
-  const [actions, setActions] = useState<DecodedAction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
-  const firstStage = stages[0];
-
-  useEffect(() => {
-    async function loadCalldata() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        if (!firstStage) {
-          setError("No stage data available");
-          return;
-        }
-
-        const { calldatas, targets, values } = extractCalldataFromStage(firstStage);
-
-        if (calldatas.length === 0) {
-          setError("No calldata found in proposal");
-          return;
-        }
-
-        const chainContext: Chain = "arb1";
-        const decoded: DecodedAction[] = [];
-
-        for (let i = 0; i < calldatas.length; i++) {
-          const result = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
-          decoded.push({
-            target: targets[i],
-            value: values[i],
-            decoded: result,
-          });
-        }
-
-        setActions(decoded);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadCalldata();
-  }, [firstStage]);
+  const { actions, loading, error } = useStageCalldata(stages[0]);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {

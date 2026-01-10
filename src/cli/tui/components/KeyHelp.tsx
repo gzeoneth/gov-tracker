@@ -24,24 +24,16 @@ const LIST_KEYS: KeyBinding[] = [
   { key: "q", action: "Quit" },
 ];
 
-const DETAIL_KEYS: KeyBinding[] = [
+const DETAIL_KEYS_BASE: KeyBinding[] = [
   { key: "↑↓", action: "Stage" },
   { key: "Enter", action: "Details" },
   { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },
-  { key: "r", action: "Re-track" },
-  { key: "b", action: "Back" },
 ];
 
-const DETAIL_KEYS_NO_RPC: KeyBinding[] = [
-  { key: "↑↓", action: "Stage" },
-  { key: "Enter", action: "Details" },
-  { key: "d", action: "Description" },
-  { key: "c", action: "Calldata" },
-  { key: "s", action: "Simulate" },
-  { key: "b", action: "Back" },
-];
+const DETAIL_RETRACK: KeyBinding = { key: "r", action: "Re-track" };
+const DETAIL_BACK: KeyBinding = { key: "b", action: "Back" };
 
 const CALLDATA_KEYS: KeyBinding[] = [
   { key: "←→", action: "Actions" },
@@ -64,31 +56,29 @@ const DESCRIPTION_KEYS: KeyBinding[] = [
   { key: "b", action: "Back" },
 ];
 
-export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElement {
-  let keys: KeyBinding[];
-
+function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
   switch (view) {
     case "list":
-      keys = hasProviders ? LIST_KEYS : LIST_KEYS.filter((k) => k.key !== "d");
-      break;
+      return hasProviders ? LIST_KEYS : LIST_KEYS.filter((k) => k.key !== "d");
     case "detail":
-      keys = hasProviders ? DETAIL_KEYS : DETAIL_KEYS_NO_RPC;
-      break;
+      return hasProviders
+        ? [...DETAIL_KEYS_BASE, DETAIL_RETRACK, DETAIL_BACK]
+        : [...DETAIL_KEYS_BASE, DETAIL_BACK];
     case "calldata":
-      keys = CALLDATA_KEYS;
-      break;
+      return CALLDATA_KEYS;
     case "stage":
-      keys = STAGE_KEYS;
-      break;
+      return STAGE_KEYS;
     case "simulation":
-      keys = SIMULATION_KEYS;
-      break;
+      return SIMULATION_KEYS;
     case "description":
-      keys = DESCRIPTION_KEYS;
-      break;
+      return DESCRIPTION_KEYS;
     default:
-      keys = [];
+      return [];
   }
+}
+
+export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElement {
+  const keys = getKeysForView(view, hasProviders);
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1}>

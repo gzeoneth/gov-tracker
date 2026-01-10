@@ -196,19 +196,21 @@ export function useNavigation(): UseNavigationResult {
     });
   }, []);
 
-  const goToCalldata = useCallback(() => {
+  const goToSubView = useCallback((targetView: "calldata" | "simulation" | "description") => {
     setState((prev) => {
-      if (prev.view === "detail") {
-        return {
-          ...prev,
-          view: "calldata",
-          scrollOffset: 0,
-          calldataActionIndex: 0,
-        };
-      }
-      return prev;
+      if (prev.view !== "detail") return prev;
+      return {
+        ...prev,
+        view: targetView,
+        scrollOffset: 0,
+        calldataActionIndex: 0,
+      };
     });
   }, []);
+
+  const goToCalldata = useCallback(() => goToSubView("calldata"), [goToSubView]);
+  const goToSimulation = useCallback(() => goToSubView("simulation"), [goToSubView]);
+  const goToDescription = useCallback(() => goToSubView("description"), [goToSubView]);
 
   const goToStage = useCallback((index: number) => {
     setState((prev) => ({
@@ -217,32 +219,6 @@ export function useNavigation(): UseNavigationResult {
       selectedStageIndex: index,
       scrollOffset: 0,
     }));
-  }, []);
-
-  const goToSimulation = useCallback(() => {
-    setState((prev) => {
-      if (prev.view === "detail") {
-        return {
-          ...prev,
-          view: "simulation",
-          scrollOffset: 0,
-        };
-      }
-      return prev;
-    });
-  }, []);
-
-  const goToDescription = useCallback(() => {
-    setState((prev) => {
-      if (prev.view === "detail") {
-        return {
-          ...prev,
-          view: "description",
-          scrollOffset: 0,
-        };
-      }
-      return prev;
-    });
   }, []);
 
   const nextAction = useCallback((maxIndex: number) => {

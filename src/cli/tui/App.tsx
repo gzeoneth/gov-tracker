@@ -67,23 +67,25 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   const { view, selectedProposal } = navigation.state;
 
-  switch (view) {
-    case "list":
-      return (
-        <ProposalList
-          items={items}
-          data={cache.data}
-          navigation={navigation}
-          tracker={tracker}
-          onQuit={handleQuit}
-        />
-      );
+  if (view === "list") {
+    return (
+      <ProposalList
+        items={items}
+        data={cache.data}
+        navigation={navigation}
+        tracker={tracker}
+        onQuit={handleQuit}
+      />
+    );
+  }
 
+  if (!selectedProposal) {
+    navigation.back();
+    return <Text>Returning to list...</Text>;
+  }
+
+  switch (view) {
     case "detail":
-      if (!selectedProposal) {
-        navigation.back();
-        return <Text>Returning to list...</Text>;
-      }
       return (
         <ProposalDetail
           proposal={selectedProposal}
@@ -93,52 +95,16 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
       );
 
     case "calldata":
-      if (!selectedProposal) {
-        navigation.back();
-        return <Text>Returning to list...</Text>;
-      }
-      return (
-        <CalldataView
-          proposal={selectedProposal}
-          navigation={navigation}
-        />
-      );
+      return <CalldataView proposal={selectedProposal} navigation={navigation} />;
 
     case "stage":
-      if (!selectedProposal) {
-        navigation.back();
-        return <Text>Returning to list...</Text>;
-      }
-      return (
-        <StageView
-          proposal={selectedProposal}
-          navigation={navigation}
-        />
-      );
+      return <StageView proposal={selectedProposal} navigation={navigation} />;
 
     case "simulation":
-      if (!selectedProposal) {
-        navigation.back();
-        return <Text>Returning to list...</Text>;
-      }
-      return (
-        <SimulationView
-          proposal={selectedProposal}
-          navigation={navigation}
-        />
-      );
+      return <SimulationView proposal={selectedProposal} navigation={navigation} />;
 
     case "description":
-      if (!selectedProposal) {
-        navigation.back();
-        return <Text>Returning to list...</Text>;
-      }
-      return (
-        <DescriptionView
-          proposal={selectedProposal}
-          navigation={navigation}
-        />
-      );
+      return <DescriptionView proposal={selectedProposal} navigation={navigation} />;
 
     default:
       return <Text>Unknown view: {view}</Text>;

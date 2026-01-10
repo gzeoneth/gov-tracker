@@ -307,6 +307,7 @@ export {
   // Signature lookup
   lookupSignature,
   lookupLocalSignature,
+  LookupSignatureOptions,
   // Parameter utilities
   parseParamTypes,
   isLikelyCalldata,

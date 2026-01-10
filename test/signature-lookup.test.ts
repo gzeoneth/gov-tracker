@@ -243,4 +243,132 @@ describe("Signature Lookup", () => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("DISABLE_4BYTE_LOOKUP env var", () => {
+    const originalFetch = global.fetch;
+    const originalEnv = process.env.DISABLE_4BYTE_LOOKUP;
+
+    beforeEach(() => {
+      vi.stubGlobal("fetch", vi.fn());
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+      vi.unstubAllGlobals();
+      if (originalEnv === undefined) {
+        delete process.env.DISABLE_4BYTE_LOOKUP;
+      } else {
+        process.env.DISABLE_4BYTE_LOOKUP = originalEnv;
+      }
+    });
+
+    it("should skip API lookup when DISABLE_4BYTE_LOOKUP=1", async () => {
+      // #given - env var is set to disable lookups
+      process.env.DISABLE_4BYTE_LOOKUP = "1";
+      const unknownSelector = "0xfedcba98";
+
+      // #when - looking up an unknown selector
+      const result = await lookupSignature(unknownSelector);
+
+      // #then - returns failed without calling fetch
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it("should call API when DISABLE_4BYTE_LOOKUP is not set", async () => {
+      // #given - env var is not set and API returns empty
+      delete process.env.DISABLE_4BYTE_LOOKUP;
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [] }),
+      } as Response);
+      const unknownSelector = "0x98765432";
+
+      // #when - looking up an unknown selector
+      const result = await lookupSignature(unknownSelector);
+
+      // #then - fetch is called (even though no result found)
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should call API when DISABLE_4BYTE_LOOKUP is set to non-1 value", async () => {
+      // #given - env var is set but not to "1"
+      process.env.DISABLE_4BYTE_LOOKUP = "false";
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [] }),
+      } as Response);
+      const unknownSelector = "0x11112222";
+
+      // #when - looking up an unknown selector
+      const result = await lookupSignature(unknownSelector);
+
+      // #then - fetch is still called (only "1" disables)
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should still use local registry when DISABLE_4BYTE_LOOKUP=1", async () => {
+      // #given - env var is set but selector is in local registry
+      process.env.DISABLE_4BYTE_LOOKUP = "1";
+
+      // #when - looking up a known local selector
+      const result = await lookupSignature("0xa9059cbb");
+
+      // #then - returns from local registry without calling fetch
+      expect(result.signature).toBe("transfer(address,uint256)");
+      expect(result.source).toBe("local");
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it("should skip API lookup when disableApiLookup option is true", async () => {
+      // #given - disableApiLookup option is passed
+      delete process.env.DISABLE_4BYTE_LOOKUP;
+      const unknownSelector = "0x33445566";
+
+      // #when - looking up with option to disable API
+      const result = await lookupSignature(unknownSelector, { disableApiLookup: true });
+
+      // #then - returns failed without calling fetch
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it("should call API when disableApiLookup option is false", async () => {
+      // #given - disableApiLookup option is explicitly false
+      delete process.env.DISABLE_4BYTE_LOOKUP;
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ results: [] }),
+      } as Response);
+      const unknownSelector = "0x77889900";
+
+      // #when - looking up with option explicitly set to false
+      const result = await lookupSignature(unknownSelector, { disableApiLookup: false });
+
+      // #then - fetch is called
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should prioritize option over env var (option true overrides env)", async () => {
+      // #given - env var not set but option is true
+      delete process.env.DISABLE_4BYTE_LOOKUP;
+      const unknownSelector = "0xaabbcc00";
+
+      // #when - looking up with disableApiLookup: true
+      const result = await lookupSignature(unknownSelector, { disableApiLookup: true });
+
+      // #then - option takes precedence, no fetch called
+      expect(result.signature).toBeNull();
+      expect(result.source).toBe("failed");
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
 });

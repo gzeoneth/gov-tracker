@@ -102,6 +102,8 @@ This project uses automated npm publishing via GitHub Actions with OIDC authenti
 npm install @gzeoneth/gov-tracker@alpha  # X.Y.Z-alpha.<branch>.<sha>
 ```
 
+> **Note:** Branch names are sanitized for npm compatibility: non-alphanumeric characters are replaced with `-` and converted to lowercase (e.g., `feature/my-branch` → `feature-my-branch`).
+
 ### Automatic Beta Releases
 
 Every push to `main` auto-publishes a beta:

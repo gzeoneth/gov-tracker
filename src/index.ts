@@ -296,7 +296,12 @@ export {
   trackElectionProposal,
   getElectionProposalId,
   getElectionProposalParams,
+  getMemberElectionProposalParams,
   prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+  getElectionIndexForProposalId,
+  trackAllElections,
+  trackIncompleteElections,
 } from "./election";
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 

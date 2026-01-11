@@ -333,6 +333,7 @@ export async function trackElectionProposal(
       vettingDeadline: null,
       isInVettingPeriod: false,
       canProceedToMemberPhase: false,
+      canExecuteMember: false,
     };
   }
 
@@ -411,6 +412,9 @@ export async function trackElectionProposal(
     compliantNomineeCount >= TIMING.SECURITY_COUNCIL_TARGET_NOMINEES &&
     !memberProposalId;
 
+  // Can execute member election if it succeeded (installs new council members)
+  const canExecuteMember = memberProposalState === "Succeeded";
+
   return {
     electionIndex,
     phase,
@@ -424,6 +428,7 @@ export async function trackElectionProposal(
     vettingDeadline,
     isInVettingPeriod,
     canProceedToMemberPhase,
+    canExecuteMember,
   };
 }
 
@@ -470,6 +475,87 @@ export async function getElectionProposalId(
 // Member Election Trigger Functions
 
 /**
+ * Search for ProposalCreated event and extract proposal parameters
+ *
+ * Common helper used by both nominee and member election param lookups.
+ */
+async function findProposalCreatedParams(
+  proposalId: string,
+  governorAddress: string,
+  governor: ethers.Contract,
+  provider: ethers.providers.Provider
+): Promise<ElectionProposalParams | null> {
+  const topic = proposalCreatedInterface.getEventTopic("ProposalCreated");
+
+  let startBlock: number;
+  try {
+    const snapshot = await governor.proposalSnapshot(proposalId);
+    startBlock = Math.max(0, snapshot.toNumber() - 1000);
+  } catch {
+    const currentBlock = await provider.getBlockNumber();
+    startBlock = Math.max(0, currentBlock - 10000);
+  }
+
+  const currentBlock = await provider.getBlockNumber();
+
+  const logs = await queryWithRetry(() =>
+    provider.getLogs({
+      address: governorAddress,
+      topics: [topic],
+      fromBlock: startBlock,
+      toBlock: currentBlock,
+    })
+  );
+
+  for (const eventLog of logs) {
+    try {
+      const parsed = proposalCreatedInterface.parseLog(eventLog);
+      const args = parsed.args as unknown as ProposalCreatedEventArgs;
+      if (args.proposalId.toString() === proposalId) {
+        log("Found ProposalCreated event for proposal %s", proposalId);
+        return {
+          targets: args.targets,
+          values: args.values,
+          calldatas: args.calldatas,
+          description: args.description,
+          descriptionHash: saltFromDescription(args.description),
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  log("ProposalCreated event not found for proposal %s", proposalId);
+  return null;
+}
+
+/**
+ * Build a prepared execute() transaction from proposal params
+ */
+function buildExecuteTransaction(
+  params: ElectionProposalParams,
+  governorAddress: string,
+  description: string
+): PreparedTransaction {
+  const calldata = governorInterface.encodeFunctionData("execute", [
+    params.targets,
+    params.values,
+    params.calldatas,
+    params.descriptionHash,
+  ]);
+
+  return {
+    to: governorAddress,
+    data: calldata,
+    value: "0",
+    chain: "arb1",
+    chainId: 42161,
+    description,
+  };
+}
+
+/**
  * Get the proposal parameters for an election proposal
  *
  * Searches for the ProposalCreated event to extract targets, values, calldatas,
@@ -493,57 +579,8 @@ export async function getElectionProposalParams(
     return null;
   }
 
-  // Search for ProposalCreated event
-  const topic = proposalCreatedInterface.getEventTopic("ProposalCreated");
-
-  // Get proposal snapshot to narrow search range
   const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
-
-  let startBlock: number;
-  try {
-    const snapshot = await governor.proposalSnapshot(proposalId);
-    // Search from ~1000 blocks before snapshot (proposal is created before snapshot)
-    startBlock = Math.max(0, snapshot.toNumber() - 1000);
-  } catch {
-    // Fallback: search last 10000 blocks
-    const currentBlock = await provider.getBlockNumber();
-    startBlock = Math.max(0, currentBlock - 10000);
-  }
-
-  const currentBlock = await provider.getBlockNumber();
-
-  const logs = await queryWithRetry(() =>
-    provider.getLogs({
-      address: nomineeGovernorAddress,
-      topics: [topic],
-      fromBlock: startBlock,
-      toBlock: currentBlock,
-    })
-  );
-
-  // Find the log matching our proposal ID
-  for (const eventLog of logs) {
-    try {
-      const parsed = proposalCreatedInterface.parseLog(eventLog);
-      // Cast through unknown required due to ethers' Result type structure
-      const args = parsed.args as unknown as ProposalCreatedEventArgs;
-      if (args.proposalId.toString() === proposalId) {
-        log("Found ProposalCreated event for proposal %s", proposalId);
-        return {
-          targets: args.targets,
-          values: args.values,
-          calldatas: args.calldatas,
-          description: args.description,
-          descriptionHash: saltFromDescription(args.description),
-        };
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  log("ProposalCreated event not found for proposal %s", proposalId);
-  return null;
+  return findProposalCreatedParams(proposalId, nomineeGovernorAddress, governor, provider);
 }
 
 /**
@@ -586,7 +623,6 @@ export async function prepareMemberElectionTrigger(
     return null;
   }
 
-  // Get proposal params
   const params = await getElectionProposalParams(
     electionStatus.electionIndex,
     provider,
@@ -598,20 +634,212 @@ export async function prepareMemberElectionTrigger(
     return null;
   }
 
-  // Build execute calldata using governor interface
-  const calldata = governorInterface.encodeFunctionData("execute", [
-    params.targets,
-    params.values,
-    params.calldatas,
-    params.descriptionHash,
-  ]);
+  return buildExecuteTransaction(
+    params,
+    nomineeGovernorAddress,
+    `execute() on NomineeElectionGovernor to trigger member election #${electionStatus.electionIndex}`
+  );
+}
 
-  return {
-    to: nomineeGovernorAddress,
-    data: calldata,
-    value: "0",
-    chain: "arb1",
-    chainId: 42161,
-    description: `execute() on NomineeElectionGovernor to trigger member election #${electionStatus.electionIndex}`,
-  };
+/**
+ * Get proposal parameters for a member election
+ *
+ * Retrieves the targets, values, calldatas, and description hash needed to
+ * execute a member election proposal.
+ *
+ * @param electionIndex - Election index
+ * @param provider - L2 provider
+ * @param memberGovernorAddress - Optional governor address override
+ * @returns Proposal parameters or null if not found
+ */
+export async function getMemberElectionProposalParams(
+  electionIndex: number,
+  provider: ethers.providers.Provider,
+  memberGovernorAddress: string = ADDRESSES.ELECTION_MEMBER_GOVERNOR
+): Promise<ElectionProposalParams | null> {
+  log("getMemberElectionProposalParams for index %d", electionIndex);
+
+  const memberGovernor = getMemberGovernor(memberGovernorAddress, provider);
+
+  let memberProposalId: string | null = null;
+  try {
+    const propId = await queryWithRetry<ethers.BigNumber>(() =>
+      memberGovernor.electionIndexToProposalId(electionIndex)
+    );
+    if (propId && !propId.isZero()) {
+      memberProposalId = propId.toString();
+    }
+  } catch {
+    log("No member proposal ID found for election %d", electionIndex);
+    return null;
+  }
+
+  if (!memberProposalId) {
+    log("No member proposal ID found for election %d", electionIndex);
+    return null;
+  }
+
+  return findProposalCreatedParams(
+    memberProposalId,
+    memberGovernorAddress,
+    memberGovernor,
+    provider
+  );
+}
+
+/**
+ * Prepare a transaction to execute member election result
+ *
+ * After member voting succeeds, calling execute() on the MemberElectionGovernor
+ * installs the new Security Council members.
+ *
+ * @param electionStatus - Status from trackElectionProposal (must have canExecuteMember=true)
+ * @param provider - L2 provider
+ * @param memberGovernorAddress - Optional governor address override
+ * @returns Prepared transaction or null if not ready
+ *
+ * @example
+ * ```typescript
+ * const status = await trackElectionProposal(5, l2Provider, l1Provider);
+ *
+ * if (status.canExecuteMember) {
+ *   const prepared = await prepareMemberElectionExecution(status, l2Provider);
+ *   if (prepared) {
+ *     const tx = await signer.sendTransaction({
+ *       to: prepared.to,
+ *       data: prepared.data,
+ *     });
+ *     await tx.wait();
+ *     console.log("New Security Council members installed!");
+ *   }
+ * }
+ * ```
+ */
+export async function prepareMemberElectionExecution(
+  electionStatus: Pick<ElectionProposalStatus, "electionIndex" | "canExecuteMember">,
+  provider: ethers.providers.Provider,
+  memberGovernorAddress: string = ADDRESSES.ELECTION_MEMBER_GOVERNOR
+): Promise<PreparedTransaction | null> {
+  log("prepareMemberElectionExecution for election %d", electionStatus.electionIndex);
+
+  if (!electionStatus.canExecuteMember) {
+    log("Cannot execute member election - not ready");
+    return null;
+  }
+
+  const params = await getMemberElectionProposalParams(
+    electionStatus.electionIndex,
+    provider,
+    memberGovernorAddress
+  );
+
+  if (!params) {
+    log("Could not find proposal params for member election %d", electionStatus.electionIndex);
+    return null;
+  }
+
+  return buildExecuteTransaction(
+    params,
+    memberGovernorAddress,
+    `execute() on MemberElectionGovernor to install new Security Council members for election #${electionStatus.electionIndex}`
+  );
+}
+
+// Election Discovery & Batch Tracking
+
+/**
+ * Find the election index for a given proposal ID
+ *
+ * Searches through elections to find which one contains the given proposal ID
+ * (either as nominee or member proposal).
+ *
+ * @param proposalId - The proposal ID to find
+ * @param l2Provider - L2 provider
+ * @param l1Provider - L1 provider (needed for trackElectionProposal)
+ * @returns Election index or null if not found
+ */
+export async function getElectionIndexForProposalId(
+  proposalId: string,
+  l2Provider: ethers.providers.Provider,
+  l1Provider: ethers.providers.Provider
+): Promise<number | null> {
+  log("getElectionIndexForProposalId: searching for proposal %s", proposalId);
+
+  // Get current election count
+  const status = await checkElectionStatus(l2Provider, l1Provider);
+  const electionCount = status.electionCount;
+
+  // Search through elections (most recent first for efficiency)
+  for (let i = electionCount - 1; i >= 0; i--) {
+    try {
+      const electionStatus = await trackElectionProposal(i, l2Provider, l1Provider);
+
+      if (electionStatus.nomineeProposalId === proposalId) {
+        log("Found proposal %s as nominee proposal for election %d", proposalId, i);
+        return i;
+      }
+      if (electionStatus.memberProposalId === proposalId) {
+        log("Found proposal %s as member proposal for election %d", proposalId, i);
+        return i;
+      }
+    } catch {
+      // Skip elections that fail to track
+      continue;
+    }
+  }
+
+  log("Proposal %s not found in any election", proposalId);
+  return null;
+}
+
+/**
+ * Track all active elections (not yet completed)
+ *
+ * Returns election statuses for all elections that are still in progress.
+ *
+ * @param l2Provider - L2 provider
+ * @param l1Provider - L1 provider
+ * @returns Array of election statuses for active elections
+ */
+export async function trackAllElections(
+  l2Provider: ethers.providers.Provider,
+  l1Provider: ethers.providers.Provider
+): Promise<ElectionProposalStatus[]> {
+  log("trackAllElections: fetching all active elections");
+
+  const status = await checkElectionStatus(l2Provider, l1Provider);
+  const electionCount = status.electionCount;
+  const results: ElectionProposalStatus[] = [];
+
+  // Track all elections (including completed for history)
+  for (let i = 0; i < electionCount; i++) {
+    try {
+      const electionStatus = await trackElectionProposal(i, l2Provider, l1Provider);
+      results.push(electionStatus);
+    } catch (err) {
+      log("Failed to track election %d: %s", i, err);
+      // Skip failed elections
+    }
+  }
+
+  log("Tracked %d elections", results.length);
+  return results;
+}
+
+/**
+ * Track only incomplete elections (not yet completed)
+ *
+ * Returns election statuses for elections that are still in progress.
+ * Completed elections are excluded.
+ *
+ * @param l2Provider - L2 provider
+ * @param l1Provider - L1 provider
+ * @returns Array of election statuses for incomplete elections
+ */
+export async function trackIncompleteElections(
+  l2Provider: ethers.providers.Provider,
+  l1Provider: ethers.providers.Provider
+): Promise<ElectionProposalStatus[]> {
+  const all = await trackAllElections(l2Provider, l1Provider);
+  return all.filter((e) => e.phase !== "COMPLETED");
 }

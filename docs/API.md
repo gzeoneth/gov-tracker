@@ -98,12 +98,99 @@ The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 p
 
 ### Elections
 
+Security Council elections use a separate 6-phase state machine.
+
+#### Check Election Status
+
 ```typescript
-const election = await tracker.checkElection();
-if (election.canCreate) {
-  await signer.sendTransaction(election.prepared.createElection);
+import { checkElectionStatus } from "@gzeoneth/gov-tracker";
+
+const status = await checkElectionStatus(l2Provider, l1Provider);
+console.log(`${status.electionCount} elections, next in ${status.timeUntilElection}`);
+```
+
+#### Track All Elections
+
+```typescript
+import { trackAllElections, trackIncompleteElections } from "@gzeoneth/gov-tracker";
+
+// Track all elections (complete + active)
+const allElections = await trackAllElections(l2Provider, l1Provider);
+
+// Track only active elections
+const activeElections = await trackIncompleteElections(l2Provider, l1Provider);
+
+for (const election of activeElections) {
+  console.log(`Election ${election.electionIndex}: ${election.phase}`);
 }
 ```
+
+#### Track Single Election
+
+```typescript
+import { trackElectionProposal } from "@gzeoneth/gov-tracker";
+
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+console.log(election.phase);             // "COMPLETED"
+console.log(election.nomineeProposalId); // "0x..."
+console.log(election.memberProposalId);  // "0x..."
+console.log(election.canExecuteMember);  // false (already executed)
+```
+
+#### Prepare Election Transactions (A→B→C)
+
+The full election lifecycle has three executable steps:
+
+```typescript
+import {
+  prepareElectionCreation,
+  prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+  checkElectionStatus,
+  trackElectionProposal,
+} from "@gzeoneth/gov-tracker";
+
+// Step A: Create nominee election (when conditions match)
+const status = await checkElectionStatus(l2Provider, l1Provider);
+if (status.canCreateElection) {
+  const { transaction } = prepareElectionCreation(status);
+  await signer.sendTransaction(transaction);
+}
+
+// Step B: Execute nominee election → creates member election
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+if (election.canProceedToMemberPhase) {
+  const tx = await prepareMemberElectionTrigger(election, l2Provider);
+  if (tx) await signer.sendTransaction(tx);
+}
+
+// Step C: Execute member election → installs new council members
+if (election.canExecuteMember) {
+  const tx = await prepareMemberElectionExecution(election, l2Provider);
+  if (tx) await signer.sendTransaction(tx);
+}
+```
+
+#### Cache Election Status
+
+```typescript
+// Save to cache
+await tracker.saveElectionCheckpoint(electionStatus);
+
+// Retrieve from cache
+const cached = await tracker.getElectionCheckpoint(0);
+```
+
+#### Election Phases
+
+| Phase | Description | Action Available |
+|-------|-------------|------------------|
+| `NOT_STARTED` | Election hasn't begun | `prepareElectionCreation()` if `canCreateElection` |
+| `NOMINEE_SELECTION` | Nominee voting active | Wait for voting |
+| `VETTING_PERIOD` | 7-day vetting period | `prepareMemberElectionTrigger()` after vetting ends |
+| `MEMBER_ELECTION` | Member voting active | Wait for voting |
+| `PENDING_EXECUTION` | Awaiting execution | `prepareMemberElectionExecution()` if `canExecuteMember` |
+| `COMPLETED` | Fully executed | None |
 
 ---
 

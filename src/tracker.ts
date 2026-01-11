@@ -30,6 +30,7 @@ import {
   PrepareResult,
   PrepareOptions,
   ElectionCheckResult,
+  ElectionProposalStatus,
   TimelockLink,
 } from "./types";
 import { DEFAULT_CHUNKING_CONFIG, ADDRESSES, DEFAULT_RPC_URLS } from "./constants";
@@ -38,6 +39,7 @@ import {
   prepareElectionCreation,
   trackElectionProposal,
   prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
 } from "./election";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
@@ -60,8 +62,8 @@ import { trackGovernorPipeline, trackTimelockPipeline } from "./tracker/pipeline
 
 // Import from focused modules
 import { txHashCacheKey, readCacheStatus, FileCache } from "./tracker/cache";
-import { loadWatermarks, saveWatermarks } from "./tracker/discovery";
-import { CacheAdapter } from "./types";
+import { loadWatermarks, saveWatermarks, LoadedWatermarks } from "./tracker/discovery";
+import { CacheAdapter, WatermarkHashes } from "./types";
 import {
   discoverAll as discoverAllInternal,
   discoverProposals as discoverProposalsInternal,
@@ -191,7 +193,7 @@ export class ProposalStageTracker {
    * Watermarks are stored as a TrackingCheckpoint for unified cache format.
    * Returns empty object if no watermarks are cached.
    */
-  async loadWatermarks(): Promise<DiscoveryWatermarks> {
+  async loadWatermarks(): Promise<LoadedWatermarks> {
     return loadWatermarks(this.cache);
   }
 
@@ -199,9 +201,53 @@ export class ProposalStageTracker {
    * Save discovery watermarks to cache.
    * Watermarks are stored as TrackingCheckpoint with proper metadata,
    * following the same pattern as proposal/timelock checkpoints.
+   *
+   * @param watermarks - Block numbers per discovery key
+   * @param hashes - Block hashes per discovery key (for reorg detection)
    */
-  async saveWatermarks(watermarks: DiscoveryWatermarks): Promise<void> {
-    return saveWatermarks(watermarks, this.cache);
+  async saveWatermarks(
+    watermarks: DiscoveryWatermarks,
+    hashes: WatermarkHashes = {}
+  ): Promise<void> {
+    return saveWatermarks(watermarks, hashes, this.cache);
+  }
+
+  /**
+   * Save an election checkpoint to cache.
+   * Elections are stored with key format: `election:{electionIndex}`
+   *
+   * @param electionStatus - Election status from trackElectionProposal
+   */
+  async saveElectionCheckpoint(electionStatus: ElectionProposalStatus): Promise<void> {
+    if (!this.cache) return;
+
+    const key = `election:${electionStatus.electionIndex}`;
+    const checkpoint: TrackingCheckpoint = {
+      version: 1,
+      createdAt: Date.now(),
+      input: { type: "election", electionIndex: electionStatus.electionIndex },
+      lastProcessedStage: null,
+      lastProcessedBlock: { l1: 0, l2: 0 },
+      cachedData: { electionStatus },
+      metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+    };
+
+    await this.cache.set(key, checkpoint);
+    logTracker("saved election checkpoint: %s (phase: %s)", key, electionStatus.phase);
+  }
+
+  /**
+   * Get an election checkpoint from cache.
+   *
+   * @param electionIndex - Election index
+   * @returns Election status or null if not cached
+   */
+  async getElectionCheckpoint(electionIndex: number): Promise<ElectionProposalStatus | null> {
+    if (!this.cache) return null;
+
+    const key = `election:${electionIndex}`;
+    const checkpoint = await this.cache.get<TrackingCheckpoint>(key);
+    return checkpoint?.cachedData?.electionStatus ?? null;
   }
 
   // Discovery API
@@ -242,9 +288,10 @@ export class ProposalStageTracker {
    * Discover all proposals and timelock operations with auto-watermark management.
    *
    * This is the unified discovery API that handles everything internally:
+   * - Verifies watermark hashes to detect chain reorgs (rolls back if mismatch)
    * - Loads watermarks from cache (or uses provided fromWatermarks)
    * - Discovers from all enabled targets in parallel
-   * - Auto-saves updated watermarks to cache
+   * - Auto-saves updated watermarks and hashes to cache
    *
    * @param targets - Which governors/timelocks to scan
    * @param toBlock - End block for discovery
@@ -260,8 +307,10 @@ export class ProposalStageTracker {
     timelockOps: DiscoveredTimelockOp[];
     watermarks: DiscoveryWatermarks;
   }> {
-    // Load watermarks from cache (or use provided override)
-    const watermarks = fromWatermarks ?? (await this.loadWatermarks());
+    // Load watermarks and hashes from cache (or use provided override)
+    const loaded = await this.loadWatermarks();
+    const watermarks = fromWatermarks ?? loaded.watermarks;
+    const hashes = fromWatermarks ? {} : loaded.hashes; // Only use cached hashes if using cached watermarks
 
     const result = await discoverAllInternal(
       targets,
@@ -269,11 +318,12 @@ export class ProposalStageTracker {
       this.l2Provider,
       this.cache,
       watermarks,
+      hashes,
       { chunkSize: this.chunkingConfig.l2ChunkSize }
     );
 
-    // Auto-save updated watermarks
-    await this.saveWatermarks(result.watermarks);
+    // Auto-save updated watermarks and hashes
+    await this.saveWatermarks(result.watermarks, result.hashes);
 
     return result;
   }
@@ -744,6 +794,7 @@ export class ProposalStageTracker {
       status,
       canCreate: status.canCreateElection,
       canTriggerMember: false,
+      canExecuteMember: false,
       prepared: {},
     };
 
@@ -762,11 +813,19 @@ export class ProposalStageTracker {
 
       result.currentElection = electionStatus;
       result.canTriggerMember = electionStatus.canProceedToMemberPhase;
+      result.canExecuteMember = electionStatus.canExecuteMember;
 
       if (electionStatus.canProceedToMemberPhase) {
         const memberTx = await prepareMemberElectionTrigger(electionStatus, this.l2Provider);
         if (memberTx) {
           result.prepared.triggerMember = memberTx;
+        }
+      }
+
+      if (electionStatus.canExecuteMember) {
+        const executeTx = await prepareMemberElectionExecution(electionStatus, this.l2Provider);
+        if (executeTx) {
+          result.prepared.executeMember = executeTx;
         }
       }
     }

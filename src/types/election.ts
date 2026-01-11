@@ -37,6 +37,8 @@ export interface ElectionProposalStatus {
   vettingDeadline: number | null;
   isInVettingPeriod: boolean;
   canProceedToMemberPhase: boolean;
+  /** True when member election succeeded and can be executed to install new council */
+  canExecuteMember: boolean;
 }
 
 /**
@@ -59,9 +61,11 @@ export interface ElectionCheckResult {
   status: ElectionStatus;
   canCreate: boolean;
   canTriggerMember: boolean;
+  canExecuteMember: boolean;
   currentElection?: ElectionProposalStatus;
   prepared: {
     createElection?: PreparedTransaction;
     triggerMember?: PreparedTransaction;
+    executeMember?: PreparedTransaction;
   };
 }

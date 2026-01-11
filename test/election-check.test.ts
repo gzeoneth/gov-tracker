@@ -69,6 +69,7 @@ describe("Election Check Utilities", () => {
         isInVettingPeriod: false,
         vettingDeadline: null,
         canProceedToMemberPhase: false,
+        canExecuteMember: false,
       };
 
       const output = formatElectionStatus(baseStatus, electionStatus);
@@ -95,6 +96,7 @@ describe("Election Check Utilities", () => {
         isInVettingPeriod: false,
         vettingDeadline: null,
         canProceedToMemberPhase: false,
+        canExecuteMember: true,
       };
 
       const output = formatElectionStatus(baseStatus, electionStatus);
@@ -117,6 +119,7 @@ describe("Election Check Utilities", () => {
         isInVettingPeriod: true,
         vettingDeadline: 24000000,
         canProceedToMemberPhase: true,
+        canExecuteMember: false,
       };
 
       const output = formatElectionStatus(baseStatus, electionStatus);
@@ -139,6 +142,7 @@ describe("Election Check Utilities", () => {
         isInVettingPeriod: false,
         vettingDeadline: null,
         canProceedToMemberPhase: false,
+        canExecuteMember: false,
       };
 
       const output = formatElectionStatus(baseStatus, electionStatus);
@@ -170,6 +174,7 @@ describe("Election Check Utilities", () => {
         isInVettingPeriod: true,
         vettingDeadline: 25000000,
         canProceedToMemberPhase: false,
+        canExecuteMember: false,
       };
 
       const output = formatElectionStatus(status, electionStatus);

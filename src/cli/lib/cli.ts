@@ -38,6 +38,8 @@ import {
   prepareL2ToL1MessageStage,
   getStageData,
   invalidateBlockInfoCache,
+  trackAllElections,
+  ElectionProposalStatus,
 } from "../../index";
 import { withScope } from "../../utils/logger";
 
@@ -454,7 +456,8 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
     timelockActive = 0,
     timelockFailed = 0;
   let electionTotal = 0,
-    electionComplete = 0;
+    electionComplete = 0,
+    electionActive = 0;
 
   for (const [, checkpoint] of checkpoints) {
     const stages = checkpoint.cachedData?.completedStages ?? [];
@@ -465,8 +468,11 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
 
     if (input.type === "governor") {
       if (isElectionGovernor(input.governorAddress)) {
+        // Legacy election governor checkpoints (discovered but not tracked)
+        // These will be replaced by proper election checkpoints
         electionTotal++;
         if (isComplete) electionComplete++;
+        else electionActive++;
       } else {
         proposalTotal++;
         if (isComplete) proposalComplete++;
@@ -478,6 +484,15 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
       if (isComplete) timelockComplete++;
       else if (isFailed) timelockFailed++;
       else timelockActive++;
+    } else if (input.type === "election") {
+      // Proper election checkpoints with phase tracking
+      electionTotal++;
+      const electionStatus = checkpoint.cachedData?.electionStatus;
+      if (electionStatus?.phase === "COMPLETED") {
+        electionComplete++;
+      } else {
+        electionActive++;
+      }
     }
   }
 
@@ -497,8 +512,14 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
     `  Active: ${timelockActive}`
   );
   if (timelockFailed > 0) lines.push(`  Failed: ${timelockFailed}`);
-  if (electionTotal > 0)
-    lines.push(``, `Elections: ${electionTotal} (${electionComplete} complete)`);
+  if (electionTotal > 0) {
+    lines.push(
+      ``,
+      `Elections: ${electionTotal}`,
+      `  Complete: ${electionComplete}`,
+      `  Active: ${electionActive}`
+    );
+  }
 
   return lines.join("\n");
 }
@@ -743,6 +764,7 @@ export async function runMonitorCycle(
   proposals: DiscoveredProposal[];
   timelockOps: DiscoveredTimelockOp[];
   watermarks: DiscoveryWatermarks;
+  elections: ElectionProposalStatus[];
 }> {
   const l2Provider = providers.l2Provider;
   const tipBlock = await l2Provider.getBlockNumber();
@@ -933,11 +955,28 @@ export async function runMonitorCycle(
   // Run timelock tasks
   await Promise.all(timelockTasks.map((task) => limit(() => track(task.key, task.fn))));
 
+  // Phase 3: Track elections
+  // This tracks all elections and stores their status in the cache
+  const elections: ElectionProposalStatus[] = [];
+  if (!isShuttingDown()) {
+    try {
+      const allElections = await trackAllElections(providers.l2Provider, providers.l1Provider);
+      for (const electionStatus of allElections) {
+        elections.push(electionStatus);
+        await tracker.saveElectionCheckpoint(electionStatus);
+      }
+    } catch (err) {
+      // Election tracking is non-critical, log and continue
+      console.error("Election tracking failed:", err);
+    }
+  }
+
   return {
     result,
     proposals: discoveryResult.proposals,
     timelockOps: discoveryResult.timelockOps,
     watermarks: discoveryResult.watermarks,
+    elections,
   };
 }
 

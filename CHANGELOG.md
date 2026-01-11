@@ -22,6 +22,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`LookupSignatureOptions` type** - New exported type for configuring signature lookup
 
+- **Election Tracking Integration** - Elections now tracked as first-class entities in the bundled cache:
+  - `ElectionTrackingInput` type for election checkpoint identification
+  - `trackAllElections(l2Provider, l1Provider)`: Track all Security Council elections
+  - `trackIncompleteElections(l2Provider, l1Provider)`: Track only active elections
+  - `getElectionIndexForProposalId(proposalId, l2Provider, l1Provider)`: Map proposal ID to election index
+  - `tracker.saveElectionCheckpoint(electionStatus)`: Persist election status to cache
+  - `tracker.getElectionCheckpoint(electionIndex)`: Retrieve cached election status
+  - CLI `run` command now tracks elections in Phase 3 after proposals/timelocks
+  - Cache key pattern: `election:{index}`
+
+- **Full Election Lifecycle Preparation** - Complete A→B→C election transaction preparation:
+  - `prepareElectionCreation()`: Step A - Create nominee election proposal
+  - `prepareMemberElectionTrigger()`: Step B - Execute nominee election to create member proposal
+  - `prepareMemberElectionExecution()`: Step C - Execute member election to install council members
+  - `getMemberElectionProposalParams()`: Get member election proposal parameters
+  - `canExecuteMember` flag in `ElectionProposalStatus` indicates Step C readiness
+  - `ElectionCheckResult.prepared.executeMember`: Prepared transaction for Step C
+
+- **Reorg Detection for Discovery Watermarks** - Watermarks now include block hashes for chain reorganization detection:
+  - `WatermarkHashes` type for storing block hashes alongside watermarks
+  - `verifyWatermark(key, blockNumber, hash, provider)`: Verify watermark validity
+  - `loadWatermarks()` returns `{ watermarks, hashes }` tuple
+  - `saveWatermarks(watermarks, hashes, cache)`: Save both watermarks and hashes
+  - `TrackingCheckpoint.cachedData.watermarkHashes`: Persisted hash storage
+
 ### Changed
 
 - **CLI: Public RPC warning** - Warns when using default public RPC URLs

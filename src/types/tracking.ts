@@ -7,6 +7,7 @@ import { TrackedStage } from "./stages";
 import { CallScheduledData } from "./timelock";
 import { ProposalType, ProposalData, ProposalState } from "./governor";
 import { TimelockState, TimelockLink } from "./timelock";
+import { ElectionProposalStatus } from "./election";
 
 // Execution Types (merged from execution.ts)
 
@@ -71,9 +72,21 @@ export interface DiscoveryTrackingInput {
 }
 
 /**
+ * Input for tracking a Security Council election
+ */
+export interface ElectionTrackingInput {
+  type: "election";
+  electionIndex: number;
+}
+
+/**
  * Union type for all tracking entry points
  */
-export type TrackingInput = GovernorTrackingInput | TimelockTrackingInput | DiscoveryTrackingInput;
+export type TrackingInput =
+  | GovernorTrackingInput
+  | TimelockTrackingInput
+  | DiscoveryTrackingInput
+  | ElectionTrackingInput;
 
 /**
  * Hints for the next stage in the pipeline
@@ -110,6 +123,9 @@ export type DiscoveryKey =
 /** Discovery watermarks for incremental block scanning */
 export type DiscoveryWatermarks = Partial<Record<DiscoveryKey, number>>;
 
+/** Block hashes for watermark reorg detection */
+export type WatermarkHashes = Partial<Record<DiscoveryKey, string>>;
+
 /** Discovery targets configuration */
 export type DiscoveryTargets = Partial<Record<DiscoveryKey, boolean>>;
 
@@ -129,6 +145,10 @@ export interface TrackingCheckpoint {
   cachedData: {
     completedStages?: TrackedStage[];
     discoveryWatermarks?: DiscoveryWatermarks;
+    /** Block hashes for reorg detection (v0.2.2+) */
+    watermarkHashes?: WatermarkHashes;
+    /** Election status for election checkpoints (v0.2.2+) */
+    electionStatus?: ElectionProposalStatus;
   };
   metadata?: {
     errorCount: number;

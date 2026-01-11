@@ -202,7 +202,7 @@ export function useNavigation(): UseNavigationResult {
 
   const back = useCallback(() => {
     setState((prev) => {
-      if (prev.view === "help" && prev.previousView) {
+      if ((prev.view === "help" || prev.view === "settings") && prev.previousView) {
         return { ...prev, view: prev.previousView, previousView: null };
       }
       if (prev.view === "detail" || prev.view === "election") {

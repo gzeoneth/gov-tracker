@@ -16,9 +16,9 @@ export function SearchBar({
   isActive,
   resultCount,
   placeholder = "Type to search...",
-}: SearchBarProps): React.ReactElement {
+}: SearchBarProps): React.ReactElement | null {
   if (!isActive && !query) {
-    return <Box />;
+    return null;
   }
 
   if (isActive) {

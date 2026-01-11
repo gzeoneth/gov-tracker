@@ -8,6 +8,7 @@ import type { UseNavigationResult } from "../hooks/index.js";
 import type { TrackedStage, Chain } from "../../../types/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { StatusBadge } from "../components/StatusBadge.js";
+import { getVisibleRows } from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 
@@ -102,11 +103,7 @@ function formatStageData(stage: TrackedStage): Array<{ label: string; value: str
   return items;
 }
 
-function getVisibleRows(): number {
-  const terminalHeight = process.stdout.rows || 24;
-  // Header (3) + Footer (3) + section headers (~6) + scroll indicators (2) = 14 lines reserved
-  return Math.max(5, terminalHeight - 14);
-}
+const RESERVED_LINES = 14;
 
 export function StageView({
   proposal,
@@ -118,7 +115,7 @@ export function StageView({
 
   const stageTitle = stage ? formatStageTitle(stage.type) : "";
   const dataItems = stage ? formatStageData(stage) : [];
-  const visibleRows = getVisibleRows();
+  const visibleRows = getVisibleRows(RESERVED_LINES);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {

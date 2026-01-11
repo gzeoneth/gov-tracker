@@ -9,6 +9,7 @@ import type { UseTrackerResult } from "../hooks/useTracker.js";
 import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { ProposalRow } from "../components/ProposalRow.js";
+import { getTerminalSize, getVisibleRows } from "../utils/index.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -18,17 +19,7 @@ interface ProposalListProps {
   onQuit: () => void;
 }
 
-function getTerminalSize(): { width: number; height: number } {
-  return {
-    width: process.stdout.columns || 80,
-    height: process.stdout.rows || 24,
-  };
-}
-
-function getVisibleRows(terminalHeight: number): number {
-  // Header (3) + Footer (3) + scroll indicators (2) = 8 lines reserved
-  return Math.max(5, terminalHeight - 8);
-}
+const RESERVED_LINES = 8;
 
 export function ProposalList({
   items,
@@ -39,8 +30,8 @@ export function ProposalList({
 }: ProposalListProps): React.ReactElement {
   const { state } = navigation;
   const selectedIndex = state.selectedIndex;
-  const { width: terminalWidth, height: terminalHeight } = getTerminalSize();
-  const visibleRows = getVisibleRows(terminalHeight);
+  const { width: terminalWidth } = getTerminalSize();
+  const visibleRows = getVisibleRows(RESERVED_LINES);
 
   const startIndex = Math.max(
     0,

@@ -7,6 +7,7 @@ import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
+import { wrapText, getVisibleRows } from "../utils/index.js";
 import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata.js";
 
 interface CalldataViewProps {
@@ -24,15 +25,6 @@ interface FormattedLine {
 }
 
 const FOLD_THRESHOLD = 100;
-
-function wrapText(text: string, width: number): string[] {
-  if (text.length <= width) return [text];
-  const lines: string[] = [];
-  for (let i = 0; i < text.length; i += width) {
-    lines.push(text.slice(i, i + width));
-  }
-  return lines;
-}
 
 function formatParameter(
   param: DecodedParameter,
@@ -107,9 +99,7 @@ function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0, keyPrefix =
   return lines;
 }
 
-function getVisibleLines(terminalHeight: number): number {
-  return Math.max(5, terminalHeight - 14);
-}
+const RESERVED_LINES = 14;
 
 export function CalldataView({
   proposal,
@@ -128,8 +118,7 @@ export function CalldataView({
     return line.foldKey && expandedKeys.has(line.foldKey);
   });
 
-  const terminalHeight = process.stdout.rows || 24;
-  const visibleCount = getVisibleLines(terminalHeight);
+  const visibleCount = getVisibleRows(RESERVED_LINES);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {

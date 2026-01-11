@@ -7,6 +7,7 @@ import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
+import { wrapText } from "../utils/index.js";
 import { extractAllSimulationsFromDecoded } from "../../../simulation/index.js";
 import type { ExtractedSimulation } from "../../../types/simulation.js";
 import type { Chain } from "../../../types/index.js";
@@ -14,15 +15,6 @@ import type { Chain } from "../../../types/index.js";
 interface SimulationViewProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
-}
-
-function wrapText(text: string, width: number): string[] {
-  if (text.length <= width) return [text];
-  const lines: string[] = [];
-  for (let i = 0; i < text.length; i += width) {
-    lines.push(text.slice(i, i + width));
-  }
-  return lines;
 }
 
 export function SimulationView({

@@ -8,6 +8,7 @@
 import { useState, useCallback, useRef } from "react";
 import { spawn, type ChildProcess } from "child_process";
 import { join } from "path";
+import { existsSync } from "fs";
 
 export interface CliProcessResult {
   success: boolean;
@@ -23,9 +24,24 @@ export interface UseCliProcessResult {
 }
 
 function findCliPath(): string {
-  // Navigate from dist/cli/tui/hooks to dist/cli/cli.js
-  // This works because at runtime, the code runs from dist/
-  return join(__dirname, "..", "..", "cli.js");
+  // __dirname points to either src/cli/tui/hooks or dist/cli/tui/hooks
+  // The CLI is always at dist/cli/cli.js after build
+
+  // If we're in src/, navigate to project root and then to dist/cli/cli.js
+  if (__dirname.includes("/src/")) {
+    const projectRoot = __dirname.replace(/\/src\/cli\/tui\/hooks$/, "");
+    return join(projectRoot, "dist", "cli", "cli.js");
+  }
+
+  // If we're already in dist/, navigate relative to dist/cli/cli.js
+  const relativeCliPath = join(__dirname, "..", "..", "cli.js");
+  if (existsSync(relativeCliPath)) {
+    return relativeCliPath;
+  }
+
+  // Fallback for unexpected directory structure
+  const projectRoot = __dirname.replace(/\/dist\/cli\/tui\/hooks$/, "");
+  return join(projectRoot, "dist", "cli", "cli.js");
 }
 
 export function useCliProcess(): UseCliProcessResult {

@@ -3,7 +3,7 @@
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { UseNavigationResult } from "../hooks/index.js";
 import type { TuiConfig } from "../config.js";
 import { loadConfig, saveConfig, getDefaultConfig } from "../config.js";
@@ -56,9 +56,23 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showMessage = useCallback((msg: string) => {
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+    }
+    setMessage(msg);
+    messageTimeoutRef.current = setTimeout(() => setMessage(null), 2000);
+  }, []);
 
   useEffect(() => {
     setConfig(loadConfig());
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+      }
+    };
   }, []);
 
   const items = getSettingItems(config);
@@ -89,8 +103,7 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     setConfig(newConfig);
     saveConfig(newConfig);
     onConfigChange?.(newConfig);
-    setMessage("Settings saved");
-    setTimeout(() => setMessage(null), 2000);
+    showMessage("Settings saved");
   };
 
   useInput((input: string, key: KeyInput) => {
@@ -133,8 +146,7 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     } else if (input === "r") {
       setConfig(getDefaultConfig());
       saveConfig(getDefaultConfig());
-      setMessage("Settings reset to defaults");
-      setTimeout(() => setMessage(null), 2000);
+      showMessage("Settings reset to defaults");
     }
   });
 

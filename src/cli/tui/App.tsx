@@ -56,8 +56,10 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   useEffect(() => {
     if (tracker.lastResult && navigation.state.view === "detail") {
-      cache.reload();
+      void cache.reload();
     }
+    // Only trigger on lastResult change; view check is a guard condition
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracker.lastResult]);
 
   const handleQuit = () => {

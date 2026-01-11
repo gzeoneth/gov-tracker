@@ -2,7 +2,7 @@
  * Cache loading hook for TUI
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { TrackingCheckpoint, TrackerStats } from "../../../types/index.js";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
 import type { CacheData } from "../types.js";
@@ -78,8 +78,13 @@ export function useCache(cachePath?: string): UseCacheResult {
   const [data, setData] = useState<CacheData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const signalRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
-  const loadCache = async (signal?: { cancelled: boolean }) => {
+  const loadCache = useCallback(async () => {
+    signalRef.current.cancelled = true;
+    const signal = { cancelled: false };
+    signalRef.current = signal;
+
     setLoading(true);
     setError(null);
 
@@ -91,29 +96,26 @@ export function useCache(cachePath?: string): UseCacheResult {
 
       const { checkpoints } = await readCacheStatus(path);
 
-      if (signal?.cancelled) return;
+      if (signal.cancelled) return;
 
       const stats = computeStats(checkpoints);
       setData({ checkpoints, stats });
     } catch (err) {
-      if (signal?.cancelled) return;
+      if (signal.cancelled) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      if (!signal?.cancelled) {
+      if (!signal.cancelled) {
         setLoading(false);
       }
     }
-  };
-
-  useEffect(() => {
-    const signal = { cancelled: false };
-    loadCache(signal);
-    return () => {
-      signal.cancelled = true;
-    };
   }, [cachePath]);
 
-  const reload = async () => loadCache();
+  useEffect(() => {
+    void loadCache();
+    return () => {
+      signalRef.current.cancelled = true;
+    };
+  }, [loadCache]);
 
-  return { data, loading, error, reload };
+  return { data, loading, error, reload: loadCache };
 }

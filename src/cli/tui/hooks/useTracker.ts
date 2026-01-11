@@ -4,7 +4,7 @@
  * Provides tracking functionality when RPC providers are available.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type {
   TrackingResult,
   TrackingProgress,
@@ -42,6 +42,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
   const [lastResult, setLastResult] = useState<TrackingResult | null>(null);
   const [preparedTxs, setPreparedTxs] = useState<PreparedTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const isTrackingRef = useRef(false);
 
   const canTrack = !!options.providers;
 
@@ -71,6 +72,10 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
 
   const track = useCallback(
     async (item: ProposalListItem): Promise<TrackingResult | null> => {
+      if (isTrackingRef.current) {
+        return null;
+      }
+
       if (!canTrack) {
         setError("No RPC providers configured. Use --l2-rpc and --l1-rpc options.");
         return null;
@@ -79,6 +84,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
       const tracker = createTrackerInstance();
       if (!tracker) return null;
 
+      isTrackingRef.current = true;
       setIsTracking(true);
       setProgress("Starting...");
       setError(null);
@@ -123,6 +129,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         setError(message);
         return null;
       } finally {
+        isTrackingRef.current = false;
         setIsTracking(false);
         setProgress(null);
       }
@@ -131,6 +138,10 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
   );
 
   const discover = useCallback(async (): Promise<{ proposals: number; timelocks: number }> => {
+    if (isTrackingRef.current) {
+      return { proposals: 0, timelocks: 0 };
+    }
+
     if (!canTrack || !options.providers) {
       setError("No RPC providers configured. Use --l2-rpc and --l1-rpc options.");
       return { proposals: 0, timelocks: 0 };
@@ -139,6 +150,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
     const tracker = createTrackerInstance();
     if (!tracker) return { proposals: 0, timelocks: 0 };
 
+    isTrackingRef.current = true;
     setIsTracking(true);
     setProgress("Discovering new proposals...");
     setError(null);
@@ -228,6 +240,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
       setError(message);
       return { proposals: 0, timelocks: 0 };
     } finally {
+      isTrackingRef.current = false;
       setIsTracking(false);
       setProgress(null);
     }

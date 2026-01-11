@@ -74,6 +74,16 @@ const HELP_SECTIONS: ShortcutSection[] = [
     ],
   },
   {
+    title: "Settings View",
+    icon: "⚙",
+    shortcuts: [
+      { key: "j/k", description: "Navigate settings" },
+      { key: "Enter/Space", description: "Edit or toggle setting" },
+      { key: "r", description: "Reset all to defaults" },
+      { key: "b/Esc", description: "Save and close" },
+    ],
+  },
+  {
     title: "Tips",
     icon: "💡",
     shortcuts: [

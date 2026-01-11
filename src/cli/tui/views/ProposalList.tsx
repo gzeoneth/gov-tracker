@@ -79,7 +79,7 @@ export function ProposalList({
     } else if (key.tab) {
       navigation.cycleFilter();
     } else if (input === "d" && tracker.canTrack && !tracker.isTracking) {
-      void tracker.discover().then(() => onReload());
+      void tracker.discover().then(() => onReload()).catch(() => {});
     } else if (input === "e" && tracker.canTrack) {
       navigation.goToElection();
     } else if (input === "g") {
@@ -133,10 +133,22 @@ export function ProposalList({
         {items.length === 0 ? (
           <EmptyState
             title="No proposals found"
-            message={state.searchQuery
-              ? `No results for "${state.searchQuery}"`
-              : `No proposals match filter [${state.filter}]`}
-            hint={state.searchQuery ? "Press / to modify search" : "Press Tab to change filter"}
+            message={
+              state.searchQuery
+                ? `No results for "${state.searchQuery}"`
+                : (data?.stats?.total ?? 0) === 0
+                  ? "Cache is empty"
+                  : `No proposals match filter [${state.filter}]`
+            }
+            hint={
+              state.searchQuery
+                ? "Press / to modify search"
+                : (data?.stats?.total ?? 0) === 0
+                  ? tracker.canTrack
+                    ? "Press d to discover proposals"
+                    : "Use --l2-rpc to enable discovery"
+                  : "Press Tab to change filter"
+            }
           />
         ) : (
           <Box flexDirection="column">

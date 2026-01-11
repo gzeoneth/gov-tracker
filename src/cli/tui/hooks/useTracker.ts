@@ -9,10 +9,14 @@ import type {
   TrackingResult,
   TrackingProgress,
   PreparedTransaction,
+  DiscoveryWatermarks,
 } from "../../../types/index.js";
 import { createTracker, ProposalStageTracker } from "../../../tracker.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
+
+const BLOCKS_PER_DAY_L2 = (24 * 60 * 60) / 0.25; // ~345,600 blocks/day on Arbitrum
+const DEFAULT_DISCOVERY_DAYS = 60;
 
 export interface UseTrackerResult {
   isTracking: boolean;
@@ -133,7 +137,34 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
       const toBlock = await options.providers.l2Provider.getBlockNumber();
       const { buildDefaultTargets } = await import("../../../constants");
       const targets = buildDefaultTargets();
-      const { proposals, timelockOps } = await tracker.discoverAll(targets, toBlock);
+
+      // Check if we have cached watermarks, otherwise use 60-day default
+      const cachedWatermarks = await tracker.loadWatermarks();
+      const hasWatermarks = Object.keys(cachedWatermarks).length > 0;
+
+      let fromWatermarks: DiscoveryWatermarks | undefined;
+      if (!hasWatermarks) {
+        // No cache - default to last 60 days
+        const defaultFromBlock = Math.max(
+          0,
+          toBlock - Math.floor(BLOCKS_PER_DAY_L2 * DEFAULT_DISCOVERY_DAYS)
+        );
+        setProgress(`Discovering proposals from last ${DEFAULT_DISCOVERY_DAYS} days...`);
+        fromWatermarks = {
+          constitutionalGovernor: defaultFromBlock,
+          nonConstitutionalGovernor: defaultFromBlock,
+          electionNomineeGovernor: defaultFromBlock,
+          electionMemberGovernor: defaultFromBlock,
+          l2ConstitutionalTimelock: defaultFromBlock,
+          l2NonConstitutionalTimelock: defaultFromBlock,
+        };
+      }
+
+      const { proposals, timelockOps } = await tracker.discoverAll(
+        targets,
+        toBlock,
+        fromWatermarks
+      );
       return { proposals: proposals.length, timelocks: timelockOps.length };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -102,7 +102,11 @@ function formatStageData(stage: TrackedStage): Array<{ label: string; value: str
   return items;
 }
 
-const VISIBLE_ROWS = 22;
+function getVisibleRows(): number {
+  const terminalHeight = process.stdout.rows || 24;
+  // Header (3) + Footer (3) + section headers (~6) + scroll indicators (2) = 14 lines reserved
+  return Math.max(5, terminalHeight - 14);
+}
 
 export function StageView({
   proposal,
@@ -114,6 +118,7 @@ export function StageView({
 
   const stageTitle = stage ? formatStageTitle(stage.type) : "";
   const dataItems = stage ? formatStageData(stage) : [];
+  const visibleRows = getVisibleRows();
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
@@ -137,7 +142,7 @@ export function StageView({
     );
   }
 
-  const visibleItems = dataItems.slice(state.scrollOffset, state.scrollOffset + VISIBLE_ROWS);
+  const visibleItems = dataItems.slice(state.scrollOffset, state.scrollOffset + visibleRows);
 
   return (
     <ViewLayout view="stage" title={stageTitle}>
@@ -187,8 +192,8 @@ export function StageView({
           {visibleItems.map((item, i) => (
             <Box key={i} marginLeft={1}><Text color="cyan">{item.label}: </Text><Text>{item.value}</Text></Box>
           ))}
-          {state.scrollOffset + VISIBLE_ROWS < dataItems.length && (
-            <Text color="gray">  ↓ {dataItems.length - state.scrollOffset - VISIBLE_ROWS} items below</Text>
+          {state.scrollOffset + visibleRows < dataItems.length && (
+            <Text color="gray">  ↓ {dataItems.length - state.scrollOffset - visibleRows} items below</Text>
           )}
         </Box>
       )}

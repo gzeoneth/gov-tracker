@@ -31,10 +31,33 @@ function truncate(str: string, maxLen: number): string {
   return str.length <= maxLen ? str : str.slice(0, maxLen - 3) + "...";
 }
 
+function extractMarkdownTitle(description: string): string | null {
+  const lines = description.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#")) {
+      // Remove leading # symbols and trim
+      return trimmed.replace(/^#+\s*/, "").trim();
+    }
+  }
+  return null;
+}
+
 function getProposalTitle(checkpoint: TrackingCheckpoint): string {
   const data = getCreatedData(getStages(checkpoint));
   if (data?.description) {
-    return truncate(data.description.split("\n")[0], 60);
+    const mdTitle = extractMarkdownTitle(data.description);
+    if (mdTitle) {
+      return truncate(mdTitle, 60);
+    }
+    // Fallback to first non-empty line
+    const firstLine = data.description
+      .split("\n")
+      .find((l) => l.trim())
+      ?.trim();
+    if (firstLine) {
+      return truncate(firstLine, 60);
+    }
   }
   if (checkpoint.input.type === "governor") {
     return `Proposal ${checkpoint.input.proposalId.slice(0, 12)}...`;

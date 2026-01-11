@@ -18,10 +18,16 @@ interface ProposalListProps {
   onQuit: () => void;
 }
 
-const VISIBLE_ROWS = 20;
+function getTerminalSize(): { width: number; height: number } {
+  return {
+    width: process.stdout.columns || 80,
+    height: process.stdout.rows || 24,
+  };
+}
 
-function getTerminalWidth(): number {
-  return process.stdout.columns || 80;
+function getVisibleRows(terminalHeight: number): number {
+  // Header (3) + Footer (3) + scroll indicators (2) = 8 lines reserved
+  return Math.max(5, terminalHeight - 8);
 }
 
 export function ProposalList({
@@ -33,13 +39,14 @@ export function ProposalList({
 }: ProposalListProps): React.ReactElement {
   const { state } = navigation;
   const selectedIndex = state.selectedIndex;
-  const terminalWidth = getTerminalWidth();
+  const { width: terminalWidth, height: terminalHeight } = getTerminalSize();
+  const visibleRows = getVisibleRows(terminalHeight);
 
   const startIndex = Math.max(
     0,
-    Math.min(selectedIndex - Math.floor(VISIBLE_ROWS / 2), items.length - VISIBLE_ROWS)
+    Math.min(selectedIndex - Math.floor(visibleRows / 2), items.length - visibleRows)
   );
-  const visibleItems = items.slice(startIndex, startIndex + VISIBLE_ROWS);
+  const visibleItems = items.slice(startIndex, startIndex + visibleRows);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "q") {
@@ -110,8 +117,8 @@ export function ProposalList({
                 maxWidth={terminalWidth - 4}
               />
             ))}
-            {startIndex + VISIBLE_ROWS < items.length && (
-              <Text color="gray">  ↓ {items.length - startIndex - VISIBLE_ROWS} more</Text>
+            {startIndex + visibleRows < items.length && (
+              <Text color="gray">  ↓ {items.length - startIndex - visibleRows} more</Text>
             )}
           </Box>
         )}

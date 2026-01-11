@@ -185,7 +185,30 @@ export function useProposals(
       if (checkpoint.input.type === "discovery") continue;
 
       const stages = getStages(checkpoint);
-      if (stages.length === 0) continue;
+
+      // Handle proposals with no stages yet (discovered but not tracked)
+      if (stages.length === 0) {
+        const title =
+          checkpoint.input.type === "governor"
+            ? `Proposal ${checkpoint.input.proposalId.slice(0, 8)}...`
+            : checkpoint.input.type === "timelock"
+              ? `Timelock ${checkpoint.input.operationId.slice(0, 10)}...`
+              : "Unknown";
+
+        items.push({
+          key,
+          title,
+          type: checkpoint.input.type === "timelock" ? "timelock" : "governor",
+          proposalType: undefined,
+          status: "active", // Needs tracking
+          stageProgress: "0/7",
+          currentStage: null,
+          hasExecutable: false,
+          createdAt: checkpoint.createdAt,
+          checkpoint,
+        });
+        continue;
+      }
 
       const completedCount = stages.filter(
         (s) => s.status === "COMPLETED" || s.status === "SKIPPED"

@@ -16,6 +16,8 @@ export type ViewType =
 
 export type FilterType = "all" | "active" | "complete" | "timelocks";
 
+export type SortType = "newest" | "oldest" | "progress" | "status";
+
 export interface ProposalListItem {
   key: string;
   title: string;
@@ -33,6 +35,7 @@ export interface NavigationState {
   view: ViewType;
   previousView: ViewType | null;
   filter: FilterType;
+  sort: SortType;
   selectedIndex: number;
   selectedProposal: ProposalListItem | null;
   selectedStageIndex: number;

@@ -221,6 +221,7 @@ describe("TUI Component Rendering", () => {
           view: "help" as const,
           previousView: "list" as const,
           filter: "all" as const,
+          sort: "newest" as const,
           selectedIndex: 0,
           selectedProposal: null,
           selectedStageIndex: 0,
@@ -238,6 +239,7 @@ describe("TUI Component Rendering", () => {
         goToBottom: vi.fn(),
         setFilter: vi.fn(),
         cycleFilter: vi.fn(),
+        cycleSort: vi.fn(),
         selectItem: vi.fn(),
         enter: vi.fn(),
         goToCalldata: vi.fn(),
@@ -411,6 +413,78 @@ describe("TUI Component Rendering", () => {
           expect(element).toBeDefined();
         }).not.toThrow();
       }
+    });
+  });
+
+  describe("Skeleton", () => {
+    it("should render single line skeleton", async () => {
+      const { Skeleton } = await import("../src/cli/tui/components/Skeleton.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Skeleton, {
+          width: 20,
+          animated: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render multi-line skeleton", async () => {
+      const { Skeleton } = await import("../src/cli/tui/components/Skeleton.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Skeleton, {
+          width: 30,
+          height: 3,
+          animated: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("SkeletonRow", () => {
+    it("should render row with multiple columns", async () => {
+      const { SkeletonRow } = await import("../src/cli/tui/components/Skeleton.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SkeletonRow, {
+          columns: [5, 20, 10],
+          animated: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("SkeletonList", () => {
+    it("should render list with default props", async () => {
+      const { SkeletonList } = await import("../src/cli/tui/components/Skeleton.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SkeletonList, {
+          animated: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render list with custom rows and columns", async () => {
+      const { SkeletonList } = await import("../src/cli/tui/components/Skeleton.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SkeletonList, {
+          rows: 10,
+          columns: [3, 50, 15],
+          animated: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
     });
   });
 

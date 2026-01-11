@@ -4,11 +4,12 @@
 
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { TrackerStats } from "../../../types/index.js";
-import type { ViewType, FilterType } from "../types.js";
+import type { ViewType, FilterType, SortType } from "../types.js";
 
 interface HeaderProps {
   view: ViewType;
   filter: FilterType;
+  sort?: SortType;
   stats: TrackerStats | null;
   hasProviders: boolean;
   isTracking: boolean;
@@ -17,9 +18,17 @@ interface HeaderProps {
   breadcrumb?: string[];
 }
 
+const SORT_LABELS: Record<SortType, string> = {
+  newest: "↓New",
+  oldest: "↑Old",
+  progress: "↓Prog",
+  status: "Status",
+};
+
 export function Header({
   view,
   filter,
+  sort,
   stats,
   hasProviders,
   isTracking,
@@ -99,7 +108,7 @@ export function Header({
         {view === "list" && (
           <Text color="gray">
             {" "}
-            [{filter.toUpperCase()}]
+            [{filter.toUpperCase()}] [{sort ? SORT_LABELS[sort] : "↓New"}]
           </Text>
         )}
         {position && position.total > 0 && (

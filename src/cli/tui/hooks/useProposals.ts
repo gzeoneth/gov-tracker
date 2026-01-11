@@ -4,7 +4,7 @@
 
 import { useMemo } from "react";
 import type { TrackingCheckpoint, StageType, TrackedStage } from "../../../types/index.js";
-import type { ProposalListItem, FilterType, CacheData } from "../types.js";
+import type { ProposalListItem, FilterType, SortType, CacheData } from "../types.js";
 
 interface ProposalCreatedData {
   description?: string;
@@ -136,10 +136,45 @@ function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
   return true;
 }
 
+function getProgressNumber(progress: string): number {
+  const match = progress.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function sortItems(items: ProposalListItem[], sort: SortType): ProposalListItem[] {
+  return [...items].sort((a, b) => {
+    switch (sort) {
+      case "newest":
+        if (a.createdAt === null && b.createdAt === null) return 0;
+        if (a.createdAt === null) return 1;
+        if (b.createdAt === null) return -1;
+        return b.createdAt - a.createdAt;
+
+      case "oldest":
+        if (a.createdAt === null && b.createdAt === null) return 0;
+        if (a.createdAt === null) return 1;
+        if (b.createdAt === null) return -1;
+        return a.createdAt - b.createdAt;
+
+      case "progress":
+        return getProgressNumber(b.stageProgress) - getProgressNumber(a.stageProgress);
+
+      case "status": {
+        const statusOrder = { active: 0, complete: 1, failed: 2 };
+        return statusOrder[a.status] - statusOrder[b.status];
+      }
+
+      default:
+        return 0;
+    }
+  });
+}
+
 export function useProposals(
   data: CacheData | null,
   filter: FilterType,
-  searchQuery = ""
+  searchQuery = "",
+  sort: SortType = "newest"
 ): { items: ProposalListItem[]; filteredCount: number; totalCount: number } {
   return useMemo(() => {
     if (!data) return { items: [], filteredCount: 0, totalCount: 0 };
@@ -170,19 +205,14 @@ export function useProposals(
       });
     }
 
-    items.sort((a, b) => {
-      if (a.createdAt === null && b.createdAt === null) return 0;
-      if (a.createdAt === null) return 1;
-      if (b.createdAt === null) return -1;
-      return b.createdAt - a.createdAt;
-    });
+    const sorted = sortItems(items, sort);
 
     const lowerSearch = searchQuery.toLowerCase();
-    const filtered = items.filter((item) => {
+    const filtered = sorted.filter((item) => {
       if (!matchesFilter(item, filter)) return false;
       if (lowerSearch && !item.title.toLowerCase().includes(lowerSearch)) return false;
       return true;
     });
     return { items: filtered, filteredCount: filtered.length, totalCount: items.length };
-  }, [data, filter, searchQuery]);
+  }, [data, filter, searchQuery, sort]);
 }

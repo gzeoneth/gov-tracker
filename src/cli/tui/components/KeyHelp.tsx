@@ -16,11 +16,12 @@ interface KeyBinding {
 }
 
 const LIST_KEYS: KeyBinding[] = [
-  { key: "↑↓/PgUp/Dn", action: "Navigate" },
+  { key: "j/k", action: "Navigate" },
   { key: "g/G", action: "Top/Bottom" },
   { key: "/", action: "Search" },
   { key: "Enter", action: "View" },
   { key: "Tab", action: "Filter" },
+  { key: "o", action: "Sort" },
   { key: "R", action: "Reload" },
   { key: "e", action: "Elections" },
   { key: "d", action: "Discover" },
@@ -29,9 +30,10 @@ const LIST_KEYS: KeyBinding[] = [
 ];
 
 const DETAIL_KEYS_BASE: KeyBinding[] = [
-  { key: "↑↓", action: "Stage" },
+  { key: "j/k", action: "Stage" },
   { key: "1-7", action: "Jump" },
   { key: "Enter", action: "Details" },
+  { key: "y/Y", action: "Copy ID/TX" },
   { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },

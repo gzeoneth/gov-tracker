@@ -3,12 +3,19 @@
  */
 
 import { useState, useCallback } from "react";
-import type { NavigationState, ProposalListItem, FilterType, ViewType } from "../types.js";
+import type {
+  NavigationState,
+  ProposalListItem,
+  FilterType,
+  ViewType,
+  SortType,
+} from "../types.js";
 
 const INITIAL_STATE: NavigationState = {
   view: "list",
   previousView: null,
   filter: "all",
+  sort: "newest",
   selectedIndex: 0,
   selectedProposal: null,
   selectedStageIndex: 0,
@@ -22,6 +29,7 @@ export interface UseNavigationResult {
   state: NavigationState;
   setFilter: (filter: FilterType) => void;
   cycleFilter: () => void;
+  cycleSort: () => void;
   selectItem: (index: number) => void;
   moveUp: () => void;
   moveDown: (maxIndex: number) => void;
@@ -49,6 +57,7 @@ export interface UseNavigationResult {
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
+const SORT_ORDER: SortType[] = ["newest", "oldest", "progress", "status"];
 const PAGE_SIZE = 10;
 const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 
@@ -63,6 +72,13 @@ export function useNavigation(): UseNavigationResult {
     setState((prev) => {
       const nextIndex = (FILTER_ORDER.indexOf(prev.filter) + 1) % FILTER_ORDER.length;
       return { ...prev, filter: FILTER_ORDER[nextIndex], selectedIndex: 0, scrollOffset: 0 };
+    });
+  }, []);
+
+  const cycleSort = useCallback(() => {
+    setState((prev) => {
+      const nextIndex = (SORT_ORDER.indexOf(prev.sort) + 1) % SORT_ORDER.length;
+      return { ...prev, sort: SORT_ORDER[nextIndex], selectedIndex: 0, scrollOffset: 0 };
     });
   }, []);
 
@@ -258,6 +274,7 @@ export function useNavigation(): UseNavigationResult {
     state,
     setFilter,
     cycleFilter,
+    cycleSort,
     selectItem,
     moveUp,
     moveDown,

@@ -87,6 +87,8 @@ export function ProposalList({
       navigation.goToBottom(items.length);
     } else if (input === "R") {
       onReload();
+    } else if (input === "o") {
+      navigation.cycleSort();
     } else if (input === "?") {
       navigation.goToHelp();
     }
@@ -97,6 +99,7 @@ export function ProposalList({
       <Header
         view="list"
         filter={state.filter}
+        sort={state.sort}
         stats={data?.stats ?? null}
         hasProviders={tracker.canTrack}
         isTracking={tracker.isTracking}

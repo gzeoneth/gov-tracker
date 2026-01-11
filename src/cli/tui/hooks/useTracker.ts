@@ -10,8 +10,9 @@ import type {
   TrackingProgress,
   PreparedTransaction,
   DiscoveryWatermarks,
+  ChunkingConfig,
 } from "../../../types/index.js";
-import { createTracker, ProposalStageTracker } from "../../../tracker.js";
+import { createTracker, ProposalStageTracker, CHUNK_SIZES } from "../../../index.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
 import { loadConfig } from "../config.js";
@@ -47,11 +48,20 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
   const createTrackerInstance = useCallback((): ProposalStageTracker | null => {
     if (!options.providers) return null;
 
+    const tuiConfig = loadConfig();
+    const chunkingConfig: ChunkingConfig = {
+      l2ChunkSize: tuiConfig.discovery.chunkSize || CHUNK_SIZES.L2,
+      l1ChunkSize: CHUNK_SIZES.L1,
+      novaChunkSize: tuiConfig.discovery.chunkSize || CHUNK_SIZES.NOVA,
+      delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
+    };
+
     return createTracker({
       l1Provider: options.providers.l1Provider,
       l2Provider: options.providers.l2Provider,
       novaProvider: options.providers.novaProvider,
       cachePath: options.cachePath,
+      chunkingConfig,
       onProgress: (prog: TrackingProgress) => {
         const { stage, currentIndex, totalStages } = prog;
         setProgress(`[${currentIndex + 1}/${totalStages}] ${stage.type}: ${stage.status}`);

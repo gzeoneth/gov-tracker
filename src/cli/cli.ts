@@ -763,12 +763,25 @@ uiCmd
 
     try {
       const { runTui } = await import("./tui");
+      const { loadConfig } = await import("./tui/config.js");
 
-      // Create providers with defaults (env vars → public RPCs)
-      const providers = createProvidersFromOptions(opts);
+      // Load TUI config for RPC URLs (used as fallback before env vars)
+      const tuiConfig = loadConfig();
+
+      // Merge: CLI args > env vars > saved config > public defaults
+      const mergedOpts = {
+        l2Rpc: opts.l2Rpc || process.env.ARB1_RPC || tuiConfig.rpc.l2Url || undefined,
+        l1Rpc: opts.l1Rpc || process.env.ETH_RPC || tuiConfig.rpc.l1Url || undefined,
+        novaRpc: opts.novaRpc || process.env.NOVA_RPC || tuiConfig.rpc.novaUrl || undefined,
+      };
+      const providers = createProvidersFromOptions(mergedOpts);
+
+      // Use config cache path if set and no CLI arg provided
+      const cachePath =
+        opts.cache !== DEFAULT_CACHE_PATH ? opts.cache : tuiConfig.cache.path || opts.cache;
 
       await runTui({
-        cachePath: opts.cache,
+        cachePath,
         providers,
         verbose: opts.verbose,
       });

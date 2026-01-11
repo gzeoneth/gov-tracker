@@ -62,18 +62,20 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
       return;
     }
 
+    let cancelled = false;
+
     const loadElectionData = async () => {
       try {
         setData((prev) => ({ ...prev, loading: true, error: null }));
 
-        // Get overall election status
         const status = await checkElectionStatus(providers.l2Provider, providers.l1Provider);
+        if (cancelled) return;
 
-        // Track last few elections
         const proposals: ElectionProposalStatus[] = [];
         const startIndex = Math.max(0, status.electionCount - 3);
 
         for (let i = status.electionCount; i >= startIndex; i--) {
+          if (cancelled) return;
           try {
             const proposal = await trackElectionProposal(i, providers.l2Provider, providers.l1Provider);
             proposals.push(proposal);
@@ -82,23 +84,31 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
           }
         }
 
-        setData({
-          status,
-          proposals,
-          loading: false,
-          error: null,
-        });
+        if (!cancelled) {
+          setData({
+            status,
+            proposals,
+            loading: false,
+            error: null,
+          });
+        }
       } catch (err) {
-        setData({
-          status: null,
-          proposals: [],
-          loading: false,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        if (!cancelled) {
+          setData({
+            status: null,
+            proposals: [],
+            loading: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
     };
 
     loadElectionData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [providers]);
 
   useInput((input: string, key: KeyInput) => {

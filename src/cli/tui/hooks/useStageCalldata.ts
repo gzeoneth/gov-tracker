@@ -25,20 +25,22 @@ export function useStageCalldata(firstStage: TrackedStage | undefined): UseStage
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadCalldata(): Promise<void> {
       setLoading(true);
       setError(null);
 
       try {
         if (!firstStage) {
-          setError("No stage data available");
+          if (!cancelled) setError("No stage data available");
           return;
         }
 
         const { calldatas, targets, values } = extractCalldataFromStage(firstStage);
 
         if (calldatas.length === 0) {
-          setError("No calldata found in proposal");
+          if (!cancelled) setError("No calldata found in proposal");
           return;
         }
 
@@ -46,6 +48,7 @@ export function useStageCalldata(firstStage: TrackedStage | undefined): UseStage
         const decoded: DecodedAction[] = [];
 
         for (let i = 0; i < calldatas.length; i++) {
+          if (cancelled) return;
           const result = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
           decoded.push({
             target: targets[i],
@@ -54,15 +57,19 @@ export function useStageCalldata(firstStage: TrackedStage | undefined): UseStage
           });
         }
 
-        setActions(decoded);
+        if (!cancelled) setActions(decoded);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadCalldata();
+
+    return () => {
+      cancelled = true;
+    };
   }, [firstStage]);
 
   return { actions, loading, error };

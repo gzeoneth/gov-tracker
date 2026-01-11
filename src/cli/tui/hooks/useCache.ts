@@ -79,7 +79,7 @@ export function useCache(cachePath?: string): UseCacheResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCache = async () => {
+  const loadCache = async (signal?: { cancelled: boolean }) => {
     setLoading(true);
     setError(null);
 
@@ -90,19 +90,30 @@ export function useCache(cachePath?: string): UseCacheResult {
       }
 
       const { checkpoints } = await readCacheStatus(path);
-      const stats = computeStats(checkpoints);
 
+      if (signal?.cancelled) return;
+
+      const stats = computeStats(checkpoints);
       setData({ checkpoints, stats });
     } catch (err) {
+      if (signal?.cancelled) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (!signal?.cancelled) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadCache();
+    const signal = { cancelled: false };
+    loadCache(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, [cachePath]);
 
-  return { data, loading, error, reload: loadCache };
+  const reload = async () => loadCache();
+
+  return { data, loading, error, reload };
 }

@@ -189,6 +189,39 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         toBlock,
         fromWatermarks
       );
+
+      const discoveredCount = proposals.length + timelockOps.length;
+      if (discoveredCount === 0) {
+        return { proposals: 0, timelocks: 0 };
+      }
+
+      setProgress(`Found ${discoveredCount} new items. Tracking...`);
+      let tracked = 0;
+
+      for (const proposal of proposals) {
+        tracked++;
+        setProgress(
+          `Tracking ${tracked}/${discoveredCount}: proposal ${proposal.proposalId.slice(0, 8)}...`
+        );
+        try {
+          await tracker.trackByTxHash(proposal.creationTxHash);
+        } catch {
+          // Continue tracking others even if one fails
+        }
+      }
+
+      for (const op of timelockOps) {
+        tracked++;
+        setProgress(
+          `Tracking ${tracked}/${discoveredCount}: timelock ${op.operationId.slice(0, 10)}...`
+        );
+        try {
+          await tracker.trackByTxHash(op.scheduledTxHash);
+        } catch {
+          // Continue tracking others even if one fails
+        }
+      }
+
       return { proposals: proposals.length, timelocks: timelockOps.length };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

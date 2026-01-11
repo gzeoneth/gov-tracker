@@ -79,7 +79,7 @@ export function ProposalList({
     } else if (key.tab) {
       navigation.cycleFilter();
     } else if (input === "d" && tracker.canTrack && !tracker.isTracking) {
-      void tracker.discover();
+      void tracker.discover().then(() => onReload());
     } else if (input === "e" && tracker.canTrack) {
       navigation.goToElection();
     } else if (input === "g") {

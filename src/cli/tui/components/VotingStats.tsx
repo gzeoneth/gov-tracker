@@ -35,8 +35,8 @@ export function VotingStats({ data, compact = false }: VotingStatsProps): React.
   const againstPct = calculatePercentage(data.againstVotes, total);
   const abstainPct = calculatePercentage(data.abstainVotes, total);
 
-  const forBarWidth = Math.round((forPct / 100) * BAR_WIDTH);
-  const againstBarWidth = Math.round((againstPct / 100) * BAR_WIDTH);
+  const forBarWidth = Math.min(BAR_WIDTH, Math.max(0, Math.round((forPct / 100) * BAR_WIDTH)));
+  const againstBarWidth = Math.min(BAR_WIDTH, Math.max(0, Math.round((againstPct / 100) * BAR_WIDTH)));
 
   if (compact) {
     return (

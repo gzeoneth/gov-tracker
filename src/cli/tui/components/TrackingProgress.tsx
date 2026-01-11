@@ -79,8 +79,8 @@ export function ProgressBar({
   label,
 }: ProgressBarProps): React.ReactElement {
   const percentage = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
-  const filled = Math.round((percentage / 100) * width);
-  const empty = width - filled;
+  const filled = Math.min(width, Math.round((percentage / 100) * width));
+  const empty = Math.max(0, width - filled);
 
   const filledBar = "█".repeat(filled);
   const emptyBar = "░".repeat(empty);

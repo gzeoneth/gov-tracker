@@ -49,12 +49,15 @@ function formatAge(timestamp: number | null): string {
 function parseProgress(stageProgress: string): { current: number; total: number } | null {
   const match = stageProgress.match(/(\d+)\/(\d+)/);
   if (!match) return null;
-  return { current: parseInt(match[1], 10), total: parseInt(match[2], 10) };
+  const current = parseInt(match[1], 10);
+  const total = parseInt(match[2], 10);
+  if (total <= 0 || current < 0) return null;
+  return { current, total };
 }
 
 function renderProgressBar(progress: { current: number; total: number }): string {
-  const filled = progress.current;
-  const empty = progress.total - progress.current;
+  const filled = Math.max(0, Math.min(progress.current, progress.total));
+  const empty = Math.max(0, progress.total - filled);
   return "█".repeat(filled) + "░".repeat(empty);
 }
 

@@ -74,11 +74,7 @@ export function ProposalList({
     } else if (key.tab) {
       navigation.cycleFilter();
     } else if (input === "d" && tracker.canTrack && !tracker.isTracking) {
-      tracker.discover().then((result) => {
-        if (result.proposals > 0 || result.timelocks > 0) {
-          // Reload would happen via cache hook
-        }
-      });
+      void tracker.discover();
     } else if (input === "e" && tracker.canTrack) {
       navigation.goToElection();
     } else if (input === "g") {
@@ -105,17 +101,17 @@ export function ProposalList({
         {state.isSearching && (
           <Box marginBottom={1}>
             <Text color="cyan">Search: </Text>
-            <Text>{state.searchQuery}</Text>
+            {state.searchQuery ? <Text>{state.searchQuery}</Text> : null}
             <Text color="gray">█</Text>
             <Text color="gray"> (Esc to cancel)</Text>
           </Box>
         )}
 
-        {!state.isSearching && state.searchQuery && (
+        {!state.isSearching && state.searchQuery ? (
           <Box marginBottom={1}>
             <Text color="gray">Filter: "{state.searchQuery}" (/ to search)</Text>
           </Box>
-        )}
+        ) : null}
 
         {tracker.isTracking && tracker.progress && (
           <Box marginBottom={1}>

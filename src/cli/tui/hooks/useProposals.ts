@@ -32,8 +32,9 @@ function extractMarkdownTitle(description: string): string | null {
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith("#")) {
-      // Remove leading # symbols and trim
-      return trimmed.replace(/^#+\s*/, "").trim();
+      const title = trimmed.replace(/^#+\s*/, "").trim();
+      // Return null if empty so fallback logic continues
+      return title || null;
     }
   }
   return null;

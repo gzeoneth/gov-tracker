@@ -234,7 +234,7 @@ export function CalldataView({
           const foldIndicator = line.foldable
             ? isExpanded
               ? "[-] "
-              : `[+${line.foldedLineCount}] `
+              : `[+${line.foldedLineCount ?? 0}] `
             : "";
           return (
             <Text key={i}>

@@ -29,6 +29,14 @@ interface StageViewProps {
   navigation: UseNavigationResult;
 }
 
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "[complex object]";
+  }
+}
+
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "N/A";
   if (typeof value === "string") return value;
@@ -36,10 +44,10 @@ function formatValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
-    if (value.length <= 3) return JSON.stringify(value);
+    if (value.length <= 3) return safeStringify(value);
     return `[${value.length} items]`;
   }
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") return safeStringify(value);
   return String(value);
 }
 
@@ -131,6 +139,8 @@ export function StageView({
       navigation.goToTop();
     } else if (input === "G") {
       navigation.goToBottom(dataItems.length);
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

@@ -224,7 +224,13 @@ export function useNavigation(): UseNavigationResult {
   const goToSubView = useCallback((targetView: ViewType) => {
     setState((prev) => {
       if (prev.view !== "detail" && prev.view !== "list") return prev;
-      return { ...prev, view: targetView, scrollOffset: 0, calldataActionIndex: 0 };
+      return {
+        ...prev,
+        view: targetView,
+        scrollOffset: 0,
+        calldataActionIndex: 0,
+        isSearching: false,
+      };
     });
   }, []);
 
@@ -234,7 +240,13 @@ export function useNavigation(): UseNavigationResult {
   const goToElection = useCallback(() => goToSubView("election"), [goToSubView]);
 
   const goToStage = useCallback((index: number) => {
-    setState((prev) => ({ ...prev, view: "stage", selectedStageIndex: index, scrollOffset: 0 }));
+    const clampedIndex = Math.max(0, Math.min(6, index));
+    setState((prev) => ({
+      ...prev,
+      view: "stage",
+      selectedStageIndex: clampedIndex,
+      scrollOffset: 0,
+    }));
   }, []);
 
   const nextAction = useCallback((maxIndex: number) => {

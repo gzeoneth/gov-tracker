@@ -20,6 +20,7 @@ interface ElectionData {
   proposals: ElectionProposalStatus[];
   loading: boolean;
   error: string | null;
+  warning: string | null;
 }
 
 function formatTimestamp(ts: number): string {
@@ -48,6 +49,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
     proposals: [],
     loading: true,
     error: null,
+    warning: null,
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -58,6 +60,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
         proposals: [],
         loading: false,
         error: "RPC providers required. Use --l2-rpc and --l1-rpc options.",
+        warning: null,
       });
       return;
     }
@@ -95,6 +98,9 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
             error: failedCount > 0 && proposals.length === 0
               ? `Failed to load ${failedCount} election(s)`
               : null,
+            warning: failedCount > 0 && proposals.length > 0
+              ? `Loaded ${proposals.length} election(s), ${failedCount} failed`
+              : null,
           });
         }
       } catch (err) {
@@ -104,6 +110,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
             proposals: [],
             loading: false,
             error: err instanceof Error ? err.message : String(err),
+            warning: null,
           });
         }
       }
@@ -126,7 +133,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
     }
   });
 
-  const { status, proposals } = data;
+  const { status, proposals, warning } = data;
 
   return (
     <ViewLayout
@@ -138,6 +145,11 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
       skeletonType="detail"
       error={data.error}
     >
+      {warning && (
+        <Box marginBottom={1}>
+          <Text color="yellow">[Warning] {warning}</Text>
+        </Box>
+      )}
       {status && (
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>Security Council Election Status</Text>

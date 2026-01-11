@@ -60,7 +60,7 @@ export function ScrollBar({
   if (totalItems <= visibleRows) return null;
 
   const scrollRatio = scrollOffset / Math.max(1, totalItems - visibleRows);
-  const thumbPosition = Math.round(scrollRatio * (height - 1));
+  const thumbPosition = Math.min(height - 1, Math.round(scrollRatio * (height - 1)));
 
   const chars = Array.from({ length: height }, (_, i) =>
     i === thumbPosition ? "█" : "░"

@@ -2,7 +2,7 @@
  * Full proposal description view with markdown rendering
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, Box, Text, useInput, KeyInput, useMemo } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
@@ -184,7 +184,10 @@ export function DescriptionView({
   const { state } = navigation;
   const description = getDescription(proposal);
   const terminalWidth = process.stdout.columns || 80;
-  const lines = parseMarkdown(description, terminalWidth - 4);
+  const lines = useMemo(
+    () => parseMarkdown(description, terminalWidth - 4),
+    [description, terminalWidth]
+  );
   const visibleCount = getVisibleRows(RESERVED_LINES);
   const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
 
@@ -203,6 +206,8 @@ export function DescriptionView({
       navigation.goToTop();
     } else if (input === "G") {
       navigation.goToBottom(lines.length);
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

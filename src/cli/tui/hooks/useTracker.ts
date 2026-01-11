@@ -5,7 +5,7 @@
  * Individual proposal tracking is done directly for better UX.
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import type {
   TrackingResult,
   TrackingProgress,
@@ -68,6 +68,14 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
   const [preparedTxs, setPreparedTxs] = useState<PreparedTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const isTrackingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const cliProcess = useCliProcess();
 
@@ -164,12 +172,16 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setError(message);
+        if (mountedRef.current) {
+          setError(message);
+        }
         return null;
       } finally {
         isTrackingRef.current = false;
-        setIsTracking(false);
-        setProgress(null);
+        if (mountedRef.current) {
+          setIsTracking(false);
+          setProgress(null);
+        }
       }
     },
     [options.providers, createTrackerInstance]
@@ -198,15 +210,18 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
     const result = await cliProcess.run(args);
 
     isTrackingRef.current = false;
-    setIsTracking(false);
+    if (mountedRef.current) {
+      setIsTracking(false);
+      if (!result.success) {
+        setError(result.error ?? "Discovery failed");
+      }
+    }
 
     if (result.success) {
       options.onDiscoveryComplete?.();
       return true;
-    } else {
-      setError(result.error ?? "Discovery failed");
-      return false;
     }
+    return false;
   }, [cliProcess, options]);
 
   // Sync progress from CLI process

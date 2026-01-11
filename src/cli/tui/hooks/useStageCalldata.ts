@@ -58,17 +58,27 @@ export function useStageCalldata(
         const chainContext: Chain = "arb1";
         const decoded: DecodedAction[] = [];
 
+        let decodeErrors = 0;
         for (let i = 0; i < calldatas.length; i++) {
           if (cancelled) return;
-          const result = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
-          decoded.push({
-            target: targets[i],
-            value: values[i],
-            decoded: result,
-          });
+          try {
+            const result = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
+            decoded.push({
+              target: targets[i],
+              value: values[i],
+              decoded: result,
+            });
+          } catch {
+            decodeErrors++;
+          }
         }
 
-        if (!cancelled) setActions(decoded);
+        if (!cancelled) {
+          setActions(decoded);
+          if (decodeErrors > 0 && decoded.length === 0) {
+            setError(`Failed to decode ${decodeErrors} action(s)`);
+          }
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       } finally {

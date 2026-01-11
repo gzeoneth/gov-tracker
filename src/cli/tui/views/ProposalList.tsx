@@ -39,7 +39,7 @@ export function ProposalList({
 
   const startIndex = Math.max(
     0,
-    Math.min(selectedIndex - Math.floor(visibleRows / 2), items.length - visibleRows)
+    Math.min(selectedIndex - Math.floor(visibleRows / 2), Math.max(0, items.length - visibleRows))
   );
   const visibleItems = items.slice(startIndex, startIndex + visibleRows);
 

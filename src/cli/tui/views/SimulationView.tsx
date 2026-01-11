@@ -50,6 +50,12 @@ export function SimulationView({
       setSelectedIndex((prev) => Math.min(simulations.length - 1, prev + 1));
     } else if (key.return) {
       setInputExpanded((prev) => !prev);
+    } else if (input === "g") {
+      setSelectedIndex(0);
+    } else if (input === "G" && simulations.length > 0) {
+      setSelectedIndex(simulations.length - 1);
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

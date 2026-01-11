@@ -750,18 +750,45 @@ export async function runMonitorCycle(
   const currentBlock = Math.max(0, tipBlock - blockLag);
   const concurrency = options.concurrency ?? 1;
   const limit = pLimit(concurrency);
+  const maxAgeDays = options.maxAgeDays ?? DEFAULT_MAX_AGE_DAYS;
 
-  // Optional startBlock override (watermarks are exclusive, so subtract 1)
-  const startBlockWatermarks: DiscoveryWatermarks | undefined = options.startBlock
-    ? {
-        constitutionalGovernor: options.startBlock - 1,
-        nonConstitutionalGovernor: options.startBlock - 1,
-        electionNomineeGovernor: options.startBlock - 1,
-        electionMemberGovernor: options.startBlock - 1,
-        l2ConstitutionalTimelock: options.startBlock - 1,
-        l2NonConstitutionalTimelock: options.startBlock - 1,
-      }
-    : undefined;
+  // Calculate startBlock based on maxAgeDays if not explicitly provided
+  // ~7200 blocks per day on Arbitrum (12s block time on L1, ~250ms on L2)
+  const BLOCKS_PER_DAY = 86400 / 0.25; // ~345,600 blocks/day on Arbitrum One
+  let startBlockWatermarks: DiscoveryWatermarks | undefined;
+
+  if (options.startBlock !== undefined) {
+    // Explicit startBlock override (watermarks are exclusive, so subtract 1)
+    startBlockWatermarks = {
+      constitutionalGovernor: options.startBlock - 1,
+      nonConstitutionalGovernor: options.startBlock - 1,
+      electionNomineeGovernor: options.startBlock - 1,
+      electionMemberGovernor: options.startBlock - 1,
+      l2ConstitutionalTimelock: options.startBlock - 1,
+      l2NonConstitutionalTimelock: options.startBlock - 1,
+    };
+  } else {
+    // Check if cache has watermarks, if not use maxAgeDays to limit discovery
+    const cachedWatermarks = await tracker.loadWatermarks();
+    const hasWatermarks =
+      cachedWatermarks && Object.values(cachedWatermarks).some((v) => v !== undefined);
+
+    if (!hasWatermarks) {
+      // No cache - calculate start block from maxAgeDays
+      const defaultStartBlock = Math.max(0, currentBlock - Math.floor(maxAgeDays * BLOCKS_PER_DAY));
+      startBlockWatermarks = {
+        constitutionalGovernor: defaultStartBlock,
+        nonConstitutionalGovernor: defaultStartBlock,
+        electionNomineeGovernor: defaultStartBlock,
+        electionMemberGovernor: defaultStartBlock,
+        l2ConstitutionalTimelock: defaultStartBlock,
+        l2NonConstitutionalTimelock: defaultStartBlock,
+      };
+      console.log(
+        `No cached watermarks found. Starting discovery from ~${maxAgeDays} days ago (block ${defaultStartBlock})`
+      );
+    }
+  }
 
   const targets = buildDefaultTargets();
   const discoveryResult = await tracker.discoverAll(targets, currentBlock, startBlockWatermarks);
@@ -833,7 +860,6 @@ export async function runMonitorCycle(
   }
 
   // Query incomplete checkpoints first to avoid duplicate tracking
-  const maxAgeDays = options.maxAgeDays ?? DEFAULT_MAX_AGE_DAYS;
   const incompleteCheckpoints = await tracker.queryIncompleteCheckpoints({
     maxAgeDays,
     maxErrorCount: MAX_CONSECUTIVE_ERRORS,

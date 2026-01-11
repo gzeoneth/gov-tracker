@@ -266,11 +266,12 @@ async function trackTimelock(
   // Add base data
   builder.data({ operationId, timelockAddress, state: operationState.state, eta });
 
-  // Collect scheduled data - used for predecessor caching and batch detection.
-  // Only STORE in stage.data for L1_TIMELOCK (L2_TIMELOCK skips to avoid duplication
-  // with PROPOSAL_QUEUED - callers use options.stages during preparation).
+  // Collect scheduled data - used for predecessor caching, batch detection, and calldata display.
+  // Store in L1_TIMELOCK always, and in L2_TIMELOCK when there's no PROPOSAL_QUEUED stage
+  // (e.g., Security Council operations that start directly from timelock).
   const allData = collectAllScheduledData(timelockState);
-  if (config.stageType === "L1_TIMELOCK" && allData.length > 0) {
+  const hasProposalQueuedStage = options.allStages?.some((s) => s.type === "PROPOSAL_QUEUED");
+  if (allData.length > 0 && (config.stageType === "L1_TIMELOCK" || !hasProposalQueuedStage)) {
     builder.data({ callScheduledData: serializeCallScheduledDataArray(allData) });
   }
 

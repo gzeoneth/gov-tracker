@@ -18,6 +18,7 @@ export function wrapText(text: string, width: number): string[] {
  * Truncate text with ellipsis if it exceeds maxLen
  */
 export function truncate(str: string, maxLen: number): string {
+  if (maxLen <= 1) return str.length > 0 ? "…" : "";
   if (str.length <= maxLen) return str;
   return str.slice(0, maxLen - 1) + "…";
 }

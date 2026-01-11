@@ -5,7 +5,7 @@
  * which is the single source of truth for tracking operations.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { spawn, type ChildProcess } from "child_process";
 import { join } from "path";
 import { existsSync } from "fs";
@@ -52,6 +52,14 @@ export function useCliProcess(): UseCliProcessResult {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const processRef = useRef<ChildProcess | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const cancel = useCallback(() => {
     if (processRef.current) {
@@ -85,11 +93,15 @@ export function useCliProcess(): UseCliProcessResult {
           if (resolved) return;
           resolved = true;
           clearTimeout(timeoutId);
+          proc.stdout?.removeAllListeners();
+          proc.stderr?.removeAllListeners();
           processRef.current = null;
-          setIsRunning(false);
-          setProgress(null);
-          if (!result.success && result.error) {
-            setError(result.error);
+          if (mountedRef.current) {
+            setIsRunning(false);
+            setProgress(null);
+            if (!result.success && result.error) {
+              setError(result.error);
+            }
           }
           resolve(result);
         };
@@ -102,6 +114,7 @@ export function useCliProcess(): UseCliProcessResult {
         }, CLI_TIMEOUT_MS);
 
         proc.stdout?.on("data", (data: Buffer) => {
+          if (!mountedRef.current) return;
           const lines = data.toString().split("\n").filter(Boolean);
           for (const line of lines) {
             const trimmed = line.trim();
@@ -109,7 +122,11 @@ export function useCliProcess(): UseCliProcessResult {
               trimmed.startsWith("[") ||
               trimmed.startsWith("Discovering") ||
               trimmed.startsWith("Found") ||
-              trimmed.startsWith("Tracking")
+              trimmed.startsWith("Tracking") ||
+              trimmed.startsWith("No cached") ||
+              trimmed.startsWith("Starting") ||
+              trimmed.includes("proposals") ||
+              trimmed.includes("operations")
             ) {
               setProgress(trimmed);
             }

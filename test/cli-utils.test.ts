@@ -1226,6 +1226,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1265,6 +1266,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1303,6 +1305,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1338,6 +1341,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockRejectedValue(new Error("RPC error")),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1387,6 +1391,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1432,6 +1437,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1458,6 +1464,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1502,6 +1509,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1556,6 +1564,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockProposalResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1605,6 +1614,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1639,6 +1649,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([]), // Returns empty array
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1695,6 +1706,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([nonMatchingResult, matchingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -1753,6 +1765,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 

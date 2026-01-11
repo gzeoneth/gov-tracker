@@ -5,7 +5,7 @@
  */
 
 import { React, Box, Text, useApp } from "./ink-wrapper.js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import type { ProviderBundle } from "../lib/cli.js";
 import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
 import { loadConfigWithStatus } from "./config.js";
@@ -20,6 +20,39 @@ import { HelpView } from "./views/HelpView.js";
 import { SettingsView } from "./views/SettingsView.js";
 import { Spinner } from "./components/Spinner.js";
 import { SkeletonList } from "./components/Skeleton.js";
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error("TUI Error:", error, errorInfo);
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <Box flexDirection="column" padding={1}>
+          <Text color="red" bold>Something went wrong</Text>
+          <Text color="gray">{this.state.error?.message ?? "Unknown error"}</Text>
+          <Text color="gray" marginTop={1}>Press q to quit</Text>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export interface AppProps {
   cachePath: string;
@@ -166,13 +199,15 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   };
 
   return (
-    <Box flexDirection="column" height={terminalHeight}>
-      {configWarning && (
-        <Box paddingX={1}>
-          <Text color="yellow">[Warning] {configWarning}</Text>
-        </Box>
-      )}
-      {renderView()}
-    </Box>
+    <ErrorBoundary>
+      <Box flexDirection="column" height={terminalHeight}>
+        {configWarning && (
+          <Box paddingX={1}>
+            <Text color="yellow">[Warning] {configWarning}</Text>
+          </Box>
+        )}
+        {renderView()}
+      </Box>
+    </ErrorBoundary>
   );
 }

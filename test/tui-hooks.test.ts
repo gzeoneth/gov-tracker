@@ -25,6 +25,7 @@ vi.mock("react", () => {
     useCallback: (fn: unknown) => fn,
     useMemo: (fn: unknown) => (fn as () => unknown)(),
     useRef: (initial: unknown) => ({ current: initial }),
+    useEffect: () => {},
   };
 });
 

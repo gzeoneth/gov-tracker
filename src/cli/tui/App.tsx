@@ -17,6 +17,7 @@ import { DescriptionView } from "./views/DescriptionView.js";
 import { ElectionView } from "./views/ElectionView.js";
 import { HelpView } from "./views/HelpView.js";
 import { Spinner } from "./components/Spinner.js";
+import { SkeletonList } from "./components/Skeleton.js";
 
 export interface AppProps {
   cachePath: string;
@@ -65,8 +66,13 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   if (cache.loading) {
     return (
       <Box flexDirection="column" height={terminalHeight} padding={1}>
-        <Spinner text="Loading cache..." />
-        <Text color="gray">{cachePath}</Text>
+        <Box marginBottom={1}>
+          <Spinner text="Loading proposals..." />
+        </Box>
+        <SkeletonList rows={10} columns={[3, 45, 12, 10]} />
+        <Box marginTop={1}>
+          <Text color="gray">{cachePath}</Text>
+        </Box>
       </Box>
     );
   }

@@ -3,11 +3,21 @@
  */
 
 import { React, Box, Text } from "../ink-wrapper.js";
-import type { ViewType } from "../types.js";
+import type { ViewType, FilterType, SortType } from "../types.js";
+
+interface ContextInfo {
+  filter?: FilterType;
+  sort?: SortType;
+  isSearching?: boolean;
+  hasSearch?: boolean;
+  calldataActionCount?: number;
+  currentActionIndex?: number;
+}
 
 interface KeyHelpProps {
   view: ViewType;
   hasProviders: boolean;
+  context?: ContextInfo;
 }
 
 interface KeyBinding {
@@ -94,11 +104,75 @@ function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
   }
 }
 
-export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElement {
+const SORT_DISPLAY: Record<SortType, string> = {
+  newest: "Newest",
+  oldest: "Oldest",
+  progress: "Progress",
+  status: "Status",
+};
+
+function ContextIndicators({ view, context }: { view: ViewType; context?: ContextInfo }): React.ReactElement | null {
+  if (view !== "list" || !context) return null;
+
+  const indicators: React.ReactElement[] = [];
+
+  if (context.isSearching) {
+    indicators.push(
+      <Text key="search" color="yellow">[SEARCHING] </Text>
+    );
+  } else if (context.hasSearch) {
+    indicators.push(
+      <Box key="search-active" marginRight={1}>
+        <Text color="green">⚲ </Text>
+        <Text color="gray">Esc:Clear</Text>
+      </Box>
+    );
+  }
+
+  if (context.filter && context.filter !== "all") {
+    indicators.push(
+      <Box key="filter" marginRight={1}>
+        <Text color="magenta">{context.filter.toUpperCase()}</Text>
+      </Box>
+    );
+  }
+
+  if (context.sort && context.sort !== "newest") {
+    indicators.push(
+      <Box key="sort" marginRight={1}>
+        <Text color="blue">↕{SORT_DISPLAY[context.sort]}</Text>
+      </Box>
+    );
+  }
+
+  if (indicators.length === 0) return null;
+
+  return (
+    <Box marginRight={2}>
+      {indicators}
+      <Text color="gray">│</Text>
+    </Box>
+  );
+}
+
+function CalldataIndicator({ context }: { context?: ContextInfo }): React.ReactElement | null {
+  if (!context?.calldataActionCount || context.calldataActionCount <= 1) return null;
+
+  return (
+    <Box marginRight={2}>
+      <Text color="yellow">Action {(context.currentActionIndex ?? 0) + 1}/{context.calldataActionCount}</Text>
+      <Text color="gray"> │</Text>
+    </Box>
+  );
+}
+
+export function KeyHelp({ view, hasProviders, context }: KeyHelpProps): React.ReactElement {
   const keys = getKeysForView(view, hasProviders);
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1}>
+      <ContextIndicators view={view} context={context} />
+      {view === "calldata" && <CalldataIndicator context={context} />}
       {keys.map((binding) => (
         <Box key={binding.key} marginRight={2}>
           <Text color="cyan">{binding.key}</Text>

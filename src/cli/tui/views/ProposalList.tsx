@@ -152,7 +152,16 @@ export function ProposalList({
         )}
       </Box>
 
-      <KeyHelp view="list" hasProviders={tracker.canTrack} />
+      <KeyHelp
+        view="list"
+        hasProviders={tracker.canTrack}
+        context={{
+          filter: state.filter,
+          sort: state.sort,
+          isSearching: state.isSearching,
+          hasSearch: !!state.searchQuery,
+        }}
+      />
     </Box>
   );
 }

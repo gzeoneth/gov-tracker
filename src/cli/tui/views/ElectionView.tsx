@@ -120,6 +120,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
       isTracking={data.loading}
       loading={data.loading}
       loadingText="Loading election status..."
+      skeletonType="detail"
       error={data.error}
     >
       {status && (

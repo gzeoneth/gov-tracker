@@ -60,14 +60,14 @@ export function SimulationView({
 
   if (simulations.length === 0) {
     return (
-      <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error} breadcrumb={breadcrumb}>
+      <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Extracting simulations..." skeletonType="detail" error={error} breadcrumb={breadcrumb}>
         <Text color="gray">No simulatable calls found in this proposal</Text>
       </ViewLayout>
     );
   }
 
   return (
-    <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error} breadcrumb={breadcrumb}>
+    <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Extracting simulations..." skeletonType="detail" error={error} breadcrumb={breadcrumb}>
       <Box marginBottom={1}>
         <Text color="cyan">Simulation {selectedIndex + 1}/{simulations.length}</Text>
         {simulations.length > 1 && <Text color="gray"> (use ↑↓ to navigate)</Text>}

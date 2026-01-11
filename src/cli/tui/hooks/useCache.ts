@@ -7,6 +7,18 @@ import type { TrackingCheckpoint, TrackerStats } from "../../../types/index.js";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
 import type { CacheData } from "../types.js";
 
+interface VotingData {
+  proposalState?: string;
+}
+
+function isDefeatedOrCanceled(checkpoint: TrackingCheckpoint): boolean {
+  const stages = checkpoint.cachedData.completedStages ?? [];
+  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
+  if (!votingStage?.data) return false;
+  const votingData = votingStage.data as VotingData;
+  return votingData.proposalState === "Defeated" || votingData.proposalState === "Canceled";
+}
+
 function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStats {
   const stats: TrackerStats = {
     total: 0,
@@ -20,8 +32,11 @@ function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStat
 
     stats.total++;
     const stages = checkpoint.cachedData.completedStages ?? [];
-    const isComplete = stages.length === 7 && stages.every((s) => s.status === "COMPLETED");
+    const lastStage = stages[stages.length - 1];
+    const isComplete =
+      stages.length === 7 && (lastStage?.status === "COMPLETED" || lastStage?.status === "SKIPPED");
     const hasError = (checkpoint.metadata?.errorCount ?? 0) >= 5;
+    const isFailed = hasError || isDefeatedOrCanceled(checkpoint);
 
     const isElection = stages.some((s) => {
       if (s.type === "PROPOSAL_CREATED" && s.data) {
@@ -38,13 +53,13 @@ function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStat
       } else {
         stats.proposals.total++;
         if (isComplete) stats.proposals.complete++;
-        else if (hasError) stats.proposals.errored++;
+        else if (isFailed) stats.proposals.errored++;
         else stats.proposals.active++;
       }
     } else if (checkpoint.input.type === "timelock") {
       stats.timelocks.total++;
       if (isComplete) stats.timelocks.complete++;
-      else if (hasError) stats.timelocks.errored++;
+      else if (isFailed) stats.timelocks.errored++;
       else stats.timelocks.active++;
     }
   }

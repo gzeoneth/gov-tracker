@@ -11,3 +11,6 @@ export type { UseTrackerResult, UseTrackerOptions } from "./useTracker.js";
 
 export { useStageCalldata } from "./useStageCalldata.js";
 export type { UseStageCalldataResult, DecodedAction } from "./useStageCalldata.js";
+
+export { useCliProcess } from "./useCliProcess.js";
+export type { UseCliProcessResult, CliProcessResult } from "./useCliProcess.js";

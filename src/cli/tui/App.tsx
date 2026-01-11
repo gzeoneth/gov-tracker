@@ -45,7 +45,11 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   const cache = useCache(cachePath);
   const navigation = useNavigation();
   const { items } = useProposals(cache.data, navigation.state.filter, navigation.state.searchQuery, navigation.state.sort);
-  const tracker = useTracker({ providers: providerBundle, cachePath });
+  const tracker = useTracker({
+    providers: providerBundle,
+    cachePath,
+    onDiscoveryComplete: cache.reload,
+  });
   const terminalHeight = useTerminalHeight();
 
   useEffect(() => {

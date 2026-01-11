@@ -1,28 +1,22 @@
 /**
  * Live tracking hook for TUI
  *
- * Provides tracking functionality when RPC providers are available.
+ * Discovery is delegated to CLI subprocess for simplicity.
+ * Individual proposal tracking is done directly for better UX.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   TrackingResult,
   TrackingProgress,
   PreparedTransaction,
-  DiscoveryWatermarks,
   ChunkingConfig,
 } from "../../../types/index.js";
-import {
-  createTracker,
-  ProposalStageTracker,
-  CHUNK_SIZES,
-  extractOperationId,
-} from "../../../index.js";
+import { createTracker, ProposalStageTracker, CHUNK_SIZES } from "../../../index.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
-import { loadConfig } from "../config.js";
-
-const BLOCKS_PER_DAY_L2 = (24 * 60 * 60) / 0.25; // ~345,600 blocks/day on Arbitrum
+import { loadConfig, type TuiConfig } from "../config.js";
+import { useCliProcess } from "./useCliProcess.js";
 
 export interface UseTrackerResult {
   isTracking: boolean;
@@ -32,13 +26,36 @@ export interface UseTrackerResult {
   error: string | null;
   canTrack: boolean;
   track: (item: ProposalListItem) => Promise<TrackingResult | null>;
-  discover: () => Promise<{ proposals: number; timelocks: number }>;
+  discover: () => Promise<boolean>;
   clearError: () => void;
 }
 
 export interface UseTrackerOptions {
   providers?: ProviderBundle;
   cachePath: string;
+  onDiscoveryComplete?: () => void;
+}
+
+function buildCliArgs(config: TuiConfig, cachePath: string): string[] {
+  const args = ["run", "--cache", cachePath];
+
+  // RPC URLs from config
+  if (config.rpc.l1Url) args.push("--l1-rpc", config.rpc.l1Url);
+  if (config.rpc.l2Url) args.push("--l2-rpc", config.rpc.l2Url);
+  if (config.rpc.novaUrl) args.push("--nova-rpc", config.rpc.novaUrl);
+
+  // Discovery settings
+  if (config.discovery.startBlock) {
+    args.push("--start-block", config.discovery.startBlock.toString());
+  }
+  if (config.discovery.chunkSize) {
+    args.push("--l2-chunk-size", config.discovery.chunkSize.toString());
+  }
+  if (config.discovery.concurrency > 1) {
+    args.push("--concurrency", config.discovery.concurrency.toString());
+  }
+
+  return args;
 }
 
 export function useTracker(options: UseTrackerOptions): UseTrackerResult {
@@ -49,7 +66,15 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
   const [error, setError] = useState<string | null>(null);
   const isTrackingRef = useRef(false);
 
-  const canTrack = !!options.providers;
+  const cliProcess = useCliProcess();
+
+  // Check if RPC is configured (either via providers or config)
+  // Memoized to avoid re-reading config file on every render
+  const canTrack = useMemo(() => {
+    if (options.providers) return true;
+    const config = loadConfig();
+    return !!(config.rpc.l1Url || config.rpc.l2Url);
+  }, [options.providers]);
 
   const createTrackerInstance = useCallback((): ProposalStageTracker | null => {
     if (!options.providers) return null;
@@ -75,13 +100,14 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
     });
   }, [options.providers, options.cachePath]);
 
+  // Track a single proposal (used in ProposalDetail view)
   const track = useCallback(
     async (item: ProposalListItem): Promise<TrackingResult | null> => {
       if (isTrackingRef.current) {
         return null;
       }
 
-      if (!canTrack) {
+      if (!options.providers) {
         setError("No RPC providers configured. Use --l2-rpc and --l1-rpc options.");
         return null;
       }
@@ -139,149 +165,58 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         setProgress(null);
       }
     },
-    [canTrack, createTrackerInstance]
+    [options.providers, createTrackerInstance]
   );
 
-  const discover = useCallback(async (): Promise<{ proposals: number; timelocks: number }> => {
-    if (isTrackingRef.current) {
-      return { proposals: 0, timelocks: 0 };
+  // Discover new proposals via CLI subprocess
+  const discover = useCallback(async (): Promise<boolean> => {
+    if (cliProcess.isRunning || isTrackingRef.current) {
+      return false;
     }
 
-    if (!canTrack || !options.providers) {
-      setError("No RPC providers configured. Use --l2-rpc and --l1-rpc options.");
-      return { proposals: 0, timelocks: 0 };
-    }
+    const config = loadConfig();
 
-    const tracker = createTrackerInstance();
-    if (!tracker) return { proposals: 0, timelocks: 0 };
+    // Check if we have RPC URLs configured
+    const hasRpcConfig = config.rpc.l1Url || config.rpc.l2Url || options.providers;
+    if (!hasRpcConfig) {
+      setError("No RPC URLs configured. Use Settings (S) to configure or pass --l2-rpc.");
+      return false;
+    }
 
     isTrackingRef.current = true;
     setIsTracking(true);
-    setProgress("Discovering new proposals...");
     setError(null);
 
-    try {
-      const toBlock = await options.providers.l2Provider.getBlockNumber();
-      const { buildDefaultTargets } = await import("../../../constants");
-      const targets = buildDefaultTargets();
+    const args = buildCliArgs(config, options.cachePath);
+    const result = await cliProcess.run(args);
 
-      // Load cached watermarks and merge with 60-day default for missing keys
-      const cachedWatermarks = await tracker.loadWatermarks();
-      const tuiConfig = loadConfig();
-      // Clamp defaultDays to valid range: 1-365 (falsy values default to 60)
-      const rawDefaultDays = tuiConfig.discovery.defaultDays || 60;
-      const defaultDays = Math.max(1, Math.min(365, rawDefaultDays));
-      const defaultFromBlock = Math.max(0, toBlock - Math.floor(BLOCKS_PER_DAY_L2 * defaultDays));
+    isTrackingRef.current = false;
+    setIsTracking(false);
 
-      // All required watermark keys
-      const requiredKeys = [
-        "constitutionalGovernor",
-        "nonConstitutionalGovernor",
-        "electionNomineeGovernor",
-        "electionMemberGovernor",
-        "l2ConstitutionalTimelock",
-        "l2NonConstitutionalTimelock",
-      ] as const;
-
-      // Check if all watermarks are present
-      const hasAllWatermarks = requiredKeys.every((key) => cachedWatermarks[key] !== undefined);
-
-      let fromWatermarks: DiscoveryWatermarks | undefined;
-      if (!hasAllWatermarks) {
-        // Missing watermarks - fill with 60-day default, preserve existing
-        setProgress(`Discovering proposals from last ${defaultDays} days...`);
-        fromWatermarks = {
-          constitutionalGovernor: cachedWatermarks.constitutionalGovernor ?? defaultFromBlock,
-          nonConstitutionalGovernor: cachedWatermarks.nonConstitutionalGovernor ?? defaultFromBlock,
-          electionNomineeGovernor: cachedWatermarks.electionNomineeGovernor ?? defaultFromBlock,
-          electionMemberGovernor: cachedWatermarks.electionMemberGovernor ?? defaultFromBlock,
-          l2ConstitutionalTimelock: cachedWatermarks.l2ConstitutionalTimelock ?? defaultFromBlock,
-          l2NonConstitutionalTimelock:
-            cachedWatermarks.l2NonConstitutionalTimelock ?? defaultFromBlock,
-        };
-      }
-
-      const { proposals, timelockOps } = await tracker.discoverAll(
-        targets,
-        toBlock,
-        fromWatermarks
-      );
-
-      if (proposals.length === 0 && timelockOps.length === 0) {
-        return { proposals: 0, timelocks: 0 };
-      }
-
-      // Phase 1: Track proposals first and collect their operationIds
-      const trackedOperationIds = new Set<string>();
-      let tracked = 0;
-
-      setProgress(`Tracking ${proposals.length} proposals...`);
-      for (const proposal of proposals) {
-        tracked++;
-        setProgress(
-          `Tracking ${tracked}/${proposals.length}: proposal ${proposal.proposalId.slice(0, 8)}...`
-        );
-        try {
-          const results = await tracker.trackByTxHash(proposal.creationTxHash);
-          // Collect operationIds from tracked proposals to deduplicate timelocks
-          for (const result of results) {
-            const stages = result.stages ?? [];
-            const opId = extractOperationId(stages);
-            if (opId) trackedOperationIds.add(opId.toLowerCase());
-            // Also check timelockLink for proposals that spawned timelocks
-            if (result.timelockLink?.operationId) {
-              trackedOperationIds.add(result.timelockLink.operationId.toLowerCase());
-            }
-          }
-        } catch {
-          // Continue tracking others even if one fails
-        }
-      }
-
-      // Phase 2: Filter and track timelocks (exclude those already linked to proposals)
-      const uniqueTimelocks = timelockOps.filter(
-        (op) => !trackedOperationIds.has(op.operationId.toLowerCase())
-      );
-      const filteredCount = timelockOps.length - uniqueTimelocks.length;
-      if (filteredCount > 0) {
-        setProgress(`Filtered ${filteredCount} duplicate timelocks`);
-      }
-
-      tracked = 0;
-      for (const op of uniqueTimelocks) {
-        tracked++;
-        setProgress(
-          `Tracking ${tracked}/${uniqueTimelocks.length}: timelock ${op.operationId.slice(0, 10)}...`
-        );
-        try {
-          await tracker.trackByTxHash(op.scheduledTxHash);
-        } catch {
-          // Continue tracking others even if one fails
-        }
-      }
-
-      return { proposals: proposals.length, timelocks: uniqueTimelocks.length };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      return { proposals: 0, timelocks: 0 };
-    } finally {
-      isTrackingRef.current = false;
-      setIsTracking(false);
-      setProgress(null);
+    if (result.success) {
+      options.onDiscoveryComplete?.();
+      return true;
+    } else {
+      setError(result.error ?? "Discovery failed");
+      return false;
     }
-  }, [canTrack, createTrackerInstance, options.providers]);
+  }, [cliProcess, options]);
+
+  // Sync progress from CLI process
+  const combinedProgress = cliProcess.progress ?? progress;
+  const combinedError = cliProcess.error ?? error;
+  const combinedIsTracking = cliProcess.isRunning || isTracking;
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
   return {
-    isTracking,
-    progress,
+    isTracking: combinedIsTracking,
+    progress: combinedProgress,
     lastResult,
     preparedTxs,
-    error,
+    error: combinedError,
     canTrack,
     track,
     discover,

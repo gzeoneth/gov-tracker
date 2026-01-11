@@ -45,6 +45,9 @@ function buildCliArgs(config: TuiConfig, cachePath: string): string[] {
   if (config.rpc.novaUrl) args.push("--nova-rpc", config.rpc.novaUrl);
 
   // Discovery settings
+  if (config.discovery.defaultDays) {
+    args.push("--max-age-days", config.discovery.defaultDays.toString());
+  }
   if (config.discovery.startBlock) {
     args.push("--start-block", config.discovery.startBlock.toString());
   }

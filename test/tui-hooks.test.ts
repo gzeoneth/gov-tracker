@@ -226,6 +226,8 @@ describe("useTracker discovery via CLI subprocess", () => {
         "http://l2.example.com",
         "--nova-rpc",
         "http://nova.example.com",
+        "--max-age-days",
+        "60",
         "--start-block",
         "12345",
         "--l2-chunk-size",

@@ -4,6 +4,11 @@
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { UseNavigationResult } from "../hooks/index.js";
+import {
+  ScrollIndicatorTop,
+  ScrollIndicatorBottom,
+  ScrollPosition,
+} from "../components/ScrollIndicator.js";
 import { getVisibleRows } from "../utils/index.js";
 
 interface HelpViewProps {
@@ -132,9 +137,18 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
       </Box>
 
       <Box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
+        {allLines.length > visibleRows && (
+          <Box marginBottom={1}>
+            <ScrollPosition
+              scrollOffset={state.scrollOffset}
+              visibleRows={visibleRows}
+              totalItems={allLines.length}
+            />
+          </Box>
+        )}
         {hasLess && (
           <Box marginBottom={1}>
-            <Text color="gray">↑ {state.scrollOffset} more above</Text>
+            <ScrollIndicatorTop scrollOffset={state.scrollOffset} />
           </Box>
         )}
 
@@ -154,7 +168,11 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
 
         {hasMore && (
           <Box marginTop={1}>
-            <Text color="gray">↓ {allLines.length - state.scrollOffset - visibleRows} more below</Text>
+            <ScrollIndicatorBottom
+              scrollOffset={state.scrollOffset}
+              visibleRows={visibleRows}
+              totalItems={allLines.length}
+            />
           </Box>
         )}
       </Box>

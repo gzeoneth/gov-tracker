@@ -2,10 +2,15 @@
  * Full proposal description view with markdown rendering
  */
 
-import { React, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
+import {
+  ScrollIndicatorTop,
+  ScrollIndicatorBottom,
+  ScrollPosition,
+} from "../components/ScrollIndicator.js";
 import { getVisibleRows } from "../utils/index.js";
 
 interface DescriptionViewProps {
@@ -205,13 +210,25 @@ export function DescriptionView({
 
   return (
     <ViewLayout view="description" title="Proposal Description" breadcrumb={breadcrumb}>
-      {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
+      {lines.length > visibleCount && (
+        <Box marginBottom={1}>
+          <ScrollPosition
+            scrollOffset={state.scrollOffset}
+            visibleRows={visibleCount}
+            totalItems={lines.length}
+          />
+        </Box>
+      )}
+      <ScrollIndicatorTop scrollOffset={state.scrollOffset} unit="lines" />
       {visibleLines.map((line, i) => (
         <FormattedLineComponent key={i} line={line} />
       ))}
-      {state.scrollOffset + visibleCount < lines.length && (
-        <Text color="gray">↓ {lines.length - state.scrollOffset - visibleCount} lines below</Text>
-      )}
+      <ScrollIndicatorBottom
+        scrollOffset={state.scrollOffset}
+        visibleRows={visibleCount}
+        totalItems={lines.length}
+        unit="lines"
+      />
     </ViewLayout>
   );
 }

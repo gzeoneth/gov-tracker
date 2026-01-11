@@ -8,6 +8,11 @@ import type { UseNavigationResult } from "../hooks/index.js";
 import type { TrackedStage, Chain } from "../../../types/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { StatusBadge } from "../components/StatusBadge.js";
+import {
+  ScrollIndicatorTop,
+  ScrollIndicatorBottom,
+  ScrollPosition,
+} from "../components/ScrollIndicator.js";
 import { getVisibleRows } from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
@@ -188,14 +193,31 @@ export function StageView({
 
       {dataItems.length > 0 && (
         <Box flexDirection="column">
-          <Text bold>Data:</Text>
-          {state.scrollOffset > 0 && <Text color="gray">  ↑ {state.scrollOffset} items above</Text>}
+          <Box>
+            <Text bold>Data</Text>
+            {dataItems.length > visibleRows && (
+              <Box marginLeft={1}>
+                <ScrollPosition
+                  scrollOffset={state.scrollOffset}
+                  visibleRows={visibleRows}
+                  totalItems={dataItems.length}
+                />
+              </Box>
+            )}
+          </Box>
+          <Box marginLeft={1}>
+            <ScrollIndicatorTop scrollOffset={state.scrollOffset} />
+          </Box>
           {visibleItems.map((item, i) => (
             <Box key={i} marginLeft={1}><Text color="cyan">{item.label}: </Text><Text>{item.value}</Text></Box>
           ))}
-          {state.scrollOffset + visibleRows < dataItems.length && (
-            <Text color="gray">  ↓ {dataItems.length - state.scrollOffset - visibleRows} items below</Text>
-          )}
+          <Box marginLeft={1}>
+            <ScrollIndicatorBottom
+              scrollOffset={state.scrollOffset}
+              visibleRows={visibleRows}
+              totalItems={dataItems.length}
+            />
+          </Box>
         </Box>
       )}
 

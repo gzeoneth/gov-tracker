@@ -7,6 +7,11 @@ import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
+import {
+  ScrollIndicatorTop,
+  ScrollIndicatorBottom,
+  ScrollPosition,
+} from "../components/ScrollIndicator.js";
 import { wrapText, getVisibleRows } from "../utils/index.js";
 import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata.js";
 
@@ -204,7 +209,16 @@ export function CalldataView({
       )}
 
       <Box flexDirection="column">
-        {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
+        {displayLines.length > visibleCount && (
+          <Box marginBottom={1}>
+            <ScrollPosition
+              scrollOffset={state.scrollOffset}
+              visibleRows={visibleCount}
+              totalItems={displayLines.length}
+            />
+          </Box>
+        )}
+        <ScrollIndicatorTop scrollOffset={state.scrollOffset} unit="lines" />
         {visibleLines.map((line, i) => {
           const prefix = "  ".repeat(line.indent);
           const isExpanded = line.foldKey && expandedKeys.has(line.foldKey);
@@ -221,9 +235,12 @@ export function CalldataView({
             </Text>
           );
         })}
-        {state.scrollOffset + visibleCount < displayLines.length && (
-          <Text color="gray">↓ {displayLines.length - state.scrollOffset - visibleCount} lines below</Text>
-        )}
+        <ScrollIndicatorBottom
+          scrollOffset={state.scrollOffset}
+          visibleRows={visibleCount}
+          totalItems={displayLines.length}
+          unit="lines"
+        />
       </Box>
     </ViewLayout>
   );

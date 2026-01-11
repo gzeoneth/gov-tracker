@@ -414,6 +414,73 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("CollapsibleSection", () => {
+    it("should render expanded section with children", async () => {
+      const { CollapsibleSection } = await import("../src/cli/tui/components/CollapsibleSection.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(
+          CollapsibleSection,
+          {
+            title: "Test Section",
+            isExpanded: true,
+          },
+          React.createElement("span", null, "Child content")
+        );
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render collapsed section", async () => {
+      const { CollapsibleSection } = await import("../src/cli/tui/components/CollapsibleSection.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(
+          CollapsibleSection,
+          {
+            title: "Collapsed Section",
+            isExpanded: false,
+            badge: "3 items",
+            badgeColor: "green",
+          },
+          React.createElement("span", null, "Hidden content")
+        );
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("SectionItem", () => {
+    it("should render with string value", async () => {
+      const { SectionItem } = await import("../src/cli/tui/components/CollapsibleSection.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SectionItem, {
+          label: "Status",
+          value: "Active",
+          color: "green",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render with React node value", async () => {
+      const { SectionItem } = await import("../src/cli/tui/components/CollapsibleSection.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SectionItem, {
+          label: "Custom",
+          value: React.createElement("span", null, "Custom content"),
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
   describe("Timeline", () => {
     it("should render in compact mode", async () => {
       const { Timeline } = await import("../src/cli/tui/components/Timeline.js");

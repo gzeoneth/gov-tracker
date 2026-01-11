@@ -1,5 +1,5 @@
 /**
- * TUI Configuration - persistent settings stored in ~/.gov-tracker/config.json
+ * TUI Configuration - persistent settings stored alongside cache file
  */
 
 import * as fs from "fs";
@@ -58,12 +58,28 @@ const DEFAULT_CONFIG: TuiConfig = {
   },
 };
 
+// Module-level cache path for config location
+let configBasePath: string | null = null;
+
+/**
+ * Set the base path for config storage (same directory as cache)
+ * Call this before using loadConfig/saveConfig in TUI context
+ */
+export function setConfigBasePath(cachePath: string): void {
+  // If cachePath is a file, use its directory; if a directory, use it directly
+  const stats = fs.existsSync(cachePath) && fs.statSync(cachePath);
+  configBasePath = stats && stats.isDirectory() ? cachePath : path.dirname(cachePath);
+}
+
 function getConfigDir(): string {
+  if (configBasePath) {
+    return configBasePath;
+  }
   return path.join(os.homedir(), ".gov-tracker");
 }
 
 function getConfigPath(): string {
-  return path.join(getConfigDir(), "config.json");
+  return path.join(getConfigDir(), "tui-config.json");
 }
 
 export function loadConfig(): TuiConfig {

@@ -8,6 +8,7 @@
 import * as fs from "fs";
 import type { ProviderBundle } from "../lib/cli.js";
 import { React, render, checkTuiDependencies } from "./ink-wrapper.js";
+import { setConfigBasePath } from "./config.js";
 
 export interface TuiOptions {
   cachePath: string;
@@ -33,6 +34,9 @@ function checkTtySupport(): void {
 export async function runTui(options: TuiOptions): Promise<void> {
   checkTtySupport();
   checkTuiDependencies();
+
+  // Set config storage path to same directory as cache
+  setConfigBasePath(options.cachePath);
 
   // Set up file logging if logFile is specified
   let logStream: fs.WriteStream | null = null;

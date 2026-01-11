@@ -5,6 +5,7 @@
 import { useMemo } from "react";
 import type { TrackingCheckpoint, StageType, TrackedStage } from "../../../types/index.js";
 import type { ProposalListItem, FilterType, SortType, CacheData } from "../types.js";
+import { isElectionGovernor } from "../../../constants.js";
 
 interface ProposalCreatedData {
   description?: string;
@@ -130,6 +131,9 @@ function getItemType(
 }
 
 function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
+  // Elections have their own view (press 'e'), exclude from main list
+  if (item.type === "election") return false;
+
   switch (filter) {
     case "all":
       return true;
@@ -197,6 +201,14 @@ export function useProposals(
 
       // Handle proposals with no stages yet (discovered but not tracked)
       if (stages.length === 0) {
+        // Skip untracked election proposals - they belong in the Elections view
+        if (
+          checkpoint.input.type === "governor" &&
+          isElectionGovernor(checkpoint.input.governorAddress)
+        ) {
+          continue;
+        }
+
         let title: string;
         if (checkpoint.input.type === "governor") {
           title = `Proposal ${checkpoint.input.proposalId.slice(0, 8)}...`;

@@ -14,9 +14,9 @@ import type {
 import { createTracker, ProposalStageTracker } from "../../../tracker.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
+import { loadConfig } from "../config.js";
 
 const BLOCKS_PER_DAY_L2 = (24 * 60 * 60) / 0.25; // ~345,600 blocks/day on Arbitrum
-const DEFAULT_DISCOVERY_DAYS = 60;
 
 export interface UseTrackerResult {
   isTracking: boolean;
@@ -144,12 +144,11 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
 
       let fromWatermarks: DiscoveryWatermarks | undefined;
       if (!hasWatermarks) {
-        // No cache - default to last 60 days
-        const defaultFromBlock = Math.max(
-          0,
-          toBlock - Math.floor(BLOCKS_PER_DAY_L2 * DEFAULT_DISCOVERY_DAYS)
-        );
-        setProgress(`Discovering proposals from last ${DEFAULT_DISCOVERY_DAYS} days...`);
+        // No cache - use configured default days (default: 60)
+        const tuiConfig = loadConfig();
+        const defaultDays = tuiConfig.discovery.defaultDays || 60;
+        const defaultFromBlock = Math.max(0, toBlock - Math.floor(BLOCKS_PER_DAY_L2 * defaultDays));
+        setProgress(`Discovering proposals from last ${defaultDays} days...`);
         fromWatermarks = {
           constitutionalGovernor: defaultFromBlock,
           nonConstitutionalGovernor: defaultFromBlock,

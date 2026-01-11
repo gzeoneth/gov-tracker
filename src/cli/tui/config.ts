@@ -21,6 +21,7 @@ export interface TuiConfig {
     compactMode: boolean;
   };
   discovery: {
+    defaultDays: number;
     startBlock: number | null;
     chunkSize: number;
     concurrency: number;
@@ -42,6 +43,7 @@ const DEFAULT_CONFIG: TuiConfig = {
     compactMode: false,
   },
   discovery: {
+    defaultDays: 60,
     startBlock: null,
     chunkSize: 50000,
     concurrency: 1,

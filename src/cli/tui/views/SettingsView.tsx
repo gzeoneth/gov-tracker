@@ -33,6 +33,7 @@ function getSettingItems(config: TuiConfig): SettingItem[] {
     { section: "display", key: "theme", label: "Theme", value: config.display.theme, type: "select", options: ["dark", "light"] },
     { section: "display", key: "showProgressBar", label: "Show Progress Bar", value: config.display.showProgressBar ? "yes" : "no", type: "boolean" },
     { section: "display", key: "compactMode", label: "Compact Mode", value: config.display.compactMode ? "yes" : "no", type: "boolean" },
+    { section: "discovery", key: "defaultDays", label: "Default Days", value: config.discovery.defaultDays.toString(), type: "number" },
     { section: "discovery", key: "startBlock", label: "Start Block", value: config.discovery.startBlock?.toString() ?? "(auto)", type: "number" },
     { section: "discovery", key: "chunkSize", label: "Chunk Size", value: config.discovery.chunkSize.toString(), type: "number" },
     { section: "discovery", key: "concurrency", label: "Concurrency", value: config.discovery.concurrency.toString(), type: "number" },

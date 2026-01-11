@@ -8,6 +8,7 @@ import { React, Box, Text, useApp } from "./ink-wrapper.js";
 import { useEffect, useState } from "react";
 import type { ProviderBundle } from "../lib/cli.js";
 import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
+import { loadConfigWithStatus } from "./config.js";
 import { ProposalList } from "./views/ProposalList.js";
 import { ProposalDetail } from "./views/ProposalDetail.js";
 import { CalldataView } from "./views/CalldataView.js";
@@ -51,6 +52,14 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
     onDiscoveryComplete: cache.reload,
   });
   const terminalHeight = useTerminalHeight();
+  const [configWarning, setConfigWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    const { warning } = loadConfigWithStatus();
+    if (warning) {
+      setConfigWarning(warning);
+    }
+  }, []);
 
   useEffect(() => {
     if (verbose && cache.error) {
@@ -158,6 +167,11 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   return (
     <Box flexDirection="column" height={terminalHeight}>
+      {configWarning && (
+        <Box paddingX={1}>
+          <Text color="yellow">[Warning] {configWarning}</Text>
+        </Box>
+      )}
       {renderView()}
     </Box>
   );

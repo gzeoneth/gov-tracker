@@ -87,24 +87,39 @@ function getConfigPath(): string {
   return path.join(getConfigDir(), "tui-config.json");
 }
 
-export function loadConfig(): TuiConfig {
+export interface ConfigLoadResult {
+  config: TuiConfig;
+  warning?: string;
+}
+
+export function loadConfigWithStatus(): ConfigLoadResult {
   try {
     const configPath = getConfigPath();
     if (!fs.existsSync(configPath)) {
-      return { ...DEFAULT_CONFIG };
+      return { config: { ...DEFAULT_CONFIG } };
     }
     const raw = fs.readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw) as Partial<TuiConfig>;
     return {
-      rpc: { ...DEFAULT_CONFIG.rpc, ...parsed.rpc },
-      cache: { ...DEFAULT_CONFIG.cache, ...parsed.cache },
-      display: { ...DEFAULT_CONFIG.display, ...parsed.display },
-      discovery: { ...DEFAULT_CONFIG.discovery, ...parsed.discovery },
-      debug: { ...DEFAULT_CONFIG.debug, ...parsed.debug },
+      config: {
+        rpc: { ...DEFAULT_CONFIG.rpc, ...parsed.rpc },
+        cache: { ...DEFAULT_CONFIG.cache, ...parsed.cache },
+        display: { ...DEFAULT_CONFIG.display, ...parsed.display },
+        discovery: { ...DEFAULT_CONFIG.discovery, ...parsed.discovery },
+        debug: { ...DEFAULT_CONFIG.debug, ...parsed.debug },
+      },
     };
-  } catch {
-    return { ...DEFAULT_CONFIG };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      config: { ...DEFAULT_CONFIG },
+      warning: `Config file corrupted, using defaults: ${message}`,
+    };
   }
+}
+
+export function loadConfig(): TuiConfig {
+  return loadConfigWithStatus().config;
 }
 
 export function saveConfig(config: TuiConfig): boolean {

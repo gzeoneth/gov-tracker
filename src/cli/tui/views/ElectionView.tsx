@@ -53,6 +53,11 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // Reset selection when proposals change to avoid out-of-bounds index
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [data.proposals.length]);
+
   useEffect(() => {
     if (!providers) {
       setData({

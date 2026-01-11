@@ -2,7 +2,7 @@
  * Simulation data view for displaying simulation data for Tenderly/Foundry
  */
 
-import { React, Box, Text, useInput, KeyInput, useState, useMemo } from "../ink-wrapper.js";
+import { React, Box, Text, useInput, KeyInput, useState, useMemo, useEffect } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
@@ -40,6 +40,12 @@ export function SimulationView({
     }
     return allSimulations;
   }, [actions]);
+
+  // Reset selection when simulations change to avoid out-of-bounds index
+  useEffect(() => {
+    setSelectedIndex(0);
+    setInputExpanded(false);
+  }, [simulations.length]);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {

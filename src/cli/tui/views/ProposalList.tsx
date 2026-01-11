@@ -18,7 +18,7 @@ interface ProposalListProps {
   onQuit: () => void;
 }
 
-const VISIBLE_ROWS = 15;
+const VISIBLE_ROWS = 20;
 
 function getTerminalWidth(): number {
   return process.stdout.columns || 80;

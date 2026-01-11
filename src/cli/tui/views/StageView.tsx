@@ -102,7 +102,7 @@ function formatStageData(stage: TrackedStage): Array<{ label: string; value: str
   return items;
 }
 
-const VISIBLE_ROWS = 18;
+const VISIBLE_ROWS = 22;
 
 export function StageView({
   proposal,

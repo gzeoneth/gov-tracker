@@ -58,7 +58,7 @@ export function ProposalRow({ item, isSelected, maxWidth = 80 }: ProposalRowProp
 
   // Calculate available width for title: total - cursor(2) - type(3) - age(9) - status(3) - progress(4) - exec(2) - spaces(5)
   const titleWidth = Math.max(20, maxWidth - 28);
-  const displayTitle = truncate(item.title, titleWidth);
+  const displayTitle = truncate(item.title, titleWidth).padEnd(titleWidth);
 
   return (
     <Box>

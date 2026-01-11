@@ -264,6 +264,71 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("Spinner", () => {
+    it("should render without errors", async () => {
+      const { Spinner } = await import("../src/cli/tui/components/Spinner.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Spinner, { text: "Loading..." });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render without text", async () => {
+      const { Spinner } = await import("../src/cli/tui/components/Spinner.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Spinner, {});
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("EmptyState", () => {
+    it("should render with all props", async () => {
+      const { EmptyState } = await import("../src/cli/tui/components/EmptyState.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(EmptyState, {
+          title: "No proposals",
+          message: "No proposals match your filter",
+          hint: "Try changing the filter",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render with minimal props", async () => {
+      const { EmptyState } = await import("../src/cli/tui/components/EmptyState.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(EmptyState, { title: "Empty" });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("StatusBar", () => {
+    it("should render with all props", async () => {
+      const { StatusBar } = await import("../src/cli/tui/components/StatusBar.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(StatusBar, {
+          left: "Left text",
+          center: "Center text",
+          right: "Right text",
+          color: "cyan",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
   describe("StageRow", () => {
     it("should render without errors with minimal stage data", async () => {
       const { StageRow } = await import("../src/cli/tui/components/StageRow.js");

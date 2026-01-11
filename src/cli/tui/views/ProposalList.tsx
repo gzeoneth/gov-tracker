@@ -10,6 +10,7 @@ import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { ProposalRow } from "../components/ProposalRow.js";
 import { getVisibleRows } from "../utils/index.js";
+import { EmptyState } from "../components/EmptyState.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -128,9 +129,13 @@ export function ProposalList({
         )}
 
         {items.length === 0 ? (
-          <Box marginY={1}>
-            <Text color="gray">No proposals found for filter [{state.filter}]</Text>
-          </Box>
+          <EmptyState
+            title="No proposals found"
+            message={state.searchQuery
+              ? `No results for "${state.searchQuery}"`
+              : `No proposals match filter [${state.filter}]`}
+            hint={state.searchQuery ? "Press / to modify search" : "Press Tab to change filter"}
+          />
         ) : (
           <Box flexDirection="column">
             {startIndex > 0 && (

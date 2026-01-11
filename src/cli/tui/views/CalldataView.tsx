@@ -170,6 +170,8 @@ export function CalldataView({
           return next;
         });
       }
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

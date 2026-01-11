@@ -130,6 +130,12 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
       setSelectedIndex((prev) => Math.max(0, prev - 1));
     } else if ((key.downArrow || input === "j") && data.proposals.length > 0) {
       setSelectedIndex((prev) => Math.min(data.proposals.length - 1, prev + 1));
+    } else if (input === "g") {
+      setSelectedIndex(0);
+    } else if (input === "G" && data.proposals.length > 0) {
+      setSelectedIndex(data.proposals.length - 1);
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

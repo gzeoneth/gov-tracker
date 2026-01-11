@@ -83,6 +83,8 @@ export function ProposalList({
       navigation.goToBottom(items.length);
     } else if (input === "R") {
       onReload();
+    } else if (input === "?") {
+      navigation.goToHelp();
     }
   });
 

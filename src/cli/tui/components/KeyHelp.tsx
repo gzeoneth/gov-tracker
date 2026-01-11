@@ -24,6 +24,7 @@ const LIST_KEYS: KeyBinding[] = [
   { key: "R", action: "Reload" },
   { key: "e", action: "Elections" },
   { key: "d", action: "Discover" },
+  { key: "?", action: "Help" },
   { key: "q", action: "Quit" },
 ];
 
@@ -34,6 +35,7 @@ const DETAIL_KEYS_BASE: KeyBinding[] = [
   { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },
+  { key: "?", action: "Help" },
 ];
 
 const DETAIL_RETRACK: KeyBinding = { key: "r", action: "Re-track" };

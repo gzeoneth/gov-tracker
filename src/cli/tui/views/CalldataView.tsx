@@ -163,16 +163,22 @@ export function CalldataView({
 
   const visibleLines = displayLines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
 
+  const shortTitle = proposal.title.length > 30
+    ? proposal.title.substring(0, 30) + "..."
+    : proposal.title;
+
+  const breadcrumb = ["Proposals", shortTitle, "Calldata"];
+
   if (actions.length === 0) {
     return (
-      <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error}>
+      <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error} breadcrumb={breadcrumb}>
         <Text color="gray">No calldata to display</Text>
       </ViewLayout>
     );
   }
 
   return (
-    <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error}>
+    <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error} breadcrumb={breadcrumb}>
       <Box marginBottom={1}>
         <Text color="cyan">Action {state.calldataActionIndex + 1}/{actions.length}</Text>
         {actions.length > 1 && <Text color="gray"> (← → navigate)</Text>}

@@ -14,6 +14,7 @@ interface HeaderProps {
   isTracking: boolean;
   title?: string;
   position?: { current: number; total: number };
+  breadcrumb?: string[];
 }
 
 export function Header({
@@ -24,6 +25,7 @@ export function Header({
   isTracking,
   title,
   position,
+  breadcrumb,
 }: HeaderProps): React.ReactElement {
   const getViewTitle = (): string => {
     switch (view) {
@@ -70,12 +72,30 @@ export function Header({
     return null;
   };
 
+  const renderBreadcrumb = (): React.ReactElement | null => {
+    if (!breadcrumb || breadcrumb.length === 0) return null;
+    return (
+      <Box>
+        {breadcrumb.map((item, i) => (
+          <Text key={i}>
+            {i > 0 && <Text color="gray"> › </Text>}
+            <Text color={i === breadcrumb.length - 1 ? "cyan" : "gray"}>{item}</Text>
+          </Text>
+        ))}
+      </Box>
+    );
+  };
+
   return (
     <Box borderStyle="single" borderColor="cyan" paddingX={1}>
       <Box flexGrow={1}>
-        <Text bold color="cyan">
-          {getViewTitle()}
-        </Text>
+        {breadcrumb && breadcrumb.length > 0 ? (
+          renderBreadcrumb()
+        ) : (
+          <Text bold color="cyan">
+            {getViewTitle()}
+          </Text>
+        )}
         {view === "list" && (
           <Text color="gray">
             {" "}

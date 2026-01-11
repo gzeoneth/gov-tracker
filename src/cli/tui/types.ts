@@ -11,7 +11,8 @@ export type ViewType =
   | "stage"
   | "simulation"
   | "description"
-  | "election";
+  | "election"
+  | "help";
 
 export type FilterType = "all" | "active" | "complete" | "timelocks";
 
@@ -30,6 +31,7 @@ export interface ProposalListItem {
 
 export interface NavigationState {
   view: ViewType;
+  previousView: ViewType | null;
   filter: FilterType;
   selectedIndex: number;
   selectedProposal: ProposalListItem | null;

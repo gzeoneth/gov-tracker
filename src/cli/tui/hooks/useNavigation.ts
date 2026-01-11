@@ -7,6 +7,7 @@ import type { NavigationState, ProposalListItem, FilterType, ViewType } from "..
 
 const INITIAL_STATE: NavigationState = {
   view: "list",
+  previousView: null,
   filter: "all",
   selectedIndex: 0,
   selectedProposal: null,
@@ -44,6 +45,7 @@ export interface UseNavigationResult {
   setSearchQuery: (query: string) => void;
   appendSearchChar: (char: string) => void;
   deleteSearchChar: () => void;
+  goToHelp: () => void;
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
@@ -171,6 +173,9 @@ export function useNavigation(): UseNavigationResult {
 
   const back = useCallback(() => {
     setState((prev) => {
+      if (prev.view === "help" && prev.previousView) {
+        return { ...prev, view: prev.previousView, previousView: null };
+      }
       if (prev.view === "detail" || prev.view === "election") {
         return { ...prev, view: "list", selectedProposal: null, selectedStageIndex: 0 };
       }
@@ -241,6 +246,14 @@ export function useNavigation(): UseNavigationResult {
     }));
   }, []);
 
+  const goToHelp = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      view: "help",
+      previousView: prev.view,
+    }));
+  }, []);
+
   return {
     state,
     setFilter,
@@ -268,5 +281,6 @@ export function useNavigation(): UseNavigationResult {
     setSearchQuery,
     appendSearchChar,
     deleteSearchChar,
+    goToHelp,
   };
 }

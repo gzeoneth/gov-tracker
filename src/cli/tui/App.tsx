@@ -15,6 +15,7 @@ import { StageView } from "./views/StageView.js";
 import { SimulationView } from "./views/SimulationView.js";
 import { DescriptionView } from "./views/DescriptionView.js";
 import { ElectionView } from "./views/ElectionView.js";
+import { HelpView } from "./views/HelpView.js";
 
 export interface AppProps {
   cachePath: string;
@@ -84,6 +85,10 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   const { view, selectedProposal } = navigation.state;
 
   const renderView = (): React.ReactElement => {
+    if (view === "help") {
+      return <HelpView navigation={navigation} />;
+    }
+
     if (view === "list") {
       return (
         <ProposalList

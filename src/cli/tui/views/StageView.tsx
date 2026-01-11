@@ -129,9 +129,15 @@ export function StageView({
     }
   });
 
+  const shortTitle = proposal.title.length > 30
+    ? proposal.title.substring(0, 30) + "..."
+    : proposal.title;
+
+  const breadcrumb = ["Proposals", shortTitle, stageTitle || "Stage"];
+
   if (!stage) {
     return (
-      <ViewLayout view="stage" title={stageTitle}>
+      <ViewLayout view="stage" title={stageTitle} breadcrumb={breadcrumb}>
         <Text color="gray">Stage not found</Text>
       </ViewLayout>
     );
@@ -140,7 +146,7 @@ export function StageView({
   const visibleItems = dataItems.slice(state.scrollOffset, state.scrollOffset + visibleRows);
 
   return (
-    <ViewLayout view="stage" title={stageTitle}>
+    <ViewLayout view="stage" title={stageTitle} breadcrumb={breadcrumb}>
       <Box flexDirection="column" marginBottom={1}>
         <Box>
           <Text bold>{stageTitle}</Text>

@@ -52,16 +52,22 @@ export function SimulationView({
 
   const currentSim = simulations[selectedIndex];
 
+  const shortTitle = proposal.title.length > 30
+    ? proposal.title.substring(0, 30) + "..."
+    : proposal.title;
+
+  const breadcrumb = ["Proposals", shortTitle, "Simulation"];
+
   if (simulations.length === 0) {
     return (
-      <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error}>
+      <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error} breadcrumb={breadcrumb}>
         <Text color="gray">No simulatable calls found in this proposal</Text>
       </ViewLayout>
     );
   }
 
   return (
-    <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error}>
+    <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Loading simulation data..." error={error} breadcrumb={breadcrumb}>
       <Box marginBottom={1}>
         <Text color="cyan">Simulation {selectedIndex + 1}/{simulations.length}</Text>
         {simulations.length > 1 && <Text color="gray"> (use ↑↓ to navigate)</Text>}

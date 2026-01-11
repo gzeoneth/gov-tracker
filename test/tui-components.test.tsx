@@ -69,7 +69,7 @@ describe("TUI Component Rendering", () => {
       const { KeyHelp } = await import("../src/cli/tui/components/KeyHelp.js");
       const React = await import("react");
 
-      const views = ["list", "detail", "calldata", "stage", "simulation", "description", "election"] as const;
+      const views = ["list", "detail", "calldata", "stage", "simulation", "description", "election", "help"] as const;
 
       for (const view of views) {
         expect(() => {
@@ -127,6 +127,23 @@ describe("TUI Component Rendering", () => {
           hasProviders: false,
           isTracking: false,
           position: { current: 5, total: 100 },
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render with breadcrumb navigation", async () => {
+      const { Header } = await import("../src/cli/tui/components/Header.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Header, {
+          view: "detail",
+          filter: "all",
+          stats: null,
+          hasProviders: false,
+          isTracking: false,
+          breadcrumb: ["Proposals", "Test Proposal", "Stage 1"],
         });
         expect(element).toBeDefined();
       }).not.toThrow();
@@ -189,6 +206,59 @@ describe("TUI Component Rendering", () => {
           },
           isSelected: false,
         });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("HelpView", () => {
+    it("should render without errors", async () => {
+      const { HelpView } = await import("../src/cli/tui/views/HelpView.js");
+      const React = await import("react");
+
+      const mockNavigation = {
+        state: {
+          view: "help" as const,
+          previousView: "list" as const,
+          filter: "all" as const,
+          selectedIndex: 0,
+          selectedProposal: null,
+          selectedStageIndex: 0,
+          calldataActionIndex: 0,
+          scrollOffset: 0,
+          searchQuery: "",
+          isSearching: false,
+        },
+        back: vi.fn(),
+        moveUp: vi.fn(),
+        moveDown: vi.fn(),
+        pageUp: vi.fn(),
+        pageDown: vi.fn(),
+        goToTop: vi.fn(),
+        goToBottom: vi.fn(),
+        setFilter: vi.fn(),
+        cycleFilter: vi.fn(),
+        selectItem: vi.fn(),
+        enter: vi.fn(),
+        goToCalldata: vi.fn(),
+        goToStage: vi.fn(),
+        goToSimulation: vi.fn(),
+        goToDescription: vi.fn(),
+        goToElection: vi.fn(),
+        nextAction: vi.fn(),
+        prevAction: vi.fn(),
+        setScrollOffset: vi.fn(),
+        reset: vi.fn(),
+        startSearch: vi.fn(),
+        cancelSearch: vi.fn(),
+        setSearchQuery: vi.fn(),
+        appendSearchChar: vi.fn(),
+        deleteSearchChar: vi.fn(),
+        goToHelp: vi.fn(),
+      };
+
+      expect(() => {
+        const element = React.createElement(HelpView, { navigation: mockNavigation });
         expect(element).toBeDefined();
       }).not.toThrow();
     });

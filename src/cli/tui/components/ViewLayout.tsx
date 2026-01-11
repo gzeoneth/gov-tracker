@@ -16,6 +16,7 @@ interface ViewLayoutProps {
   loading?: boolean;
   loadingText?: string;
   error?: string | null;
+  breadcrumb?: string[];
   children: React.ReactNode;
 }
 
@@ -28,6 +29,7 @@ export function ViewLayout({
   loading = false,
   loadingText = "Loading...",
   error = null,
+  breadcrumb,
   children,
 }: ViewLayoutProps): React.ReactElement {
   return (
@@ -39,6 +41,7 @@ export function ViewLayout({
         hasProviders={hasProviders}
         isTracking={isTracking}
         title={title}
+        breadcrumb={breadcrumb}
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>

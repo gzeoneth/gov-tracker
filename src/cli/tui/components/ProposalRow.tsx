@@ -45,25 +45,43 @@ function formatAge(timestamp: number | null): string {
   return `${years}y ago`;
 }
 
+function parseProgress(stageProgress: string): { current: number; total: number } | null {
+  const match = stageProgress.match(/(\d+)\/(\d+)/);
+  if (!match) return null;
+  return { current: parseInt(match[1], 10), total: parseInt(match[2], 10) };
+}
+
+function renderProgressBar(progress: { current: number; total: number }): string {
+  const filled = progress.current;
+  const empty = progress.total - progress.current;
+  return "█".repeat(filled) + "░".repeat(empty);
+}
+
 export function ProposalRow({ item, isSelected }: ProposalRowProps): React.ReactElement {
   const typeLabel = getTypeLabel(item);
   const typeColor = getTypeColor(item);
   const age = formatAge(item.createdAt);
+  const progress = parseProgress(item.stageProgress);
+  const progressBar = progress ? renderProgressBar(progress) : null;
 
   return (
     <Box>
       <Text color={isSelected ? "cyan" : undefined} bold={isSelected}>
         {isSelected ? ">" : " "}
       </Text>
-      <Text color={typeColor}>{typeLabel}</Text>
+      <Text color={typeColor}>[{typeLabel}]</Text>
       <Text> </Text>
       <Text color={isSelected ? "cyan" : undefined}>{item.title}</Text>
       <Text color="gray"> </Text>
       <Text color="gray">{age.padStart(8)}</Text>
       <Text> </Text>
       <StatusBadge status={item.status} compact />
-      <Text color="gray">{item.stageProgress}</Text>
-      {item.hasExecutable && <Text color="green">▶</Text>}
+      {progressBar ? (
+        <Text color={item.status === "complete" ? "green" : "yellow"}>{progressBar}</Text>
+      ) : (
+        <Text color="gray">{item.stageProgress}</Text>
+      )}
+      {item.hasExecutable && <Text color="green" bold> ▶</Text>}
     </Box>
   );
 }

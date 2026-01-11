@@ -99,6 +99,8 @@ export function ProposalDetail({
       if (stages[stageIndex]) {
         navigation.goToStage(stageIndex);
       }
+    } else if (inputKey === "?") {
+      navigation.goToHelp();
     }
   });
 
@@ -124,6 +126,10 @@ export function ProposalDetail({
   const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
   const votingData = votingStage?.data as VotingActiveData | undefined;
 
+  const shortTitle = proposal.title.length > 40
+    ? proposal.title.substring(0, 40) + "..."
+    : proposal.title;
+
   return (
     <Box flexDirection="column" height="100%">
       <Header
@@ -134,6 +140,7 @@ export function ProposalDetail({
         isTracking={tracker.isTracking}
         title={proposal.title}
         position={{ current: state.selectedStageIndex + 1, total: 7 }}
+        breadcrumb={["Proposals", shortTitle]}
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>

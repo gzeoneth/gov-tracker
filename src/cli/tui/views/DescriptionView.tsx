@@ -197,8 +197,14 @@ export function DescriptionView({
     }
   });
 
+  const shortTitle = proposal.title.length > 30
+    ? proposal.title.substring(0, 30) + "..."
+    : proposal.title;
+
+  const breadcrumb = ["Proposals", shortTitle, "Description"];
+
   return (
-    <ViewLayout view="description" title="Proposal Description">
+    <ViewLayout view="description" title="Proposal Description" breadcrumb={breadcrumb}>
       {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
       {visibleLines.map((line, i) => (
         <FormattedLineComponent key={i} line={line} />

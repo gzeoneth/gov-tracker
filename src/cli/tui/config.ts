@@ -26,6 +26,10 @@ export interface TuiConfig {
     chunkSize: number;
     concurrency: number;
   };
+  debug: {
+    logFile: string;
+    namespaces: string;
+  };
 }
 
 const DEFAULT_CONFIG: TuiConfig = {
@@ -47,6 +51,10 @@ const DEFAULT_CONFIG: TuiConfig = {
     startBlock: null,
     chunkSize: 50000,
     concurrency: 1,
+  },
+  debug: {
+    logFile: "",
+    namespaces: "gov-tracker:*",
   },
 };
 
@@ -71,6 +79,7 @@ export function loadConfig(): TuiConfig {
       cache: { ...DEFAULT_CONFIG.cache, ...parsed.cache },
       display: { ...DEFAULT_CONFIG.display, ...parsed.display },
       discovery: { ...DEFAULT_CONFIG.discovery, ...parsed.discovery },
+      debug: { ...DEFAULT_CONFIG.debug, ...parsed.debug },
     };
   } catch {
     return { ...DEFAULT_CONFIG };

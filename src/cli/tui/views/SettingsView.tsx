@@ -13,7 +13,7 @@ interface SettingsViewProps {
   onConfigChange?: (config: TuiConfig) => void;
 }
 
-type SettingSection = "rpc" | "cache" | "display" | "discovery";
+type SettingSection = "rpc" | "cache" | "display" | "discovery" | "debug";
 
 interface SettingItem {
   section: SettingSection;
@@ -37,6 +37,8 @@ function getSettingItems(config: TuiConfig): SettingItem[] {
     { section: "discovery", key: "startBlock", label: "Start Block", value: config.discovery.startBlock?.toString() ?? "(auto)", type: "number" },
     { section: "discovery", key: "chunkSize", label: "Chunk Size", value: config.discovery.chunkSize.toString(), type: "number" },
     { section: "discovery", key: "concurrency", label: "Concurrency", value: config.discovery.concurrency.toString(), type: "number" },
+    { section: "debug", key: "logFile", label: "Log File", value: config.debug.logFile || "(none)", type: "text" },
+    { section: "debug", key: "namespaces", label: "Debug Namespaces", value: config.debug.namespaces || "gov-tracker:*", type: "text" },
   ];
 }
 
@@ -45,6 +47,7 @@ const SECTION_TITLES: Record<SettingSection, string> = {
   cache: "Cache Settings",
   display: "Display Options",
   discovery: "Discovery Parameters",
+  debug: "Debug Settings",
 };
 
 export function SettingsView({ navigation, onConfigChange }: SettingsViewProps): React.ReactElement {
@@ -79,6 +82,8 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
       } else {
         (newConfig.discovery as Record<string, unknown>)[item.key] = parseInt(newValue, 10) || 0;
       }
+    } else if (item.section === "debug") {
+      newConfig.debug = { ...config.debug, [item.key]: newValue === "(none)" ? "" : newValue };
     }
 
     setConfig(newConfig);

@@ -758,9 +758,9 @@ addOptions(uiCmd, rpcOptions);
 uiCmd
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(verboseOption)
+  .option("--log-file <path>", "Write debug logs to file (for debugging TUI)")
+  .option("--debug-namespaces <pattern>", "Debug namespaces to enable (default: gov-tracker:*)")
   .action(async (opts) => {
-    if (opts.verbose) debug.enable("gov-tracker:*");
-
     try {
       const { runTui } = await import("./tui");
       const { loadConfig } = await import("./tui/config.js");
@@ -780,10 +780,20 @@ uiCmd
       const cachePath =
         opts.cache !== DEFAULT_CACHE_PATH ? opts.cache : tuiConfig.cache.path || opts.cache;
 
+      // Debug settings: CLI args > saved config > defaults
+      const logFile = opts.logFile || tuiConfig.debug.logFile || undefined;
+      const debugNamespaces = opts.debugNamespaces || tuiConfig.debug.namespaces || "gov-tracker:*";
+
+      // Enable debug with namespaces if log file is specified or verbose mode
+      if (logFile || opts.verbose) {
+        debug.enable(debugNamespaces);
+      }
+
       await runTui({
         cachePath,
         providers,
         verbose: opts.verbose,
+        logFile,
       });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {

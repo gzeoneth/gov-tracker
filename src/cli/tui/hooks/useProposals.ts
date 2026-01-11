@@ -210,7 +210,11 @@ export function useProposals(
     const lowerSearch = searchQuery.toLowerCase();
     const filtered = sorted.filter((item) => {
       if (!matchesFilter(item, filter)) return false;
-      if (lowerSearch && !item.title.toLowerCase().includes(lowerSearch)) return false;
+      if (lowerSearch) {
+        const matchesTitle = item.title.toLowerCase().includes(lowerSearch);
+        const matchesKey = item.key.toLowerCase().includes(lowerSearch);
+        if (!matchesTitle && !matchesKey) return false;
+      }
       return true;
     });
     return { items: filtered, filteredCount: filtered.length, totalCount: items.length };

@@ -41,6 +41,10 @@ export class FileCache implements CacheAdapter {
   }
 
   private persistSync(): void {
+    const dir = path.dirname(this.path);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const obj = Object.fromEntries(this.cache);
     fs.writeFileSync(this.path, JSON.stringify(obj, null, 2));
   }

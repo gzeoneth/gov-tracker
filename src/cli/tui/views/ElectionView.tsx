@@ -72,16 +72,18 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
         if (cancelled) return;
 
         const proposals: ElectionProposalStatus[] = [];
-        const startIndex = Math.max(0, status.electionCount - 3);
 
         let failedCount = 0;
-        for (let i = status.electionCount; i >= startIndex; i--) {
-          if (cancelled) return;
-          try {
-            const proposal = await trackElectionProposal(i, providers.l2Provider, providers.l1Provider);
-            proposals.push(proposal);
-          } catch {
-            failedCount++;
+        if (status.electionCount > 0) {
+          const startIndex = Math.max(1, status.electionCount - 2);
+          for (let i = status.electionCount; i >= startIndex; i--) {
+            if (cancelled) return;
+            try {
+              const proposal = await trackElectionProposal(i, providers.l2Provider, providers.l1Provider);
+              proposals.push(proposal);
+            } catch {
+              failedCount++;
+            }
           }
         }
 

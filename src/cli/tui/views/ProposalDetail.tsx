@@ -13,7 +13,7 @@ import { StatusBadge } from "../components/StatusBadge.js";
 import { VotingStats } from "../components/VotingStats.js";
 import { StageProgress } from "../components/StageProgress.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
-import type { VotingActiveData } from "../../../types/stages.js";
+import { isStageType } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
 import { ErrorBanner } from "../components/ErrorDisplay.js";
 
@@ -82,6 +82,7 @@ export function ProposalDetail({
   const getTxHash = (): string => {
     if (input.type === "governor") return input.creationTxHash;
     if (input.type === "timelock") return input.scheduledTxHash;
+    if (input.type === "discovery") return "";
     return "";
   };
 
@@ -92,14 +93,17 @@ export function ProposalDetail({
     if (input.type === "timelock") {
       return input.operationId;
     }
+    if (input.type === "discovery") {
+      return input.id;
+    }
     return "";
   };
 
   const txHash = getTxHash();
   const txUrl = txHash ? getTxUrl(CHAIN_IDS.ARB_ONE, txHash) : null;
 
-  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
-  const votingData = votingStage?.data as VotingActiveData | undefined;
+  const votingStage = stages.find((s) => isStageType(s, "VOTING_ACTIVE"));
+  const votingData = votingStage?.data;
 
   const shortTitle = proposal.title.length > 40
     ? proposal.title.substring(0, 40) + "..."

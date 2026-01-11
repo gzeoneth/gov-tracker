@@ -329,6 +329,91 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("ConfirmDialog", () => {
+    it("should render with all props", async () => {
+      const { ConfirmDialog } = await import("../src/cli/tui/components/ConfirmDialog.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(ConfirmDialog, {
+          title: "Confirm Action",
+          message: "Are you sure?",
+          onConfirm: vi.fn(),
+          onCancel: vi.fn(),
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("VotingStats", () => {
+    it("should render with voting data", async () => {
+      const { VotingStats } = await import("../src/cli/tui/components/VotingStats.js");
+      const React = await import("react");
+
+      const mockData = {
+        forVotes: "1000000",
+        againstVotes: "500000",
+        abstainVotes: "100000",
+        quorum: "500000",
+        quorumReached: true,
+        proposalState: "Succeeded",
+        forVotesRaw: "1000000000000000000000000",
+        againstVotesRaw: "500000000000000000000000",
+        abstainVotesRaw: "100000000000000000000000",
+        quorumRaw: "500000000000000000000000",
+        deadline: "1700000000",
+      };
+
+      expect(() => {
+        const element = React.createElement(VotingStats, { data: mockData });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render in compact mode", async () => {
+      const { VotingStats } = await import("../src/cli/tui/components/VotingStats.js");
+      const React = await import("react");
+
+      const mockData = {
+        forVotes: "1000",
+        againstVotes: "500",
+        abstainVotes: "100",
+        quorum: "500",
+        quorumReached: false,
+        forVotesRaw: "1000000000000000000000",
+        againstVotesRaw: "500000000000000000000",
+        abstainVotesRaw: "100000000000000000000",
+        quorumRaw: "500000000000000000000",
+        deadline: "1700000000",
+      };
+
+      expect(() => {
+        const element = React.createElement(VotingStats, { data: mockData, compact: true });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("Toast", () => {
+    it("should render with all types", async () => {
+      const { Toast } = await import("../src/cli/tui/components/Toast.js");
+      const React = await import("react");
+
+      const types = ["success", "error", "info", "warning"] as const;
+      for (const type of types) {
+        expect(() => {
+          const element = React.createElement(Toast, {
+            message: "Test message",
+            type,
+            duration: 0,
+          });
+          expect(element).toBeDefined();
+        }).not.toThrow();
+      }
+    });
+  });
+
   describe("StageRow", () => {
     it("should render without errors with minimal stage data", async () => {
       const { StageRow } = await import("../src/cli/tui/components/StageRow.js");

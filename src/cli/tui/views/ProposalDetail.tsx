@@ -10,6 +10,7 @@ import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { StageRow } from "../components/StageRow.js";
 import { StatusBadge } from "../components/StatusBadge.js";
+import { VotingStats } from "../components/VotingStats.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import type { VotingActiveData } from "../../../types/stages.js";
 
@@ -25,44 +26,6 @@ function formatDate(timestamp: number | null): string {
 }
 
 
-interface VotingStatsProps {
-  data: VotingActiveData;
-}
-
-function VotingStats({ data }: VotingStatsProps): React.ReactElement {
-  const forPct = parseFloat(data.forVotes) || 0;
-  const againstPct = parseFloat(data.againstVotes) || 0;
-  const abstainPct = parseFloat(data.abstainVotes) || 0;
-  const total = forPct + againstPct + abstainPct;
-
-  const forBar = total > 0 ? Math.round((forPct / total) * 20) : 0;
-  const againstBar = total > 0 ? Math.round((againstPct / total) * 20) : 0;
-
-  return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text bold>Voting:</Text>
-      <Box marginLeft={1} flexDirection="column">
-        <Box>
-          <Text color="green">For: {data.forVotes}</Text>
-          <Text color="gray"> {"█".repeat(forBar)}{"░".repeat(20 - forBar)}</Text>
-        </Box>
-        <Box>
-          <Text color="red">Against: {data.againstVotes}</Text>
-          <Text color="gray"> {"█".repeat(againstBar)}{"░".repeat(20 - againstBar)}</Text>
-        </Box>
-        <Box>
-          <Text color="gray">Abstain: {data.abstainVotes}</Text>
-        </Box>
-        <Box>
-          <Text color="cyan">Quorum: {data.quorum}</Text>
-          <Text color={data.quorumReached ? "green" : "yellow"}>
-            {data.quorumReached ? " ✓ Reached" : " ○ Not reached"}
-          </Text>
-        </Box>
-      </Box>
-    </Box>
-  );
-}
 
 export function ProposalDetail({
   proposal,

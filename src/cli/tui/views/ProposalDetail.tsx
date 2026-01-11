@@ -39,9 +39,9 @@ export function ProposalDetail({
   useInput((inputKey: string, key: KeyInput) => {
     if (inputKey === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow) {
+    } else if (key.upArrow || inputKey === "k") {
       navigation.moveUp();
-    } else if (key.downArrow) {
+    } else if (key.downArrow || inputKey === "j") {
       navigation.moveDown(7);
     } else if (key.return && stages[state.selectedStageIndex]) {
       navigation.goToStage(state.selectedStageIndex);

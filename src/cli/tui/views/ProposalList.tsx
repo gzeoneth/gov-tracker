@@ -11,6 +11,7 @@ import { KeyHelp } from "../components/KeyHelp.js";
 import { ProposalRow } from "../components/ProposalRow.js";
 import { getVisibleRows } from "../utils/index.js";
 import { EmptyState } from "../components/EmptyState.js";
+import { SearchBar } from "../components/SearchBar.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -62,13 +63,15 @@ export function ProposalList({
 
     if (input === "/") {
       navigation.startSearch();
-    } else if (key.upArrow) {
+    } else if (key.escape && state.searchQuery) {
+      navigation.setSearchQuery("");
+    } else if (key.upArrow || input === "k") {
       navigation.moveUp();
-    } else if (key.downArrow) {
+    } else if (key.downArrow || input === "j") {
       navigation.moveDown(items.length);
-    } else if (key.pageUp) {
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
       navigation.pageUp(items.length);
-    } else if (key.pageDown) {
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
       navigation.pageDown(items.length);
     } else if (key.return) {
       navigation.enter(items);
@@ -101,20 +104,11 @@ export function ProposalList({
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>
-        {state.isSearching && (
-          <Box marginBottom={1}>
-            <Text color="cyan">Search: </Text>
-            {state.searchQuery ? <Text>{state.searchQuery}</Text> : null}
-            <Text color="gray">█</Text>
-            <Text color="gray"> (Esc to cancel)</Text>
-          </Box>
-        )}
-
-        {!state.isSearching && state.searchQuery ? (
-          <Box marginBottom={1}>
-            <Text color="gray">Filter: "{state.searchQuery}" (/ to search)</Text>
-          </Box>
-        ) : null}
+        <SearchBar
+          query={state.searchQuery}
+          isActive={state.isSearching}
+          resultCount={items.length}
+        />
 
         {tracker.isTracking && tracker.progress && (
           <Box marginBottom={1}>

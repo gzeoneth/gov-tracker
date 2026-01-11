@@ -414,6 +414,48 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("SearchBar", () => {
+    it("should render when active with query", async () => {
+      const { SearchBar } = await import("../src/cli/tui/components/SearchBar.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SearchBar, {
+          query: "test search",
+          isActive: true,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render inactive with query and result count", async () => {
+      const { SearchBar } = await import("../src/cli/tui/components/SearchBar.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SearchBar, {
+          query: "proposal",
+          isActive: false,
+          resultCount: 5,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render empty when no query and not active", async () => {
+      const { SearchBar } = await import("../src/cli/tui/components/SearchBar.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(SearchBar, {
+          query: "",
+          isActive: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
   describe("CollapsibleSection", () => {
     it("should render expanded section with children", async () => {
       const { CollapsibleSection } = await import("../src/cli/tui/components/CollapsibleSection.js");

@@ -57,9 +57,11 @@ export function Header({
 
   const getRightSide = (): React.ReactElement | null => {
     if (view === "list" && stats) {
+      const totalActive =
+        stats.proposals.active + stats.timelocks.active + (stats.elections.total - stats.elections.complete);
       return (
         <Text color="gray">
-          {stats.total} proposals | {stats.proposals.active} active
+          {stats.total} items | {totalActive} active
           {hasProviders && <Text color="green"> [RPC]</Text>}
           {isTracking && <Text color="yellow"> [Tracking...]</Text>}
         </Text>

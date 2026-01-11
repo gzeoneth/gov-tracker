@@ -12,7 +12,12 @@ import type {
   DiscoveryWatermarks,
   ChunkingConfig,
 } from "../../../types/index.js";
-import { createTracker, ProposalStageTracker, CHUNK_SIZES } from "../../../index.js";
+import {
+  createTracker,
+  ProposalStageTracker,
+  CHUNK_SIZES,
+  extractOperationId,
+} from "../../../index.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
 import { loadConfig } from "../config.js";
@@ -202,30 +207,51 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         fromWatermarks
       );
 
-      const discoveredCount = proposals.length + timelockOps.length;
-      if (discoveredCount === 0) {
+      if (proposals.length === 0 && timelockOps.length === 0) {
         return { proposals: 0, timelocks: 0 };
       }
 
-      setProgress(`Found ${discoveredCount} new items. Tracking...`);
+      // Phase 1: Track proposals first and collect their operationIds
+      const trackedOperationIds = new Set<string>();
       let tracked = 0;
 
+      setProgress(`Tracking ${proposals.length} proposals...`);
       for (const proposal of proposals) {
         tracked++;
         setProgress(
-          `Tracking ${tracked}/${discoveredCount}: proposal ${proposal.proposalId.slice(0, 8)}...`
+          `Tracking ${tracked}/${proposals.length}: proposal ${proposal.proposalId.slice(0, 8)}...`
         );
         try {
-          await tracker.trackByTxHash(proposal.creationTxHash);
+          const results = await tracker.trackByTxHash(proposal.creationTxHash);
+          // Collect operationIds from tracked proposals to deduplicate timelocks
+          for (const result of results) {
+            const stages = result.stages ?? [];
+            const opId = extractOperationId(stages);
+            if (opId) trackedOperationIds.add(opId.toLowerCase());
+            // Also check timelockLink for proposals that spawned timelocks
+            if (result.timelockLink?.operationId) {
+              trackedOperationIds.add(result.timelockLink.operationId.toLowerCase());
+            }
+          }
         } catch {
           // Continue tracking others even if one fails
         }
       }
 
-      for (const op of timelockOps) {
+      // Phase 2: Filter and track timelocks (exclude those already linked to proposals)
+      const uniqueTimelocks = timelockOps.filter(
+        (op) => !trackedOperationIds.has(op.operationId.toLowerCase())
+      );
+      const filteredCount = timelockOps.length - uniqueTimelocks.length;
+      if (filteredCount > 0) {
+        setProgress(`Filtered ${filteredCount} duplicate timelocks`);
+      }
+
+      tracked = 0;
+      for (const op of uniqueTimelocks) {
         tracked++;
         setProgress(
-          `Tracking ${tracked}/${discoveredCount}: timelock ${op.operationId.slice(0, 10)}...`
+          `Tracking ${tracked}/${uniqueTimelocks.length}: timelock ${op.operationId.slice(0, 10)}...`
         );
         try {
           await tracker.trackByTxHash(op.scheduledTxHash);
@@ -234,7 +260,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
         }
       }
 
-      return { proposals: proposals.length, timelocks: timelockOps.length };
+      return { proposals: proposals.length, timelocks: uniqueTimelocks.length };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);

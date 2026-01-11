@@ -24,7 +24,10 @@ export function SimulationView({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [inputExpanded, setInputExpanded] = useState(false);
 
-  const stages = proposal.checkpoint.cachedData.completedStages ?? [];
+  const stages = useMemo(
+    () => proposal.checkpoint.cachedData.completedStages ?? [],
+    [proposal.checkpoint.cachedData.completedStages]
+  );
   const { actions, loading, error } = useStageCalldata(stages[0]);
 
   const simulations = useMemo((): ExtractedSimulation[] => {
@@ -50,7 +53,8 @@ export function SimulationView({
     }
   });
 
-  const currentSim = simulations[selectedIndex];
+  const safeIndex = Math.min(selectedIndex, Math.max(0, simulations.length - 1));
+  const currentSim = simulations.length > 0 ? simulations[safeIndex] : undefined;
 
   const shortTitle = proposal.title.length > 30
     ? proposal.title.substring(0, 30) + "..."
@@ -69,7 +73,7 @@ export function SimulationView({
   return (
     <ViewLayout view="simulation" title="Simulation Data" loading={loading} loadingText="Extracting simulations..." skeletonType="detail" error={error} breadcrumb={breadcrumb}>
       <Box marginBottom={1}>
-        <Text color="cyan">Simulation {selectedIndex + 1}/{simulations.length}</Text>
+        <Text color="cyan">Simulation {safeIndex + 1}/{simulations.length}</Text>
         {simulations.length > 1 && <Text color="gray"> (use ↑↓ to navigate)</Text>}
       </Box>
 

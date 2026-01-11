@@ -103,6 +103,18 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
           showMessage(`Invalid value for ${item.label}: must be a positive number`, true);
           return;
         }
+        if (item.key === "defaultDays" && parsed > 365) {
+          showMessage("Default days cannot exceed 365", true);
+          return;
+        }
+        if (item.key === "chunkSize" && (parsed < 1000 || parsed > 10_000_000)) {
+          showMessage("Chunk size must be between 1,000 and 10,000,000", true);
+          return;
+        }
+        if (item.key === "concurrency" && parsed > 20) {
+          showMessage("Concurrency cannot exceed 20", true);
+          return;
+        }
         (newConfig.discovery as Record<string, unknown>)[item.key] = parsed;
       }
     } else if (item.section === "debug") {

@@ -137,6 +137,7 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
 
         if (result) {
           const prepared: PreparedTransaction[] = [];
+          let prepErrors = 0;
           for (const stage of result.stages) {
             if (stage.status === "READY" || stage.executable) {
               try {
@@ -147,11 +148,14 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
                   prepared.push(prep.prepared);
                 }
               } catch {
-                // Skip stages that can't be prepared
+                prepErrors++;
               }
             }
           }
           setPreparedTxs(prepared);
+          if (prepErrors > 0 && prepared.length === 0) {
+            setError(`Failed to prepare ${prepErrors} transaction(s)`);
+          }
         }
 
         return result;

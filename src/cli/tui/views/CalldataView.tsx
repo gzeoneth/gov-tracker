@@ -2,7 +2,7 @@
  * Decoded calldata view with foldable long values (no truncation)
  */
 
-import { React, useState, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, useState, useMemo, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
@@ -111,11 +111,15 @@ export function CalldataView({
   navigation,
 }: CalldataViewProps): React.ReactElement {
   const { state } = navigation;
-  const stages = proposal.checkpoint.cachedData.completedStages ?? [];
+  const stages = useMemo(
+    () => proposal.checkpoint.cachedData.completedStages ?? [],
+    [proposal.checkpoint.cachedData.completedStages]
+  );
   const { actions, loading, error } = useStageCalldata(stages[0], stages);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
-  const currentAction = actions[state.calldataActionIndex];
+  const safeActionIndex = Math.min(state.calldataActionIndex, Math.max(0, actions.length - 1));
+  const currentAction = actions.length > 0 ? actions[safeActionIndex] : undefined;
   const allLines = currentAction ? formatDecodedCalldata(currentAction.decoded) : [];
 
   const displayLines = allLines.filter((line) => {
@@ -181,7 +185,7 @@ export function CalldataView({
 
   const keyHelpContext = {
     calldataActionCount: actions.length,
-    currentActionIndex: state.calldataActionIndex,
+    currentActionIndex: safeActionIndex,
   };
 
   if (actions.length === 0) {
@@ -195,7 +199,7 @@ export function CalldataView({
   return (
     <ViewLayout view="calldata" loading={loading} loadingText="Decoding calldata..." skeletonType="text" error={error} breadcrumb={breadcrumb} keyHelpContext={keyHelpContext}>
       <Box marginBottom={1}>
-        <Text color="cyan">Action {state.calldataActionIndex + 1}/{actions.length}</Text>
+        <Text color="cyan">Action {safeActionIndex + 1}/{actions.length}</Text>
         {actions.length > 1 && <Text color="gray"> (← → navigate)</Text>}
         <Text color="gray"> (Enter toggle, e=expand all, c=collapse all)</Text>
       </Box>

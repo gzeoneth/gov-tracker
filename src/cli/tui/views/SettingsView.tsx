@@ -55,14 +55,14 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showMessage = useCallback((msg: string) => {
+  const showMessage = useCallback((msg: string, isError = false) => {
     if (messageTimeoutRef.current) {
       clearTimeout(messageTimeoutRef.current);
     }
-    setMessage(msg);
+    setMessage({ text: msg, isError });
     messageTimeoutRef.current = setTimeout(() => setMessage(null), 2000);
   }, []);
 
@@ -101,9 +101,9 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     }
 
     setConfig(newConfig);
-    saveConfig(newConfig);
+    const saved = saveConfig(newConfig);
     onConfigChange?.(newConfig);
-    showMessage("Settings saved");
+    showMessage(saved ? "Settings saved" : "Failed to save settings", !saved);
   };
 
   useInput((input: string, key: KeyInput) => {
@@ -144,9 +144,10 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
         setEditValue(item.value === "(default)" || item.value === "(auto)" ? "" : item.value);
       }
     } else if (input === "r") {
-      setConfig(getDefaultConfig());
-      saveConfig(getDefaultConfig());
-      showMessage("Settings reset to defaults");
+      const defaults = getDefaultConfig();
+      setConfig(defaults);
+      const saved = saveConfig(defaults);
+      showMessage(saved ? "Settings reset to defaults" : "Failed to save defaults", !saved);
     }
   });
 
@@ -189,7 +190,7 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
       <Box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
         {message && (
           <Box marginBottom={1}>
-            <Text color="green">{message}</Text>
+            <Text color={message.isError ? "red" : "green"}>{message.text}</Text>
           </Box>
         )}
 

@@ -67,8 +67,13 @@ let configBasePath: string | null = null;
  */
 export function setConfigBasePath(cachePath: string): void {
   // If cachePath is a file, use its directory; if a directory, use it directly
-  const stats = fs.existsSync(cachePath) && fs.statSync(cachePath);
-  configBasePath = stats && stats.isDirectory() ? cachePath : path.dirname(cachePath);
+  try {
+    const stats = fs.existsSync(cachePath) && fs.statSync(cachePath);
+    configBasePath = stats && stats.isDirectory() ? cachePath : path.dirname(cachePath);
+  } catch {
+    // Fall back to parent directory if stat fails (permissions, race condition, etc.)
+    configBasePath = path.dirname(cachePath);
+  }
 }
 
 function getConfigDir(): string {
@@ -102,13 +107,18 @@ export function loadConfig(): TuiConfig {
   }
 }
 
-export function saveConfig(config: TuiConfig): void {
-  const configDir = getConfigDir();
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
+export function saveConfig(config: TuiConfig): boolean {
+  try {
+    const configDir = getConfigDir();
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    const configPath = getConfigPath();
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    return true;
+  } catch {
+    return false;
   }
-  const configPath = getConfigPath();
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 
 export function getDefaultConfig(): TuiConfig {

@@ -106,7 +106,7 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
       navigation.back();
     } else if (key.upArrow) {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if (key.downArrow) {
+    } else if (key.downArrow && data.proposals.length > 0) {
       setSelectedIndex((prev) => Math.min(data.proposals.length - 1, prev + 1));
     }
   });

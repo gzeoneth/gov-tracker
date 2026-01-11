@@ -144,14 +144,17 @@ export function CalldataView({
       navigation.nextAction(actions.length);
     } else if (input === "e") {
       setExpandedKeys(new Set(allFoldableKeys));
+      navigation.goToTop();
     } else if (input === "c") {
       setExpandedKeys(new Set());
+      navigation.goToTop();
     } else if (input === "g") {
       navigation.goToTop();
     } else if (input === "G") {
       navigation.goToBottom(displayLines.length);
     } else if (key.return) {
-      const currentLine = displayLines[state.scrollOffset];
+      const safeIdx = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
+      const currentLine = displayLines[safeIdx];
       if (currentLine?.foldable && currentLine.foldKey) {
         setExpandedKeys((prev) => {
           const next = new Set(prev);
@@ -166,7 +169,9 @@ export function CalldataView({
     }
   });
 
-  const visibleLines = displayLines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
+  // Clamp scrollOffset to valid range in case displayLines shrunk after fold collapse
+  const safeOffset = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
+  const visibleLines = displayLines.slice(safeOffset, safeOffset + visibleCount);
 
   const shortTitle = proposal.title.length > 30
     ? proposal.title.substring(0, 30) + "..."
@@ -212,13 +217,13 @@ export function CalldataView({
         {displayLines.length > visibleCount && (
           <Box marginBottom={1}>
             <ScrollPosition
-              scrollOffset={state.scrollOffset}
+              scrollOffset={safeOffset}
               visibleRows={visibleCount}
               totalItems={displayLines.length}
             />
           </Box>
         )}
-        <ScrollIndicatorTop scrollOffset={state.scrollOffset} unit="lines" />
+        <ScrollIndicatorTop scrollOffset={safeOffset} unit="lines" />
         {visibleLines.map((line, i) => {
           const prefix = "  ".repeat(line.indent);
           const isExpanded = line.foldKey && expandedKeys.has(line.foldKey);
@@ -236,7 +241,7 @@ export function CalldataView({
           );
         })}
         <ScrollIndicatorBottom
-          scrollOffset={state.scrollOffset}
+          scrollOffset={safeOffset}
           visibleRows={visibleCount}
           totalItems={displayLines.length}
           unit="lines"

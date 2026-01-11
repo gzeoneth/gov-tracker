@@ -43,7 +43,7 @@ export function SimulationView({
       navigation.back();
     } else if (key.upArrow) {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if (key.downArrow) {
+    } else if (key.downArrow && simulations.length > 0) {
       setSelectedIndex((prev) => Math.min(simulations.length - 1, prev + 1));
     } else if (key.return) {
       setInputExpanded((prev) => !prev);

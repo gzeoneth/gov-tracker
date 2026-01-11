@@ -27,7 +27,7 @@ export function Toast({
   onDismiss,
 }: ToastProps): React.ReactElement | null {
   const [visible, setVisible] = useState(true);
-  const config = TOAST_CONFIG[type];
+  const config = TOAST_CONFIG[type] ?? TOAST_CONFIG.info;
 
   useEffect(() => {
     if (duration > 0) {

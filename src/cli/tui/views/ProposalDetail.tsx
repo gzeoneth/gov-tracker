@@ -4,7 +4,7 @@
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
-import type { UseNavigationResult } from "../hooks/index.js";
+import { type UseNavigationResult, STAGE_COUNT } from "../hooks/index.js";
 import type { UseTrackerResult } from "../hooks/useTracker.js";
 import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
@@ -44,7 +44,7 @@ export function ProposalDetail({
     } else if (key.upArrow || inputKey === "k") {
       navigation.moveUp();
     } else if (key.downArrow || inputKey === "j") {
-      navigation.moveDown(7);
+      navigation.moveDown(STAGE_COUNT);
     } else if (key.return && stages[state.selectedStageIndex]) {
       navigation.goToStage(state.selectedStageIndex);
     } else if (inputKey === "c") {
@@ -58,7 +58,7 @@ export function ProposalDetail({
     } else if (inputKey === "g") {
       navigation.goToTop();
     } else if (inputKey === "G") {
-      navigation.goToBottom(7);
+      navigation.goToBottom(STAGE_COUNT);
     } else if (inputKey >= "1" && inputKey <= "7") {
       const stageIndex = parseInt(inputKey, 10) - 1;
       if (stages[stageIndex]) {
@@ -114,7 +114,7 @@ export function ProposalDetail({
         hasProviders={tracker.canTrack}
         isTracking={tracker.isTracking}
         title={proposal.title}
-        position={{ current: state.selectedStageIndex + 1, total: 7 }}
+        position={{ current: state.selectedStageIndex + 1, total: STAGE_COUNT }}
         breadcrumb={["Proposals", shortTitle]}
       />
 

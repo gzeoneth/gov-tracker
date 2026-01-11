@@ -74,13 +74,14 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
         const proposals: ElectionProposalStatus[] = [];
         const startIndex = Math.max(0, status.electionCount - 3);
 
+        let failedCount = 0;
         for (let i = status.electionCount; i >= startIndex; i--) {
           if (cancelled) return;
           try {
             const proposal = await trackElectionProposal(i, providers.l2Provider, providers.l1Provider);
             proposals.push(proposal);
           } catch {
-            // Skip elections that can't be tracked
+            failedCount++;
           }
         }
 
@@ -89,7 +90,9 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
             status,
             proposals,
             loading: false,
-            error: null,
+            error: failedCount > 0 && proposals.length === 0
+              ? `Failed to load ${failedCount} election(s)`
+              : null,
           });
         }
       } catch (err) {

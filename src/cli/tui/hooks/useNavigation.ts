@@ -11,6 +11,9 @@ import type {
   SortType,
 } from "../types.js";
 
+export const MAX_STAGE_INDEX = 6;
+export const STAGE_COUNT = 7;
+
 const INITIAL_STATE: NavigationState = {
   view: "list",
   previousView: null,
@@ -112,7 +115,10 @@ export function useNavigation(): UseNavigationResult {
         return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + 1) };
       }
       if (prev.view === "detail") {
-        return { ...prev, selectedStageIndex: Math.min(6, prev.selectedStageIndex + 1) };
+        return {
+          ...prev,
+          selectedStageIndex: Math.min(MAX_STAGE_INDEX, prev.selectedStageIndex + 1),
+        };
       }
       if (SCROLLABLE_VIEWS.includes(prev.view)) {
         const lastIndex = Math.max(0, maxIndex - 1);
@@ -174,7 +180,7 @@ export function useNavigation(): UseNavigationResult {
         return { ...prev, selectedIndex: maxIndex - 1 };
       }
       if (prev.view === "detail") {
-        return { ...prev, selectedStageIndex: 6 };
+        return { ...prev, selectedStageIndex: MAX_STAGE_INDEX };
       }
       if (SCROLLABLE_VIEWS.includes(prev.view)) {
         return { ...prev, scrollOffset: Math.max(0, maxIndex - 1) };

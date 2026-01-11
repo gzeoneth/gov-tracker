@@ -3,7 +3,7 @@ export type { UseCacheResult } from "./useCache.js";
 
 export { useProposals } from "./useProposals.js";
 
-export { useNavigation } from "./useNavigation.js";
+export { useNavigation, MAX_STAGE_INDEX, STAGE_COUNT } from "./useNavigation.js";
 export type { UseNavigationResult } from "./useNavigation.js";
 
 export { useTracker } from "./useTracker.js";

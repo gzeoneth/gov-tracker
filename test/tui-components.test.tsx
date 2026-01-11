@@ -414,6 +414,63 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("CopyableText", () => {
+    it("should render with label and value", async () => {
+      const { CopyableText } = await import("../src/cli/tui/components/CopyableText.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(CopyableText, {
+          value: "0x1234567890abcdef",
+          label: "TX Hash",
+          color: "blue",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render with hint", async () => {
+      const { CopyableText } = await import("../src/cli/tui/components/CopyableText.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(CopyableText, {
+          value: "0xaddress",
+          showHint: true,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
+  describe("CopyFeedback", () => {
+    it("should render success feedback", async () => {
+      const { CopyFeedback } = await import("../src/cli/tui/components/CopyableText.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(CopyFeedback, {
+          message: "Copied!",
+          type: "success",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render error feedback", async () => {
+      const { CopyFeedback } = await import("../src/cli/tui/components/CopyableText.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(CopyFeedback, {
+          message: "Failed to copy",
+          type: "error",
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
   describe("SearchBar", () => {
     it("should render when active with query", async () => {
       const { SearchBar } = await import("../src/cli/tui/components/SearchBar.js");

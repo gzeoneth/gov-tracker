@@ -13,6 +13,7 @@ import { StatusBadge } from "../components/StatusBadge.js";
 import { VotingStats } from "../components/VotingStats.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import type { VotingActiveData } from "../../../types/stages.js";
+import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;
@@ -35,6 +36,7 @@ export function ProposalDetail({
   const { state } = navigation;
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
   const input = proposal.checkpoint.input;
+  const { feedback, feedbackType, copy } = useCopyState();
 
   useInput((inputKey: string, key: KeyInput) => {
     if (inputKey === "b" || key.escape) {
@@ -64,6 +66,16 @@ export function ProposalDetail({
       }
     } else if (inputKey === "?") {
       navigation.goToHelp();
+    } else if (inputKey === "y") {
+      // Copy based on context - proposal ID by default
+      const proposalId = getProposalIdDisplay();
+      copy(proposalId, "Proposal ID");
+    } else if (inputKey === "Y") {
+      // Copy transaction hash
+      const hash = getTxHash();
+      if (hash) {
+        copy(hash, "TX Hash");
+      }
     }
   });
 
@@ -147,6 +159,12 @@ export function ProposalDetail({
         {tracker.error && (
           <Box marginBottom={1}>
             <Text color="red">Error: {tracker.error}</Text>
+          </Box>
+        )}
+
+        {feedback && (
+          <Box marginBottom={1}>
+            <CopyFeedback message={feedback} type={feedbackType} />
           </Box>
         )}
 

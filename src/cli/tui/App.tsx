@@ -16,6 +16,7 @@ import { SimulationView } from "./views/SimulationView.js";
 import { DescriptionView } from "./views/DescriptionView.js";
 import { ElectionView } from "./views/ElectionView.js";
 import { HelpView } from "./views/HelpView.js";
+import { SettingsView } from "./views/SettingsView.js";
 import { Spinner } from "./components/Spinner.js";
 import { SkeletonList } from "./components/Skeleton.js";
 
@@ -94,6 +95,10 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   const renderView = (): React.ReactElement => {
     if (view === "help") {
       return <HelpView navigation={navigation} />;
+    }
+
+    if (view === "settings") {
+      return <SettingsView navigation={navigation} />;
     }
 
     if (view === "list") {

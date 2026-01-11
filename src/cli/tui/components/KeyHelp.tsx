@@ -35,6 +35,7 @@ const LIST_KEYS: KeyBinding[] = [
   { key: "R", action: "Reload" },
   { key: "e", action: "Elections" },
   { key: "d", action: "Discover" },
+  { key: "S", action: "Settings" },
   { key: "?", action: "Help" },
   { key: "q", action: "Quit" },
 ];

@@ -258,6 +258,7 @@ describe("TUI Component Rendering", () => {
         appendSearchChar: vi.fn(),
         deleteSearchChar: vi.fn(),
         goToHelp: vi.fn(),
+        goToSettings: vi.fn(),
       };
 
       expect(() => {

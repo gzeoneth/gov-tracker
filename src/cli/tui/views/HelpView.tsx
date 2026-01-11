@@ -46,6 +46,7 @@ const HELP_SECTIONS: ShortcutSection[] = [
       { key: "R", description: "Reload cache from disk" },
       { key: "d", description: "Discover proposals", note: "requires RPC" },
       { key: "e", description: "Election status", note: "requires RPC" },
+      { key: "S", description: "Settings" },
       { key: "q", description: "Quit" },
     ],
   },

@@ -55,6 +55,7 @@ export interface UseNavigationResult {
   appendSearchChar: (char: string) => void;
   deleteSearchChar: () => void;
   goToHelp: () => void;
+  goToSettings: () => void;
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
@@ -286,6 +287,14 @@ export function useNavigation(): UseNavigationResult {
     }));
   }, []);
 
+  const goToSettings = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      view: "settings",
+      previousView: prev.view,
+    }));
+  }, []);
+
   return {
     state,
     setFilter,
@@ -316,5 +325,6 @@ export function useNavigation(): UseNavigationResult {
     appendSearchChar,
     deleteSearchChar,
     goToHelp,
+    goToSettings,
   };
 }

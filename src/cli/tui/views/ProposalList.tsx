@@ -92,6 +92,8 @@ export function ProposalList({
       navigation.cycleSort();
     } else if (input === "?") {
       navigation.goToHelp();
+    } else if (input === "S") {
+      navigation.goToSettings();
     }
   });
 

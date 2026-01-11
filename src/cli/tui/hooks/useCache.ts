@@ -78,12 +78,11 @@ export function useCache(cachePath?: string): UseCacheResult {
   const [data, setData] = useState<CacheData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const signalRef = useRef<{ cancelled: boolean }>({ cancelled: false });
+  const versionRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const loadCache = useCallback(async () => {
-    signalRef.current.cancelled = true;
-    const signal = { cancelled: false };
-    signalRef.current = signal;
+    const version = ++versionRef.current;
 
     setLoading(true);
     setError(null);
@@ -96,24 +95,26 @@ export function useCache(cachePath?: string): UseCacheResult {
 
       const { checkpoints } = await readCacheStatus(path);
 
-      if (signal.cancelled) return;
+      // Skip if superseded by newer request or unmounted
+      if (version !== versionRef.current || !mountedRef.current) return;
 
       const stats = computeStats(checkpoints);
       setData({ checkpoints, stats });
     } catch (err) {
-      if (signal.cancelled) return;
+      if (version !== versionRef.current || !mountedRef.current) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      if (!signal.cancelled) {
+      if (version === versionRef.current && mountedRef.current) {
         setLoading(false);
       }
     }
   }, [cachePath]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void loadCache();
     return () => {
-      signalRef.current.cancelled = true;
+      mountedRef.current = false;
     };
   }, [loadCache]);
 

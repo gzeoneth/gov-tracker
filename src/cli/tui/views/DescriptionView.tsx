@@ -41,6 +41,8 @@ function getDescription(proposal: ProposalListItem): string {
 function parseMarkdown(text: string, width: number): FormattedLine[] {
   const result: FormattedLine[] = [];
   const lines = text.split("\n");
+  // Guard against very narrow terminals
+  const safeWidth = Math.max(20, width);
 
   for (const rawLine of lines) {
     const trimmed = rawLine.trim();
@@ -53,7 +55,7 @@ function parseMarkdown(text: string, width: number): FormattedLine[] {
 
     // Horizontal rule
     if (/^[-*_]{3,}$/.test(trimmed)) {
-      result.push({ text: "─".repeat(Math.min(width - 4, 60)), type: "separator", indent: 0 });
+      result.push({ text: "─".repeat(Math.min(safeWidth - 4, 60)), type: "separator", indent: 0 });
       continue;
     }
 
@@ -74,7 +76,7 @@ function parseMarkdown(text: string, width: number): FormattedLine[] {
     // Bullet points
     if (/^[-*+] /.test(trimmed)) {
       const bulletText = trimmed.slice(2);
-      wrapTextToLines(bulletText, width - 6, "bullet", 2, result);
+      wrapTextToLines(bulletText, safeWidth - 6, "bullet", 2, result);
       continue;
     }
 
@@ -83,9 +85,10 @@ function parseMarkdown(text: string, width: number): FormattedLine[] {
       const match = trimmed.match(/^(\d+)\. /);
       if (match) {
         const numText = trimmed.slice(match[0].length);
-        result.push({ text: `${match[1]}. ${numText.slice(0, width - 6)}`, type: "bullet", indent: 0 });
-        if (numText.length > width - 6) {
-          wrapTextToLines(numText.slice(width - 6), width - 6, "normal", 3, result);
+        const textWidth = safeWidth - 6;
+        result.push({ text: `${match[1]}. ${numText.slice(0, textWidth)}`, type: "bullet", indent: 0 });
+        if (numText.length > textWidth) {
+          wrapTextToLines(numText.slice(textWidth), textWidth, "normal", 3, result);
         }
         continue;
       }
@@ -100,7 +103,7 @@ function parseMarkdown(text: string, width: number): FormattedLine[] {
     const processedLine = trimmed.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 
     // Normal paragraph
-    wrapTextToLines(processedLine, width - 4, "normal", 0, result);
+    wrapTextToLines(processedLine, safeWidth - 4, "normal", 0, result);
   }
 
   return result;
@@ -113,13 +116,14 @@ function wrapTextToLines(
   indent: number,
   result: FormattedLine[]
 ): void {
+  const safeWidth = Math.max(10, width);
   const words = text.split(/\s+/);
   let currentLine = "";
 
   for (const word of words) {
     if (currentLine.length === 0) {
       currentLine = word;
-    } else if (currentLine.length + 1 + word.length <= width) {
+    } else if (currentLine.length + 1 + word.length <= safeWidth) {
       currentLine += " " + word;
     } else {
       result.push({ text: currentLine, type, indent });

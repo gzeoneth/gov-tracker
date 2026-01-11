@@ -118,10 +118,10 @@ export function StageRow({ stage, index, isSelected }: StageRowProps): React.Rea
 
   return (
     <Box>
-      <Text color={isSelected ? "cyan" : undefined}>
+      <Text color={isSelected ? "cyan" : undefined} bold={isSelected}>
         {isSelected ? ">" : " "} {index + 1}.{" "}
       </Text>
-      <Text color={isSelected ? "cyan" : undefined}>{title.padEnd(18)}</Text>
+      <Text color={isSelected ? "cyan" : undefined} bold={isSelected}>{title.padEnd(18)}</Text>
       <StatusBadge status={stage.status} padded />
       <Text color="gray">{stage.chain.padEnd(10)}</Text>
       {timing ? (

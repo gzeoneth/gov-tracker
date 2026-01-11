@@ -28,6 +28,10 @@ export function checkTuiDependencies(): void {
 }
 
 export { React };
+export const useState = React?.useState as typeof import("react").useState;
+export const useCallback = React?.useCallback as typeof import("react").useCallback;
+export const useMemo = React?.useMemo as typeof import("react").useMemo;
+export const useEffect = React?.useEffect as typeof import("react").useEffect;
 export const render = ink?.render;
 export const Box = ink?.Box;
 export const Text = ink?.Text;

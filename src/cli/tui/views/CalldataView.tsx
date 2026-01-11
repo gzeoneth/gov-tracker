@@ -1,8 +1,8 @@
 /**
- * Decoded calldata view
+ * Decoded calldata view with foldable long values (no truncation)
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, useState, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
@@ -14,55 +14,102 @@ interface CalldataViewProps {
   navigation: UseNavigationResult;
 }
 
-function formatParameter(param: DecodedParameter, indent: number): string[] {
-  const prefix = "  ".repeat(indent);
-  const lines: string[] = [];
+interface FormattedLine {
+  text: string;
+  indent: number;
+  foldable: boolean;
+  foldKey?: string;
+  foldedLineCount?: number;
+  isFoldedContent?: boolean;
+}
 
-  let line = `${prefix}${param.name} (${param.type}): `;
-  if (param.addressLabel) {
-    line += `${param.displayValue} [${param.addressLabel}]`;
-  } else {
-    line += param.displayValue;
+const FOLD_THRESHOLD = 100;
+
+function wrapText(text: string, width: number): string[] {
+  if (text.length <= width) return [text];
+  const lines: string[] = [];
+  for (let i = 0; i < text.length; i += width) {
+    lines.push(text.slice(i, i + width));
   }
-  lines.push(line);
+  return lines;
+}
+
+function formatParameter(
+  param: DecodedParameter,
+  indent: number,
+  keyPrefix: string
+): FormattedLine[] {
+  const lines: FormattedLine[] = [];
+  const foldKey = `${keyPrefix}-${param.name}`;
+
+  let value = param.displayValue;
+  if (param.addressLabel) {
+    value = `${param.displayValue} [${param.addressLabel}]`;
+  }
+
+  const isFoldable = value.length > FOLD_THRESHOLD;
+  const wrappedLines = isFoldable ? wrapText(value, 80) : [value];
+
+  lines.push({
+    text: `${param.name} (${param.type}): ${wrappedLines[0]}`,
+    indent,
+    foldable: isFoldable,
+    foldKey: isFoldable ? foldKey : undefined,
+    foldedLineCount: isFoldable ? wrappedLines.length - 1 : undefined,
+  });
+
+  if (isFoldable && wrappedLines.length > 1) {
+    for (let i = 1; i < wrappedLines.length; i++) {
+      lines.push({
+        text: wrappedLines[i],
+        indent: indent + 1,
+        foldable: false,
+        isFoldedContent: true,
+        foldKey,
+      });
+    }
+  }
 
   if (param.nested) {
-    lines.push(`${prefix}  └─ [NESTED]`);
-    lines.push(...formatDecodedCalldata(param.nested, indent + 2));
+    lines.push({ text: "└─ [NESTED]", indent: indent + 1, foldable: false });
+    lines.push(...formatDecodedCalldata(param.nested, indent + 2, `${foldKey}-nested`));
   }
 
   if (param.nestedArray && param.nestedArray.length > 0) {
     param.nestedArray.forEach((nested, i) => {
-      lines.push(`${prefix}  [${i}]:`);
-      lines.push(...formatDecodedCalldata(nested, indent + 2));
+      lines.push({ text: `[${i}]:`, indent: indent + 1, foldable: false });
+      lines.push(...formatDecodedCalldata(nested, indent + 2, `${foldKey}-arr-${i}`));
     });
   }
 
   return lines;
 }
 
-function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0): string[] {
-  const prefix = "  ".repeat(indent);
-  const lines: string[] = [];
+function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0, keyPrefix = "root"): FormattedLine[] {
+  const lines: FormattedLine[] = [];
 
+  let header: string;
   if (decoded.isRetryable) {
-    lines.push(`${prefix}Retryable Ticket → ${decoded.targetChain}`);
+    header = `Retryable Ticket → ${decoded.targetChain}`;
   } else if (decoded.signature) {
-    lines.push(`${prefix}${decoded.signature}`);
+    header = decoded.signature;
   } else {
-    lines.push(`${prefix}Unknown function (${decoded.selector})`);
+    header = `Unknown function (${decoded.selector})`;
   }
+  lines.push({ text: header, indent, foldable: false });
 
   if (decoded.parameters) {
-    for (const param of decoded.parameters) {
-      lines.push(...formatParameter(param, indent + 1));
-    }
+    decoded.parameters.forEach((param, i) => {
+      lines.push(...formatParameter(param, indent + 1, `${keyPrefix}-p${i}`));
+    });
   }
 
   return lines;
 }
 
-const VISIBLE_LINES = 20;
+function getVisibleLines(terminalHeight: number): number {
+  return Math.max(5, terminalHeight - 14);
+}
 
 export function CalldataView({
   proposal,
@@ -71,6 +118,18 @@ export function CalldataView({
   const { state } = navigation;
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
   const { actions, loading, error } = useStageCalldata(stages[0]);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+
+  const currentAction = actions[state.calldataActionIndex];
+  const allLines = currentAction ? formatDecodedCalldata(currentAction.decoded) : [];
+
+  const displayLines = allLines.filter((line) => {
+    if (!line.isFoldedContent) return true;
+    return line.foldKey && expandedKeys.has(line.foldKey);
+  });
+
+  const terminalHeight = process.stdout.rows || 24;
+  const visibleCount = getVisibleLines(terminalHeight);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
@@ -78,27 +137,32 @@ export function CalldataView({
     } else if (key.upArrow) {
       navigation.moveUp();
     } else if (key.downArrow) {
-      navigation.moveDown(lines.length);
+      navigation.moveDown(displayLines.length);
     } else if (key.pageUp) {
-      navigation.pageUp(lines.length);
+      navigation.pageUp(displayLines.length);
     } else if (key.pageDown) {
-      navigation.pageDown(lines.length);
+      navigation.pageDown(displayLines.length);
     } else if (key.leftArrow) {
       navigation.prevAction();
     } else if (key.rightArrow) {
       navigation.nextAction(actions.length);
+    } else if (key.return) {
+      const currentLine = displayLines[state.scrollOffset];
+      if (currentLine?.foldable && currentLine.foldKey) {
+        setExpandedKeys((prev) => {
+          const next = new Set(prev);
+          if (next.has(currentLine.foldKey!)) {
+            next.delete(currentLine.foldKey!);
+          } else {
+            next.add(currentLine.foldKey!);
+          }
+          return next;
+        });
+      }
     }
   });
 
-  const currentAction = actions[state.calldataActionIndex];
-
-  const getDisplayLines = (): string[] => {
-    if (!currentAction) return [];
-    return formatDecodedCalldata(currentAction.decoded);
-  };
-
-  const lines = getDisplayLines();
-  const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + VISIBLE_LINES);
+  const visibleLines = displayLines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
 
   if (actions.length === 0) {
     return (
@@ -112,7 +176,8 @@ export function CalldataView({
     <ViewLayout view="calldata" loading={loading} loadingText="Loading calldata..." error={error}>
       <Box marginBottom={1}>
         <Text color="cyan">Action {state.calldataActionIndex + 1}/{actions.length}</Text>
-        {actions.length > 1 && <Text color="gray"> (use ← → to navigate)</Text>}
+        {actions.length > 1 && <Text color="gray"> (← → navigate)</Text>}
+        <Text color="gray"> (Enter to expand/collapse)</Text>
       </Box>
 
       {currentAction && (
@@ -130,11 +195,24 @@ export function CalldataView({
 
       <Box flexDirection="column">
         {state.scrollOffset > 0 && <Text color="gray">↑ {state.scrollOffset} lines above</Text>}
-        {visibleLines.map((line, i) => (
-          <Text key={i}>{line}</Text>
-        ))}
-        {state.scrollOffset + VISIBLE_LINES < lines.length && (
-          <Text color="gray">↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below</Text>
+        {visibleLines.map((line, i) => {
+          const prefix = "  ".repeat(line.indent);
+          const isExpanded = line.foldKey && expandedKeys.has(line.foldKey);
+          const foldIndicator = line.foldable
+            ? isExpanded
+              ? "[-] "
+              : `[+${line.foldedLineCount}] `
+            : "";
+          return (
+            <Text key={i}>
+              {prefix}
+              {line.foldable && <Text color="yellow">{foldIndicator}</Text>}
+              {line.text}
+            </Text>
+          );
+        })}
+        {state.scrollOffset + visibleCount < displayLines.length && (
+          <Text color="gray">↓ {displayLines.length - state.scrollOffset - visibleCount} lines below</Text>
         )}
       </Box>
     </ViewLayout>

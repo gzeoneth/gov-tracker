@@ -2,8 +2,7 @@
  * Simulation data view for displaying simulation data for Tenderly/Foundry
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
-import { useState, useMemo } from "react";
+import { React, Box, Text, useInput, KeyInput, useState, useMemo } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
@@ -17,11 +16,21 @@ interface SimulationViewProps {
   navigation: UseNavigationResult;
 }
 
+function wrapText(text: string, width: number): string[] {
+  if (text.length <= width) return [text];
+  const lines: string[] = [];
+  for (let i = 0; i < text.length; i += width) {
+    lines.push(text.slice(i, i + width));
+  }
+  return lines;
+}
+
 export function SimulationView({
   proposal,
   navigation,
 }: SimulationViewProps): React.ReactElement {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [inputExpanded, setInputExpanded] = useState(false);
 
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
   const { actions, loading, error } = useStageCalldata(stages[0]);
@@ -44,6 +53,8 @@ export function SimulationView({
       setSelectedIndex((prev) => Math.max(0, prev - 1));
     } else if (key.downArrow) {
       setSelectedIndex((prev) => Math.min(simulations.length - 1, prev + 1));
+    } else if (key.return) {
+      setInputExpanded((prev) => !prev);
     }
   });
 
@@ -84,13 +95,22 @@ export function SimulationView({
           )}
 
           <Box flexDirection="column" marginTop={1}>
-            <Text bold>Input Data:</Text>
-            <Box marginLeft={1}>
-              <Text color="gray">{currentSim.simulation.input.slice(0, 66)}{currentSim.simulation.input.length > 66 && "..."}</Text>
+            <Box>
+              <Text bold>Input Data </Text>
+              <Text color="yellow">{inputExpanded ? "[-]" : `[+${Math.ceil(currentSim.simulation.input.length / 80)} lines]`}</Text>
+              <Text color="gray"> (Enter to toggle, {currentSim.simulation.input.length} chars)</Text>
             </Box>
-            <Box marginLeft={1}>
-              <Text color="gray">({currentSim.simulation.input.length} chars)</Text>
-            </Box>
+            {inputExpanded ? (
+              wrapText(currentSim.simulation.input, 80).map((line, i) => (
+                <Box key={i} marginLeft={1}>
+                  <Text color="gray">{line}</Text>
+                </Box>
+              ))
+            ) : (
+              <Box marginLeft={1}>
+                <Text color="gray">{currentSim.simulation.input.slice(0, 80)}</Text>
+              </Box>
+            )}
           </Box>
 
           <Box marginTop={1}>

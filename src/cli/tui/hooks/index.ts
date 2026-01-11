@@ -14,3 +14,6 @@ export type { UseStageCalldataResult, DecodedAction } from "./useStageCalldata.j
 
 export { useCliProcess } from "./useCliProcess.js";
 export type { UseCliProcessResult, CliProcessResult } from "./useCliProcess.js";
+
+export { useElectionData } from "./useElectionData.js";
+export type { ElectionData } from "./useElectionData.js";

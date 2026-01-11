@@ -12,96 +12,17 @@ import {
   ScrollIndicatorBottom,
   ScrollPosition,
 } from "../components/ScrollIndicator.js";
-import { wrapText, getVisibleRows } from "../utils/index.js";
-import type { DecodedCalldata, DecodedParameter } from "../../../types/calldata.js";
+import {
+  getVisibleRows,
+  formatDecodedCalldata,
+  filterVisibleLines,
+  getAllFoldableKeys,
+  toggleFoldKey,
+} from "../utils/index.js";
 
 interface CalldataViewProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
-}
-
-interface FormattedLine {
-  text: string;
-  indent: number;
-  foldable: boolean;
-  foldKey?: string;
-  foldedLineCount?: number;
-  isFoldedContent?: boolean;
-}
-
-const FOLD_THRESHOLD = 100;
-
-function formatParameter(
-  param: DecodedParameter,
-  indent: number,
-  keyPrefix: string
-): FormattedLine[] {
-  const lines: FormattedLine[] = [];
-  const foldKey = `${keyPrefix}-${param.name}`;
-
-  let value = param.displayValue;
-  if (param.addressLabel) {
-    value = `${param.displayValue} [${param.addressLabel}]`;
-  }
-
-  const isFoldable = value.length > FOLD_THRESHOLD;
-  const wrappedLines = isFoldable ? wrapText(value, 80) : [value];
-
-  lines.push({
-    text: `${param.name} (${param.type}): ${wrappedLines[0]}`,
-    indent,
-    foldable: isFoldable,
-    foldKey: isFoldable ? foldKey : undefined,
-    foldedLineCount: isFoldable ? wrappedLines.length - 1 : undefined,
-  });
-
-  if (isFoldable && wrappedLines.length > 1) {
-    for (let i = 1; i < wrappedLines.length; i++) {
-      lines.push({
-        text: wrappedLines[i],
-        indent: indent + 1,
-        foldable: false,
-        isFoldedContent: true,
-        foldKey,
-      });
-    }
-  }
-
-  if (param.nested) {
-    lines.push({ text: "└─ [NESTED]", indent: indent + 1, foldable: false });
-    lines.push(...formatDecodedCalldata(param.nested, indent + 2, `${foldKey}-nested`));
-  }
-
-  if (param.nestedArray && param.nestedArray.length > 0) {
-    param.nestedArray.forEach((nested, i) => {
-      lines.push({ text: `[${i}]:`, indent: indent + 1, foldable: false });
-      lines.push(...formatDecodedCalldata(nested, indent + 2, `${foldKey}-arr-${i}`));
-    });
-  }
-
-  return lines;
-}
-
-function formatDecodedCalldata(decoded: DecodedCalldata, indent = 0, keyPrefix = "root"): FormattedLine[] {
-  const lines: FormattedLine[] = [];
-
-  let header: string;
-  if (decoded.isRetryable) {
-    header = `Retryable Ticket → ${decoded.targetChain}`;
-  } else if (decoded.signature) {
-    header = decoded.signature;
-  } else {
-    header = `Unknown function (${decoded.selector})`;
-  }
-  lines.push({ text: header, indent, foldable: false });
-
-  if (decoded.parameters) {
-    decoded.parameters.forEach((param, i) => {
-      lines.push(...formatParameter(param, indent + 1, `${keyPrefix}-p${i}`));
-    });
-  }
-
-  return lines;
 }
 
 const RESERVED_LINES = 14;
@@ -121,61 +42,68 @@ export function CalldataView({
   const safeActionIndex = Math.min(state.calldataActionIndex, Math.max(0, actions.length - 1));
   const currentAction = actions.length > 0 ? actions[safeActionIndex] : undefined;
   const allLines = currentAction ? formatDecodedCalldata(currentAction.decoded) : [];
-
-  const displayLines = allLines.filter((line) => {
-    if (!line.isFoldedContent) return true;
-    return line.foldKey && expandedKeys.has(line.foldKey);
-  });
-
+  const displayLines = filterVisibleLines(allLines, expandedKeys);
   const visibleCount = getVisibleRows(RESERVED_LINES);
-
-  const allFoldableKeys = allLines.filter((l) => l.foldable && l.foldKey).map((l) => l.foldKey!);
+  const allFoldableKeys = getAllFoldableKeys(allLines);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(displayLines.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(displayLines.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(displayLines.length);
-    } else if (key.leftArrow) {
-      navigation.prevAction();
-    } else if (key.rightArrow) {
-      navigation.nextAction(actions.length);
-    } else if (input === "e") {
-      setExpandedKeys(new Set(allFoldableKeys));
-      navigation.goToTop();
-    } else if (input === "c") {
-      setExpandedKeys(new Set());
-      navigation.goToTop();
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(displayLines.length);
-    } else if (key.return) {
-      const safeIdx = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
-      const currentLine = displayLines[safeIdx];
-      if (currentLine?.foldable && currentLine.foldKey) {
-        setExpandedKeys((prev) => {
-          const next = new Set(prev);
-          if (next.has(currentLine.foldKey!)) {
-            next.delete(currentLine.foldKey!);
-          } else {
-            next.add(currentLine.foldKey!);
-          }
-          return next;
-        });
-      }
-    } else if (input === "?") {
+      return;
+    }
+
+    if (input === "?") {
       navigation.goToHelp();
+      return;
+    }
+
+    switch (true) {
+      case key.upArrow || input === "k":
+        navigation.moveUp();
+        break;
+      case key.downArrow || input === "j":
+        navigation.moveDown(displayLines.length);
+        break;
+      case key.pageUp || (key.ctrl && input === "u"):
+        navigation.pageUp(displayLines.length);
+        break;
+      case key.pageDown || (key.ctrl && input === "d"):
+        navigation.pageDown(displayLines.length);
+        break;
+      case key.leftArrow:
+        navigation.prevAction();
+        break;
+      case key.rightArrow:
+        navigation.nextAction(actions.length);
+        break;
+      case input === "e":
+        setExpandedKeys(new Set(allFoldableKeys));
+        navigation.goToTop();
+        break;
+      case input === "c":
+        setExpandedKeys(new Set());
+        navigation.goToTop();
+        break;
+      case input === "g":
+        navigation.goToTop();
+        break;
+      case input === "G":
+        navigation.goToBottom(displayLines.length);
+        break;
+      case key.return:
+        handleToggleFold();
+        break;
     }
   });
 
-  // Clamp scrollOffset to valid range in case displayLines shrunk after fold collapse
+  function handleToggleFold(): void {
+    const safeIdx = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
+    const currentLine = displayLines[safeIdx];
+    if (currentLine?.foldable && currentLine.foldKey) {
+      setExpandedKeys((prev) => toggleFoldKey(prev, currentLine.foldKey!));
+    }
+  }
+
   const safeOffset = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
   const visibleLines = displayLines.slice(safeOffset, safeOffset + visibleCount);
 

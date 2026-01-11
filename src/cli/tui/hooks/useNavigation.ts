@@ -66,6 +66,33 @@ const SORT_ORDER: SortType[] = ["newest", "oldest", "progress", "status"];
 const PAGE_SIZE = 10;
 const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 
+function isScrollableView(view: ViewType): boolean {
+  return SCROLLABLE_VIEWS.includes(view);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function cycleArray<T>(array: T[], current: T): T {
+  const nextIndex = (array.indexOf(current) + 1) % array.length;
+  return array[nextIndex];
+}
+
+type NavigableField = "selectedIndex" | "selectedStageIndex" | "scrollOffset";
+
+function getNavigableField(view: ViewType): NavigableField | null {
+  if (view === "list") return "selectedIndex";
+  if (view === "detail") return "selectedStageIndex";
+  if (isScrollableView(view)) return "scrollOffset";
+  return null;
+}
+
+function getMaxForField(field: NavigableField, maxIndex: number): number {
+  if (field === "selectedStageIndex") return MAX_STAGE_INDEX;
+  return maxIndex <= 0 ? 0 : maxIndex - 1;
+}
+
 export function useNavigation(): UseNavigationResult {
   const [state, setState] = useState<NavigationState>(INITIAL_STATE);
 
@@ -74,120 +101,55 @@ export function useNavigation(): UseNavigationResult {
   }, []);
 
   const cycleFilter = useCallback(() => {
-    setState((prev) => {
-      const nextIndex = (FILTER_ORDER.indexOf(prev.filter) + 1) % FILTER_ORDER.length;
-      return { ...prev, filter: FILTER_ORDER[nextIndex], selectedIndex: 0, scrollOffset: 0 };
-    });
+    setState((prev) => ({
+      ...prev,
+      filter: cycleArray(FILTER_ORDER, prev.filter),
+      selectedIndex: 0,
+      scrollOffset: 0,
+    }));
   }, []);
 
   const cycleSort = useCallback(() => {
-    setState((prev) => {
-      const nextIndex = (SORT_ORDER.indexOf(prev.sort) + 1) % SORT_ORDER.length;
-      return { ...prev, sort: SORT_ORDER[nextIndex], selectedIndex: 0, scrollOffset: 0 };
-    });
+    setState((prev) => ({
+      ...prev,
+      sort: cycleArray(SORT_ORDER, prev.sort),
+      selectedIndex: 0,
+      scrollOffset: 0,
+    }));
   }, []);
 
   const selectItem = useCallback((index: number) => {
     setState((prev) => ({ ...prev, selectedIndex: index }));
   }, []);
 
-  const moveUp = useCallback(() => {
+  const navigate = useCallback((delta: number, maxIndex: number): void => {
     setState((prev) => {
-      if (prev.view === "list") {
-        return { ...prev, selectedIndex: Math.max(0, prev.selectedIndex - 1) };
-      }
-      if (prev.view === "detail") {
-        return { ...prev, selectedStageIndex: Math.max(0, prev.selectedStageIndex - 1) };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: Math.max(0, prev.scrollOffset - 1) };
-      }
-      return prev;
+      const field = getNavigableField(prev.view);
+      if (!field) return prev;
+      const max = getMaxForField(field, maxIndex);
+      const newValue = clamp(prev[field] + delta, 0, max);
+      return { ...prev, [field]: newValue };
     });
   }, []);
 
-  const moveDown = useCallback((maxIndex: number) => {
+  const navigateTo = useCallback((position: "top" | "bottom", maxIndex: number): void => {
     setState((prev) => {
-      if (prev.view === "list") {
-        if (maxIndex <= 0) {
-          return { ...prev, selectedIndex: 0 };
-        }
-        return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + 1) };
-      }
-      if (prev.view === "detail") {
-        return {
-          ...prev,
-          selectedStageIndex: Math.min(MAX_STAGE_INDEX, prev.selectedStageIndex + 1),
-        };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        const lastIndex = Math.max(0, maxIndex - 1);
-        return { ...prev, scrollOffset: Math.min(lastIndex, prev.scrollOffset + 1) };
-      }
-      return prev;
+      const field = getNavigableField(prev.view);
+      if (!field) return prev;
+      const max = getMaxForField(field, maxIndex);
+      return { ...prev, [field]: position === "top" ? 0 : max };
     });
   }, []);
 
-  const pageUp = useCallback((_maxIndex: number) => {
-    setState((prev) => {
-      if (prev.view === "list") {
-        return { ...prev, selectedIndex: Math.max(0, prev.selectedIndex - PAGE_SIZE) };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: Math.max(0, prev.scrollOffset - PAGE_SIZE) };
-      }
-      return prev;
-    });
-  }, []);
-
-  const pageDown = useCallback((maxIndex: number) => {
-    setState((prev) => {
-      if (prev.view === "list") {
-        if (maxIndex <= 0) {
-          return { ...prev, selectedIndex: 0 };
-        }
-        return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + PAGE_SIZE) };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        const lastIndex = Math.max(0, maxIndex - 1);
-        return { ...prev, scrollOffset: Math.min(lastIndex, prev.scrollOffset + PAGE_SIZE) };
-      }
-      return prev;
-    });
-  }, []);
-
-  const goToTop = useCallback(() => {
-    setState((prev) => {
-      if (prev.view === "list") {
-        return { ...prev, selectedIndex: 0 };
-      }
-      if (prev.view === "detail") {
-        return { ...prev, selectedStageIndex: 0 };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: 0 };
-      }
-      return prev;
-    });
-  }, []);
-
-  const goToBottom = useCallback((maxIndex: number) => {
-    setState((prev) => {
-      if (prev.view === "list") {
-        if (maxIndex <= 0) {
-          return { ...prev, selectedIndex: 0 };
-        }
-        return { ...prev, selectedIndex: maxIndex - 1 };
-      }
-      if (prev.view === "detail") {
-        return { ...prev, selectedStageIndex: MAX_STAGE_INDEX };
-      }
-      if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: Math.max(0, maxIndex - 1) };
-      }
-      return prev;
-    });
-  }, []);
+  const moveUp = useCallback(() => navigate(-1, Infinity), [navigate]);
+  const moveDown = useCallback((maxIndex: number) => navigate(1, maxIndex), [navigate]);
+  const pageUp = useCallback((_maxIndex: number) => navigate(-PAGE_SIZE, Infinity), [navigate]);
+  const pageDown = useCallback((maxIndex: number) => navigate(PAGE_SIZE, maxIndex), [navigate]);
+  const goToTop = useCallback(() => navigateTo("top", 0), [navigateTo]);
+  const goToBottom = useCallback(
+    (maxIndex: number) => navigateTo("bottom", maxIndex),
+    [navigateTo]
+  );
 
   const enter = useCallback((items: ProposalListItem[]) => {
     setState((prev) => {
@@ -214,7 +176,7 @@ export function useNavigation(): UseNavigationResult {
       if (prev.view === "detail" || prev.view === "election") {
         return { ...prev, view: "list", selectedProposal: null, selectedStageIndex: 0 };
       }
-      if (SCROLLABLE_VIEWS.includes(prev.view) || prev.view === "simulation") {
+      if (isScrollableView(prev.view) || prev.view === "simulation") {
         return { ...prev, view: "detail", scrollOffset: 0, calldataActionIndex: 0 };
       }
       return prev;
@@ -240,30 +202,27 @@ export function useNavigation(): UseNavigationResult {
   const goToElection = useCallback(() => goToSubView("election"), [goToSubView]);
 
   const goToStage = useCallback((index: number) => {
-    const clampedIndex = Math.max(0, Math.min(6, index));
     setState((prev) => ({
       ...prev,
       view: "stage",
-      selectedStageIndex: clampedIndex,
+      selectedStageIndex: clamp(index, 0, MAX_STAGE_INDEX),
       scrollOffset: 0,
     }));
   }, []);
 
-  const nextAction = useCallback((maxIndex: number) => {
+  const navigateAction = useCallback((delta: number, maxIndex: number) => {
     setState((prev) => ({
       ...prev,
-      calldataActionIndex: Math.min(maxIndex - 1, prev.calldataActionIndex + 1),
+      calldataActionIndex: clamp(prev.calldataActionIndex + delta, 0, Math.max(0, maxIndex - 1)),
       scrollOffset: 0,
     }));
   }, []);
 
-  const prevAction = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      calldataActionIndex: Math.max(0, prev.calldataActionIndex - 1),
-      scrollOffset: 0,
-    }));
-  }, []);
+  const nextAction = useCallback(
+    (maxIndex: number) => navigateAction(1, maxIndex),
+    [navigateAction]
+  );
+  const prevAction = useCallback(() => navigateAction(-1, Infinity), [navigateAction]);
 
   const setScrollOffset = useCallback((offset: number) => {
     setState((prev) => ({ ...prev, scrollOffset: offset }));
@@ -299,21 +258,12 @@ export function useNavigation(): UseNavigationResult {
     }));
   }, []);
 
-  const goToHelp = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      view: "help",
-      previousView: prev.view,
-    }));
+  const goToOverlay = useCallback((targetView: "help" | "settings") => {
+    setState((prev) => ({ ...prev, view: targetView, previousView: prev.view }));
   }, []);
 
-  const goToSettings = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      view: "settings",
-      previousView: prev.view,
-    }));
-  }, []);
+  const goToHelp = useCallback(() => goToOverlay("help"), [goToOverlay]);
+  const goToSettings = useCallback(() => goToOverlay("settings"), [goToOverlay]);
 
   return {
     state,

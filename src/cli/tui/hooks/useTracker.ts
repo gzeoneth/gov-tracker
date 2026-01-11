@@ -29,6 +29,33 @@ function getTxHashFromCheckpoint(checkpoint: TrackingCheckpoint): string {
   throw new Error("Cannot track discovery checkpoint");
 }
 
+interface PrepareResult {
+  prepared: PreparedTransaction[];
+  errorCount: number;
+}
+
+async function prepareExecutableTransactions(
+  tracker: ProposalStageTracker,
+  result: TrackingResult
+): Promise<PrepareResult> {
+  const executableStages = result.stages.filter((s) => s.status === "READY" || s.executable);
+  const prepared: PreparedTransaction[] = [];
+  let errorCount = 0;
+
+  for (const stage of executableStages) {
+    try {
+      const prep = await tracker.prepareTransaction(stage, { stages: result.stages });
+      if (prep.success) {
+        prepared.push(prep.prepared);
+      }
+    } catch {
+      errorCount++;
+    }
+  }
+
+  return { prepared, errorCount };
+}
+
 export interface UseTrackerResult {
   isTracking: boolean;
   progress: string | null;
@@ -48,28 +75,24 @@ export interface UseTrackerOptions {
 }
 
 function buildCliArgs(config: TuiConfig, cachePath: string): string[] {
-  const args = ["run", "--cache", cachePath];
+  const { rpc, discovery } = config;
 
-  // RPC URLs from config
-  if (config.rpc.l1Url) args.push("--l1-rpc", config.rpc.l1Url);
-  if (config.rpc.l2Url) args.push("--l2-rpc", config.rpc.l2Url);
-  if (config.rpc.novaUrl) args.push("--nova-rpc", config.rpc.novaUrl);
+  const optionalArgs: [boolean, string, string][] = [
+    [!!rpc.l1Url, "--l1-rpc", rpc.l1Url ?? ""],
+    [!!rpc.l2Url, "--l2-rpc", rpc.l2Url ?? ""],
+    [!!rpc.novaUrl, "--nova-rpc", rpc.novaUrl ?? ""],
+    [!!discovery.defaultDays, "--max-age-days", String(discovery.defaultDays ?? "")],
+    [!!discovery.startBlock, "--start-block", String(discovery.startBlock ?? "")],
+    [!!discovery.chunkSize, "--l2-chunk-size", String(discovery.chunkSize ?? "")],
+    [discovery.concurrency > 1, "--concurrency", String(discovery.concurrency)],
+  ];
 
-  // Discovery settings
-  if (config.discovery.defaultDays) {
-    args.push("--max-age-days", config.discovery.defaultDays.toString());
-  }
-  if (config.discovery.startBlock) {
-    args.push("--start-block", config.discovery.startBlock.toString());
-  }
-  if (config.discovery.chunkSize) {
-    args.push("--l2-chunk-size", config.discovery.chunkSize.toString());
-  }
-  if (config.discovery.concurrency > 1) {
-    args.push("--concurrency", config.discovery.concurrency.toString());
-  }
-
-  return args;
+  return [
+    "run",
+    "--cache",
+    cachePath,
+    ...optionalArgs.filter(([cond]) => cond).flatMap(([, flag, val]) => [flag, val]),
+  ];
 }
 
 export function useTracker(options: UseTrackerOptions): UseTrackerResult {
@@ -145,32 +168,17 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
 
       try {
         const txHash = getTxHashFromCheckpoint(item.checkpoint);
-
         const results = await tracker.trackByTxHash(txHash);
         const result = results[0] ?? null;
+
         if (!mountedRef.current) return null;
         setLastResult(result);
 
         if (result) {
-          const prepared: PreparedTransaction[] = [];
-          let prepErrors = 0;
-          for (const stage of result.stages) {
-            if (stage.status === "READY" || stage.executable) {
-              try {
-                const prep = await tracker.prepareTransaction(stage, {
-                  stages: result.stages,
-                });
-                if (prep.success) {
-                  prepared.push(prep.prepared);
-                }
-              } catch {
-                prepErrors++;
-              }
-            }
-          }
+          const { prepared, errorCount } = await prepareExecutableTransactions(tracker, result);
           setPreparedTxs(prepared);
-          if (prepErrors > 0 && prepared.length === 0) {
-            setError(`Failed to prepare ${prepErrors} transaction(s)`);
+          if (errorCount > 0 && prepared.length === 0) {
+            setError(`Failed to prepare ${errorCount} transaction(s)`);
           }
         }
 

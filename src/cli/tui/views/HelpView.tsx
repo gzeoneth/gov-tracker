@@ -97,7 +97,7 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
       allLines.push({
         text: (
           <Box key={`${section.title}-${shortcut.key}`}>
-            <Text color="cyan">{shortcut.key.padEnd(14)}</Text>
+            <Text color="cyan">{shortcut.key.padEnd(12)}</Text>
             <Text>{shortcut.description}</Text>
             {shortcut.note && <Text color="gray"> ({shortcut.note})</Text>}
           </Box>

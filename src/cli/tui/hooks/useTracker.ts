@@ -148,24 +148,39 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
       const { buildDefaultTargets } = await import("../../../constants");
       const targets = buildDefaultTargets();
 
-      // Check if we have cached watermarks, otherwise use 60-day default
+      // Load cached watermarks and merge with 60-day default for missing keys
       const cachedWatermarks = await tracker.loadWatermarks();
-      const hasWatermarks = Object.keys(cachedWatermarks).length > 0;
+      const tuiConfig = loadConfig();
+      // Clamp defaultDays to valid range: 1-365 (falsy values default to 60)
+      const rawDefaultDays = tuiConfig.discovery.defaultDays || 60;
+      const defaultDays = Math.max(1, Math.min(365, rawDefaultDays));
+      const defaultFromBlock = Math.max(0, toBlock - Math.floor(BLOCKS_PER_DAY_L2 * defaultDays));
+
+      // All required watermark keys
+      const requiredKeys = [
+        "constitutionalGovernor",
+        "nonConstitutionalGovernor",
+        "electionNomineeGovernor",
+        "electionMemberGovernor",
+        "l2ConstitutionalTimelock",
+        "l2NonConstitutionalTimelock",
+      ] as const;
+
+      // Check if all watermarks are present
+      const hasAllWatermarks = requiredKeys.every((key) => cachedWatermarks[key] !== undefined);
 
       let fromWatermarks: DiscoveryWatermarks | undefined;
-      if (!hasWatermarks) {
-        // No cache - use configured default days (default: 60)
-        const tuiConfig = loadConfig();
-        const defaultDays = tuiConfig.discovery.defaultDays || 60;
-        const defaultFromBlock = Math.max(0, toBlock - Math.floor(BLOCKS_PER_DAY_L2 * defaultDays));
+      if (!hasAllWatermarks) {
+        // Missing watermarks - fill with 60-day default, preserve existing
         setProgress(`Discovering proposals from last ${defaultDays} days...`);
         fromWatermarks = {
-          constitutionalGovernor: defaultFromBlock,
-          nonConstitutionalGovernor: defaultFromBlock,
-          electionNomineeGovernor: defaultFromBlock,
-          electionMemberGovernor: defaultFromBlock,
-          l2ConstitutionalTimelock: defaultFromBlock,
-          l2NonConstitutionalTimelock: defaultFromBlock,
+          constitutionalGovernor: cachedWatermarks.constitutionalGovernor ?? defaultFromBlock,
+          nonConstitutionalGovernor: cachedWatermarks.nonConstitutionalGovernor ?? defaultFromBlock,
+          electionNomineeGovernor: cachedWatermarks.electionNomineeGovernor ?? defaultFromBlock,
+          electionMemberGovernor: cachedWatermarks.electionMemberGovernor ?? defaultFromBlock,
+          l2ConstitutionalTimelock: cachedWatermarks.l2ConstitutionalTimelock ?? defaultFromBlock,
+          l2NonConstitutionalTimelock:
+            cachedWatermarks.l2NonConstitutionalTimelock ?? defaultFromBlock,
         };
       }
 

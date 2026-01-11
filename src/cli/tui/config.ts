@@ -49,7 +49,7 @@ const DEFAULT_CONFIG: TuiConfig = {
   discovery: {
     defaultDays: 60,
     startBlock: null,
-    chunkSize: 50000,
+    chunkSize: 10_000_000, // Match gov-tracker default (10M blocks for L2)
     concurrency: 1,
   },
   debug: {

@@ -13,29 +13,58 @@ interface StageRowProps {
   isSelected: boolean;
 }
 
-function formatTiming(stage: TrackedStage): string | null {
+interface TimingInfo {
+  text: string;
+  color: string;
+  isCountdown: boolean;
+}
+
+function formatTiming(stage: TrackedStage): TimingInfo | null {
   if (stage.timing?.eta) {
-    const date = new Date(stage.timing.eta * 1000);
     const now = Date.now();
-    const diff = stage.timing.eta * 1000 - now;
+    const etaMs = stage.timing.eta * 1000;
+    const diff = etaMs - now;
 
     if (diff > 0) {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      if (hours > 24) {
+
+      if (hours > 48) {
         const days = Math.floor(hours / 24);
-        return `~${days}d ${hours % 24}h`;
+        return { text: `${days}d ${hours % 24}h`, color: "gray", isCountdown: true };
       }
-      return `~${hours}h ${mins}m`;
+      if (hours > 24) {
+        return { text: `${hours}h ${mins}m`, color: "yellow", isCountdown: true };
+      }
+      if (hours > 1) {
+        return { text: `${hours}h ${mins}m`, color: "yellow", isCountdown: true };
+      }
+      return { text: `${mins}m`, color: "green", isCountdown: true };
     }
 
-    return date.toLocaleDateString();
+    return {
+      text: new Date(etaMs).toLocaleDateString(),
+      color: "gray",
+      isCountdown: false
+    };
   }
 
   if (stage.transactions.length > 0) {
     const tx = stage.transactions[0];
     if (tx.timestamp) {
-      return new Date(tx.timestamp * 1000).toLocaleDateString();
+      const date = new Date(tx.timestamp * 1000);
+      const now = Date.now();
+      const elapsed = now - tx.timestamp * 1000;
+
+      if (elapsed < 60 * 60 * 1000) {
+        const mins = Math.floor(elapsed / (1000 * 60));
+        return { text: `${mins}m ago`, color: "gray", isCountdown: false };
+      }
+      if (elapsed < 24 * 60 * 60 * 1000) {
+        const hours = Math.floor(elapsed / (1000 * 60 * 60));
+        return { text: `${hours}h ago`, color: "gray", isCountdown: false };
+      }
+      return { text: date.toLocaleDateString(), color: "gray", isCountdown: false };
     }
   }
 
@@ -95,7 +124,14 @@ export function StageRow({ stage, index, isSelected }: StageRowProps): React.Rea
       <Text color={isSelected ? "cyan" : undefined}>{title.padEnd(18)}</Text>
       <StatusBadge status={stage.status} padded />
       <Text color="gray">{stage.chain.padEnd(10)}</Text>
-      <Text color="gray">{(timing ?? "").padEnd(12)}</Text>
+      {timing ? (
+        <Text color={timing.color as "gray" | "yellow" | "green"}>
+          {timing.isCountdown && "⏱ "}
+          {timing.text.padEnd(timing.isCountdown ? 10 : 12)}
+        </Text>
+      ) : (
+        <Text color="gray">{" ".repeat(12)}</Text>
+      )}
       {extra && <Text color="gray">[{extra}]</Text>}
     </Box>
   );

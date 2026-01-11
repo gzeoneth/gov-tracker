@@ -58,24 +58,7 @@ function renderProgressBar(progress: { current: number; total: number }): string
   return "█".repeat(filled) + "░".repeat(empty);
 }
 
-const COL_WIDTHS = {
-  selector: 1,
-  type: 4,
-  age: 8,
-  status: 1,
-  progress: 7,
-  executable: 2,
-  spacing: 5,
-};
-
-const FIXED_WIDTH =
-  COL_WIDTHS.selector +
-  COL_WIDTHS.type +
-  COL_WIDTHS.age +
-  COL_WIDTHS.status +
-  COL_WIDTHS.progress +
-  COL_WIDTHS.executable +
-  COL_WIDTHS.spacing;
+const FIXED_COLS_WIDTH = 1 + 4 + 1 + 1 + 8 + 1 + 1 + 1 + 7 + 2;
 
 export function ProposalRow({ item, isSelected }: ProposalRowProps): React.ReactElement {
   const typeLabel = getTypeLabel(item);
@@ -85,9 +68,8 @@ export function ProposalRow({ item, isSelected }: ProposalRowProps): React.React
   const progressBar = progress ? renderProgressBar(progress) : null;
 
   const { width } = getTerminalSize();
-  const maxTitleWidth = Math.max(10, width - FIXED_WIDTH);
+  const maxTitleWidth = Math.max(10, width - FIXED_COLS_WIDTH);
   const title = truncate(item.title, maxTitleWidth);
-  const titlePadded = title.padEnd(maxTitleWidth);
 
   const progressDisplay = progressBar ?? item.stageProgress;
   const progressColor = progressBar
@@ -103,13 +85,13 @@ export function ProposalRow({ item, isSelected }: ProposalRowProps): React.React
       </Text>
       <Text color={typeColor}>[{typeLabel}]</Text>
       <Text> </Text>
-      <Text color={isSelected ? "cyan" : undefined}>{titlePadded}</Text>
-      <Text> </Text>
-      <Text color="gray">{age.padStart(COL_WIDTHS.age)}</Text>
+      <Text color={isSelected ? "cyan" : undefined}>{title}</Text>
+      <Text color="gray"> </Text>
+      <Text color="gray">{age.padStart(8)}</Text>
       <Text> </Text>
       <StatusBadge status={item.status} compact />
-      <Text color={progressColor}> {progressDisplay.padEnd(COL_WIDTHS.progress)}</Text>
-      <Text color="green">{item.hasExecutable ? " ▶" : "  "}</Text>
+      <Text color={progressColor}> {progressDisplay}</Text>
+      {item.hasExecutable && <Text color="green"> ▶</Text>}
     </Box>
   );
 }

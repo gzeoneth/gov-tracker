@@ -12,54 +12,68 @@ interface HelpViewProps {
 
 interface ShortcutSection {
   title: string;
-  shortcuts: Array<{ key: string; description: string }>;
+  icon?: string;
+  shortcuts: Array<{ key: string; description: string; note?: string }>;
 }
 
 const HELP_SECTIONS: ShortcutSection[] = [
   {
-    title: "Navigation",
+    title: "Navigation (Vim-style)",
+    icon: "⌨",
     shortcuts: [
-      { key: "↑/↓", description: "Move selection up/down" },
-      { key: "PgUp/PgDn", description: "Move selection by 10 items" },
-      { key: "g/G", description: "Jump to top/bottom" },
-      { key: "Enter", description: "Select item / enter view" },
-      { key: "b/Esc", description: "Go back to previous view" },
-      { key: "1-7", description: "Jump to stage (in detail view)" },
+      { key: "j/↓", description: "Move down" },
+      { key: "k/↑", description: "Move up" },
+      { key: "Ctrl+d/PgDn", description: "Page down (10 items)" },
+      { key: "Ctrl+u/PgUp", description: "Page up (10 items)" },
+      { key: "g", description: "Jump to top" },
+      { key: "G", description: "Jump to bottom" },
+      { key: "Enter", description: "Select / Enter view" },
+      { key: "b/Esc", description: "Go back" },
     ],
   },
   {
     title: "List View",
+    icon: "📋",
     shortcuts: [
-      { key: "/", description: "Start search" },
-      { key: "Tab", description: "Cycle through filters (all/active/complete/timelocks)" },
+      { key: "/", description: "Start search", note: "Enter to finish, Esc to clear" },
+      { key: "Tab", description: "Cycle filter", note: "all → active → complete → timelocks" },
+      { key: "o", description: "Cycle sort", note: "newest → oldest → progress → status" },
       { key: "R", description: "Reload cache from disk" },
-      { key: "d", description: "Discover new proposals (requires RPC)" },
-      { key: "e", description: "View election status (requires RPC)" },
-      { key: "q", description: "Quit application" },
+      { key: "d", description: "Discover proposals", note: "requires RPC" },
+      { key: "e", description: "Election status", note: "requires RPC" },
+      { key: "q", description: "Quit" },
     ],
   },
   {
     title: "Detail View",
+    icon: "📄",
     shortcuts: [
-      { key: "d", description: "View full description" },
-      { key: "c", description: "View decoded calldata" },
+      { key: "1-7", description: "Jump to stage number" },
+      { key: "y", description: "Copy proposal/operation ID" },
+      { key: "Y", description: "Copy transaction hash" },
+      { key: "d", description: "View description" },
+      { key: "c", description: "View calldata" },
       { key: "s", description: "View simulation data" },
-      { key: "r", description: "Re-track proposal (requires RPC)" },
+      { key: "r", description: "Re-track proposal", note: "requires RPC" },
     ],
   },
   {
     title: "Calldata View",
+    icon: "🔍",
     shortcuts: [
       { key: "←/→", description: "Navigate between actions" },
-      { key: "Enter", description: "Toggle fold/unfold long values" },
-      { key: "e", description: "Expand all foldable sections" },
-      { key: "c", description: "Collapse all sections" },
+      { key: "Enter", description: "Toggle fold/unfold" },
+      { key: "e", description: "Expand all" },
+      { key: "c", description: "Collapse all" },
     ],
   },
   {
-    title: "Other",
+    title: "Tips",
+    icon: "💡",
     shortcuts: [
-      { key: "?", description: "Show this help" },
+      { key: "?", description: "Show/hide this help (works in any view)" },
+      { key: "Search", description: "Matches title and proposal ID" },
+      { key: "RPC", description: "Use --l2-rpc for tracking features" },
     ],
   },
 ];
@@ -70,35 +84,38 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
   const { state } = navigation;
   const visibleRows = getVisibleRows(RESERVED_LINES);
 
-  const allLines: Array<{ text: React.ReactNode; isHeader?: boolean }> = [];
+  const allLines: Array<{ text: React.ReactNode; isHeader?: boolean; isSpacer?: boolean }> = [];
 
   for (const section of HELP_SECTIONS) {
-    allLines.push({ text: section.title, isHeader: true });
+    allLines.push({ text: `${section.icon ?? "•"} ${section.title}`, isHeader: true });
     for (const shortcut of section.shortcuts) {
       allLines.push({
         text: (
           <Box key={`${section.title}-${shortcut.key}`}>
-            <Text color="cyan">{shortcut.key.padEnd(12)}</Text>
-            <Text color="gray">{shortcut.description}</Text>
+            <Text color="cyan">{shortcut.key.padEnd(14)}</Text>
+            <Text>{shortcut.description}</Text>
+            {shortcut.note && <Text color="gray"> ({shortcut.note})</Text>}
           </Box>
         ),
       });
     }
-    allLines.push({ text: "" });
+    allLines.push({ text: "", isSpacer: true });
   }
 
   const visibleLines = allLines.slice(state.scrollOffset, state.scrollOffset + visibleRows);
+  const hasMore = state.scrollOffset + visibleRows < allLines.length;
+  const hasLess = state.scrollOffset > 0;
 
   useInput((input: string, key: KeyInput) => {
     if (input === "?" || input === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow) {
+    } else if (key.upArrow || input === "k") {
       navigation.moveUp();
-    } else if (key.downArrow) {
+    } else if (key.downArrow || input === "j") {
       navigation.moveDown(allLines.length);
-    } else if (key.pageUp) {
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
       navigation.pageUp(allLines.length);
-    } else if (key.pageDown) {
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
       navigation.pageDown(allLines.length);
     } else if (input === "g") {
       navigation.goToTop();
@@ -110,38 +127,46 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
   return (
     <Box flexDirection="column" height="100%">
       <Box borderStyle="single" borderColor="cyan" paddingX={1}>
-        <Text bold color="cyan">Keyboard Shortcuts</Text>
-        <Text color="gray"> - Press ? or b to close</Text>
+        <Text bold color="cyan">Gov-Tracker Help</Text>
+        <Text color="gray"> - Keyboard Shortcuts Reference</Text>
       </Box>
 
       <Box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
-        {state.scrollOffset > 0 && <Text color="gray">↑ more above</Text>}
+        {hasLess && (
+          <Box marginBottom={1}>
+            <Text color="gray">↑ {state.scrollOffset} more above</Text>
+          </Box>
+        )}
 
         {visibleLines.map((line, i) => {
           if (line.isHeader) {
             return (
-              <Text key={i} bold color="yellow">
-                {"\n"}{line.text as string}
-              </Text>
+              <Box key={i} marginTop={i === 0 ? 0 : 1}>
+                <Text bold color="yellow">{line.text as string}</Text>
+              </Box>
             );
           }
-          if (line.text === "") {
-            return <Text key={i}> </Text>;
+          if (line.isSpacer) {
+            return null;
           }
           return <Box key={i} marginLeft={2}>{line.text}</Box>;
         })}
 
-        {state.scrollOffset + visibleRows < allLines.length && (
-          <Text color="gray">↓ more below</Text>
+        {hasMore && (
+          <Box marginTop={1}>
+            <Text color="gray">↓ {allLines.length - state.scrollOffset - visibleRows} more below</Text>
+          </Box>
         )}
       </Box>
 
       <Box borderStyle="single" borderColor="gray" paddingX={1}>
-        <Text color="cyan">↑↓</Text>
+        <Text color="cyan">j/k</Text>
         <Text color="gray">: Scroll </Text>
-        <Text color="cyan">PgUp/Dn</Text>
+        <Text color="cyan">Ctrl+d/u</Text>
         <Text color="gray">: Page </Text>
-        <Text color="cyan">?/b/Esc</Text>
+        <Text color="cyan">g/G</Text>
+        <Text color="gray">: Top/Bottom </Text>
+        <Text color="cyan">?/b</Text>
         <Text color="gray">: Close</Text>
       </Box>
     </Box>

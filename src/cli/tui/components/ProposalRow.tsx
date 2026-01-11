@@ -58,18 +58,43 @@ function renderProgressBar(progress: { current: number; total: number }): string
   return "█".repeat(filled) + "░".repeat(empty);
 }
 
+const COL_WIDTHS = {
+  selector: 1,
+  type: 4,
+  age: 8,
+  status: 1,
+  progress: 7,
+  executable: 2,
+  spacing: 5,
+};
+
+const FIXED_WIDTH =
+  COL_WIDTHS.selector +
+  COL_WIDTHS.type +
+  COL_WIDTHS.age +
+  COL_WIDTHS.status +
+  COL_WIDTHS.progress +
+  COL_WIDTHS.executable +
+  COL_WIDTHS.spacing;
+
 export function ProposalRow({ item, isSelected }: ProposalRowProps): React.ReactElement {
   const typeLabel = getTypeLabel(item);
   const typeColor = getTypeColor(item);
   const age = formatAge(item.createdAt);
   const progress = parseProgress(item.stageProgress);
   const progressBar = progress ? renderProgressBar(progress) : null;
-  const progressWidth = progressBar ? progressBar.length : item.stageProgress.length;
 
   const { width } = getTerminalSize();
-  const fixedWidth = 1 + 2 + 1 + 1 + 8 + 1 + 1 + 1 + progressWidth + (item.hasExecutable ? 2 : 0);
-  const maxTitleWidth = Math.max(10, width - fixedWidth);
+  const maxTitleWidth = Math.max(10, width - FIXED_WIDTH);
   const title = truncate(item.title, maxTitleWidth);
+  const titlePadded = title.padEnd(maxTitleWidth);
+
+  const progressDisplay = progressBar ?? item.stageProgress;
+  const progressColor = progressBar
+    ? item.status === "complete"
+      ? "green"
+      : "yellow"
+    : "gray";
 
   return (
     <Box>
@@ -78,17 +103,13 @@ export function ProposalRow({ item, isSelected }: ProposalRowProps): React.React
       </Text>
       <Text color={typeColor}>[{typeLabel}]</Text>
       <Text> </Text>
-      <Text color={isSelected ? "cyan" : undefined}>{title}</Text>
-      <Text color="gray"> </Text>
-      <Text color="gray">{age.padStart(8)}</Text>
+      <Text color={isSelected ? "cyan" : undefined}>{titlePadded}</Text>
+      <Text> </Text>
+      <Text color="gray">{age.padStart(COL_WIDTHS.age)}</Text>
       <Text> </Text>
       <StatusBadge status={item.status} compact />
-      {progressBar ? (
-        <Text color={item.status === "complete" ? "green" : "yellow"}> {progressBar}</Text>
-      ) : (
-        <Text color="gray"> {item.stageProgress}</Text>
-      )}
-      {item.hasExecutable && <Text color="green"> ▶</Text>}
+      <Text color={progressColor}> {progressDisplay.padEnd(COL_WIDTHS.progress)}</Text>
+      <Text color="green">{item.hasExecutable ? " ▶" : "  "}</Text>
     </Box>
   );
 }

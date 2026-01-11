@@ -13,6 +13,7 @@ interface HeaderProps {
   hasProviders: boolean;
   isTracking: boolean;
   title?: string;
+  position?: { current: number; total: number };
 }
 
 export function Header({
@@ -22,11 +23,12 @@ export function Header({
   hasProviders,
   isTracking,
   title,
+  position,
 }: HeaderProps): React.ReactElement {
   const getViewTitle = (): string => {
     switch (view) {
       case "list":
-        return "Gov-Tracker TUI";
+        return "Gov-Tracker TUI [PREVIEW]";
       case "detail":
         return title ?? "Proposal Detail";
       case "calldata":
@@ -79,6 +81,9 @@ export function Header({
             {" "}
             [{filter.toUpperCase()}]
           </Text>
+        )}
+        {position && position.total > 0 && (
+          <Text color="yellow"> {position.current}/{position.total}</Text>
         )}
       </Box>
       {getRightSide()}

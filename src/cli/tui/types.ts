@@ -36,6 +36,8 @@ export interface NavigationState {
   selectedStageIndex: number;
   calldataActionIndex: number;
   scrollOffset: number;
+  searchQuery: string;
+  isSearching: boolean;
 }
 
 export interface CacheData {

@@ -17,8 +17,11 @@ interface KeyBinding {
 
 const LIST_KEYS: KeyBinding[] = [
   { key: "↑↓/PgUp/Dn", action: "Navigate" },
+  { key: "g/G", action: "Top/Bottom" },
+  { key: "/", action: "Search" },
   { key: "Enter", action: "View" },
   { key: "Tab", action: "Filter" },
+  { key: "R", action: "Reload" },
   { key: "e", action: "Elections" },
   { key: "d", action: "Discover" },
   { key: "q", action: "Quit" },
@@ -26,6 +29,7 @@ const LIST_KEYS: KeyBinding[] = [
 
 const DETAIL_KEYS_BASE: KeyBinding[] = [
   { key: "↑↓", action: "Stage" },
+  { key: "1-7", action: "Jump" },
   { key: "Enter", action: "Details" },
   { key: "d", action: "Description" },
   { key: "c", action: "Calldata" },
@@ -38,6 +42,8 @@ const DETAIL_BACK: KeyBinding = { key: "b", action: "Back" };
 const CALLDATA_KEYS: KeyBinding[] = [
   { key: "←→", action: "Actions" },
   { key: "↑↓/PgUp/Dn", action: "Scroll" },
+  { key: "g/G", action: "Top/Bottom" },
+  { key: "e/c", action: "Expand/Collapse" },
   { key: "b", action: "Back" },
 ];
 
@@ -89,11 +95,10 @@ export function KeyHelp({ view, hasProviders }: KeyHelpProps): React.ReactElemen
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1}>
-      {keys.map((binding, i) => (
+      {keys.map((binding) => (
         <Box key={binding.key} marginRight={2}>
           <Text color="cyan">{binding.key}</Text>
           <Text color="gray">: {binding.action}</Text>
-          {i < keys.length - 1 && <Text color="gray"> </Text>}
         </Box>
       ))}
     </Box>

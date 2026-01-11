@@ -13,6 +13,8 @@ const INITIAL_STATE: NavigationState = {
   selectedStageIndex: 0,
   calldataActionIndex: 0,
   scrollOffset: 0,
+  searchQuery: "",
+  isSearching: false,
 };
 
 export interface UseNavigationResult {
@@ -24,6 +26,8 @@ export interface UseNavigationResult {
   moveDown: (maxIndex: number) => void;
   pageUp: (maxIndex: number) => void;
   pageDown: (maxIndex: number) => void;
+  goToTop: () => void;
+  goToBottom: (maxIndex: number) => void;
   enter: (items: ProposalListItem[]) => void;
   back: () => void;
   goToCalldata: () => void;
@@ -35,6 +39,11 @@ export interface UseNavigationResult {
   prevAction: () => void;
   setScrollOffset: (offset: number) => void;
   reset: () => void;
+  startSearch: () => void;
+  cancelSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  appendSearchChar: (char: string) => void;
+  deleteSearchChar: () => void;
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
@@ -89,7 +98,7 @@ export function useNavigation(): UseNavigationResult {
     });
   }, []);
 
-  const pageUp = useCallback(() => {
+  const pageUp = useCallback((_maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
         return { ...prev, selectedIndex: Math.max(0, prev.selectedIndex - PAGE_SIZE) };
@@ -108,6 +117,36 @@ export function useNavigation(): UseNavigationResult {
       }
       if (SCROLLABLE_VIEWS.includes(prev.view)) {
         return { ...prev, scrollOffset: prev.scrollOffset + PAGE_SIZE };
+      }
+      return prev;
+    });
+  }, []);
+
+  const goToTop = useCallback(() => {
+    setState((prev) => {
+      if (prev.view === "list") {
+        return { ...prev, selectedIndex: 0 };
+      }
+      if (prev.view === "detail") {
+        return { ...prev, selectedStageIndex: 0 };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: 0 };
+      }
+      return prev;
+    });
+  }, []);
+
+  const goToBottom = useCallback((maxIndex: number) => {
+    setState((prev) => {
+      if (prev.view === "list") {
+        return { ...prev, selectedIndex: Math.max(0, maxIndex - 1) };
+      }
+      if (prev.view === "detail") {
+        return { ...prev, selectedStageIndex: 6 };
+      }
+      if (SCROLLABLE_VIEWS.includes(prev.view)) {
+        return { ...prev, scrollOffset: Math.max(0, maxIndex - 1) };
       }
       return prev;
     });
@@ -178,6 +217,30 @@ export function useNavigation(): UseNavigationResult {
 
   const reset = useCallback(() => setState(INITIAL_STATE), []);
 
+  const startSearch = useCallback(() => {
+    setState((prev) => ({ ...prev, isSearching: true, searchQuery: "" }));
+  }, []);
+
+  const cancelSearch = useCallback(() => {
+    setState((prev) => ({ ...prev, isSearching: false, searchQuery: "" }));
+  }, []);
+
+  const setSearchQuery = useCallback((query: string) => {
+    setState((prev) => ({ ...prev, searchQuery: query, selectedIndex: 0 }));
+  }, []);
+
+  const appendSearchChar = useCallback((char: string) => {
+    setState((prev) => ({ ...prev, searchQuery: prev.searchQuery + char, selectedIndex: 0 }));
+  }, []);
+
+  const deleteSearchChar = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      searchQuery: prev.searchQuery.slice(0, -1),
+      selectedIndex: 0,
+    }));
+  }, []);
+
   return {
     state,
     setFilter,
@@ -187,6 +250,8 @@ export function useNavigation(): UseNavigationResult {
     moveDown,
     pageUp,
     pageDown,
+    goToTop,
+    goToBottom,
     enter,
     back,
     goToCalldata,
@@ -198,5 +263,10 @@ export function useNavigation(): UseNavigationResult {
     prevAction,
     setScrollOffset,
     reset,
+    startSearch,
+    cancelSearch,
+    setSearchQuery,
+    appendSearchChar,
+    deleteSearchChar,
   };
 }

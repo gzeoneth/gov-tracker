@@ -90,6 +90,15 @@ export function ProposalDetail({
       navigation.goToDescription();
     } else if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) {
       tracker.track(proposal);
+    } else if (inputKey === "g") {
+      navigation.goToTop();
+    } else if (inputKey === "G") {
+      navigation.goToBottom(7);
+    } else if (inputKey >= "1" && inputKey <= "7") {
+      const stageIndex = parseInt(inputKey, 10) - 1;
+      if (stages[stageIndex]) {
+        navigation.goToStage(stageIndex);
+      }
     }
   });
 
@@ -124,6 +133,7 @@ export function ProposalDetail({
         hasProviders={tracker.canTrack}
         isTracking={tracker.isTracking}
         title={proposal.title}
+        position={{ current: state.selectedStageIndex + 1, total: 7 }}
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>

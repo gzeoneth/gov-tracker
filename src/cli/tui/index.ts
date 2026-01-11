@@ -39,7 +39,8 @@ export async function runTui(options: TuiOptions): Promise<void> {
       cachePath: options.cachePath,
       providers: options.providers,
       verbose: options.verbose,
-    })
+    }),
+    { fullScreen: true }
   );
 
   await waitUntilExit();

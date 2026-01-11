@@ -120,6 +120,8 @@ export function CalldataView({
 
   const visibleCount = getVisibleRows(RESERVED_LINES);
 
+  const allFoldableKeys = allLines.filter((l) => l.foldable && l.foldKey).map((l) => l.foldKey!);
+
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
@@ -135,6 +137,14 @@ export function CalldataView({
       navigation.prevAction();
     } else if (key.rightArrow) {
       navigation.nextAction(actions.length);
+    } else if (input === "e") {
+      setExpandedKeys(new Set(allFoldableKeys));
+    } else if (input === "c") {
+      setExpandedKeys(new Set());
+    } else if (input === "g") {
+      navigation.goToTop();
+    } else if (input === "G") {
+      navigation.goToBottom(displayLines.length);
     } else if (key.return) {
       const currentLine = displayLines[state.scrollOffset];
       if (currentLine?.foldable && currentLine.foldKey) {
@@ -166,7 +176,7 @@ export function CalldataView({
       <Box marginBottom={1}>
         <Text color="cyan">Action {state.calldataActionIndex + 1}/{actions.length}</Text>
         {actions.length > 1 && <Text color="gray"> (← → navigate)</Text>}
-        <Text color="gray"> (Enter to expand/collapse)</Text>
+        <Text color="gray"> (Enter toggle, e=expand all, c=collapse all)</Text>
       </Box>
 
       {currentAction && (

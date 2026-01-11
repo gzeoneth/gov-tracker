@@ -5,7 +5,7 @@
  */
 
 import { React, Box, Text, useApp } from "./ink-wrapper.js";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ProviderBundle } from "../lib/cli.js";
 import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
 import { ProposalList } from "./views/ProposalList.js";
@@ -22,12 +22,27 @@ export interface AppProps {
   verbose?: boolean;
 }
 
+function useTerminalHeight(): number {
+  const [height, setHeight] = useState(process.stdout.rows || 24);
+
+  useEffect(() => {
+    const handleResize = () => setHeight(process.stdout.rows || 24);
+    process.stdout.on("resize", handleResize);
+    return () => {
+      process.stdout.off("resize", handleResize);
+    };
+  }, []);
+
+  return height;
+}
+
 export function App({ cachePath, providers: providerBundle, verbose }: AppProps): React.ReactElement {
   const { exit } = useApp();
   const cache = useCache(cachePath);
   const navigation = useNavigation();
-  const { items } = useProposals(cache.data, navigation.state.filter);
+  const { items } = useProposals(cache.data, navigation.state.filter, navigation.state.searchQuery);
   const tracker = useTracker({ providers: providerBundle, cachePath });
+  const terminalHeight = useTerminalHeight();
 
   useEffect(() => {
     if (verbose && cache.error) {
@@ -47,7 +62,7 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   if (cache.loading) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <Box flexDirection="column" height={terminalHeight} padding={1}>
         <Text color="yellow">Loading cache...</Text>
         <Text color="gray">{cachePath}</Text>
       </Box>
@@ -56,7 +71,7 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   if (cache.error) {
     return (
-      <Box flexDirection="column" padding={1}>
+      <Box flexDirection="column" height={terminalHeight} padding={1}>
         <Text color="red">Error loading cache:</Text>
         <Text color="gray">{cache.error}</Text>
         <Text color="gray" marginTop={1}>
@@ -68,50 +83,59 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   const { view, selectedProposal } = navigation.state;
 
-  if (view === "list") {
-    return (
-      <ProposalList
-        items={items}
-        data={cache.data}
-        navigation={navigation}
-        tracker={tracker}
-        onQuit={handleQuit}
-      />
-    );
-  }
-
-  if (view === "election") {
-    return <ElectionView navigation={navigation} providers={providerBundle} />;
-  }
-
-  if (!selectedProposal) {
-    navigation.back();
-    return <Text>Returning to list...</Text>;
-  }
-
-  switch (view) {
-    case "detail":
+  const renderView = (): React.ReactElement => {
+    if (view === "list") {
       return (
-        <ProposalDetail
-          proposal={selectedProposal}
+        <ProposalList
+          items={items}
+          data={cache.data}
           navigation={navigation}
           tracker={tracker}
+          onQuit={handleQuit}
+          onReload={cache.reload}
         />
       );
+    }
 
-    case "calldata":
-      return <CalldataView proposal={selectedProposal} navigation={navigation} />;
+    if (view === "election") {
+      return <ElectionView navigation={navigation} providers={providerBundle} />;
+    }
 
-    case "stage":
-      return <StageView proposal={selectedProposal} navigation={navigation} />;
+    if (!selectedProposal) {
+      navigation.back();
+      return <Text>Returning to list...</Text>;
+    }
 
-    case "simulation":
-      return <SimulationView proposal={selectedProposal} navigation={navigation} />;
+    switch (view) {
+      case "detail":
+        return (
+          <ProposalDetail
+            proposal={selectedProposal}
+            navigation={navigation}
+            tracker={tracker}
+          />
+        );
 
-    case "description":
-      return <DescriptionView proposal={selectedProposal} navigation={navigation} />;
+      case "calldata":
+        return <CalldataView proposal={selectedProposal} navigation={navigation} />;
 
-    default:
-      return <Text>Unknown view: {view}</Text>;
-  }
+      case "stage":
+        return <StageView proposal={selectedProposal} navigation={navigation} />;
+
+      case "simulation":
+        return <SimulationView proposal={selectedProposal} navigation={navigation} />;
+
+      case "description":
+        return <DescriptionView proposal={selectedProposal} navigation={navigation} />;
+
+      default:
+        return <Text>Unknown view: {view}</Text>;
+    }
+  };
+
+  return (
+    <Box flexDirection="column" height={terminalHeight}>
+      {renderView()}
+    </Box>
+  );
 }

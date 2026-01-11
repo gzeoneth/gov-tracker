@@ -12,18 +12,12 @@ import { getVisibleRows } from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 
-function chainToChainId(chain: Chain): number {
-  switch (chain) {
-    case "ethereum":
-      return CHAIN_IDS.ETHEREUM;
-    case "arb1":
-      return CHAIN_IDS.ARB_ONE;
-    case "nova":
-      return CHAIN_IDS.NOVA;
-    default:
-      return CHAIN_IDS.ETHEREUM;
-  }
-}
+const CHAIN_TO_CHAIN_ID: Record<Chain, number> = {
+  ethereum: CHAIN_IDS.ETHEREUM,
+  arb1: CHAIN_IDS.ARB_ONE,
+  nova: CHAIN_IDS.NOVA,
+  unknown: CHAIN_IDS.ETHEREUM,
+};
 
 interface StageViewProps {
   proposal: ProposalListItem;
@@ -128,6 +122,10 @@ export function StageView({
       navigation.pageUp(dataItems.length);
     } else if (key.pageDown) {
       navigation.pageDown(dataItems.length);
+    } else if (input === "g") {
+      navigation.goToTop();
+    } else if (input === "G") {
+      navigation.goToBottom(dataItems.length);
     }
   });
 
@@ -157,7 +155,7 @@ export function StageView({
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>Transactions:</Text>
           {stage.transactions.map((tx, i) => {
-            const url = getTxUrl(chainToChainId(tx.chain), tx.hash);
+            const url = getTxUrl(CHAIN_TO_CHAIN_ID[tx.chain], tx.hash);
             return (
               <Box key={i} flexDirection="column" marginLeft={1}>
                 <Box><Text color="gray">[{i + 1}] </Text><Text color="blue">{tx.hash}</Text></Box>

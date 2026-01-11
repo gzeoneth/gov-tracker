@@ -9,7 +9,6 @@ import { StatusBadge } from "./StatusBadge.js";
 interface ProposalRowProps {
   item: ProposalListItem;
   isSelected: boolean;
-  maxWidth?: number;
 }
 
 function getTypeLabel(item: ProposalListItem): string {
@@ -25,11 +24,6 @@ function getTypeColor(item: ProposalListItem): string {
   if (item.type === "timelock") return "blue";
   if (item.proposalType === "CONSTITUTIONAL") return "cyan";
   return "green";
-}
-
-function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 1) + "…";
 }
 
 function formatAge(timestamp: number | null): string {
@@ -51,14 +45,10 @@ function formatAge(timestamp: number | null): string {
   return `${years}y ago`;
 }
 
-export function ProposalRow({ item, isSelected, maxWidth = 80 }: ProposalRowProps): React.ReactElement {
+export function ProposalRow({ item, isSelected }: ProposalRowProps): React.ReactElement {
   const typeLabel = getTypeLabel(item);
   const typeColor = getTypeColor(item);
   const age = formatAge(item.createdAt);
-
-  // Calculate available width for title: total - cursor(2) - type(3) - age(9) - status(3) - progress(4) - exec(2) - spaces(5)
-  const titleWidth = Math.max(20, maxWidth - 28);
-  const displayTitle = truncate(item.title, titleWidth).padEnd(titleWidth);
 
   return (
     <Box>
@@ -67,7 +57,7 @@ export function ProposalRow({ item, isSelected, maxWidth = 80 }: ProposalRowProp
       </Text>
       <Text color={typeColor}>{typeLabel}</Text>
       <Text> </Text>
-      <Text color={isSelected ? "cyan" : undefined}>{displayTitle}</Text>
+      <Text color={isSelected ? "cyan" : undefined}>{item.title}</Text>
       <Text color="gray"> </Text>
       <Text color="gray">{age.padStart(8)}</Text>
       <Text> </Text>

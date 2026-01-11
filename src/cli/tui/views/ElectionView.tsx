@@ -169,9 +169,13 @@ interface ElectionItemProps {
   isSelected: boolean;
 }
 
-function ElectionItem({ election, isSelected }: ElectionItemProps): React.ReactElement {
-  const phaseColor = election.phase === "COMPLETED" ? "green" : election.phase === "NOT_STARTED" ? "gray" : "yellow";
+function getPhaseColor(phase: string): string {
+  if (phase === "COMPLETED") return "green";
+  if (phase === "NOT_STARTED") return "gray";
+  return "yellow";
+}
 
+function ElectionItem({ election, isSelected }: ElectionItemProps): React.ReactElement {
   return (
     <Box marginLeft={1} flexDirection="column">
       <Box>
@@ -180,7 +184,7 @@ function ElectionItem({ election, isSelected }: ElectionItemProps): React.ReactE
         <Text> </Text>
         <Text color={isSelected ? "cyan" : undefined} bold={isSelected}>Election #{election.electionIndex}</Text>
         <Text color="gray"> - </Text>
-        <Text color={phaseColor}>{election.phase.replace(/_/g, " ")}</Text>
+        <Text color={getPhaseColor(election.phase)}>{election.phase.replace(/_/g, " ")}</Text>
       </Box>
       {isSelected && (
         <Box marginLeft={4} flexDirection="column">

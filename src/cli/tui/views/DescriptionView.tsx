@@ -6,6 +6,7 @@ import { React, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
+import { getVisibleRows } from "../utils/index.js";
 
 interface DescriptionViewProps {
   proposal: ProposalListItem;
@@ -130,7 +131,7 @@ function wrapTextToLines(
   }
 }
 
-const VISIBLE_LINES = 20;
+const RESERVED_LINES = 8;
 
 function FormattedLineComponent({ line }: { line: FormattedLine }): React.ReactElement {
   const indent = " ".repeat(line.indent);
@@ -175,7 +176,8 @@ export function DescriptionView({
   const description = getDescription(proposal);
   const terminalWidth = process.stdout.columns || 80;
   const lines = parseMarkdown(description, terminalWidth - 4);
-  const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + VISIBLE_LINES);
+  const visibleCount = getVisibleRows(RESERVED_LINES);
+  const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
@@ -188,6 +190,10 @@ export function DescriptionView({
       navigation.pageUp(lines.length);
     } else if (key.pageDown) {
       navigation.pageDown(lines.length);
+    } else if (input === "g") {
+      navigation.goToTop();
+    } else if (input === "G") {
+      navigation.goToBottom(lines.length);
     }
   });
 
@@ -197,8 +203,8 @@ export function DescriptionView({
       {visibleLines.map((line, i) => (
         <FormattedLineComponent key={i} line={line} />
       ))}
-      {state.scrollOffset + VISIBLE_LINES < lines.length && (
-        <Text color="gray">↓ {lines.length - state.scrollOffset - VISIBLE_LINES} lines below</Text>
+      {state.scrollOffset + visibleCount < lines.length && (
+        <Text color="gray">↓ {lines.length - state.scrollOffset - visibleCount} lines below</Text>
       )}
     </ViewLayout>
   );

@@ -9,7 +9,7 @@ import type { UseTrackerResult } from "../hooks/useTracker.js";
 import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { ProposalRow } from "../components/ProposalRow.js";
-import { getTerminalSize, getVisibleRows } from "../utils/index.js";
+import { getVisibleRows } from "../utils/index.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -17,6 +17,7 @@ interface ProposalListProps {
   navigation: UseNavigationResult;
   tracker: UseTrackerResult;
   onQuit: () => void;
+  onReload: () => void;
 }
 
 const RESERVED_LINES = 8;
@@ -27,10 +28,10 @@ export function ProposalList({
   navigation,
   tracker,
   onQuit,
+  onReload,
 }: ProposalListProps): React.ReactElement {
   const { state } = navigation;
   const selectedIndex = state.selectedIndex;
-  const { width: terminalWidth } = getTerminalSize();
   const visibleRows = getVisibleRows(RESERVED_LINES);
 
   const startIndex = Math.max(
@@ -40,12 +41,27 @@ export function ProposalList({
   const visibleItems = items.slice(startIndex, startIndex + visibleRows);
 
   useInput((input: string, key: KeyInput) => {
+    if (state.isSearching) {
+      if (key.escape) {
+        navigation.cancelSearch();
+      } else if (key.return) {
+        navigation.cancelSearch();
+      } else if (key.backspace || key.delete) {
+        navigation.deleteSearchChar();
+      } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
+        navigation.appendSearchChar(input);
+      }
+      return;
+    }
+
     if (input === "q") {
       onQuit();
       return;
     }
 
-    if (key.upArrow) {
+    if (input === "/") {
+      navigation.startSearch();
+    } else if (key.upArrow) {
       navigation.moveUp();
     } else if (key.downArrow) {
       navigation.moveDown(items.length);
@@ -65,6 +81,12 @@ export function ProposalList({
       });
     } else if (input === "e" && tracker.canTrack) {
       navigation.goToElection();
+    } else if (input === "g") {
+      navigation.goToTop();
+    } else if (input === "G") {
+      navigation.goToBottom(items.length);
+    } else if (input === "R") {
+      onReload();
     }
   });
 
@@ -76,9 +98,25 @@ export function ProposalList({
         stats={data?.stats ?? null}
         hasProviders={tracker.canTrack}
         isTracking={tracker.isTracking}
+        position={items.length > 0 ? { current: selectedIndex + 1, total: items.length } : undefined}
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>
+        {state.isSearching && (
+          <Box marginBottom={1}>
+            <Text color="cyan">Search: </Text>
+            <Text>{state.searchQuery}</Text>
+            <Text color="gray">█</Text>
+            <Text color="gray"> (Esc to cancel)</Text>
+          </Box>
+        )}
+
+        {!state.isSearching && state.searchQuery && (
+          <Box marginBottom={1}>
+            <Text color="gray">Filter: "{state.searchQuery}" (/ to search)</Text>
+          </Box>
+        )}
+
         {tracker.isTracking && tracker.progress && (
           <Box marginBottom={1}>
             <Text color="yellow">{tracker.progress}</Text>
@@ -105,7 +143,6 @@ export function ProposalList({
                 key={item.key}
                 item={item}
                 isSelected={startIndex + i === selectedIndex}
-                maxWidth={terminalWidth - 4}
               />
             ))}
             {startIndex + visibleRows < items.length && (

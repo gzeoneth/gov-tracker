@@ -27,10 +27,6 @@ function getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined
   return getCreatedStage(stages)?.data as ProposalCreatedData | undefined;
 }
 
-function truncate(str: string, maxLen: number): string {
-  return str.length <= maxLen ? str : str.slice(0, maxLen - 3) + "...";
-}
-
 function extractMarkdownTitle(description: string): string | null {
   const lines = description.split("\n");
   for (const line of lines) {
@@ -48,15 +44,14 @@ function getProposalTitle(checkpoint: TrackingCheckpoint): string {
   if (data?.description) {
     const mdTitle = extractMarkdownTitle(data.description);
     if (mdTitle) {
-      return truncate(mdTitle, 60);
+      return mdTitle;
     }
-    // Fallback to first non-empty line
     const firstLine = data.description
       .split("\n")
       .find((l) => l.trim())
       ?.trim();
     if (firstLine) {
-      return truncate(firstLine, 60);
+      return firstLine;
     }
   }
   if (checkpoint.input.type === "governor") {
@@ -142,7 +137,8 @@ function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
 
 export function useProposals(
   data: CacheData | null,
-  filter: FilterType
+  filter: FilterType,
+  searchQuery = ""
 ): { items: ProposalListItem[]; filteredCount: number; totalCount: number } {
   return useMemo(() => {
     if (!data) return { items: [], filteredCount: 0, totalCount: 0 };
@@ -180,7 +176,12 @@ export function useProposals(
       return b.createdAt - a.createdAt;
     });
 
-    const filtered = items.filter((item) => matchesFilter(item, filter));
+    const lowerSearch = searchQuery.toLowerCase();
+    const filtered = items.filter((item) => {
+      if (!matchesFilter(item, filter)) return false;
+      if (lowerSearch && !item.title.toLowerCase().includes(lowerSearch)) return false;
+      return true;
+    });
     return { items: filtered, filteredCount: filtered.length, totalCount: items.length };
-  }, [data, filter]);
+  }, [data, filter, searchQuery]);
 }

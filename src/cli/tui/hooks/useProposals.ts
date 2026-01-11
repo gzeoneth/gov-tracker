@@ -27,7 +27,8 @@ function getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined
   return getCreatedStage(stages)?.data as ProposalCreatedData | undefined;
 }
 
-function extractMarkdownTitle(description: string): string | null {
+function extractMarkdownTitle(description: string | undefined | null): string | null {
+  if (!description) return null;
   const lines = description.split("\n");
   for (const line of lines) {
     const trimmed = line.trim();
@@ -129,11 +130,18 @@ function getItemType(
 }
 
 function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
-  if (filter === "all") return true;
-  if (filter === "active") return item.status === "active";
-  if (filter === "complete") return item.status === "complete";
-  if (filter === "timelocks") return item.type === "timelock";
-  return true;
+  switch (filter) {
+    case "all":
+      return true;
+    case "active":
+      return item.status === "active";
+    case "complete":
+      return item.status === "complete";
+    case "timelocks":
+      return item.type === "timelock";
+    default:
+      return true;
+  }
 }
 
 function getProgressNumber(progress: string): number {
@@ -141,27 +149,28 @@ function getProgressNumber(progress: string): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
+function compareByDate(aDate: number | null, bDate: number | null, ascending: boolean): number {
+  if (aDate === null && bDate === null) return 0;
+  if (aDate === null) return 1;
+  if (bDate === null) return -1;
+  return ascending ? aDate - bDate : bDate - aDate;
+}
+
 function sortItems(items: ProposalListItem[], sort: SortType): ProposalListItem[] {
   return [...items].sort((a, b) => {
     switch (sort) {
       case "newest":
-        if (a.createdAt === null && b.createdAt === null) return 0;
-        if (a.createdAt === null) return 1;
-        if (b.createdAt === null) return -1;
-        return b.createdAt - a.createdAt;
+        return compareByDate(a.createdAt, b.createdAt, false);
 
       case "oldest":
-        if (a.createdAt === null && b.createdAt === null) return 0;
-        if (a.createdAt === null) return 1;
-        if (b.createdAt === null) return -1;
-        return a.createdAt - b.createdAt;
+        return compareByDate(a.createdAt, b.createdAt, true);
 
       case "progress":
         return getProgressNumber(b.stageProgress) - getProgressNumber(a.stageProgress);
 
       case "status": {
-        const statusOrder = { active: 0, complete: 1, failed: 2 };
-        return statusOrder[a.status] - statusOrder[b.status];
+        const statusOrder: Record<string, number> = { active: 0, complete: 1, failed: 2 };
+        return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
       }
 
       default:
@@ -188,12 +197,14 @@ export function useProposals(
 
       // Handle proposals with no stages yet (discovered but not tracked)
       if (stages.length === 0) {
-        const title =
-          checkpoint.input.type === "governor"
-            ? `Proposal ${checkpoint.input.proposalId.slice(0, 8)}...`
-            : checkpoint.input.type === "timelock"
-              ? `Timelock ${checkpoint.input.operationId.slice(0, 10)}...`
-              : "Unknown";
+        let title: string;
+        if (checkpoint.input.type === "governor") {
+          title = `Proposal ${checkpoint.input.proposalId.slice(0, 8)}...`;
+        } else if (checkpoint.input.type === "timelock") {
+          title = `Timelock ${checkpoint.input.operationId.slice(0, 10)}...`;
+        } else {
+          title = "Unknown";
+        }
 
         items.push({
           key,

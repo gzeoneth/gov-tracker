@@ -11,12 +11,23 @@ import type {
   TrackingProgress,
   PreparedTransaction,
   ChunkingConfig,
+  TrackingCheckpoint,
 } from "../../../types/index.js";
 import { createTracker, ProposalStageTracker, CHUNK_SIZES } from "../../../index.js";
 import type { ProposalListItem } from "../types.js";
 import type { ProviderBundle } from "../../lib/cli.js";
 import { loadConfig, type TuiConfig } from "../config.js";
 import { useCliProcess } from "./useCliProcess.js";
+
+function getTxHashFromCheckpoint(checkpoint: TrackingCheckpoint): string {
+  if (checkpoint.input.type === "governor") {
+    return checkpoint.input.creationTxHash;
+  }
+  if (checkpoint.input.type === "timelock") {
+    return checkpoint.input.scheduledTxHash;
+  }
+  throw new Error("Cannot track discovery checkpoint");
+}
 
 export interface UseTrackerResult {
   isTracking: boolean;
@@ -133,17 +144,11 @@ export function useTracker(options: UseTrackerOptions): UseTrackerResult {
       setPreparedTxs([]);
 
       try {
-        let txHash: string;
-        if (item.checkpoint.input.type === "governor") {
-          txHash = item.checkpoint.input.creationTxHash;
-        } else if (item.checkpoint.input.type === "timelock") {
-          txHash = item.checkpoint.input.scheduledTxHash;
-        } else {
-          throw new Error("Cannot track discovery checkpoint");
-        }
+        const txHash = getTxHashFromCheckpoint(item.checkpoint);
 
         const results = await tracker.trackByTxHash(txHash);
         const result = results[0] ?? null;
+        if (!mountedRef.current) return null;
         setLastResult(result);
 
         if (result) {

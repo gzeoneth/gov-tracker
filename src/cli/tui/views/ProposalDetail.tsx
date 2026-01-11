@@ -28,8 +28,6 @@ function formatDate(timestamp: number | null): string {
   return new Date(timestamp).toLocaleString();
 }
 
-
-
 export function ProposalDetail({
   proposal,
   navigation,
@@ -56,7 +54,7 @@ export function ProposalDetail({
     } else if (inputKey === "d") {
       navigation.goToDescription();
     } else if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) {
-      tracker.track(proposal);
+      void tracker.track(proposal);
     } else if (inputKey === "g") {
       navigation.goToTop();
     } else if (inputKey === "G") {
@@ -133,9 +131,7 @@ export function ProposalDetail({
             <StatusBadge status={proposal.status} />
           </Box>
           <Box>
-            <Text color="gray">
-              {input.type === "governor" ? "Proposal ID" : "Operation ID"}:{" "}
-            </Text>
+            <Text color="gray">{input.type === "governor" ? "Proposal ID" : "Operation ID"}: </Text>
             <Text>{getProposalIdDisplay()}</Text>
           </Box>
           <Box>
@@ -197,7 +193,7 @@ export function ProposalDetail({
         <Box flexDirection="column" marginTop={1}>
           <Text bold>Stages:</Text>
           {stages.length === 0 ? (
-            <Text color="gray">  No stages tracked yet</Text>
+            <Text color="gray"> No stages tracked yet</Text>
           ) : (
             stages.map((stage, i) => (
               <StageRow

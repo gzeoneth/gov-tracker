@@ -5,6 +5,7 @@
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import { StatusBadge } from "./StatusBadge.js";
+import { getTerminalSize, truncate } from "../utils/index.js";
 
 interface ProposalRowProps {
   item: ProposalListItem;
@@ -63,6 +64,12 @@ export function ProposalRow({ item, isSelected }: ProposalRowProps): React.React
   const age = formatAge(item.createdAt);
   const progress = parseProgress(item.stageProgress);
   const progressBar = progress ? renderProgressBar(progress) : null;
+  const progressWidth = progressBar ? progressBar.length : item.stageProgress.length;
+
+  const { width } = getTerminalSize();
+  const fixedWidth = 1 + 2 + 1 + 1 + 8 + 1 + 1 + 1 + progressWidth + (item.hasExecutable ? 2 : 0);
+  const maxTitleWidth = Math.max(10, width - fixedWidth);
+  const title = truncate(item.title, maxTitleWidth);
 
   return (
     <Box>
@@ -71,17 +78,17 @@ export function ProposalRow({ item, isSelected }: ProposalRowProps): React.React
       </Text>
       <Text color={typeColor}>[{typeLabel}]</Text>
       <Text> </Text>
-      <Text color={isSelected ? "cyan" : undefined}>{item.title}</Text>
+      <Text color={isSelected ? "cyan" : undefined}>{title}</Text>
       <Text color="gray"> </Text>
       <Text color="gray">{age.padStart(8)}</Text>
       <Text> </Text>
       <StatusBadge status={item.status} compact />
       {progressBar ? (
-        <Text color={item.status === "complete" ? "green" : "yellow"}>{progressBar}</Text>
+        <Text color={item.status === "complete" ? "green" : "yellow"}> {progressBar}</Text>
       ) : (
-        <Text color="gray">{item.stageProgress}</Text>
+        <Text color="gray"> {item.stageProgress}</Text>
       )}
-      {item.hasExecutable && <Text color="green" bold> ▶</Text>}
+      {item.hasExecutable && <Text color="green"> ▶</Text>}
     </Box>
   );
 }

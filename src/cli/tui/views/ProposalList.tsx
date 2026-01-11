@@ -46,9 +46,9 @@ export function ProposalList({
   useInput((input: string, key: KeyInput) => {
     if (state.isSearching) {
       if (key.escape) {
-        navigation.cancelSearch();
+        navigation.clearSearch();
       } else if (key.return) {
-        navigation.cancelSearch();
+        navigation.finishSearch();
       } else if (key.backspace || key.delete) {
         navigation.deleteSearchChar();
       } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
@@ -104,7 +104,9 @@ export function ProposalList({
         stats={data?.stats ?? null}
         hasProviders={tracker.canTrack}
         isTracking={tracker.isTracking}
-        position={items.length > 0 ? { current: selectedIndex + 1, total: items.length } : undefined}
+        position={
+          items.length > 0 ? { current: selectedIndex + 1, total: items.length } : undefined
+        }
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>
@@ -136,9 +138,7 @@ export function ProposalList({
           />
         ) : (
           <Box flexDirection="column">
-            {startIndex > 0 && (
-              <Text color="gray">  ↑ {startIndex} more</Text>
-            )}
+            {startIndex > 0 && <Text color="gray"> ↑ {startIndex} more</Text>}
             {visibleItems.map((item, i) => (
               <ProposalRow
                 key={item.key}
@@ -147,7 +147,7 @@ export function ProposalList({
               />
             ))}
             {startIndex + visibleRows < items.length && (
-              <Text color="gray">  ↓ {items.length - startIndex - visibleRows} more</Text>
+              <Text color="gray"> ↓ {items.length - startIndex - visibleRows} more</Text>
             )}
           </Box>
         )}

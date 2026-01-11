@@ -49,7 +49,8 @@ export interface UseNavigationResult {
   setScrollOffset: (offset: number) => void;
   reset: () => void;
   startSearch: () => void;
-  cancelSearch: () => void;
+  finishSearch: () => void;
+  clearSearch: () => void;
   setSearchQuery: (query: string) => void;
   appendSearchChar: (char: string) => void;
   deleteSearchChar: () => void;
@@ -104,13 +105,17 @@ export function useNavigation(): UseNavigationResult {
   const moveDown = useCallback((maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
+        if (maxIndex <= 0) {
+          return { ...prev, selectedIndex: 0 };
+        }
         return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + 1) };
       }
       if (prev.view === "detail") {
         return { ...prev, selectedStageIndex: Math.min(6, prev.selectedStageIndex + 1) };
       }
       if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: prev.scrollOffset + 1 };
+        const lastIndex = Math.max(0, maxIndex - 1);
+        return { ...prev, scrollOffset: Math.min(lastIndex, prev.scrollOffset + 1) };
       }
       return prev;
     });
@@ -131,10 +136,14 @@ export function useNavigation(): UseNavigationResult {
   const pageDown = useCallback((maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
+        if (maxIndex <= 0) {
+          return { ...prev, selectedIndex: 0 };
+        }
         return { ...prev, selectedIndex: Math.min(maxIndex - 1, prev.selectedIndex + PAGE_SIZE) };
       }
       if (SCROLLABLE_VIEWS.includes(prev.view)) {
-        return { ...prev, scrollOffset: prev.scrollOffset + PAGE_SIZE };
+        const lastIndex = Math.max(0, maxIndex - 1);
+        return { ...prev, scrollOffset: Math.min(lastIndex, prev.scrollOffset + PAGE_SIZE) };
       }
       return prev;
     });
@@ -158,7 +167,10 @@ export function useNavigation(): UseNavigationResult {
   const goToBottom = useCallback((maxIndex: number) => {
     setState((prev) => {
       if (prev.view === "list") {
-        return { ...prev, selectedIndex: Math.max(0, maxIndex - 1) };
+        if (maxIndex <= 0) {
+          return { ...prev, selectedIndex: 0 };
+        }
+        return { ...prev, selectedIndex: maxIndex - 1 };
       }
       if (prev.view === "detail") {
         return { ...prev, selectedStageIndex: 6 };
@@ -242,7 +254,11 @@ export function useNavigation(): UseNavigationResult {
     setState((prev) => ({ ...prev, isSearching: true, searchQuery: "" }));
   }, []);
 
-  const cancelSearch = useCallback(() => {
+  const finishSearch = useCallback(() => {
+    setState((prev) => ({ ...prev, isSearching: false }));
+  }, []);
+
+  const clearSearch = useCallback(() => {
     setState((prev) => ({ ...prev, isSearching: false, searchQuery: "" }));
   }, []);
 
@@ -294,7 +310,8 @@ export function useNavigation(): UseNavigationResult {
     setScrollOffset,
     reset,
     startSearch,
-    cancelSearch,
+    finishSearch,
+    clearSearch,
     setSearchQuery,
     appendSearchChar,
     deleteSearchChar,

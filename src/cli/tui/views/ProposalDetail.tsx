@@ -11,9 +11,11 @@ import { KeyHelp } from "../components/KeyHelp.js";
 import { StageRow } from "../components/StageRow.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import { VotingStats } from "../components/VotingStats.js";
+import { StageProgress } from "../components/StageProgress.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import type { VotingActiveData } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
+import { ErrorBanner } from "../components/ErrorDisplay.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;
@@ -119,6 +121,9 @@ export function ProposalDetail({
       />
 
       <Box flexDirection="column" paddingX={1} flexGrow={1}>
+        {/* Stage progress with number hints */}
+        <StageProgress stages={stages} currentIndex={state.selectedStageIndex} />
+
         {/* Metadata */}
         <Box flexDirection="column" marginBottom={1}>
           <Box>
@@ -158,7 +163,8 @@ export function ProposalDetail({
 
         {tracker.error && (
           <Box marginBottom={1}>
-            <Text color="red">Error: {tracker.error}</Text>
+            <ErrorBanner error={tracker.error} />
+            {tracker.canTrack && <Text color="gray">Press r to retry</Text>}
           </Box>
         )}
 

@@ -12,6 +12,7 @@ import { ProposalRow } from "../components/ProposalRow.js";
 import { getVisibleRows } from "../utils/index.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { SearchBar } from "../components/SearchBar.js";
+import { ErrorBanner } from "../components/ErrorDisplay.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
@@ -121,7 +122,7 @@ export function ProposalList({
 
         {tracker.error && (
           <Box marginBottom={1}>
-            <Text color="red">Error: {tracker.error}</Text>
+            <ErrorBanner error={tracker.error} />
           </Box>
         )}
 

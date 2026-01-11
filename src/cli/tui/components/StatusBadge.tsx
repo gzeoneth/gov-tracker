@@ -8,6 +8,7 @@ import type { StageStatus } from "../../../types/index.js";
 interface StatusBadgeProps {
   status: StageStatus | "active" | "complete" | "failed";
   compact?: boolean;
+  padded?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
@@ -22,16 +23,17 @@ const STATUS_CONFIG: Record<string, { icon: string; color: string; label: string
   failed: { icon: "✗", color: "red", label: "Failed" },
 };
 
-export function StatusBadge({ status, compact = false }: StatusBadgeProps): React.ReactElement {
+export function StatusBadge({ status, compact = false, padded = false }: StatusBadgeProps): React.ReactElement {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.NOT_STARTED;
 
   if (compact) {
     return <Text color={config.color}>{config.icon}</Text>;
   }
 
+  const text = `${config.icon} ${config.label}`;
   return (
     <Text color={config.color}>
-      {config.icon} {config.label}
+      {padded ? text.padEnd(14) : text}
     </Text>
   );
 }

@@ -163,7 +163,7 @@ export function StageView({
             const url = getTxUrl(chainToChainId(tx.chain), tx.hash);
             return (
               <Box key={i} flexDirection="column" marginLeft={1}>
-                <Box><Text color="gray">[{i + 1}] </Text><Text color="blue">{tx.hash.slice(0, 18)}...</Text></Box>
+                <Box><Text color="gray">[{i + 1}] </Text><Text color="blue">{tx.hash}</Text></Box>
                 <Box marginLeft={2}>
                   <Text color="gray">Block {tx.blockNumber} on {tx.chain}{tx.timestamp && ` at ${new Date(tx.timestamp * 1000).toLocaleString()}`}</Text>
                 </Box>

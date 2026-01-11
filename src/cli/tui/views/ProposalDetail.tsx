@@ -24,10 +24,6 @@ function formatDate(timestamp: number | null): string {
   return new Date(timestamp).toLocaleString();
 }
 
-function truncateHash(hash: string, length = 16): string {
-  if (hash.length <= length) return hash;
-  return `${hash.slice(0, length / 2 + 2)}...${hash.slice(-length / 2)}`;
-}
 
 interface VotingStatsProps {
   data: VotingActiveData;
@@ -105,10 +101,10 @@ export function ProposalDetail({
 
   const getProposalIdDisplay = (): string => {
     if (input.type === "governor") {
-      return truncateHash(input.proposalId, 24);
+      return input.proposalId;
     }
     if (input.type === "timelock") {
-      return truncateHash(input.operationId, 24);
+      return input.operationId;
     }
     return "";
   };
@@ -147,7 +143,7 @@ export function ProposalDetail({
           </Box>
           <Box>
             <Text color="gray">TX: </Text>
-            <Text color="blue">{truncateHash(txHash, 32)}</Text>
+            <Text color="blue">{txHash}</Text>
           </Box>
           <Box>
             <Text color="gray">Created: </Text>

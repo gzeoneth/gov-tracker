@@ -92,25 +92,11 @@ export function StageRow({ stage, index, isSelected }: StageRowProps): React.Rea
       <Text color={isSelected ? "cyan" : undefined}>
         {isSelected ? ">" : " "} {index + 1}.{" "}
       </Text>
-      <Box width={20}>
-        <Text color={isSelected ? "cyan" : undefined}>{title}</Text>
-      </Box>
-      <Box width={14}>
-        <StatusBadge status={stage.status} />
-      </Box>
-      <Box width={10}>
-        <Text color="gray">{stage.chain}</Text>
-      </Box>
-      {timing && (
-        <Box width={12}>
-          <Text color="gray">{timing}</Text>
-        </Box>
-      )}
-      {extra && (
-        <Box>
-          <Text color="gray"> [{extra}]</Text>
-        </Box>
-      )}
+      <Text color={isSelected ? "cyan" : undefined}>{title.padEnd(18)}</Text>
+      <StatusBadge status={stage.status} padded />
+      <Text color="gray">{stage.chain.padEnd(10)}</Text>
+      <Text color="gray">{(timing ?? "").padEnd(12)}</Text>
+      {extra && <Text color="gray">[{extra}]</Text>}
     </Box>
   );
 }

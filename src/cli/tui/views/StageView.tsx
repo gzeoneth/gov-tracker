@@ -118,7 +118,8 @@ export function StageView({
 }: StageViewProps): React.ReactElement {
   const { state } = navigation;
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
-  const stage = stages[state.selectedStageIndex];
+  const safeIndex = stages.length > 0 ? Math.min(state.selectedStageIndex, stages.length - 1) : 0;
+  const stage = stages[safeIndex];
 
   const stageTitle = stage ? formatStageTitle(stage.type) : "";
   const dataItems = stage ? formatStageData(stage) : [];

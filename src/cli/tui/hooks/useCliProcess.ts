@@ -23,6 +23,9 @@ export interface UseCliProcessResult {
   cancel: () => void;
 }
 
+const CLI_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_STDERR_LENGTH = 10000; // Limit stderr buffer size
+
 function findCliPath(): string {
   // __dirname points to either src/cli/tui/hooks or dist/cli/tui/hooks
   // The CLI is always at dist/cli/cli.js after build
@@ -53,7 +56,7 @@ export function useCliProcess(): UseCliProcessResult {
   const cancel = useCallback(() => {
     if (processRef.current) {
       processRef.current.kill("SIGTERM");
-      processRef.current = null;
+      // Process close event will handle cleanup and state updates
     }
   }, []);
 
@@ -75,49 +78,61 @@ export function useCliProcess(): UseCliProcessResult {
         });
 
         processRef.current = proc;
-        let lastLine = "";
         let stderrOutput = "";
+        let resolved = false;
+
+        const cleanup = (result: CliProcessResult): void => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeoutId);
+          processRef.current = null;
+          setIsRunning(false);
+          setProgress(null);
+          if (!result.success && result.error) {
+            setError(result.error);
+          }
+          resolve(result);
+        };
+
+        const timeoutId = setTimeout(() => {
+          if (proc.pid && !resolved) {
+            proc.kill("SIGTERM");
+            cleanup({ success: false, error: "CLI timed out after 10 minutes" });
+          }
+        }, CLI_TIMEOUT_MS);
 
         proc.stdout?.on("data", (data: Buffer) => {
           const lines = data.toString().split("\n").filter(Boolean);
           for (const line of lines) {
-            lastLine = line.trim();
-            // Parse progress from CLI output
-            if (lastLine.startsWith("[") || lastLine.startsWith("Discovering")) {
-              setProgress(lastLine);
-            } else if (lastLine.startsWith("Found")) {
-              setProgress(lastLine);
-            } else if (lastLine.startsWith("Tracking")) {
-              setProgress(lastLine);
+            const trimmed = line.trim();
+            if (
+              trimmed.startsWith("[") ||
+              trimmed.startsWith("Discovering") ||
+              trimmed.startsWith("Found") ||
+              trimmed.startsWith("Tracking")
+            ) {
+              setProgress(trimmed);
             }
           }
         });
 
         proc.stderr?.on("data", (data: Buffer) => {
-          stderrOutput += data.toString();
+          if (stderrOutput.length < MAX_STDERR_LENGTH) {
+            stderrOutput += data.toString().slice(0, MAX_STDERR_LENGTH - stderrOutput.length);
+          }
         });
 
         proc.on("close", (code) => {
-          processRef.current = null;
-          setIsRunning(false);
-          setProgress(null);
-
           if (code === 0) {
-            resolve({ success: true });
+            cleanup({ success: true });
           } else {
             const errMsg = stderrOutput.trim() || `CLI exited with code ${code}`;
-            setError(errMsg);
-            resolve({ success: false, error: errMsg });
+            cleanup({ success: false, error: errMsg });
           }
         });
 
         proc.on("error", (err) => {
-          processRef.current = null;
-          setIsRunning(false);
-          setProgress(null);
-          const errMsg = err.message;
-          setError(errMsg);
-          resolve({ success: false, error: errMsg });
+          cleanup({ success: false, error: err.message });
         });
       });
     },

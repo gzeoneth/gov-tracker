@@ -14,7 +14,17 @@ interface ErrorDisplayProps {
 function categorizeError(error: string): { type: string; color: string } {
   const lowerError = error.toLowerCase();
 
-  if (lowerError.includes("network") || lowerError.includes("timeout") || lowerError.includes("econnrefused")) {
+  // Network errors: connection issues, DNS failures, timeouts
+  if (
+    lowerError.includes("network") ||
+    lowerError.includes("timeout") ||
+    lowerError.includes("etimedout") ||
+    lowerError.includes("econnrefused") ||
+    lowerError.includes("econnreset") ||
+    lowerError.includes("enotfound") ||
+    lowerError.includes("ehostunreach") ||
+    lowerError.includes("enetunreach")
+  ) {
     return { type: "Network", color: "yellow" };
   }
   if (lowerError.includes("rpc") || lowerError.includes("provider")) {

@@ -56,10 +56,10 @@ function getProposalTitle(checkpoint: TrackingCheckpoint): string {
     }
   }
   if (checkpoint.input.type === "governor") {
-    return `Proposal ${checkpoint.input.proposalId.slice(0, 12)}...`;
+    return `Proposal ${checkpoint.input.proposalId}`;
   }
   if (checkpoint.input.type === "timelock") {
-    return `Timelock Op ${checkpoint.input.operationId.slice(0, 12)}...`;
+    return `Timelock Op ${checkpoint.input.operationId}`;
   }
   return "Unknown";
 }

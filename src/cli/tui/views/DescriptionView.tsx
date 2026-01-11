@@ -195,9 +195,9 @@ export function DescriptionView({
       navigation.moveUp();
     } else if (key.downArrow || input === "j") {
       navigation.moveDown(lines.length);
-    } else if (key.pageUp) {
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
       navigation.pageUp(lines.length);
-    } else if (key.pageDown) {
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
       navigation.pageDown(lines.length);
     } else if (input === "g") {
       navigation.goToTop();

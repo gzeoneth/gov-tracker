@@ -123,9 +123,9 @@ export function StageView({
       navigation.moveUp();
     } else if (key.downArrow || input === "j") {
       navigation.moveDown(dataItems.length);
-    } else if (key.pageUp) {
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
       navigation.pageUp(dataItems.length);
-    } else if (key.pageDown) {
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
       navigation.pageDown(dataItems.length);
     } else if (input === "g") {
       navigation.goToTop();

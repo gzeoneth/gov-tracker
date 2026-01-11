@@ -134,9 +134,9 @@ export function CalldataView({
       navigation.moveUp();
     } else if (key.downArrow || input === "j") {
       navigation.moveDown(displayLines.length);
-    } else if (key.pageUp) {
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
       navigation.pageUp(displayLines.length);
-    } else if (key.pageDown) {
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
       navigation.pageDown(displayLines.length);
     } else if (key.leftArrow) {
       navigation.prevAction();

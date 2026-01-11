@@ -41,9 +41,9 @@ export function SimulationView({
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow) {
+    } else if (key.upArrow || input === "k") {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if (key.downArrow && simulations.length > 0) {
+    } else if ((key.downArrow || input === "j") && simulations.length > 0) {
       setSelectedIndex((prev) => Math.min(simulations.length - 1, prev + 1));
     } else if (key.return) {
       setInputExpanded((prev) => !prev);

@@ -104,9 +104,9 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow) {
+    } else if (key.upArrow || input === "k") {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if (key.downArrow && data.proposals.length > 0) {
+    } else if ((key.downArrow || input === "j") && data.proposals.length > 0) {
       setSelectedIndex((prev) => Math.min(data.proposals.length - 1, prev + 1));
     }
   });

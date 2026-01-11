@@ -119,9 +119,9 @@ export function StageView({
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
-    } else if (key.upArrow) {
+    } else if (key.upArrow || input === "k") {
       navigation.moveUp();
-    } else if (key.downArrow) {
+    } else if (key.downArrow || input === "j") {
       navigation.moveDown(dataItems.length);
     } else if (key.pageUp) {
       navigation.pageUp(dataItems.length);

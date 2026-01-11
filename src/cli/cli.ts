@@ -764,8 +764,8 @@ uiCmd
     try {
       const { runTui } = await import("./tui");
 
-      // Create providers only if RPC URLs are provided
-      const providers = opts.l2Rpc ? createProvidersFromOptions(opts) : undefined;
+      // Create providers with defaults (env vars → public RPCs)
+      const providers = createProvidersFromOptions(opts);
 
       await runTui({
         cachePath: opts.cache,

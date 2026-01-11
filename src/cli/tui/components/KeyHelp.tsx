@@ -84,7 +84,8 @@ const ELECTION_KEYS: KeyBinding[] = [
 function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
   switch (view) {
     case "list":
-      return hasProviders ? LIST_KEYS : LIST_KEYS.filter((k) => k.key !== "d" && k.key !== "e");
+      // Always show all keys - discover/election use default public RPCs if none configured
+      return LIST_KEYS;
     case "detail":
       return hasProviders
         ? [...DETAIL_KEYS_BASE, DETAIL_RETRACK, DETAIL_BACK]

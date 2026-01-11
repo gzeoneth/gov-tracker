@@ -29,6 +29,7 @@ interface BuilderState<T extends StageType> {
   timing?: StageTiming;
   executable: boolean;
   error?: string;
+  isStale?: boolean;
 }
 
 export class StageBuilder<T extends StageType> {
@@ -121,6 +122,14 @@ export class StageBuilder<T extends StageType> {
    */
   executable(value: boolean): this {
     this._stage.executable = value;
+    return this;
+  }
+
+  /**
+   * Mark stage as stale (READY but past expected completion time)
+   */
+  stale(isStale: boolean): this {
+    this._stage.isStale = isStale;
     return this;
   }
 

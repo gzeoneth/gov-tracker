@@ -427,8 +427,9 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
-      // #then - stage should be FAILED
-      expect(result.stage.status).toBe("FAILED");
+      // #then - stage should be CANCELED (not FAILED)
+      expect(result.stage.status).toBe("CANCELED");
+      expect(result.stage.data.reason).toBe("Proposal was canceled by proposer");
     });
 
     it("should handle Expired proposal state", async () => {

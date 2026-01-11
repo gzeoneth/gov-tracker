@@ -406,6 +406,54 @@ const STAGE_DURATION_DAYS: Partial<Record<StageType, number>> = {
 };
 
 /**
+ * Default staleness thresholds by stage type (in seconds)
+ *
+ * - Timelocks: 7 days past ETA
+ * - Retryables: 14 days past ETA (they have 7-day expiry window)
+ * - Other: 7 days default
+ */
+const DEFAULT_STALENESS_THRESHOLDS: Partial<Record<StageType, number>> = {
+  L2_TIMELOCK: 7 * 24 * 60 * 60,
+  L1_TIMELOCK: 7 * 24 * 60 * 60,
+  L2_TO_L1_MESSAGE: 7 * 24 * 60 * 60,
+  RETRYABLE_EXECUTED: 14 * 24 * 60 * 60,
+};
+
+const DEFAULT_STALENESS_THRESHOLD = 7 * 24 * 60 * 60; // 7 days
+
+/**
+ * Check if a stage is stale (READY but past expected completion time).
+ *
+ * A stage is considered stale when:
+ * - Status is READY
+ * - Current time > (eta + staleness threshold)
+ *
+ * @param stage - The stage to check
+ * @param currentTimestamp - Current Unix timestamp (seconds)
+ * @param customThreshold - Optional custom staleness threshold in seconds
+ * @returns true if stale, false if not stale, undefined if staleness cannot be determined
+ */
+export function isStageStale(
+  stage: TrackedStage,
+  currentTimestamp: number,
+  customThreshold?: number
+): boolean | undefined {
+  if (stage.status !== "READY") {
+    return undefined;
+  }
+
+  const eta = stage.timing?.eta;
+  if (eta === undefined) {
+    return undefined;
+  }
+
+  const threshold =
+    customThreshold ?? DEFAULT_STALENESS_THRESHOLDS[stage.type] ?? DEFAULT_STALENESS_THRESHOLD;
+
+  return currentTimestamp > eta + threshold;
+}
+
+/**
  * Calculate expected ETA for a stage that hasn't started yet
  *
  * Estimates when a future stage will complete based on:

@@ -201,6 +201,7 @@ export {
   estimateTimestampFromBlock,
   getL1BlockNumberFromL2,
   invalidateBlockInfoCache,
+  isStageStale,
 } from "./utils/timing";
 
 // Salt utilities

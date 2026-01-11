@@ -146,12 +146,10 @@ export async function trackVotingStage(
     } else {
       builder.status("COMPLETED");
     }
-  } else if (
-    proposalState === "Defeated" ||
-    proposalState === "Canceled" ||
-    proposalState === "Expired"
-  ) {
-    builder.status("FAILED");
+  } else if (proposalState === "Canceled") {
+    builder.status("CANCELED").data({ reason: "Proposal was canceled by proposer" });
+  } else if (proposalState === "Defeated" || proposalState === "Expired") {
+    builder.status("FAILED").data({ reason: proposalState });
   } else if (proposalState === "Pending") {
     builder.status("NOT_STARTED");
   }

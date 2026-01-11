@@ -112,7 +112,7 @@ export function CalldataView({
 }: CalldataViewProps): React.ReactElement {
   const { state } = navigation;
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
-  const { actions, loading, error } = useStageCalldata(stages[0]);
+  const { actions, loading, error } = useStageCalldata(stages[0], stages);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
   const currentAction = actions[state.calldataActionIndex];

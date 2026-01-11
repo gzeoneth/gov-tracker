@@ -92,9 +92,18 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
       }
     } else if (item.section === "discovery") {
       if (item.key === "startBlock") {
-        newConfig.discovery = { ...config.discovery, startBlock: newValue === "(auto)" ? null : parseInt(newValue, 10) || null };
+        const parsed = parseInt(newValue, 10);
+        newConfig.discovery = {
+          ...config.discovery,
+          startBlock: newValue === "(auto)" || isNaN(parsed) ? null : Math.max(0, parsed),
+        };
       } else {
-        (newConfig.discovery as Record<string, unknown>)[item.key] = parseInt(newValue, 10) || 0;
+        const parsed = parseInt(newValue, 10);
+        if (isNaN(parsed) || parsed < 1) {
+          showMessage(`Invalid value for ${item.label}: must be a positive number`, true);
+          return;
+        }
+        (newConfig.discovery as Record<string, unknown>)[item.key] = parsed;
       }
     } else if (item.section === "debug") {
       newConfig.debug = { ...config.debug, [item.key]: newValue === "(none)" ? "" : newValue };

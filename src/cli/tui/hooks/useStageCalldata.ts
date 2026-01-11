@@ -19,7 +19,20 @@ export interface UseStageCalldataResult {
   error: string | null;
 }
 
-export function useStageCalldata(firstStage: TrackedStage | undefined): UseStageCalldataResult {
+function findStageWithCalldata(stages: TrackedStage[]): TrackedStage | undefined {
+  for (const stage of stages) {
+    const { calldatas } = extractCalldataFromStage(stage);
+    if (calldatas.length > 0) {
+      return stage;
+    }
+  }
+  return undefined;
+}
+
+export function useStageCalldata(
+  firstStage: TrackedStage | undefined,
+  allStages?: TrackedStage[]
+): UseStageCalldataResult {
   const [actions, setActions] = useState<DecodedAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,17 +45,15 @@ export function useStageCalldata(firstStage: TrackedStage | undefined): UseStage
       setError(null);
 
       try {
-        if (!firstStage) {
-          if (!cancelled) setError("No stage data available");
-          return;
-        }
+        const stagesToSearch = allStages ?? (firstStage ? [firstStage] : []);
+        const stageWithCalldata = findStageWithCalldata(stagesToSearch);
 
-        const { calldatas, targets, values } = extractCalldataFromStage(firstStage);
-
-        if (calldatas.length === 0) {
+        if (!stageWithCalldata) {
           if (!cancelled) setError("No calldata found in proposal");
           return;
         }
+
+        const { calldatas, targets, values } = extractCalldataFromStage(stageWithCalldata);
 
         const chainContext: Chain = "arb1";
         const decoded: DecodedAction[] = [];
@@ -70,7 +81,7 @@ export function useStageCalldata(firstStage: TrackedStage | undefined): UseStage
     return () => {
       cancelled = true;
     };
-  }, [firstStage]);
+  }, [firstStage, allStages]);
 
   return { actions, loading, error };
 }

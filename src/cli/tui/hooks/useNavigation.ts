@@ -235,6 +235,7 @@ export function useNavigation(): UseNavigationResult {
     setState((prev) => ({
       ...prev,
       calldataActionIndex: Math.min(maxIndex - 1, prev.calldataActionIndex + 1),
+      scrollOffset: 0,
     }));
   }, []);
 
@@ -242,6 +243,7 @@ export function useNavigation(): UseNavigationResult {
     setState((prev) => ({
       ...prev,
       calldataActionIndex: Math.max(0, prev.calldataActionIndex - 1),
+      scrollOffset: 0,
     }));
   }, []);
 

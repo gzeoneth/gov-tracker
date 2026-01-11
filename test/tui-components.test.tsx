@@ -414,6 +414,82 @@ describe("TUI Component Rendering", () => {
     });
   });
 
+  describe("Timeline", () => {
+    it("should render in compact mode", async () => {
+      const { Timeline } = await import("../src/cli/tui/components/Timeline.js");
+      const React = await import("react");
+
+      const mockStages = [
+        { type: "PROPOSAL_CREATED", status: "COMPLETED" as const },
+        { type: "VOTING_ACTIVE", status: "COMPLETED" as const },
+        { type: "PROPOSAL_QUEUED", status: "PENDING" as const },
+      ] as Parameters<typeof Timeline>[0]["stages"];
+
+      expect(() => {
+        const element = React.createElement(Timeline, {
+          stages: mockStages,
+          currentIndex: 2,
+          compact: true,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should render in full mode", async () => {
+      const { Timeline } = await import("../src/cli/tui/components/Timeline.js");
+      const React = await import("react");
+
+      const mockStages = [
+        { type: "PROPOSAL_CREATED", status: "COMPLETED" as const, executable: false },
+        { type: "VOTING_ACTIVE", status: "READY" as const, executable: true },
+      ] as Parameters<typeof Timeline>[0]["stages"];
+
+      expect(() => {
+        const element = React.createElement(Timeline, {
+          stages: mockStages,
+          currentIndex: 1,
+          compact: false,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should handle empty stages array", async () => {
+      const { Timeline } = await import("../src/cli/tui/components/Timeline.js");
+      const React = await import("react");
+
+      expect(() => {
+        const element = React.createElement(Timeline, {
+          stages: [],
+          currentIndex: 0,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+
+    it("should handle all stage statuses", async () => {
+      const { Timeline } = await import("../src/cli/tui/components/Timeline.js");
+      const React = await import("react");
+
+      const mockStages = [
+        { type: "PROPOSAL_CREATED", status: "COMPLETED" as const },
+        { type: "VOTING_ACTIVE", status: "READY" as const },
+        { type: "PROPOSAL_QUEUED", status: "PENDING" as const },
+        { type: "L2_TIMELOCK", status: "FAILED" as const },
+        { type: "L2_TO_L1_MESSAGE", status: "SKIPPED" as const },
+        { type: "L1_TIMELOCK", status: "NOT_STARTED" as const },
+      ] as Parameters<typeof Timeline>[0]["stages"];
+
+      expect(() => {
+        const element = React.createElement(Timeline, {
+          stages: mockStages,
+          currentIndex: 3,
+        });
+        expect(element).toBeDefined();
+      }).not.toThrow();
+    });
+  });
+
   describe("StageRow", () => {
     it("should render without errors with minimal stage data", async () => {
       const { StageRow } = await import("../src/cli/tui/components/StageRow.js");

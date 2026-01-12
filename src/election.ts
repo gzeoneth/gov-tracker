@@ -18,6 +18,11 @@ import {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
+  ElectionContender,
+  ElectionNominee,
+  MemberElectionNominee,
+  NomineeElectionDetails,
+  MemberElectionDetails,
 } from "./types";
 import { getL1BlockNumberFromL2 } from "./utils/timing";
 import { saltFromDescription } from "./utils/salt-computation";
@@ -73,6 +78,25 @@ function getMemberGovernor(
   provider?: ethers.providers.Provider
 ): ethers.Contract {
   return new ethers.Contract(address, MEMBER_ELECTION_GOVERNOR_ABI, provider);
+}
+
+/** Get block range for log queries based on proposal snapshot */
+async function getLogQueryBlockRange(
+  governor: ethers.Contract,
+  proposalId: string,
+  provider: ethers.providers.Provider,
+  offsetFromSnapshot: number = 1000,
+  fallbackRange: number = 100000
+): Promise<{ fromBlock: number; toBlock: number }> {
+  const toBlock = await provider.getBlockNumber();
+  let fromBlock: number;
+  try {
+    const snapshot = await governor.proposalSnapshot(proposalId);
+    fromBlock = Math.max(0, snapshot.toNumber() - offsetFromSnapshot);
+  } catch {
+    fromBlock = Math.max(0, toBlock - fallbackRange);
+  }
+  return { fromBlock, toBlock };
 }
 
 // Core Functions
@@ -842,4 +866,278 @@ export async function trackIncompleteElections(
 ): Promise<ElectionProposalStatus[]> {
   const all = await trackAllElections(l2Provider, l1Provider);
   return all.filter((e) => e.phase !== "COMPLETED");
+}
+
+// ============================================================================
+// Detailed Election Tracking
+// ============================================================================
+
+/**
+ * Get all contenders who registered for a nominee election
+ *
+ * Fetches ContenderAdded events to build the list of registered contenders.
+ *
+ * @param proposalId - Nominee election proposal ID
+ * @param provider - L2 provider
+ * @param nomineeGovernorAddress - Optional governor address override
+ * @returns Array of contenders with registration info
+ */
+export async function getContenders(
+  proposalId: string,
+  provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<ElectionContender[]> {
+  log("getContenders for proposal %s", proposalId);
+
+  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
+  const iface = new ethers.utils.Interface(NOMINEE_ELECTION_GOVERNOR_ABI);
+  const { fromBlock, toBlock } = await getLogQueryBlockRange(governor, proposalId, provider);
+
+  const logs = await queryWithRetry(() =>
+    provider.getLogs({
+      address: nomineeGovernorAddress,
+      topics: [
+        iface.getEventTopic("ContenderAdded"),
+        ethers.utils.hexZeroPad(BigNumber.from(proposalId).toHexString(), 32),
+      ],
+      fromBlock,
+      toBlock,
+    })
+  );
+
+  const contenders = logs.flatMap((eventLog) => {
+    try {
+      const parsed = iface.parseLog(eventLog);
+      return [
+        {
+          address: parsed.args.contender as string,
+          registeredAtBlock: eventLog.blockNumber,
+          registrationTxHash: eventLog.transactionHash,
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  log("Found %d contenders for proposal %s", contenders.length, proposalId);
+  return contenders;
+}
+
+/**
+ * Get all nominees for a nominee election with their vote counts
+ *
+ * Fetches nominee list from contract and enriches with vote data.
+ *
+ * @param proposalId - Nominee election proposal ID
+ * @param provider - L2 provider
+ * @param nomineeGovernorAddress - Optional governor address override
+ * @returns Array of nominees with vote and exclusion data
+ */
+export async function getNomineesWithVotes(
+  proposalId: string,
+  provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<ElectionNominee[]> {
+  log("getNomineesWithVotes for proposal %s", proposalId);
+
+  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
+  const nomineeAddresses = await queryWithRetry<string[]>(() => governor.nominees(proposalId));
+
+  const nominees = await Promise.all(
+    nomineeAddresses.map(async (addr) => {
+      const [votesReceived, isExcluded] = await Promise.all([
+        queryWithRetry<BigNumber>(() => governor.votesReceived(proposalId, addr)),
+        queryWithRetry<boolean>(() => governor.isExcluded(proposalId, addr)),
+      ]);
+      return { address: addr, votesReceived, isExcluded };
+    })
+  );
+
+  log("Found %d nominees for proposal %s", nominees.length, proposalId);
+  return nominees;
+}
+
+/**
+ * Get excluded nominees with exclusion details
+ *
+ * Fetches NomineeExcluded events to get exclusion information.
+ *
+ * @param proposalId - Nominee election proposal ID
+ * @param provider - L2 provider
+ * @param nomineeGovernorAddress - Optional governor address override
+ * @returns Array of excluded nominees with exclusion tx info
+ */
+export async function getExcludedNominees(
+  proposalId: string,
+  provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<ElectionNominee[]> {
+  log("getExcludedNominees for proposal %s", proposalId);
+
+  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
+  const iface = new ethers.utils.Interface(NOMINEE_ELECTION_GOVERNOR_ABI);
+  const { fromBlock, toBlock } = await getLogQueryBlockRange(governor, proposalId, provider, 0);
+
+  const logs = await queryWithRetry(() =>
+    provider.getLogs({
+      address: nomineeGovernorAddress,
+      topics: [
+        iface.getEventTopic("NomineeExcluded"),
+        ethers.utils.hexZeroPad(BigNumber.from(proposalId).toHexString(), 32),
+      ],
+      fromBlock,
+      toBlock,
+    })
+  );
+
+  const parsedLogs = logs.flatMap((eventLog) => {
+    try {
+      const parsed = iface.parseLog(eventLog);
+      return [{ addr: parsed.args.nominee as string, eventLog }];
+    } catch {
+      return [];
+    }
+  });
+
+  const excluded = await Promise.all(
+    parsedLogs.map(async ({ addr, eventLog }) => {
+      const votesReceived = await queryWithRetry<BigNumber>(() =>
+        governor.votesReceived(proposalId, addr)
+      );
+      return {
+        address: addr,
+        votesReceived,
+        isExcluded: true,
+        excludedAtBlock: eventLog.blockNumber,
+        exclusionTxHash: eventLog.transactionHash,
+      };
+    })
+  );
+
+  log("Found %d excluded nominees for proposal %s", excluded.length, proposalId);
+  return excluded;
+}
+
+/**
+ * Get detailed nominee election information
+ *
+ * Aggregates contenders, nominees, excluded nominees, and voting data.
+ *
+ * @param electionIndex - Election index
+ * @param provider - L2 provider
+ * @param nomineeGovernorAddress - Optional governor address override
+ * @returns Detailed nominee election data or null if not found
+ */
+export async function getNomineeElectionDetails(
+  electionIndex: number,
+  provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<NomineeElectionDetails | null> {
+  log("getNomineeElectionDetails for election %d", electionIndex);
+
+  const proposalId = await getElectionProposalId(electionIndex, provider, nomineeGovernorAddress);
+  if (!proposalId) {
+    log("No proposal found for election %d", electionIndex);
+    return null;
+  }
+
+  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
+
+  const [contenders, nominees, snapshotBlock] = await Promise.all([
+    getContenders(proposalId, provider, nomineeGovernorAddress),
+    getNomineesWithVotes(proposalId, provider, nomineeGovernorAddress),
+    queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId)),
+  ]);
+
+  const quorumThreshold = await queryWithRetry<BigNumber>(() =>
+    governor.quorum(snapshotBlock.toNumber())
+  );
+
+  const compliantNominees = nominees.filter((n) => !n.isExcluded);
+  const excludedNominees = nominees.filter((n) => n.isExcluded);
+
+  return {
+    proposalId,
+    electionIndex,
+    contenders,
+    nominees,
+    compliantNominees,
+    excludedNominees,
+    quorumThreshold,
+    targetNomineeCount: TIMING.SECURITY_COUNCIL_TARGET_NOMINEES,
+  };
+}
+
+/**
+ * Get member election results with weighted votes
+ *
+ * Fetches top nominees (winners) and their weighted vote totals.
+ *
+ * @param electionIndex - Election index
+ * @param provider - L2 provider
+ * @param memberGovernorAddress - Optional governor address override
+ * @param nomineeGovernorAddress - Optional nominee governor address override
+ * @returns Detailed member election data or null if not found
+ */
+export async function getMemberElectionDetails(
+  electionIndex: number,
+  provider: ethers.providers.Provider,
+  memberGovernorAddress: string = ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<MemberElectionDetails | null> {
+  log("getMemberElectionDetails for election %d", electionIndex);
+
+  const memberGovernor = getMemberGovernor(memberGovernorAddress, provider);
+  const nomineeGovernor = getNomineeGovernor(nomineeGovernorAddress, provider);
+
+  const propId = await queryWithRetry<BigNumber>(() =>
+    memberGovernor.electionIndexToProposalId(electionIndex)
+  ).catch(() => null);
+
+  if (!propId || propId.isZero()) {
+    log("No member proposal found for election %d", electionIndex);
+    return null;
+  }
+  const memberProposalId = propId.toString();
+
+  const [winners, deadline, fullWeightDeadline, nomineeProposalId] = await Promise.all([
+    queryWithRetry<string[]>(() => memberGovernor.topNominees(memberProposalId)).catch(() => []),
+    queryWithRetry<BigNumber>(() => memberGovernor.proposalDeadline(memberProposalId)),
+    queryWithRetry<BigNumber>(() => memberGovernor.fullWeightVotingDeadline(memberProposalId)),
+    getElectionProposalId(electionIndex, provider, nomineeGovernorAddress),
+  ]);
+
+  const allNominees = nomineeProposalId
+    ? await queryWithRetry<string[]>(() => nomineeGovernor.compliantNominees(nomineeProposalId))
+    : [];
+
+  const winnersSet = new Set(winners.map((w) => w.toLowerCase()));
+
+  const nomineeDetails: MemberElectionNominee[] = await Promise.all(
+    allNominees.map(async (addr) => {
+      const weight = await queryWithRetry<BigNumber>(() =>
+        memberGovernor.weightReceived(memberProposalId, addr)
+      );
+      return {
+        address: addr,
+        weightReceived: weight,
+        isWinner: winnersSet.has(addr.toLowerCase()),
+        rank: 0,
+      };
+    })
+  );
+
+  nomineeDetails
+    .sort((a, b) => (b.weightReceived.gt(a.weightReceived) ? 1 : -1))
+    .forEach((n, i) => (n.rank = i + 1));
+
+  return {
+    proposalId: memberProposalId,
+    electionIndex,
+    nominees: nomineeDetails,
+    winners,
+    fullWeightDeadline: fullWeightDeadline.toNumber(),
+    proposalDeadline: deadline.toNumber(),
+  };
 }

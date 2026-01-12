@@ -18,6 +18,12 @@ import {
   trackElectionProposal,
   createTracker,
   ADDRESSES,
+  getElectionProposalId,
+  getContenders,
+  getNomineesWithVotes,
+  getExcludedNominees,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
 } from "../src";
 
 dotenv.config({ quiet: true });
@@ -279,5 +285,255 @@ describe("Fork Infrastructure Tests", () => {
 
     // Clean up
     await forks.stopAll();
+  });
+});
+
+describe("Detailed Election Tracking", () => {
+  let forks: DualForkResult | null = null;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+
+  // Election #0 completed around L2 block ~287M (Dec 2023)
+  // Using a block after member election execution for full data
+  const ELECTION_0_COMPLETE_BLOCK = 287_000_000;
+
+  beforeAll(() => {
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
+  });
+
+  afterAll(async () => {
+    if (forks) {
+      await forks.stopAll();
+    }
+  });
+
+  describe("getElectionProposalId", () => {
+    it("should return proposal ID for election #0", async () => {
+      // #given Fork at block after election #0 creation
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when getting proposal ID for election 0
+      const proposalId = await getElectionProposalId(0, forks.l2.provider);
+
+      // #then should return a valid proposal ID
+      expect(proposalId).toBeDefined();
+      expect(proposalId).not.toBeNull();
+      expect(typeof proposalId).toBe("string");
+      expect(proposalId!.length).toBeGreaterThan(0);
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getContenders", () => {
+    it("should return contenders for election #0", async () => {
+      // #given Fork at block after election #0 had contenders
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      const proposalId = await getElectionProposalId(0, forks.l2.provider);
+      expect(proposalId).not.toBeNull();
+
+      // #when getting contenders
+      const contenders = await getContenders(proposalId!, forks.l2.provider);
+
+      // #then should return array of contenders with valid structure
+      expect(Array.isArray(contenders)).toBe(true);
+      // Election #0 should have had contenders
+      if (contenders.length > 0) {
+        const contender = contenders[0];
+        expect(contender).toHaveProperty("address");
+        expect(contender).toHaveProperty("registeredAtBlock");
+        expect(contender).toHaveProperty("registrationTxHash");
+        expect(typeof contender.address).toBe("string");
+        expect(typeof contender.registeredAtBlock).toBe("number");
+        expect(typeof contender.registrationTxHash).toBe("string");
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getNomineesWithVotes", () => {
+    it("should return nominees with vote counts for election #0", async () => {
+      // #given Fork at block after election #0 had nominees
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      const proposalId = await getElectionProposalId(0, forks.l2.provider);
+      expect(proposalId).not.toBeNull();
+
+      // #when getting nominees with votes
+      const nominees = await getNomineesWithVotes(proposalId!, forks.l2.provider);
+
+      // #then should return array of nominees with valid structure
+      expect(Array.isArray(nominees)).toBe(true);
+      // Election #0 should have had nominees (at least 6 for a successful election)
+      if (nominees.length > 0) {
+        const nominee = nominees[0];
+        expect(nominee).toHaveProperty("address");
+        expect(nominee).toHaveProperty("votesReceived");
+        expect(nominee).toHaveProperty("isExcluded");
+        expect(typeof nominee.address).toBe("string");
+        expect(typeof nominee.isExcluded).toBe("boolean");
+        // votesReceived is BigNumber
+        expect(nominee.votesReceived._isBigNumber).toBe(true);
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getExcludedNominees", () => {
+    it("should return excluded nominees (if any) for election #0", async () => {
+      // #given Fork at block after election #0 vetting period
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      const proposalId = await getElectionProposalId(0, forks.l2.provider);
+      expect(proposalId).not.toBeNull();
+
+      // #when getting excluded nominees
+      const excluded = await getExcludedNominees(proposalId!, forks.l2.provider);
+
+      // #then should return array (may be empty if no exclusions)
+      expect(Array.isArray(excluded)).toBe(true);
+      // If there are excluded nominees, verify structure
+      if (excluded.length > 0) {
+        const nominee = excluded[0];
+        expect(nominee).toHaveProperty("address");
+        expect(nominee).toHaveProperty("votesReceived");
+        expect(nominee).toHaveProperty("isExcluded");
+        expect(nominee.isExcluded).toBe(true);
+        expect(nominee).toHaveProperty("excludedAtBlock");
+        expect(nominee).toHaveProperty("exclusionTxHash");
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getNomineeElectionDetails", () => {
+    it("should return comprehensive nominee election details for election #0", async () => {
+      // #given Fork at block after election #0 completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when getting nominee election details
+      const details = await getNomineeElectionDetails(0, forks.l2.provider);
+
+      // #then should return valid details structure
+      expect(details).not.toBeNull();
+      expect(details!.electionIndex).toBe(0);
+      expect(details!.proposalId).toBeDefined();
+      expect(Array.isArray(details!.contenders)).toBe(true);
+      expect(Array.isArray(details!.nominees)).toBe(true);
+      expect(Array.isArray(details!.compliantNominees)).toBe(true);
+      expect(Array.isArray(details!.excludedNominees)).toBe(true);
+      expect(details!.quorumThreshold._isBigNumber).toBe(true);
+      expect(details!.targetNomineeCount).toBe(6);
+
+      // Compliant + excluded should equal all nominees
+      expect(details!.compliantNominees.length + details!.excludedNominees.length).toBe(
+        details!.nominees.length
+      );
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getMemberElectionDetails", () => {
+    it("should return comprehensive member election details for election #0", async () => {
+      // #given Fork at block after election #0 member election completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when getting member election details
+      const details = await getMemberElectionDetails(0, forks.l2.provider);
+
+      // #then should return valid details structure
+      expect(details).not.toBeNull();
+      expect(details!.electionIndex).toBe(0);
+      expect(details!.proposalId).toBeDefined();
+      expect(Array.isArray(details!.nominees)).toBe(true);
+      expect(Array.isArray(details!.winners)).toBe(true);
+      expect(typeof details!.fullWeightDeadline).toBe("number");
+      expect(typeof details!.proposalDeadline).toBe("number");
+
+      // Should have 6 winners for a completed election
+      expect(details!.winners.length).toBe(6);
+
+      // Nominees should have valid structure
+      if (details!.nominees.length > 0) {
+        const nominee = details!.nominees[0];
+        expect(nominee).toHaveProperty("address");
+        expect(nominee).toHaveProperty("weightReceived");
+        expect(nominee).toHaveProperty("isWinner");
+        expect(nominee).toHaveProperty("rank");
+        expect(nominee.weightReceived._isBigNumber).toBe(true);
+        expect(typeof nominee.isWinner).toBe("boolean");
+        expect(typeof nominee.rank).toBe("number");
+        expect(nominee.rank).toBeGreaterThan(0);
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+
+    it("should rank nominees by weight received in descending order", async () => {
+      // #given Fork at block after election #0 member election
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when getting member election details
+      const details = await getMemberElectionDetails(0, forks.l2.provider);
+      expect(details).not.toBeNull();
+
+      // #then nominees should be ranked in descending weight order
+      const nominees = details!.nominees;
+      for (let i = 1; i < nominees.length; i++) {
+        const prev = nominees[i - 1];
+        const curr = nominees[i];
+        // Previous weight >= current weight (descending order)
+        expect(prev.weightReceived.gte(curr.weightReceived)).toBe(true);
+        // Ranks should increment
+        expect(curr.rank).toBe(prev.rank + 1);
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
   });
 });

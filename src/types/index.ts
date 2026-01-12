@@ -111,6 +111,14 @@ export {
   ElectionProposalStatus,
   ElectionStatus,
   ElectionCheckResult,
+  // Detailed election participant types
+  ElectionContender,
+  ElectionNominee,
+  MemberElectionVote,
+  MemberElectionNominee,
+  // Election detail aggregates
+  NomineeElectionDetails,
+  MemberElectionDetails,
 } from "./election";
 
 // Calldata decoding types

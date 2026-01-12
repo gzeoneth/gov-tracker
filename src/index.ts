@@ -302,6 +302,12 @@ export {
   getElectionIndexForProposalId,
   trackAllElections,
   trackIncompleteElections,
+  // Detailed election tracking
+  getContenders,
+  getNomineesWithVotes,
+  getExcludedNominees,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
 } from "./election";
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 

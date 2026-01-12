@@ -138,6 +138,17 @@ export const NOMINEE_ELECTION_GOVERNOR_ABI = [
   "function state(uint256 proposalId) view returns (uint8)",
   "function getProposeArgs(uint256 electionIndex) view returns (address[], uint256[], bytes[], string)",
   "function hashProposal(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) view returns (bytes32)",
+  // Detailed nominee tracking
+  "function nominees(uint256 proposalId) view returns (address[])",
+  "function compliantNominees(uint256 proposalId) view returns (address[])",
+  "function votesReceived(uint256 proposalId, address contender) view returns (uint256)",
+  "function isExcluded(uint256 proposalId, address nominee) view returns (bool)",
+  "function quorum(uint256 blockNumber) view returns (uint256)",
+  // Events
+  "event ContenderAdded(uint256 indexed proposalId, address indexed contender)",
+  "event NewNominee(uint256 indexed proposalId, address indexed nominee)",
+  "event NomineeExcluded(uint256 indexed proposalId, address indexed nominee)",
+  "event VoteCastForContender(uint256 indexed proposalId, address indexed voter, address indexed contender, uint256 votes, uint256 totalUsedVotes, uint256 usableVotes)",
 ];
 
 /**
@@ -146,7 +157,15 @@ export const NOMINEE_ELECTION_GOVERNOR_ABI = [
 export const MEMBER_ELECTION_GOVERNOR_ABI = [
   "function state(uint256 proposalId) view returns (uint8)",
   "function proposalDeadline(uint256 proposalId) view returns (uint256)",
+  "function proposalSnapshot(uint256 proposalId) view returns (uint256)",
   "function electionIndexToProposalId(uint256 electionIndex) view returns (uint256)",
+  // Detailed member election tracking
+  "function weightReceived(uint256 proposalId, address nominee) view returns (uint256)",
+  "function topNominees(uint256 proposalId) view returns (address[])",
+  "function fullWeightVotingDeadline(uint256 proposalId) view returns (uint256)",
+  "function fullWeightDuration() view returns (uint256)",
+  // Events
+  "event VoteCastForNominee(address indexed voter, uint256 indexed proposalId, address indexed nominee, uint256 votes, uint256 weight, uint256 totalUsedVotes, uint256 usableVotes, uint256 weightReceived)",
 ];
 
 /**

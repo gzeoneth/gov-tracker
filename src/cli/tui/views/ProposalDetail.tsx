@@ -16,16 +16,12 @@ import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import { isStageType } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
 import { ErrorBanner } from "../components/ErrorDisplay.js";
+import { formatDate, getTxHash, getProposalIdDisplay } from "../utils/proposal-detail-helpers.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
   tracker: UseTrackerResult;
-}
-
-function formatDate(timestamp: number | null): string {
-  if (timestamp === null) return "Unknown";
-  return new Date(timestamp).toLocaleString();
 }
 
 export function ProposalDetail({
@@ -37,6 +33,9 @@ export function ProposalDetail({
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
   const input = proposal.checkpoint.input;
   const { feedback, feedbackType, copy } = useCopyState();
+
+  const txHash = getTxHash(input);
+  const proposalId = getProposalIdDisplay(input);
 
   useInput((inputKey: string, key: KeyInput) => {
     if (inputKey === "b" || key.escape) {
@@ -67,39 +66,13 @@ export function ProposalDetail({
     } else if (inputKey === "?") {
       navigation.goToHelp();
     } else if (inputKey === "y") {
-      // Copy based on context - proposal ID by default
-      const proposalId = getProposalIdDisplay();
       copy(proposalId, "Proposal ID");
     } else if (inputKey === "Y") {
-      // Copy transaction hash
-      const hash = getTxHash();
-      if (hash) {
-        copy(hash, "TX Hash");
+      if (txHash) {
+        copy(txHash, "TX Hash");
       }
     }
   });
-
-  const getTxHash = (): string => {
-    if (input.type === "governor") return input.creationTxHash;
-    if (input.type === "timelock") return input.scheduledTxHash;
-    if (input.type === "discovery") return "";
-    return "";
-  };
-
-  const getProposalIdDisplay = (): string => {
-    if (input.type === "governor") {
-      return input.proposalId;
-    }
-    if (input.type === "timelock") {
-      return input.operationId;
-    }
-    if (input.type === "discovery") {
-      return input.id;
-    }
-    return "";
-  };
-
-  const txHash = getTxHash();
   const txUrl = txHash ? getTxUrl(CHAIN_IDS.ARB_ONE, txHash) : null;
 
   const votingStage = stages.find((s) => isStageType(s, "VOTING_ACTIVE"));
@@ -136,7 +109,7 @@ export function ProposalDetail({
           </Box>
           <Box>
             <Text color="gray">{input.type === "governor" ? "Proposal ID" : "Operation ID"}: </Text>
-            <Text>{getProposalIdDisplay()}</Text>
+            <Text>{proposalId}</Text>
           </Box>
           <Box>
             <Text color="gray">TX: </Text>

@@ -25,3 +25,6 @@ export {
   SECTION_TITLES,
 } from "./settings-data.js";
 export type { SettingSection, SettingItem, GroupedSettingItems } from "./settings-data.js";
+export { HELP_SECTIONS } from "./help-data.js";
+export type { HelpSection, HelpShortcut } from "./help-data.js";
+export { formatDate, getTxHash, getProposalIdDisplay } from "./proposal-detail-helpers.js";

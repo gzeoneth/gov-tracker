@@ -32,14 +32,22 @@ import { loggers } from "./utils/logger";
 
 const log = loggers.tracker;
 
-/** Helper to get cache keys as array */
-function getCacheKeys(cache: CacheAdapter): string[] {
-  if (typeof cache.keys === "function") {
-    const result = cache.keys();
-    if (Symbol.iterator in Object(result)) {
-      return [...(result as Iterable<string>)];
-    }
+/** Helper to get cache keys as array (handles sync and async returns) */
+async function getCacheKeysAsync(cache: CacheAdapter): Promise<string[]> {
+  if (typeof cache.keys !== "function") return [];
+
+  const result = cache.keys();
+
+  // Handle Promise<string[]>
+  if (result instanceof Promise) {
+    return result;
   }
+
+  // Handle IterableIterator<string> or string[]
+  if (Symbol.iterator in Object(result)) {
+    return [...(result as Iterable<string>)];
+  }
+
   return [];
 }
 
@@ -76,12 +84,9 @@ export async function linkCheckpointToChild(
     return;
   }
 
-  checkpoint.metadata = {
-    ...checkpoint.metadata,
-    errorCount: checkpoint.metadata?.errorCount ?? 0,
-    lastTrackedAt: checkpoint.metadata?.lastTrackedAt ?? Date.now(),
-    sourceCheckpoint: parentKey,
-  };
+  // Initialize metadata if not present, then set sourceCheckpoint
+  checkpoint.metadata = checkpoint.metadata ?? { errorCount: 0, lastTrackedAt: Date.now() };
+  checkpoint.metadata.sourceCheckpoint = parentKey;
 
   await cache.set(childKey, checkpoint);
   log("Linked %s as child of %s", childKey, parentKey);
@@ -135,7 +140,7 @@ export function filterChildCheckpoints(results: TrackingResult[]): TrackingResul
  */
 export async function getChildToParentMap(cache: CacheAdapter): Promise<Map<string, string>> {
   const result = new Map<string, string>();
-  const keys = getCacheKeys(cache);
+  const keys = await getCacheKeysAsync(cache);
 
   for (const key of keys) {
     const checkpoint = await cache.get<TrackingCheckpoint>(key);
@@ -159,7 +164,7 @@ export async function getChildCheckpoints(
   cache: CacheAdapter
 ): Promise<string[]> {
   const children: string[] = [];
-  const keys = getCacheKeys(cache);
+  const keys = await getCacheKeysAsync(cache);
 
   for (const key of keys) {
     const checkpoint = await cache.get<TrackingCheckpoint>(key);
@@ -197,7 +202,7 @@ export interface DeduplicationStats {
  * @returns Statistics about checkpoint relationships
  */
 export async function getDeduplicationStats(cache: CacheAdapter): Promise<DeduplicationStats> {
-  const keys = getCacheKeys(cache);
+  const keys = await getCacheKeysAsync(cache);
 
   let totalCheckpoints = 0;
   let childCheckpoints = 0;
@@ -249,7 +254,7 @@ export async function findPotentialParent(
 ): Promise<string | null> {
   if (timelockCheckpoint.input.type !== "timelock") return null;
 
-  const keys = getCacheKeys(cache);
+  const keys = await getCacheKeysAsync(cache);
   const timelockAddr = timelockCheckpoint.input.timelockAddress?.toLowerCase();
 
   // Check if it's from L2 Constitutional timelock (elections schedule here)
@@ -290,7 +295,7 @@ export async function findPotentialParent(
  * @returns Number of newly linked checkpoints
  */
 export async function autoLinkOrphanedCheckpoints(cache: CacheAdapter): Promise<number> {
-  const keys = getCacheKeys(cache);
+  const keys = await getCacheKeysAsync(cache);
   let linkedCount = 0;
 
   for (const key of keys) {

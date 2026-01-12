@@ -80,6 +80,15 @@ npx @gzeoneth/gov-tracker track 0x... -w --private-key $PRIVATE_KEY
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
 
+# Selective tracking (only track specific types)
+npx @gzeoneth/gov-tracker run --track-core            # Constitutional proposals only
+npx @gzeoneth/gov-tracker run --track-treasury        # Non-constitutional proposals only
+npx @gzeoneth/gov-tracker run --track-elections       # Election governors only
+npx @gzeoneth/gov-tracker run --track-timelocks       # Direct timelock operations only
+
+# Track with elections enabled in run loop
+npx @gzeoneth/gov-tracker run --loop --election
+
 # Disable caching
 npx @gzeoneth/gov-tracker track 0x... --no-cache
 ```

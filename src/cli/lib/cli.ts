@@ -33,6 +33,7 @@ import {
   DiscoveredProposal,
   DiscoveredTimelockOp,
   DiscoveryWatermarks,
+  DiscoveryTargets,
   calculateExpectedEta,
   prepareRetryableStage,
   prepareL2ToL1MessageStage,
@@ -624,6 +625,8 @@ export interface MonitorRunOptions {
   maxAgeDays?: number;
   /** Number of concurrent tracking operations (default: 1 = sequential) */
   concurrency?: number;
+  /** Custom discovery targets (default: all enabled via buildDefaultTargets()) */
+  targets?: DiscoveryTargets;
 }
 
 export interface MonitorRunResult {
@@ -785,7 +788,7 @@ export async function runMonitorCycle(
       }
     : undefined;
 
-  const targets = buildDefaultTargets();
+  const targets = options.targets ?? buildDefaultTargets();
   const discoveryResult = await tracker.discoverAll(targets, currentBlock, startBlockWatermarks);
 
   const result: MonitorRunResult = { tracked: 0, prepared: 0, errors: 0, retracked: 0 };

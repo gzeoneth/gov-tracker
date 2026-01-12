@@ -76,6 +76,8 @@ import {
   ChunkingConfig,
   extractAllSimulationsFromDecoded,
   getBundledCachePath,
+  buildDefaultTargets,
+  DiscoveryTargets,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
@@ -308,6 +310,10 @@ runCmd
   .option("--json-output <path>", "Write JSON state for dashboard integration")
   .option("--election", "Also check for Security Council elections each cycle")
   .option("--concurrency <n>", "Number of concurrent tracking operations", "1")
+  .option("--track-core", "Track constitutional (core) governor proposals")
+  .option("--track-treasury", "Track non-constitutional (treasury) governor proposals")
+  .option("--track-timelocks", "Track L2 timelock operations (direct schedules)")
+  .option("--track-elections", "Track election governor proposals")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
@@ -337,12 +343,33 @@ runCmd
 
     const gasSettings: GasSettings = parseGasSettings(opts);
 
+    // Build discovery targets from --track-* flags
+    // If any --track-* flag is specified, only track those; otherwise track all
+    const hasTrackFlags =
+      opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+    const discoveryTargets: DiscoveryTargets = hasTrackFlags
+      ? {
+          constitutionalGovernor: opts.trackCore,
+          nonConstitutionalGovernor: opts.trackTreasury,
+          l2ConstitutionalTimelock: opts.trackTimelocks,
+          l2NonConstitutionalTimelock: opts.trackTimelocks,
+          electionNomineeGovernor: opts.trackElections,
+          electionMemberGovernor: opts.trackElections,
+        }
+      : buildDefaultTargets();
+
     if (opts.verbose) {
       if (startBlock !== undefined) console.log(`Starting discovery from block ${startBlock}`);
       console.log(`Block lag: ${blockLag} blocks behind tip`);
       console.log(`Max age for re-tracking: ${maxAgeDays} days`);
       console.log(`Max consecutive errors before skip: ${MAX_CONSECUTIVE_ERRORS}`);
       if (concurrency > 1) console.log(`Concurrency: ${concurrency}`);
+      if (hasTrackFlags) {
+        const enabled = Object.entries(discoveryTargets)
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        console.log(`Tracking targets: ${enabled.join(", ")}`);
+      }
       console.log(
         `L2 gas: ${gasSettings.maxFeePerGas} gwei maxFee, ${gasSettings.maxPriorityFeePerGas} gwei priority`
       );
@@ -368,6 +395,7 @@ runCmd
         blockLag,
         maxAgeDays,
         concurrency,
+        targets: discoveryTargets,
         onTrack: async (r): Promise<TrackCallbackReturn> => {
           // Skip showing complete elections
           if (r.result?.isElection && r.result?.isComplete) {

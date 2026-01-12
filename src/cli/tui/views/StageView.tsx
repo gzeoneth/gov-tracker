@@ -5,7 +5,6 @@
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
-import type { TrackedStage, Chain } from "../../../types/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import {
@@ -13,101 +12,17 @@ import {
   ScrollIndicatorBottom,
   ScrollPosition,
 } from "../components/ScrollIndicator.js";
-import { getVisibleRows } from "../utils/index.js";
+import {
+  getVisibleRows,
+  CHAIN_TO_CHAIN_ID,
+  formatStageData,
+} from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
-import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
-
-const CHAIN_TO_CHAIN_ID: Record<Chain, number> = {
-  ethereum: CHAIN_IDS.ETHEREUM,
-  arb1: CHAIN_IDS.ARB_ONE,
-  nova: CHAIN_IDS.NOVA,
-  unknown: CHAIN_IDS.ETHEREUM,
-};
+import { getTxUrl } from "../../../constants.js";
 
 interface StageViewProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
-}
-
-function safeStringify(value: unknown): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return "[complex object]";
-  }
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return "N/A";
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return value.toString();
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "[]";
-    if (value.length <= 3) return safeStringify(value);
-    return `[${value.length} items]`;
-  }
-  if (typeof value === "object") return safeStringify(value);
-  return String(value);
-}
-
-function formatStageData(stage: TrackedStage): Array<{ label: string; value: string }> {
-  const items: Array<{ label: string; value: string }> = [];
-  const data = stage.data as Record<string, unknown> | undefined;
-
-  if (!data) return items;
-
-  const PRIORITY_FIELDS = [
-    "proposalId",
-    "operationId",
-    "proposer",
-    "description",
-    "proposalState",
-    "forVotes",
-    "againstVotes",
-    "abstainVotes",
-    "quorum",
-    "quorumReached",
-    "timelockAddress",
-    "eta",
-    "state",
-    "messageCount",
-    "ticketCount",
-    "redeemedCount",
-  ];
-
-  const SKIP_FIELDS = [
-    "targets",
-    "values",
-    "calldatas",
-    "signatures",
-    "callScheduledData",
-    "_rawBytesArray",
-  ];
-
-  for (const field of PRIORITY_FIELDS) {
-    if (field in data && data[field] !== undefined) {
-      let value = formatValue(data[field]);
-      if (field === "description" && value.length > 100) {
-        value = value.slice(0, 100) + "...";
-      }
-      items.push({ label: field, value });
-    }
-  }
-
-  for (const [key, value] of Object.entries(data)) {
-    if (PRIORITY_FIELDS.includes(key)) continue;
-    if (SKIP_FIELDS.includes(key)) continue;
-    if (value === undefined || value === null) continue;
-
-    let formattedValue = formatValue(value);
-    if (formattedValue.length > 80) {
-      formattedValue = formattedValue.slice(0, 80) + "...";
-    }
-    items.push({ label: key, value: formattedValue });
-  }
-
-  return items;
 }
 
 const RESERVED_LINES = 14;

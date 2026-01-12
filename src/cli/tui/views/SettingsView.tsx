@@ -7,48 +7,18 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { UseNavigationResult } from "../hooks/index.js";
 import type { TuiConfig } from "../config.js";
 import { loadConfig, saveConfig, getDefaultConfig } from "../config.js";
+import {
+  getSettingItems,
+  updateConfigValue,
+  groupSettingItems,
+  SECTION_TITLES,
+  type SettingItem,
+} from "../utils/settings-data.js";
 
 interface SettingsViewProps {
   navigation: UseNavigationResult;
   onConfigChange?: (config: TuiConfig) => void;
 }
-
-type SettingSection = "rpc" | "cache" | "display" | "discovery" | "debug";
-
-interface SettingItem {
-  section: SettingSection;
-  key: string;
-  label: string;
-  value: string;
-  type: "text" | "number" | "boolean" | "select";
-  options?: string[];
-}
-
-function getSettingItems(config: TuiConfig): SettingItem[] {
-  return [
-    { section: "rpc", key: "l1Url", label: "L1 (Ethereum) RPC", value: config.rpc.l1Url || "(default)", type: "text" },
-    { section: "rpc", key: "l2Url", label: "L2 (Arbitrum) RPC", value: config.rpc.l2Url || "(default)", type: "text" },
-    { section: "rpc", key: "novaUrl", label: "Nova RPC", value: config.rpc.novaUrl || "(default)", type: "text" },
-    { section: "cache", key: "path", label: "Cache Path", value: config.cache.path || "(default)", type: "text" },
-    { section: "display", key: "theme", label: "Theme", value: config.display.theme, type: "select", options: ["dark", "light"] },
-    { section: "display", key: "showProgressBar", label: "Show Progress Bar", value: config.display.showProgressBar ? "yes" : "no", type: "boolean" },
-    { section: "display", key: "compactMode", label: "Compact Mode", value: config.display.compactMode ? "yes" : "no", type: "boolean" },
-    { section: "discovery", key: "defaultDays", label: "Default Days", value: config.discovery.defaultDays.toString(), type: "number" },
-    { section: "discovery", key: "startBlock", label: "Start Block", value: config.discovery.startBlock?.toString() ?? "(auto)", type: "number" },
-    { section: "discovery", key: "chunkSize", label: "Chunk Size", value: config.discovery.chunkSize.toString(), type: "number" },
-    { section: "discovery", key: "concurrency", label: "Concurrency", value: config.discovery.concurrency.toString(), type: "number" },
-    { section: "debug", key: "logFile", label: "Log File", value: config.debug.logFile || "(none)", type: "text" },
-    { section: "debug", key: "namespaces", label: "Debug Namespaces", value: config.debug.namespaces || "gov-tracker:*", type: "text" },
-  ];
-}
-
-const SECTION_TITLES: Record<SettingSection, string> = {
-  rpc: "RPC Configuration",
-  cache: "Cache Settings",
-  display: "Display Options",
-  discovery: "Discovery Parameters",
-  debug: "Debug Settings",
-};
 
 export function SettingsView({ navigation, onConfigChange }: SettingsViewProps): React.ReactElement {
   const [config, setConfig] = useState<TuiConfig>(getDefaultConfig());
@@ -77,99 +47,92 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
 
   const items = getSettingItems(config);
 
-  const updateConfig = (item: SettingItem, newValue: string): void => {
-    const newConfig = { ...config };
-
-    if (item.section === "rpc") {
-      newConfig.rpc = { ...config.rpc, [item.key]: newValue === "(default)" ? "" : newValue };
-    } else if (item.section === "cache") {
-      newConfig.cache = { ...config.cache, [item.key]: newValue === "(default)" ? "" : newValue };
-    } else if (item.section === "display") {
-      if (item.type === "boolean") {
-        (newConfig.display as Record<string, unknown>)[item.key] = newValue === "yes";
-      } else {
-        (newConfig.display as Record<string, unknown>)[item.key] = newValue;
-      }
-    } else if (item.section === "discovery") {
-      if (item.key === "startBlock") {
-        const parsed = parseInt(newValue, 10);
-        newConfig.discovery = {
-          ...config.discovery,
-          startBlock: newValue === "(auto)" || isNaN(parsed) ? null : Math.max(0, parsed),
-        };
-      } else {
-        const parsed = parseInt(newValue, 10);
-        if (isNaN(parsed) || parsed < 1) {
-          showMessage(`Invalid value for ${item.label}: must be a positive number`, true);
-          return;
-        }
-        if (item.key === "defaultDays" && parsed > 365) {
-          showMessage("Default days cannot exceed 365", true);
-          return;
-        }
-        if (item.key === "chunkSize" && (parsed < 1000 || parsed > 10_000_000)) {
-          showMessage("Chunk size must be between 1,000 and 10,000,000", true);
-          return;
-        }
-        if (item.key === "concurrency" && parsed > 20) {
-          showMessage("Concurrency cannot exceed 20", true);
-          return;
-        }
-        (newConfig.discovery as Record<string, unknown>)[item.key] = parsed;
-      }
-    } else if (item.section === "debug") {
-      newConfig.debug = { ...config.debug, [item.key]: newValue === "(none)" ? "" : newValue };
+  const handleUpdateConfig = (item: SettingItem, newValue: string): void => {
+    const result = updateConfigValue(config, item, newValue);
+    if (!result.success) {
+      showMessage(result.error.message, true);
+      return;
     }
 
-    setConfig(newConfig);
-    const saved = saveConfig(newConfig);
-    onConfigChange?.(newConfig);
+    setConfig(result.config);
+    const saved = saveConfig(result.config);
+    onConfigChange?.(result.config);
     showMessage(saved ? "Settings saved" : "Failed to save settings", !saved);
+  };
+
+  const handleEditInput = (input: string, key: KeyInput): boolean => {
+    if (key.escape) {
+      setIsEditing(false);
+      setEditValue("");
+      return true;
+    }
+    if (key.return) {
+      handleUpdateConfig(items[selectedIndex], editValue);
+      setIsEditing(false);
+      setEditValue("");
+      return true;
+    }
+    if (key.backspace || key.delete) {
+      setEditValue((v) => v.slice(0, -1));
+      return true;
+    }
+    if (input && input.length === 1 && !key.ctrl && !key.meta) {
+      setEditValue((v) => v + input);
+      return true;
+    }
+    return true;
+  };
+
+  const handleItemSelect = (item: SettingItem): void => {
+    if (item.type === "boolean") {
+      handleUpdateConfig(item, item.value === "yes" ? "no" : "yes");
+      return;
+    }
+    if (item.type === "select" && item.options) {
+      const currentIdx = item.options.indexOf(item.value);
+      handleUpdateConfig(item, item.options[(currentIdx + 1) % item.options.length]);
+      return;
+    }
+    setIsEditing(true);
+    const isPlaceholder = item.value === "(default)" || item.value === "(auto)";
+    setEditValue(isPlaceholder ? "" : item.value);
+  };
+
+  const handleResetToDefaults = (): void => {
+    const defaults = getDefaultConfig();
+    setConfig(defaults);
+    const saved = saveConfig(defaults);
+    showMessage(saved ? "Settings reset to defaults" : "Failed to save defaults", !saved);
+  };
+
+  const handleNavigationInput = (input: string, key: KeyInput): void => {
+    if (key.escape || input === "b") {
+      navigation.back();
+      return;
+    }
+    if (key.upArrow || input === "k") {
+      setSelectedIndex((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (key.downArrow || input === "j") {
+      setSelectedIndex((i) => Math.min(items.length - 1, i + 1));
+      return;
+    }
+    if (key.return || input === " ") {
+      handleItemSelect(items[selectedIndex]);
+      return;
+    }
+    if (input === "r") {
+      handleResetToDefaults();
+    }
   };
 
   useInput((input: string, key: KeyInput) => {
     if (isEditing) {
-      if (key.escape) {
-        setIsEditing(false);
-        setEditValue("");
-      } else if (key.return) {
-        const item = items[selectedIndex];
-        updateConfig(item, editValue);
-        setIsEditing(false);
-        setEditValue("");
-      } else if (key.backspace || key.delete) {
-        setEditValue((v) => v.slice(0, -1));
-      } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        setEditValue((v) => v + input);
-      }
+      handleEditInput(input, key);
       return;
     }
-
-    if (key.escape || input === "b") {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      setSelectedIndex((i) => Math.max(0, i - 1));
-    } else if (key.downArrow || input === "j") {
-      setSelectedIndex((i) => Math.min(items.length - 1, i + 1));
-    } else if (key.return || input === " ") {
-      const item = items[selectedIndex];
-      if (item.type === "boolean") {
-        const newValue = item.value === "yes" ? "no" : "yes";
-        updateConfig(item, newValue);
-      } else if (item.type === "select" && item.options) {
-        const currentIdx = item.options.indexOf(item.value);
-        const newValue = item.options[(currentIdx + 1) % item.options.length];
-        updateConfig(item, newValue);
-      } else {
-        setIsEditing(true);
-        setEditValue(item.value === "(default)" || item.value === "(auto)" ? "" : item.value);
-      }
-    } else if (input === "r") {
-      const defaults = getDefaultConfig();
-      setConfig(defaults);
-      const saved = saveConfig(defaults);
-      showMessage(saved ? "Settings reset to defaults" : "Failed to save defaults", !saved);
-    }
+    handleNavigationInput(input, key);
   });
 
   const renderItem = (item: SettingItem, index: number): React.ReactElement => {
@@ -190,16 +153,7 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     );
   };
 
-  const groupedItems: { section: SettingSection; items: { item: SettingItem; index: number }[] }[] = [];
-  let currentGroup: { section: SettingSection; items: { item: SettingItem; index: number }[] } | null = null;
-
-  items.forEach((item, index) => {
-    if (!currentGroup || currentGroup.section !== item.section) {
-      currentGroup = { section: item.section, items: [] };
-      groupedItems.push(currentGroup);
-    }
-    currentGroup.items.push({ item, index });
-  });
+  const groupedItems = groupSettingItems(items);
 
   return (
     <Box flexDirection="column" height="100%">

@@ -16,17 +16,44 @@ interface VotingData {
   proposalState?: string;
 }
 
-function getStages(checkpoint: TrackingCheckpoint): TrackedStage[] {
-  return checkpoint.cachedData.completedStages ?? [];
-}
+const stageHelpers = {
+  getAll(checkpoint: TrackingCheckpoint): TrackedStage[] {
+    return checkpoint.cachedData.completedStages ?? [];
+  },
 
-function getCreatedStage(stages: TrackedStage[]): TrackedStage | undefined {
-  return stages.find((s) => s.type === "PROPOSAL_CREATED");
-}
+  findByType(stages: TrackedStage[], type: StageType): TrackedStage | undefined {
+    return stages.find((s) => s.type === type);
+  },
 
-function getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined {
-  return getCreatedStage(stages)?.data as ProposalCreatedData | undefined;
-}
+  getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined {
+    return this.findByType(stages, "PROPOSAL_CREATED")?.data as ProposalCreatedData | undefined;
+  },
+
+  getCreationTimestamp(stages: TrackedStage[]): number | null {
+    const createdStage = this.findByType(stages, "PROPOSAL_CREATED");
+    if (createdStage?.timing?.startedAt) {
+      return createdStage.timing.startedAt * 1000;
+    }
+    const l2TimelockStage = this.findByType(stages, "L2_TIMELOCK");
+    if (l2TimelockStage?.timing?.startedAt) {
+      return l2TimelockStage.timing.startedAt * 1000;
+    }
+    return null;
+  },
+
+  hasExecutable(stages: TrackedStage[]): boolean {
+    return stages.some((s) => s.status === "READY" || s.executable === true);
+  },
+
+  isElection(stages: TrackedStage[]): boolean {
+    const proposalType = this.getCreatedData(stages)?.proposalType;
+    return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
+  },
+
+  countCompleted(stages: TrackedStage[]): number {
+    return stages.filter((s) => s.status === "COMPLETED" || s.status === "SKIPPED").length;
+  },
+};
 
 function extractMarkdownTitle(description: string | undefined | null): string | null {
   if (!description) return null;
@@ -35,7 +62,6 @@ function extractMarkdownTitle(description: string | undefined | null): string | 
     const trimmed = line.trim();
     if (trimmed.startsWith("#")) {
       const title = trimmed.replace(/^#+\s*/, "").trim();
-      // Return null if empty so fallback logic continues
       return title || null;
     }
   }
@@ -43,20 +69,18 @@ function extractMarkdownTitle(description: string | undefined | null): string | 
 }
 
 function getProposalTitle(checkpoint: TrackingCheckpoint): string {
-  const data = getCreatedData(getStages(checkpoint));
+  const data = stageHelpers.getCreatedData(stageHelpers.getAll(checkpoint));
   if (data?.description) {
     const mdTitle = extractMarkdownTitle(data.description);
-    if (mdTitle) {
-      return mdTitle;
-    }
+    if (mdTitle) return mdTitle;
+
     const firstLine = data.description
       .split("\n")
       .find((l) => l.trim())
       ?.trim();
-    if (firstLine) {
-      return firstLine;
-    }
+    if (firstLine) return firstLine;
   }
+
   if (checkpoint.input.type === "governor") {
     return `Proposal ${checkpoint.input.proposalId}`;
   }
@@ -67,9 +91,9 @@ function getProposalTitle(checkpoint: TrackingCheckpoint): string {
 }
 
 function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete" | "failed" {
-  const stages = getStages(checkpoint);
+  const stages = stageHelpers.getAll(checkpoint);
 
-  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
+  const votingStage = stageHelpers.findByType(stages, "VOTING_ACTIVE");
   const votingData = votingStage?.data as VotingData | undefined;
   if (votingData?.proposalState === "Defeated" || votingData?.proposalState === "Canceled") {
     return "failed";
@@ -91,7 +115,7 @@ function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete
 }
 
 function getCurrentStageType(checkpoint: TrackingCheckpoint): StageType | null {
-  const stages = getStages(checkpoint);
+  const stages = stageHelpers.getAll(checkpoint);
   for (let i = stages.length - 1; i >= 0; i--) {
     if (stages[i].status !== "COMPLETED" && stages[i].status !== "SKIPPED") {
       return stages[i].type;
@@ -100,87 +124,52 @@ function getCurrentStageType(checkpoint: TrackingCheckpoint): StageType | null {
   return checkpoint.lastProcessedStage;
 }
 
-function hasExecutableStage(stages: TrackedStage[]): boolean {
-  return stages.some((s) => s.status === "READY" || s.executable === true);
-}
-
-function isElectionProposal(stages: TrackedStage[]): boolean {
-  const proposalType = getCreatedData(stages)?.proposalType;
-  return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
-}
-
-function getCreationTimestamp(stages: TrackedStage[]): number | null {
-  const createdStage = getCreatedStage(stages);
-  if (createdStage?.timing?.startedAt) {
-    return createdStage.timing.startedAt * 1000;
-  }
-  const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
-  if (l2TimelockStage?.timing?.startedAt) {
-    return l2TimelockStage.timing.startedAt * 1000;
-  }
-  return null;
-}
-
 function getItemType(
   checkpoint: TrackingCheckpoint,
   stages: TrackedStage[]
 ): ProposalListItem["type"] {
-  if (isElectionProposal(stages)) return "election";
+  if (stageHelpers.isElection(stages)) return "election";
   if (checkpoint.input.type === "timelock") return "timelock";
   return "governor";
 }
 
-function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
-  // Elections have their own view (press 'e'), exclude from main list
-  if (item.type === "election") return false;
+const filterPredicates: Record<FilterType, (item: ProposalListItem) => boolean> = {
+  all: () => true,
+  active: (item) => item.status === "active",
+  complete: (item) => item.status === "complete",
+  timelocks: (item) => item.type === "timelock",
+};
 
-  switch (filter) {
-    case "all":
-      return true;
-    case "active":
-      return item.status === "active";
-    case "complete":
-      return item.status === "complete";
-    case "timelocks":
-      return item.type === "timelock";
-    default:
-      return true;
-  }
+function matchesFilter(item: ProposalListItem, filter: FilterType): boolean {
+  if (item.type === "election") return false;
+  return filterPredicates[filter](item);
 }
 
-function getProgressNumber(progress: string): number {
+const STATUS_ORDER: Record<string, number> = { active: 0, complete: 1, failed: 2 };
+
+function parseProgressNumber(progress: string): number {
   const match = progress.match(/^(\d+)/);
   return match ? parseInt(match[1], 10) : 0;
 }
 
-function compareByDate(aDate: number | null, bDate: number | null, ascending: boolean): number {
-  if (aDate === null && bDate === null) return 0;
-  if (aDate === null) return 1;
-  if (bDate === null) return -1;
-  return ascending ? aDate - bDate : bDate - aDate;
+type SortComparator = (a: ProposalListItem, b: ProposalListItem) => number;
+
+function nullSafeCompare(aVal: number | null, bVal: number | null, ascending: boolean): number {
+  if (aVal === null && bVal === null) return 0;
+  if (aVal === null) return 1;
+  if (bVal === null) return -1;
+  return ascending ? aVal - bVal : bVal - aVal;
 }
 
+const sortComparators: Record<SortType, SortComparator> = {
+  newest: (a, b) => nullSafeCompare(a.createdAt, b.createdAt, false),
+  oldest: (a, b) => nullSafeCompare(a.createdAt, b.createdAt, true),
+  progress: (a, b) => parseProgressNumber(b.stageProgress) - parseProgressNumber(a.stageProgress),
+  status: (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
+};
+
 function sortItems(items: ProposalListItem[], sort: SortType): ProposalListItem[] {
-  return [...items].sort((a, b) => {
-    switch (sort) {
-      case "newest":
-        return compareByDate(a.createdAt, b.createdAt, false);
-
-      case "oldest":
-        return compareByDate(a.createdAt, b.createdAt, true);
-
-      case "progress":
-        return getProgressNumber(b.stageProgress) - getProgressNumber(a.stageProgress);
-
-      case "status": {
-        const statusOrder: Record<string, number> = { active: 0, complete: 1, failed: 2 };
-        return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
-      }
-
-      default:
-        return 0;
-    }
-  });
+  return [...items].sort(sortComparators[sort]);
 }
 
 export function useProposals(
@@ -197,11 +186,9 @@ export function useProposals(
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery") continue;
 
-      const stages = getStages(checkpoint);
+      const stages = stageHelpers.getAll(checkpoint);
 
-      // Handle proposals with no stages yet (discovered but not tracked)
       if (stages.length === 0) {
-        // Skip untracked election proposals - they belong in the Elections view
         if (
           checkpoint.input.type === "governor" &&
           isElectionGovernor(checkpoint.input.governorAddress)
@@ -223,7 +210,7 @@ export function useProposals(
           title,
           type: checkpoint.input.type === "timelock" ? "timelock" : "governor",
           proposalType: undefined,
-          status: "active", // Needs tracking
+          status: "active",
           stageProgress: "0/7",
           currentStage: null,
           hasExecutable: false,
@@ -233,20 +220,16 @@ export function useProposals(
         continue;
       }
 
-      const completedCount = stages.filter(
-        (s) => s.status === "COMPLETED" || s.status === "SKIPPED"
-      ).length;
-
       items.push({
         key,
         title: getProposalTitle(checkpoint),
         type: getItemType(checkpoint, stages),
-        proposalType: getCreatedData(stages)?.proposalType,
+        proposalType: stageHelpers.getCreatedData(stages)?.proposalType,
         status: getProposalStatus(checkpoint),
-        stageProgress: `${completedCount}/7`,
+        stageProgress: `${stageHelpers.countCompleted(stages)}/7`,
         currentStage: getCurrentStageType(checkpoint),
-        hasExecutable: hasExecutableStage(stages),
-        createdAt: getCreationTimestamp(stages),
+        hasExecutable: stageHelpers.hasExecutable(stages),
+        createdAt: stageHelpers.getCreationTimestamp(stages),
         checkpoint,
       });
     }

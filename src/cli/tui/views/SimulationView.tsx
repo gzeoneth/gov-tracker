@@ -48,20 +48,30 @@ export function SimulationView({
   }, [simulations.length]);
 
   useInput((input: string, key: KeyInput) => {
-    if (input === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if ((key.downArrow || input === "j") && simulations.length > 0) {
-      setSelectedIndex((prev) => Math.min(simulations.length - 1, prev + 1));
-    } else if (key.return) {
-      setInputExpanded((prev) => !prev);
-    } else if (input === "g") {
-      setSelectedIndex(0);
-    } else if (input === "G" && simulations.length > 0) {
-      setSelectedIndex(simulations.length - 1);
-    } else if (input === "?") {
-      navigation.goToHelp();
+    const maxIndex = Math.max(0, simulations.length - 1);
+
+    switch (true) {
+      case input === "b" || key.escape:
+        navigation.back();
+        break;
+      case key.upArrow || input === "k":
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+        break;
+      case (key.downArrow || input === "j") && simulations.length > 0:
+        setSelectedIndex((prev) => Math.min(maxIndex, prev + 1));
+        break;
+      case key.return:
+        setInputExpanded((prev) => !prev);
+        break;
+      case input === "g":
+        setSelectedIndex(0);
+        break;
+      case input === "G" && simulations.length > 0:
+        setSelectedIndex(maxIndex);
+        break;
+      case input === "?":
+        navigation.goToHelp();
+        break;
     }
   });
 

@@ -43,57 +43,81 @@ export function ProposalList({
   );
   const visibleItems = items.slice(startIndex, startIndex + visibleRows);
 
+  const handleSearchInput = (input: string, key: KeyInput): void => {
+    if (key.escape) {
+      navigation.clearSearch();
+    } else if (key.return) {
+      navigation.finishSearch();
+    } else if (key.backspace || key.delete) {
+      navigation.deleteSearchChar();
+    } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
+      navigation.appendSearchChar(input);
+    }
+  };
+
+  const handleNormalInput = (input: string, key: KeyInput): void => {
+    const itemCount = items.length;
+
+    switch (true) {
+      case input === "q":
+        onQuit();
+        break;
+      case input === "/":
+        navigation.startSearch();
+        break;
+      case key.escape && !!state.searchQuery:
+        navigation.setSearchQuery("");
+        break;
+      case key.upArrow || input === "k":
+        navigation.moveUp();
+        break;
+      case key.downArrow || input === "j":
+        navigation.moveDown(itemCount);
+        break;
+      case key.pageUp || (key.ctrl && input === "u"):
+        navigation.pageUp(itemCount);
+        break;
+      case key.pageDown || (key.ctrl && input === "d"):
+        navigation.pageDown(itemCount);
+        break;
+      case key.return:
+        navigation.enter(items);
+        break;
+      case key.tab:
+        navigation.cycleFilter();
+        break;
+      case input === "d" && !tracker.isTracking:
+        void tracker.discover();
+        break;
+      case input === "e" && tracker.canTrack:
+        navigation.goToElection();
+        break;
+      case input === "g":
+        navigation.goToTop();
+        break;
+      case input === "G":
+        navigation.goToBottom(itemCount);
+        break;
+      case input === "R":
+        onReload();
+        break;
+      case input === "o":
+        navigation.cycleSort();
+        break;
+      case input === "?":
+        navigation.goToHelp();
+        break;
+      case input === "S":
+        navigation.goToSettings();
+        break;
+    }
+  };
+
   useInput((input: string, key: KeyInput) => {
     if (state.isSearching) {
-      if (key.escape) {
-        navigation.clearSearch();
-      } else if (key.return) {
-        navigation.finishSearch();
-      } else if (key.backspace || key.delete) {
-        navigation.deleteSearchChar();
-      } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        navigation.appendSearchChar(input);
-      }
-      return;
-    }
-
-    if (input === "q") {
-      onQuit();
-      return;
-    }
-
-    if (input === "/") {
-      navigation.startSearch();
-    } else if (key.escape && state.searchQuery) {
-      navigation.setSearchQuery("");
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(items.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(items.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(items.length);
-    } else if (key.return) {
-      navigation.enter(items);
-    } else if (key.tab) {
-      navigation.cycleFilter();
-    } else if (input === "d" && !tracker.isTracking) {
-      void tracker.discover();
-    } else if (input === "e" && tracker.canTrack) {
-      navigation.goToElection();
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(items.length);
-    } else if (input === "R") {
-      onReload();
-    } else if (input === "o") {
-      navigation.cycleSort();
-    } else if (input === "?") {
-      navigation.goToHelp();
-    } else if (input === "S") {
-      navigation.goToSettings();
+      handleSearchInput(input, key);
+    } else {
+      handleNormalInput(input, key);
     }
   });
 

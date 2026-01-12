@@ -38,39 +38,53 @@ export function ProposalDetail({
   const proposalId = getProposalIdDisplay(input);
 
   useInput((inputKey: string, key: KeyInput) => {
-    if (inputKey === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || inputKey === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || inputKey === "j") {
-      navigation.moveDown(STAGE_COUNT);
-    } else if (key.return && stages[state.selectedStageIndex]) {
-      navigation.goToStage(state.selectedStageIndex);
-    } else if (inputKey === "c") {
-      navigation.goToCalldata();
-    } else if (inputKey === "s") {
-      navigation.goToSimulation();
-    } else if (inputKey === "d") {
-      navigation.goToDescription();
-    } else if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) {
-      void tracker.track(proposal);
-    } else if (inputKey === "g") {
-      navigation.goToTop();
-    } else if (inputKey === "G") {
-      navigation.goToBottom(STAGE_COUNT);
-    } else if (inputKey >= "1" && inputKey <= "7") {
-      const stageIndex = parseInt(inputKey, 10) - 1;
-      if (stages[stageIndex]) {
-        navigation.goToStage(stageIndex);
+    switch (true) {
+      case inputKey === "b" || key.escape:
+        navigation.back();
+        break;
+      case key.upArrow || inputKey === "k":
+        navigation.moveUp();
+        break;
+      case key.downArrow || inputKey === "j":
+        navigation.moveDown(STAGE_COUNT);
+        break;
+      case key.return && !!stages[state.selectedStageIndex]:
+        navigation.goToStage(state.selectedStageIndex);
+        break;
+      case inputKey === "c":
+        navigation.goToCalldata();
+        break;
+      case inputKey === "s":
+        navigation.goToSimulation();
+        break;
+      case inputKey === "d":
+        navigation.goToDescription();
+        break;
+      case inputKey === "r" && tracker.canTrack && !tracker.isTracking:
+        void tracker.track(proposal);
+        break;
+      case inputKey === "g":
+        navigation.goToTop();
+        break;
+      case inputKey === "G":
+        navigation.goToBottom(STAGE_COUNT);
+        break;
+      case inputKey >= "1" && inputKey <= "7": {
+        const stageIndex = parseInt(inputKey, 10) - 1;
+        if (stages[stageIndex]) {
+          navigation.goToStage(stageIndex);
+        }
+        break;
       }
-    } else if (inputKey === "?") {
-      navigation.goToHelp();
-    } else if (inputKey === "y") {
-      copy(proposalId, "Proposal ID");
-    } else if (inputKey === "Y") {
-      if (txHash) {
+      case inputKey === "?":
+        navigation.goToHelp();
+        break;
+      case inputKey === "y":
+        copy(proposalId, "Proposal ID");
+        break;
+      case inputKey === "Y" && !!txHash:
         copy(txHash, "TX Hash");
-      }
+        break;
     }
   });
   const txUrl = txHash ? getTxUrl(CHAIN_IDS.ARB_ONE, txHash) : null;

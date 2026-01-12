@@ -41,22 +41,33 @@ export function StageView({
   const visibleRows = getVisibleRows(RESERVED_LINES);
 
   useInput((input: string, key: KeyInput) => {
-    if (input === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(dataItems.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(dataItems.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(dataItems.length);
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(dataItems.length);
-    } else if (input === "?") {
-      navigation.goToHelp();
+    const itemCount = dataItems.length;
+
+    switch (true) {
+      case input === "b" || key.escape:
+        navigation.back();
+        break;
+      case key.upArrow || input === "k":
+        navigation.moveUp();
+        break;
+      case key.downArrow || input === "j":
+        navigation.moveDown(itemCount);
+        break;
+      case key.pageUp || (key.ctrl && input === "u"):
+        navigation.pageUp(itemCount);
+        break;
+      case key.pageDown || (key.ctrl && input === "d"):
+        navigation.pageDown(itemCount);
+        break;
+      case input === "g":
+        navigation.goToTop();
+        break;
+      case input === "G":
+        navigation.goToBottom(itemCount);
+        break;
+      case input === "?":
+        navigation.goToHelp();
+        break;
     }
   });
 

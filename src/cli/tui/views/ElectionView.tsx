@@ -57,11 +57,10 @@ function formatTimestamp(ts: number): string {
 
 function formatVotes(votes: { toString(): string }): string {
   const str = votes.toString();
-  if (str.length > 18) {
-    const intPart = str.slice(0, str.length - 18);
-    return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
-  return str;
+  const WEI_DECIMALS = 18;
+  if (str.length <= WEI_DECIMALS) return str;
+  const intPart = str.slice(0, str.length - WEI_DECIMALS);
+  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function buildStatusLines(status: ElectionStatus): DisplayLine[] {
@@ -279,15 +278,58 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
   const hasMore = scrollOffset + visibleCount < lines.length;
   const hasLess = scrollOffset > 0;
 
+  const handleBackOrEscape = (): void => {
+    if (showDetails) {
+      setShowDetails(false);
+      setScrollOffset(0);
+      clearDetails();
+    } else {
+      navigation.back();
+    }
+  };
+
+  const handleDetailScroll = (input: string, key: KeyInput): void => {
+    const maxOffset = Math.max(0, lines.length - visibleCount);
+    const PAGE_SIZE = 10;
+
+    if (key.upArrow || input === "k") {
+      setScrollOffset((prev) => Math.max(0, prev - 1));
+    } else if (key.downArrow || input === "j") {
+      setScrollOffset((prev) => Math.min(maxOffset, prev + 1));
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
+      setScrollOffset((prev) => Math.max(0, prev - PAGE_SIZE));
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
+      setScrollOffset((prev) => Math.min(maxOffset, prev + PAGE_SIZE));
+    } else if (input === "g") {
+      setScrollOffset(0);
+    } else if (input === "G") {
+      setScrollOffset(maxOffset);
+    }
+  };
+
+  const handleListNavigation = (input: string, key: KeyInput): void => {
+    if (data.proposals.length === 0) return;
+
+    const maxIndex = data.proposals.length - 1;
+
+    if (key.upArrow || input === "k") {
+      setSelectedIndex((prev) => Math.max(0, prev - 1));
+    } else if (key.downArrow || input === "j") {
+      setSelectedIndex((prev) => Math.min(maxIndex, prev + 1));
+    } else if (input === "g") {
+      setSelectedIndex(0);
+    } else if (input === "G") {
+      setSelectedIndex(maxIndex);
+    } else if ((key.return || input === "l") && selectedElection && providers) {
+      setShowDetails(true);
+      setScrollOffset(0);
+      loadDetails(selectedElection.electionIndex);
+    }
+  };
+
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
-      if (showDetails) {
-        setShowDetails(false);
-        setScrollOffset(0);
-        clearDetails();
-        return;
-      }
-      navigation.back();
+      handleBackOrEscape();
       return;
     }
 
@@ -297,38 +339,9 @@ export function ElectionView({ navigation, providers }: ElectionViewProps): Reac
     }
 
     if (showDetails) {
-      // In detail view: scroll up/down
-      if (key.upArrow || input === "k") {
-        setScrollOffset((prev) => Math.max(0, prev - 1));
-      } else if (key.downArrow || input === "j") {
-        setScrollOffset((prev) => Math.min(lines.length - visibleCount, prev + 1));
-      } else if (key.pageUp || (key.ctrl && input === "u")) {
-        setScrollOffset((prev) => Math.max(0, prev - 10));
-      } else if (key.pageDown || (key.ctrl && input === "d")) {
-        setScrollOffset((prev) => Math.min(lines.length - visibleCount, prev + 10));
-      } else if (input === "g") {
-        setScrollOffset(0);
-      } else if (input === "G") {
-        setScrollOffset(Math.max(0, lines.length - visibleCount));
-      }
-      return;
-    }
-
-    // In list view: navigate elections
-    if (data.proposals.length === 0) return;
-
-    if (key.upArrow || input === "k") {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    } else if (key.downArrow || input === "j") {
-      setSelectedIndex((prev) => Math.min(data.proposals.length - 1, prev + 1));
-    } else if (input === "g") {
-      setSelectedIndex(0);
-    } else if (input === "G") {
-      setSelectedIndex(data.proposals.length - 1);
-    } else if ((key.return || input === "l") && selectedElection && providers) {
-      setShowDetails(true);
-      setScrollOffset(0);
-      loadDetails(selectedElection.electionIndex);
+      handleDetailScroll(input, key);
+    } else {
+      handleListNavigation(input, key);
     }
   });
 

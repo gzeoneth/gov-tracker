@@ -40,10 +40,142 @@ import {
   DiscoveredTimelockOp,
 } from "../src/tracker/discovery";
 
-import { ADDRESSES } from "../src/constants";
+import { ADDRESSES, buildDefaultTargets } from "../src/constants";
 import { proposalCreatedInterface, timelockInterface } from "../src/abis";
 
 dotenv.config({ quiet: true });
+
+describe("buildDefaultTargets", () => {
+  describe("default behavior (no options)", () => {
+    it("should return object with all boolean properties", () => {
+      // #given no options provided
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets();
+
+      // #then should return object with all expected keys
+      expect(typeof targets.constitutionalGovernor).toBe("boolean");
+      expect(typeof targets.nonConstitutionalGovernor).toBe("boolean");
+      expect(typeof targets.electionNomineeGovernor).toBe("boolean");
+      expect(typeof targets.electionMemberGovernor).toBe("boolean");
+      expect(typeof targets.l2ConstitutionalTimelock).toBe("boolean");
+      expect(typeof targets.l2NonConstitutionalTimelock).toBe("boolean");
+    });
+
+    it("should have all core targets enabled by default", () => {
+      // #given no options provided
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets();
+
+      // #then all targets should be enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(true);
+      expect(targets.electionMemberGovernor).toBe(true);
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("includeElections option", () => {
+    it("should disable election governors when includeElections is false", () => {
+      // #given includeElections set to false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ includeElections: false });
+
+      // #then election governors should be disabled
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+
+    it("should keep non-election targets enabled when includeElections is false", () => {
+      // #given includeElections set to false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ includeElections: false });
+
+      // #then non-election targets should remain enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("governorsOnly option", () => {
+    it("should disable timelocks when governorsOnly is true", () => {
+      // #given governorsOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true });
+
+      // #then timelocks should be disabled
+      expect(targets.l2ConstitutionalTimelock).toBe(false);
+      expect(targets.l2NonConstitutionalTimelock).toBe(false);
+    });
+
+    it("should keep all governors enabled when governorsOnly is true", () => {
+      // #given governorsOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true });
+
+      // #then all governors should remain enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(true);
+      expect(targets.electionMemberGovernor).toBe(true);
+    });
+  });
+
+  describe("timelocksOnly option", () => {
+    it("should disable governors when timelocksOnly is true", () => {
+      // #given timelocksOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true });
+
+      // #then all governors should be disabled
+      expect(targets.constitutionalGovernor).toBe(false);
+      expect(targets.nonConstitutionalGovernor).toBe(false);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+
+    it("should keep timelocks enabled when timelocksOnly is true", () => {
+      // #given timelocksOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true });
+
+      // #then timelocks should remain enabled
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("combined options", () => {
+    it("should disable election governors when governorsOnly and includeElections false", () => {
+      // #given governorsOnly is true and includeElections is false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true, includeElections: false });
+
+      // #then election governors should be disabled, core governors enabled, timelocks disabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+      expect(targets.l2ConstitutionalTimelock).toBe(false);
+      expect(targets.l2NonConstitutionalTimelock).toBe(false);
+    });
+
+    it("should disable all governors when timelocksOnly even if includeElections true", () => {
+      // #given timelocksOnly is true and includeElections is true (default)
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true, includeElections: true });
+
+      // #then all governors should be disabled (timelocksOnly takes precedence)
+      expect(targets.constitutionalGovernor).toBe(false);
+      expect(targets.nonConstitutionalGovernor).toBe(false);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+  });
+});
 
 describe("Governor Discovery", () => {
   describe("detectProposalType", () => {

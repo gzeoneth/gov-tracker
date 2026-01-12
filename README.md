@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/gzeoneth/gov-tracker/graph/badge.svg?token=2WVH8Z82TE)](https://codecov.io/gh/gzeoneth/gov-tracker)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Track and execute Arbitrum DAO governance proposal lifecycle stages.
+Track and execute Arbitrum DAO governance proposal lifecycle stages and Security Council elections.
 
 ## Installation
 
@@ -86,6 +86,30 @@ npx @gzeoneth/gov-tracker track 0x... --no-cache
 
 **Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
 
+### Elections
+
+```bash
+# Check election status (next election, can create)
+npx @gzeoneth/gov-tracker election
+
+# List all elections with statuses
+npx @gzeoneth/gov-tracker election --list
+
+# Track specific election by index
+npx @gzeoneth/gov-tracker election --track 0
+
+# Track with detailed nominee/member info
+npx @gzeoneth/gov-tracker election --track 0 --details -v
+
+# Create election or execute phase transition
+npx @gzeoneth/gov-tracker election --track 0 -w --private-key $PRIVATE_KEY
+
+# Monitor elections in loop mode
+npx @gzeoneth/gov-tracker election --loop --interval 300
+```
+
+**Election Phases:** `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
+
 **Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this eliminates initial discovery RPC calls. SDK users can access via `getBundledCachePath()` or direct JSON import - see [Examples](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
 ## Environment
@@ -135,7 +159,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow.
 |----------|-------------|
 | Constitutional | Core proposals requiring L1 round-trip (8-day L2 timelock) |
 | Non-Constitutional | Treasury proposals, L2-only execution (3-day L2 timelock) |
-| Election | Security Council election proposals |
+| Election | Security Council election with 6-phase lifecycle |
+| Cohort | Security Council has two cohorts (0 and 1) that alternate elections |
 
 See [Arbitrum governance docs](https://docs.arbitrum.foundation/concepts/lifecycle-anatomy-aip-proposal) for more details.
 

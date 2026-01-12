@@ -192,6 +192,203 @@ const cached = await tracker.getElectionCheckpoint(0);
 | `PENDING_EXECUTION` | Awaiting execution | `prepareMemberElectionExecution()` if `canExecuteMember` |
 | `COMPLETED` | Fully executed | None |
 
+#### Detailed Election Tracking
+
+Query detailed participant information for elections:
+
+```typescript
+import {
+  getElectionProposalId,
+  getContenders,
+  getNomineesWithVotes,
+  getExcludedNominees,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+} from "@gzeoneth/gov-tracker";
+
+// Get proposal ID for an election
+const proposalId = await getElectionProposalId(0, l2Provider);
+
+// Get all contenders (people who registered)
+const contenders = await getContenders(proposalId, l2Provider);
+for (const c of contenders) {
+  console.log(`${c.address} registered at block ${c.registeredAtBlock}`);
+}
+
+// Get nominees with vote counts
+const nominees = await getNomineesWithVotes(proposalId, l2Provider);
+for (const n of nominees) {
+  console.log(`${n.address}: ${n.votesReceived.toString()} votes, excluded: ${n.isExcluded}`);
+}
+
+// Get excluded nominees (vetted out)
+const excluded = await getExcludedNominees(proposalId, l2Provider);
+for (const n of excluded) {
+  console.log(`${n.address} excluded at block ${n.excludedAtBlock}`);
+}
+
+// Get comprehensive nominee election details
+const nomineeDetails = await getNomineeElectionDetails(0, l2Provider);
+if (nomineeDetails) {
+  console.log(`Contenders: ${nomineeDetails.contenders.length}`);
+  console.log(`Nominees: ${nomineeDetails.nominees.length}`);
+  console.log(`Compliant: ${nomineeDetails.compliantNominees.length}`);
+  console.log(`Excluded: ${nomineeDetails.excludedNominees.length}`);
+  console.log(`Quorum: ${nomineeDetails.quorumThreshold.toString()}`);
+}
+
+// Get comprehensive member election details
+const memberDetails = await getMemberElectionDetails(0, l2Provider);
+if (memberDetails) {
+  console.log(`Winners (${memberDetails.winners.length}):`);
+  for (const nominee of memberDetails.nominees) {
+    const tag = nominee.isWinner ? " [WINNER]" : "";
+    console.log(`  #${nominee.rank} ${nominee.address}: ${nominee.weightReceived.toString()}${tag}`);
+  }
+}
+```
+
+**Types:**
+
+```typescript
+interface ElectionContender {
+  address: string;
+  registeredAtBlock: number;
+  registrationTxHash: string;
+}
+
+interface ElectionNominee {
+  address: string;
+  votesReceived: BigNumber;
+  isExcluded: boolean;
+  excludedAtBlock?: number;
+  exclusionTxHash?: string;
+}
+
+interface MemberElectionNominee {
+  address: string;
+  weightReceived: BigNumber;
+  isWinner: boolean;
+  rank: number;
+}
+
+interface NomineeElectionDetails {
+  proposalId: string;
+  electionIndex: number;
+  contenders: ElectionContender[];
+  nominees: ElectionNominee[];
+  compliantNominees: ElectionNominee[];
+  excludedNominees: ElectionNominee[];
+  quorumThreshold: BigNumber;
+  targetNomineeCount: number;
+}
+
+interface MemberElectionDetails {
+  proposalId: string;
+  electionIndex: number;
+  nominees: MemberElectionNominee[];
+  winners: string[];
+  fullWeightDeadline: number;
+  proposalDeadline: number;
+}
+```
+
+---
+
+### Checkpoint Deduplication
+
+Both governance proposals and elections can create "child" timelock operations that may be discovered and tracked separately. The deduplication helpers identify and manage these relationships.
+
+#### Understanding the Problem
+
+**Proposals:**
+1. Proposal tracked with key `tx:{creation_hash}`
+2. Proposal queues to L2 timelock → creates child timelock operation
+3. If discovered separately, child gets key `tx:{schedule_hash}`
+
+**Elections:**
+1. Election tracked with key `election:{index}`
+2. Member election execute → `SecurityCouncilManager.replaceCohort()`
+3. This schedules to L2 Constitutional timelock → creates child timelock op
+4. If discovered separately, child gets key `tx:{schedule_hash}`
+
+#### Link Parent to Child
+
+```typescript
+import { linkCheckpointToChild } from "@gzeoneth/gov-tracker";
+
+// Link a timelock checkpoint to its parent election
+await linkCheckpointToChild("tx:0xchild...", "election:5", cache);
+
+// Link a timelock checkpoint to its parent proposal
+await linkCheckpointToChild("tx:0xchild...", "tx:0xparent...", cache);
+```
+
+#### Filter Out Child Checkpoints
+
+```typescript
+import { filterChildCheckpoints, getDeduplicationStats } from "@gzeoneth/gov-tracker";
+
+// Filter children from tracking results
+const results = await tracker.getAllCheckpoints();
+const rootResults = filterChildCheckpoints(results);
+
+// Get statistics about parent/child relationships
+const stats = await getDeduplicationStats(cache);
+console.log(`Total: ${stats.totalCheckpoints}`);
+console.log(`Roots: ${stats.rootCheckpoints}`);
+console.log(`Children: ${stats.childCheckpoints}`);
+console.log(`  From elections: ${stats.parentTypes.fromElections}`);
+console.log(`  From proposals: ${stats.parentTypes.fromProposals}`);
+```
+
+#### Query Relationships
+
+```typescript
+import {
+  getParentCheckpoint,
+  isChildCheckpoint,
+  getChildCheckpoints,
+  getChildToParentMap,
+} from "@gzeoneth/gov-tracker";
+
+// Check if a checkpoint is a child
+const isChild = await isChildCheckpoint("tx:0x...", cache);
+
+// Get parent key
+const parentKey = await getParentCheckpoint("tx:0x...", cache);
+
+// Get all children of a parent
+const children = await getChildCheckpoints("election:5", cache);
+
+// Get full child → parent map
+const map = await getChildToParentMap(cache);
+```
+
+#### Auto-Link Orphaned Checkpoints
+
+```typescript
+import { autoLinkOrphanedCheckpoints } from "@gzeoneth/gov-tracker";
+
+// Automatically find and link orphaned timelock checkpoints
+const linkedCount = await autoLinkOrphanedCheckpoints(cache);
+console.log(`Linked ${linkedCount} orphaned checkpoints`);
+```
+
+**Types:**
+
+```typescript
+interface DeduplicationStats {
+  totalCheckpoints: number;
+  rootCheckpoints: number;
+  childCheckpoints: number;
+  parentTypes: {
+    fromElections: number;
+    fromProposals: number;
+  };
+}
+```
+
 ---
 
 ## Utility Functions

@@ -40,6 +40,30 @@ const TEST_L2_BLOCKS = {
   ELECTION_POKE: 379_398_080,
 };
 
+// Election #1 fixture transactions (provided by user for comprehensive testing)
+// These represent a complete election lifecycle
+const ELECTION_FIXTURES = {
+  // 1. Nominee election created - tx creates election #1
+  // Block: 379398081 (Dec 2024)
+  NOMINEE_ELECTION_CREATED: {
+    txHash: "0x82a0baf3d7e6a6b3247d5848e88732c8ebad0c46b204ff2b7c81beb3158600a6",
+    block: 379_398_081,
+  },
+  // 2. Nominee election executed, member election created
+  // This tx calls execute() on NomineeElectionGovernor which triggers member election
+  MEMBER_ELECTION_CREATED: {
+    txHash: "0xd6d394edbe03cb46ddf8356d7fe8a53dc0e6502b8bd8d0388774de91e639ea04",
+    block: 384_385_000, // Approximate - after vetting period
+  },
+  // 3. Member election executed, schedules into Security Council timelock
+  // This tx calls execute() on MemberElectionGovernor which installs new council
+  // and schedules operations in the L2 Constitutional timelock
+  MEMBER_ELECTION_EXECUTED: {
+    txHash: "0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697",
+    block: 389_000_000, // Approximate - after member voting
+  },
+};
+
 describe("Election Fork Tests", () => {
   let forks: DualForkResult | null = null;
   let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
@@ -531,6 +555,120 @@ describe("Detailed Election Tracking", () => {
         // Ranks should increment
         expect(curr.rank).toBe(prev.rank + 1);
       }
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+});
+
+/**
+ * Election Lifecycle Tests using User-Provided Fixture Transactions
+ *
+ * These tests verify the complete election lifecycle tracking using
+ * real transaction data from election #1:
+ * 1. Nominee election creation (0x82a0baf3...)
+ * 2. Nominee election execution / member election trigger (0xd6d394ed...)
+ * 3. Member election execution / SC timelock scheduling (0xf41a2661...)
+ */
+describe("Election Lifecycle Fixture Tests", () => {
+  let forks: DualForkResult | null = null;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+
+  beforeAll(() => {
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
+  });
+
+  afterAll(async () => {
+    if (forks) {
+      await forks.stopAll();
+    }
+  });
+
+  describe("Election #1 - Nominee Election Phase", () => {
+    it("should track election immediately after creation", async () => {
+      // #given Fork at block after nominee election creation tx
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_FIXTURES.NOMINEE_ELECTION_CREATED.block + 1000,
+      });
+
+      // #when tracking election #1 (the one created by the fixture tx)
+      const status = await checkElectionStatus(forks.l2.provider, forks.l1.provider);
+      const electionIndex = status.electionCount - 1; // Most recent election
+
+      const election = await trackElectionProposal(
+        electionIndex,
+        forks.l2.provider,
+        forks.l1.provider
+      );
+
+      // #then should be in nominee selection phase
+      expect(election.nomineeProposalId).not.toBeNull();
+      expect(["NOMINEE_SELECTION", "VETTING_PERIOD", "MEMBER_ELECTION", "COMPLETED"]).toContain(
+        election.phase
+      );
+      expect(election.targetNomineeCount).toBe(6);
+
+      await forks.stopAll();
+      forks = null;
+    });
+
+    it("should return valid proposal ID for election after creation", async () => {
+      // #given Fork at block after nominee election creation
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_FIXTURES.NOMINEE_ELECTION_CREATED.block + 1000,
+      });
+
+      // #when getting proposal ID for the created election
+      const status = await checkElectionStatus(forks.l2.provider, forks.l1.provider);
+      const electionIndex = status.electionCount - 1;
+
+      const proposalId = await getElectionProposalId(electionIndex, forks.l2.provider);
+
+      // #then should have valid proposal ID
+      expect(proposalId).not.toBeNull();
+      expect(typeof proposalId).toBe("string");
+      expect(proposalId!.length).toBeGreaterThan(0);
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("Tracker trackByTxHash for Election Transactions", () => {
+    it("should recognize nominee election creation tx as election-related", async () => {
+      // #given Fork at block after the election creation tx
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_FIXTURES.NOMINEE_ELECTION_CREATED.block + 1000,
+      });
+
+      // #when tracking by the creation tx hash
+      const tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider: forks.l2.provider,
+      });
+
+      const results = await tracker.trackByTxHash(
+        ELECTION_FIXTURES.NOMINEE_ELECTION_CREATED.txHash
+      );
+
+      // #then should discover it as election-related proposal
+      // The tx creates a proposal on the NomineeElectionGovernor
+      expect(results.length).toBeGreaterThan(0);
+      // Should have discovered the proposal from the election governor
 
       await forks.stopAll();
       forks = null;

@@ -153,6 +153,18 @@ export interface TrackingCheckpoint {
   metadata?: {
     errorCount: number;
     lastTrackedAt: number;
+    /**
+     * Reference to the parent checkpoint that created this timelock operation.
+     * Used for deduplication when tracking results spawn child timelock operations.
+     *
+     * Examples:
+     * - Election executes → schedules to L2 timelock → sourceCheckpoint = "election:5"
+     * - Proposal queued → schedules to L2 timelock → sourceCheckpoint = "tx:0x..."
+     * - L2 timelock executed → schedules to L1 → child already tracked in stages, no need for separate key
+     *
+     * @see linkCheckpointToChild
+     */
+    sourceCheckpoint?: string;
   };
 }
 

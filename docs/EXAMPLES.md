@@ -561,3 +561,158 @@ const simulation = {
   value: "0",
 };
 ```
+
+---
+
+## Election Tracking
+
+### Check Election Status
+
+```typescript
+import { checkElectionStatus } from "@gzeoneth/gov-tracker";
+
+const status = await checkElectionStatus(l2Provider, l1Provider);
+
+console.log(`Election count: ${status.electionCount}`);
+console.log(`Next cohort: ${status.cohort === 0 ? "First" : "Second"}`);
+console.log(`Can create: ${status.canCreateElection}`);
+
+if (!status.canCreateElection) {
+  console.log(`Next election in: ${status.timeUntilElection}`);
+}
+```
+
+### Track All Elections
+
+```typescript
+import { trackAllElections, trackIncompleteElections } from "@gzeoneth/gov-tracker";
+
+// Track all elections (including completed)
+const allElections = await trackAllElections(l2Provider, l1Provider);
+for (const election of allElections) {
+  console.log(`Election #${election.electionIndex}: ${election.phase}`);
+  console.log(`  Cohort: ${election.cohort === 0 ? "First" : "Second"}`);
+  console.log(`  Nominees: ${election.compliantNomineeCount}/6`);
+}
+
+// Track only active elections
+const activeElections = await trackIncompleteElections(l2Provider, l1Provider);
+```
+
+### Track Single Election with Details
+
+```typescript
+import {
+  trackElectionProposal,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+} from "@gzeoneth/gov-tracker";
+
+// Track election by index
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+console.log(`Phase: ${election.phase}`);
+console.log(`Nominee proposal: ${election.nomineeProposalId}`);
+console.log(`Member proposal: ${election.memberProposalId}`);
+
+// Get detailed nominee info
+if (election.nomineeProposalId) {
+  const nomineeDetails = await getNomineeElectionDetails(0, l2Provider);
+  if (nomineeDetails) {
+    console.log(`Contenders: ${nomineeDetails.contenders.length}`);
+    console.log(`Nominees: ${nomineeDetails.nominees.length}`);
+    console.log(`Compliant: ${nomineeDetails.compliantNominees.length}`);
+    console.log(`Excluded: ${nomineeDetails.excludedNominees.length}`);
+
+    // List nominees with votes
+    for (const nominee of nomineeDetails.compliantNominees) {
+      console.log(`  ${nominee.address}: ${nominee.votesReceived.toString()} votes`);
+    }
+  }
+}
+
+// Get detailed member election info
+if (election.memberProposalId) {
+  const memberDetails = await getMemberElectionDetails(0, l2Provider);
+  if (memberDetails) {
+    console.log(`Winners: ${memberDetails.winners.length}`);
+
+    // List nominees by rank
+    for (const nominee of memberDetails.nominees) {
+      const tag = nominee.isWinner ? "[WINNER]" : "";
+      console.log(`  #${nominee.rank} ${nominee.address}: ${nominee.weightReceived.toString()} ${tag}`);
+    }
+  }
+}
+```
+
+### Execute Election Actions
+
+```typescript
+import {
+  checkElectionStatus,
+  prepareElectionCreation,
+  trackElectionProposal,
+  prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+} from "@gzeoneth/gov-tracker";
+
+// Step 1: Create new election (when time has elapsed)
+const status = await checkElectionStatus(l2Provider, l1Provider);
+if (status.canCreateElection) {
+  const { transaction, electionIndex } = prepareElectionCreation(status);
+  console.log(`Creating election #${electionIndex}`);
+  const tx = await signer.sendTransaction(transaction);
+  await tx.wait();
+}
+
+// Step 2: Track and advance election phases
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+
+// Trigger member election (after vetting period)
+if (election.canProceedToMemberPhase) {
+  const prepared = await prepareMemberElectionTrigger(election, l2Provider);
+  if (prepared) {
+    const tx = await signer.sendTransaction(prepared);
+    await tx.wait();
+    console.log("Member election triggered");
+  }
+}
+
+// Execute member election (install new council members)
+if (election.canExecuteMember) {
+  const prepared = await prepareMemberElectionExecution(election, l2Provider);
+  if (prepared) {
+    const tx = await signer.sendTransaction(prepared);
+    await tx.wait();
+    console.log("New Security Council members installed");
+  }
+}
+```
+
+### Monitor Elections in Background
+
+```typescript
+import { trackAllElections, checkElectionStatus } from "@gzeoneth/gov-tracker";
+
+async function monitorElections() {
+  // Check for new election opportunity
+  const status = await checkElectionStatus(l2Provider, l1Provider);
+  if (status.canCreateElection) {
+    await notifySlack(`Election #${status.electionCount} can be created!`);
+  }
+
+  // Check for actionable elections
+  const elections = await trackAllElections(l2Provider, l1Provider);
+  for (const election of elections) {
+    if (election.canProceedToMemberPhase) {
+      await notifySlack(`Election #${election.electionIndex}: Ready to trigger member phase`);
+    }
+    if (election.canExecuteMember) {
+      await notifySlack(`Election #${election.electionIndex}: Ready to execute member election`);
+    }
+  }
+}
+
+// Run every 5 minutes
+setInterval(monitorElections, 5 * 60 * 1000);
+```

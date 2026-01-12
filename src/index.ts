@@ -311,6 +311,21 @@ export {
 } from "./election";
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 
+// Checkpoint deduplication helpers
+export {
+  isSecurityCouncilTimelockOp,
+  linkCheckpointToChild,
+  getParentCheckpoint,
+  isChildCheckpoint,
+  filterChildCheckpoints,
+  getChildToParentMap,
+  getChildCheckpoints,
+  getDeduplicationStats,
+  findPotentialParent,
+  autoLinkOrphanedCheckpoints,
+} from "./deduplication";
+export type { DeduplicationStats } from "./deduplication";
+
 // ============================================================================
 // TIER 6: Calldata Decoding
 // ============================================================================

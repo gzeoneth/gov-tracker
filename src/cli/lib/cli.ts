@@ -40,6 +40,8 @@ import {
   getStageData,
   invalidateBlockInfoCache,
   trackAllElections,
+  trackElectionProposal,
+  getElectionIndexForProposalId,
   ElectionProposalStatus,
 } from "../../index";
 import { withScope } from "../../utils/logger";
@@ -523,6 +525,64 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Display a tracking result, automatically switching to election display for election proposals.
+ * Handles the election auto-switch logic internally, falling back to formatTrackingResult for non-elections.
+ */
+export async function displayTrackingResult(
+  result: TrackingResult,
+  providers: ProviderBundle,
+  label?: string
+): Promise<void> {
+  if (result.isElection) {
+    const proposalId = result.input.type === "governor" ? result.input.proposalId : undefined;
+    const electionIndex = proposalId
+      ? await getElectionIndexForProposalId(proposalId, providers.l2Provider, providers.l1Provider)
+      : null;
+
+    if (electionIndex !== null) {
+      const election = await trackElectionProposal(
+        electionIndex,
+        providers.l2Provider,
+        providers.l1Provider
+      );
+      const cohortName = election.cohort === 0 ? "First" : "Second";
+      console.log(`=== Election #${electionIndex} ===`);
+      console.log(`Phase: ${election.phase}`);
+      console.log(`Cohort: ${cohortName} (${election.cohort})`);
+      console.log(
+        `Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`
+      );
+
+      if (election.nomineeProposalId) {
+        console.log(`\nElection ID: ${election.nomineeProposalId}`);
+        console.log(`\nNominee Phase:`);
+        console.log(`  State: ${election.nomineeProposalState}`);
+        if (election.vettingDeadline) {
+          console.log(`  Vetting Deadline: block ${election.vettingDeadline}`);
+        }
+        console.log(`  In Vetting Period: ${election.isInVettingPeriod ? "YES" : "NO"}`);
+      }
+
+      if (election.memberProposalId) {
+        console.log(`\nMember Phase:`);
+        console.log(`  State: ${election.memberProposalState}`);
+      }
+
+      if (election.canProceedToMemberPhase) {
+        console.log(`\n→ Ready to trigger member election`);
+      }
+      if (election.canExecuteMember) {
+        console.log(`\n→ Ready to execute member election`);
+      }
+      console.log("");
+      return;
+    }
+  }
+
+  console.log(formatTrackingResult(result, label));
 }
 
 // ============================================================================

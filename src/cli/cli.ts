@@ -90,8 +90,8 @@ import {
   executeTransaction,
   formatDryRun,
   formatMultiplePreparedTransactions,
-  formatTrackingResult,
   formatCacheStatus,
+  displayTrackingResult,
   runWithLoop,
   runMonitorCycle,
   trackAndPrepare,
@@ -404,7 +404,7 @@ runCmd
 
           if (r.result) {
             console.log(`\n[${r.key}]`);
-            console.log(formatTrackingResult(r.result));
+            await displayTrackingResult(r.result, providers);
           } else if (r.error) {
             console.log(`\n[${r.key}] ERROR: ${r.error}`);
           }
@@ -581,10 +581,11 @@ trackCmd
         );
 
         // Format tracking output
-        results.forEach((r, i) => {
+        for (let i = 0; i < results.length; i++) {
+          const r = results[i];
           const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-          console.log(formatTrackingResult(r, label));
-        });
+          await displayTrackingResult(r, providers, label);
+        }
 
         // Show all prepared transactions
         if (preparedTransactions.length > 0) {
@@ -638,13 +639,14 @@ trackCmd
             console.log(`\nRe-tracking to find next stages...`);
             const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
 
-            retracked.results.forEach((r, i) => {
+            for (let i = 0; i < retracked.results.length; i++) {
+              const r = retracked.results[i];
               const label =
                 retracked.results.length > 1
                   ? `Operation ${i + 1}/${retracked.results.length}`
                   : undefined;
-              console.log(formatTrackingResult(r, label));
-            });
+              await displayTrackingResult(r, providers, label);
+            }
 
             if (retracked.preparedTransactions.length > 0) {
               console.log(

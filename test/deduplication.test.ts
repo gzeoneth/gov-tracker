@@ -786,4 +786,83 @@ describe("Deduplication Helpers", () => {
       expect(linkedCount).toBe(0);
     });
   });
+
+  describe("getCacheKeysAsync edge cases (via getChildToParentMap)", () => {
+    it("should handle cache.keys() returning Promise<string[]>", async () => {
+      // #given - mock cache where keys() returns a Promise
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: "0x123",
+          operationId: "0xabc",
+          scheduledTxHash: "0x456",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now(), sourceCheckpoint: "tx:0x789" },
+      };
+
+      const asyncKeysCache = {
+        get: async <T>(key: string): Promise<T | null> => {
+          if (key === "tx:0x456") return checkpoint as unknown as T;
+          return null;
+        },
+        set: async (): Promise<void> => {},
+        delete: async (): Promise<void> => {},
+        clear: async (): Promise<void> => {},
+        has: async (): Promise<boolean> => false,
+        keys: (): Promise<string[]> => Promise.resolve(["tx:0x456"]),
+      };
+
+      // #when
+      const map = await getChildToParentMap(asyncKeysCache);
+
+      // #then
+      expect(map.size).toBe(1);
+      expect(map.get("tx:0x456")).toBe("tx:0x789");
+    });
+
+    it("should handle cache.keys() returning non-iterable non-Promise value", async () => {
+      // #given - mock cache where keys() returns an unexpected type (defensive case)
+      const brokenKeysCache = {
+        get: async <T>(): Promise<T | null> => null,
+        set: async (): Promise<void> => {},
+        delete: async (): Promise<void> => {},
+        clear: async (): Promise<void> => {},
+        has: async (): Promise<boolean> => false,
+        keys: (): string[] | IterableIterator<string> | Promise<string[]> => {
+          // Return something that's not iterable and not a Promise
+          // This exercises the fallback return [] on line 51
+          return 42 as unknown as string[];
+        },
+      };
+
+      // #when
+      const map = await getChildToParentMap(brokenKeysCache);
+
+      // #then - should return empty map since keys() returned invalid value
+      expect(map.size).toBe(0);
+    });
+
+    it("should handle cache without keys method", async () => {
+      // #given - cache adapter that doesn't implement keys()
+      const noKeysCache = {
+        get: async <T>(): Promise<T | null> => null,
+        set: async (): Promise<void> => {},
+        delete: async (): Promise<void> => {},
+        clear: async (): Promise<void> => {},
+        has: async (): Promise<boolean> => false,
+        keys: undefined as unknown as () => Promise<string[]>,
+      };
+
+      // #when
+      const map = await getChildToParentMap(noKeysCache);
+
+      // #then - should return empty map since keys() is not a function
+      expect(map.size).toBe(0);
+    });
+  });
 });

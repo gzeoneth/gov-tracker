@@ -147,6 +147,54 @@ describe("StageBuilder", () => {
       expect(stage.timing?.delaySeconds).toBe(86400);
     });
 
+    it("should set isStale flag", () => {
+      // #given - StageBuilder with stale set
+      // #when - building the stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").stale(true).build();
+
+      // #then - isStale is set correctly
+      expect(stage.isStale).toBe(true);
+    });
+
+    it("should not set isStale when false", () => {
+      // #given - StageBuilder with stale set to false
+      // #when - building the stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").stale(false).build();
+
+      // #then - isStale is false
+      expect(stage.isStale).toBe(false);
+    });
+
+    it("should return this from stale() for method chaining", () => {
+      // #given - StageBuilder instance
+      const builder = new StageBuilder("L2_TIMELOCK", "arb1");
+
+      // #when - calling stale()
+      const result = builder.stale(true);
+
+      // #then - returns the same builder instance
+      expect(result).toBe(builder);
+    });
+
+    it("should combine stale with data, timing, and status", () => {
+      // #given - StageBuilder with all methods combined
+      // #when - building the stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .data({ operationId: "0xabc123", timelockAddress: "0xdef456" })
+        .timing({ startedAt: 1700000000, eta: 1700086400, delaySeconds: 86400 })
+        .stale(true)
+        .tx("0x111", 100, "arb1", 42161, { timestamp: 1700000000 })
+        .build();
+
+      // #then - all properties are set correctly including isStale
+      expect(stage.status).toBe("READY");
+      expect(stage.data.operationId).toBe("0xabc123");
+      expect(stage.timing?.eta).toBe(1700086400);
+      expect(stage.isStale).toBe(true);
+      expect(stage.transactions?.length).toBe(1);
+    });
+
     it("should create SKIPPED status with skip method", () => {
       // #given - StageBuilder with skip() called
       // #when - building the stage

@@ -98,10 +98,299 @@ The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 p
 
 ### Elections
 
+Security Council elections use a separate 6-phase state machine.
+
+#### Check Election Status
+
 ```typescript
-const election = await tracker.checkElection();
-if (election.canCreate) {
-  await signer.sendTransaction(election.prepared.createElection);
+import { checkElectionStatus } from "@gzeoneth/gov-tracker";
+
+const status = await checkElectionStatus(l2Provider, l1Provider);
+console.log(`${status.electionCount} elections, next in ${status.timeUntilElection}`);
+```
+
+#### Track All Elections
+
+```typescript
+import { trackAllElections, trackIncompleteElections } from "@gzeoneth/gov-tracker";
+
+// Track all elections (complete + active)
+const allElections = await trackAllElections(l2Provider, l1Provider);
+
+// Track only active elections
+const activeElections = await trackIncompleteElections(l2Provider, l1Provider);
+
+for (const election of activeElections) {
+  console.log(`Election ${election.electionIndex}: ${election.phase}`);
+}
+```
+
+#### Track Single Election
+
+```typescript
+import { trackElectionProposal } from "@gzeoneth/gov-tracker";
+
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+console.log(election.phase);             // "COMPLETED"
+console.log(election.nomineeProposalId); // "0x..."
+console.log(election.memberProposalId);  // "0x..."
+console.log(election.canExecuteMember);  // false (already executed)
+```
+
+#### Prepare Election Transactions (A→B→C)
+
+The full election lifecycle has three executable steps:
+
+```typescript
+import {
+  prepareElectionCreation,
+  prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+  checkElectionStatus,
+  trackElectionProposal,
+} from "@gzeoneth/gov-tracker";
+
+// Step A: Create nominee election (when conditions match)
+const status = await checkElectionStatus(l2Provider, l1Provider);
+if (status.canCreateElection) {
+  const { transaction } = prepareElectionCreation(status);
+  await signer.sendTransaction(transaction);
+}
+
+// Step B: Execute nominee election → creates member election
+const election = await trackElectionProposal(0, l2Provider, l1Provider);
+if (election.canProceedToMemberPhase) {
+  const tx = await prepareMemberElectionTrigger(election, l2Provider);
+  if (tx) await signer.sendTransaction(tx);
+}
+
+// Step C: Execute member election → installs new council members
+if (election.canExecuteMember) {
+  const tx = await prepareMemberElectionExecution(election, l2Provider);
+  if (tx) await signer.sendTransaction(tx);
+}
+```
+
+#### Cache Election Status
+
+```typescript
+// Save to cache
+await tracker.saveElectionCheckpoint(electionStatus);
+
+// Retrieve from cache
+const cached = await tracker.getElectionCheckpoint(0);
+```
+
+#### Election Phases
+
+| Phase | Description | Action Available |
+|-------|-------------|------------------|
+| `NOT_STARTED` | Election hasn't begun | `prepareElectionCreation()` if `canCreateElection` |
+| `NOMINEE_SELECTION` | Nominee voting active | Wait for voting |
+| `VETTING_PERIOD` | 7-day vetting period | `prepareMemberElectionTrigger()` after vetting ends |
+| `MEMBER_ELECTION` | Member voting active | Wait for voting |
+| `PENDING_EXECUTION` | Awaiting execution | `prepareMemberElectionExecution()` if `canExecuteMember` |
+| `COMPLETED` | Fully executed | None |
+
+#### Detailed Election Tracking
+
+Query detailed participant information for elections:
+
+```typescript
+import {
+  getElectionProposalId,
+  getMemberElectionProposalId,
+  getContenders,
+  getNomineesWithVotes,
+  getExcludedNominees,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+} from "@gzeoneth/gov-tracker";
+
+// Get proposal ID for an election (same ID used by both governors)
+// Note: Nominee and member governors share the same proposal ID (derived from election index).
+// Each governor maintains its own state for this ID.
+const proposalId = await getElectionProposalId(0, l2Provider);
+const memberProposalId = await getMemberElectionProposalId(0, l2Provider);
+// proposalId === memberProposalId (same ID, different state per governor)
+
+// Get all contenders (people who registered)
+const contenders = await getContenders(proposalId, l2Provider);
+for (const c of contenders) {
+  console.log(`${c.address} registered at block ${c.registeredAtBlock}`);
+}
+
+// Get nominees with vote counts
+const nominees = await getNomineesWithVotes(proposalId, l2Provider);
+for (const n of nominees) {
+  console.log(`${n.address}: ${n.votesReceived.toString()} votes, excluded: ${n.isExcluded}`);
+}
+
+// Get excluded nominees (vetted out)
+const excluded = await getExcludedNominees(proposalId, l2Provider);
+for (const n of excluded) {
+  console.log(`${n.address} excluded at block ${n.excludedAtBlock}`);
+}
+
+// Get comprehensive nominee election details
+const nomineeDetails = await getNomineeElectionDetails(0, l2Provider);
+if (nomineeDetails) {
+  console.log(`Contenders: ${nomineeDetails.contenders.length}`);
+  console.log(`Nominees: ${nomineeDetails.nominees.length}`);
+  console.log(`Compliant: ${nomineeDetails.compliantNominees.length}`);
+  console.log(`Excluded: ${nomineeDetails.excludedNominees.length}`);
+  console.log(`Quorum: ${nomineeDetails.quorumThreshold.toString()}`);
+}
+
+// Get comprehensive member election details
+const memberDetails = await getMemberElectionDetails(0, l2Provider);
+if (memberDetails) {
+  console.log(`Winners (${memberDetails.winners.length}):`);
+  for (const nominee of memberDetails.nominees) {
+    const tag = nominee.isWinner ? " [WINNER]" : "";
+    console.log(`  #${nominee.rank} ${nominee.address}: ${nominee.weightReceived.toString()}${tag}`);
+  }
+}
+```
+
+**Types:**
+
+```typescript
+interface ElectionContender {
+  address: string;
+  registeredAtBlock: number;
+  registrationTxHash: string;
+}
+
+interface ElectionNominee {
+  address: string;
+  votesReceived: BigNumber;
+  isExcluded: boolean;
+  excludedAtBlock?: number;
+  exclusionTxHash?: string;
+}
+
+interface MemberElectionNominee {
+  address: string;
+  weightReceived: BigNumber;
+  isWinner: boolean;
+  rank: number;
+}
+
+interface NomineeElectionDetails {
+  proposalId: string;
+  electionIndex: number;
+  contenders: ElectionContender[];
+  nominees: ElectionNominee[];
+  compliantNominees: ElectionNominee[];
+  excludedNominees: ElectionNominee[];
+  quorumThreshold: BigNumber;
+  targetNomineeCount: number;
+}
+
+interface MemberElectionDetails {
+  proposalId: string;
+  electionIndex: number;
+  nominees: MemberElectionNominee[];
+  winners: string[];
+  fullWeightDeadline: number;
+  proposalDeadline: number;
+}
+```
+
+---
+
+### Checkpoint Deduplication
+
+Both governance proposals and elections can create "child" timelock operations that may be discovered and tracked separately. The deduplication helpers identify and manage these relationships.
+
+#### Understanding the Problem
+
+**Proposals:**
+1. Proposal tracked with key `tx:{creation_hash}`
+2. Proposal queues to L2 timelock → creates child timelock operation
+3. If discovered separately, child gets key `tx:{schedule_hash}`
+
+**Elections:**
+1. Election tracked with key `election:{index}`
+2. Member election execute → `SecurityCouncilManager.replaceCohort()`
+3. This schedules to L2 Constitutional timelock → creates child timelock op
+4. If discovered separately, child gets key `tx:{schedule_hash}`
+
+#### Link Parent to Child
+
+```typescript
+import { linkCheckpointToChild } from "@gzeoneth/gov-tracker";
+
+// Link a timelock checkpoint to its parent election
+await linkCheckpointToChild("tx:0xchild...", "election:5", cache);
+
+// Link a timelock checkpoint to its parent proposal
+await linkCheckpointToChild("tx:0xchild...", "tx:0xparent...", cache);
+```
+
+#### Filter Out Child Checkpoints
+
+```typescript
+import { filterChildCheckpoints, getDeduplicationStats } from "@gzeoneth/gov-tracker";
+
+// Filter children from tracking results
+const results = await tracker.getAllCheckpoints();
+const rootResults = filterChildCheckpoints(results);
+
+// Get statistics about parent/child relationships
+const stats = await getDeduplicationStats(cache);
+console.log(`Total: ${stats.totalCheckpoints}`);
+console.log(`Roots: ${stats.rootCheckpoints}`);
+console.log(`Children: ${stats.childCheckpoints}`);
+console.log(`  From elections: ${stats.parentTypes.fromElections}`);
+console.log(`  From proposals: ${stats.parentTypes.fromProposals}`);
+```
+
+#### Query Relationships
+
+```typescript
+import {
+  getParentCheckpoint,
+  isChildCheckpoint,
+  getChildCheckpoints,
+  getChildToParentMap,
+} from "@gzeoneth/gov-tracker";
+
+// Check if a checkpoint is a child
+const isChild = await isChildCheckpoint("tx:0x...", cache);
+
+// Get parent key
+const parentKey = await getParentCheckpoint("tx:0x...", cache);
+
+// Get all children of a parent
+const children = await getChildCheckpoints("election:5", cache);
+
+// Get full child → parent map
+const map = await getChildToParentMap(cache);
+```
+
+#### Auto-Link Orphaned Checkpoints
+
+```typescript
+import { autoLinkOrphanedCheckpoints } from "@gzeoneth/gov-tracker";
+
+// Automatically find and link orphaned timelock checkpoints
+const linkedCount = await autoLinkOrphanedCheckpoints(cache);
+console.log(`Linked ${linkedCount} orphaned checkpoints`);
+```
+
+**Types:**
+
+```typescript
+interface DeduplicationStats {
+  totalCheckpoints: number;
+  rootCheckpoints: number;
+  childCheckpoints: number;
+  parentTypes: {
+    fromElections: number;
+    fromProposals: number;
+  };
 }
 ```
 

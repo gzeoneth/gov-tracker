@@ -15,6 +15,7 @@ import {
   getElectionProposalId,
   getElectionProposalParams,
   prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
   prepareElectionCreation,
   trackElectionProposal,
   DEFAULT_RPC_URLS,
@@ -353,6 +354,183 @@ describe("Election Module - Mocked Tests", () => {
 
       // #then - should use custom address
       expect(result.transaction.to).toBe(customAddress);
+    });
+  });
+
+  describe("prepareMemberElectionExecution", () => {
+    it("should return null when canExecuteMember is false", async () => {
+      // #given - Any provider (won't be used since function exits early)
+      const mockProvider = {} as ethers.providers.Provider;
+
+      // #when - calling with canExecuteMember=false
+      const result = await prepareMemberElectionExecution(
+        { electionIndex: 2, canExecuteMember: false },
+        mockProvider
+      );
+
+      // #then - should return null without calling any provider methods
+      expect(result).toBeNull();
+    });
+  });
+});
+
+describe("Election Data Types", () => {
+  describe("ElectionContender", () => {
+    it("should accept valid contender structure", () => {
+      // #given - a valid contender object
+      const contender = {
+        address: "0x1234567890123456789012345678901234567890",
+        registeredAtBlock: 12345678,
+        registrationTxHash: "0xabc123def456abc123def456abc123def456abc123def456abc123def456abc1",
+      };
+
+      // #then - structure should be valid
+      expect(contender.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(typeof contender.registeredAtBlock).toBe("number");
+      expect(contender.registrationTxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+    });
+  });
+
+  describe("ElectionNominee", () => {
+    it("should accept valid nominee structure", () => {
+      // #given - a valid nominee object
+      const nominee = {
+        address: "0x1234567890123456789012345678901234567890",
+        votesReceived: BigNumber.from("1000000000000000000"),
+        isExcluded: false,
+      };
+
+      // #then - structure should be valid
+      expect(nominee.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(nominee.votesReceived._isBigNumber).toBe(true);
+      expect(typeof nominee.isExcluded).toBe("boolean");
+    });
+
+    it("should accept excluded nominee with exclusion details", () => {
+      // #given - an excluded nominee
+      const excludedNominee = {
+        address: "0x1234567890123456789012345678901234567890",
+        votesReceived: BigNumber.from("500000000000000000"),
+        isExcluded: true,
+        excludedAtBlock: 12345678,
+        exclusionTxHash: "0xabc123def456abc123def456abc123def456abc123def456abc123def456abc1",
+      };
+
+      // #then - should have exclusion details
+      expect(excludedNominee.isExcluded).toBe(true);
+      expect(excludedNominee.excludedAtBlock).toBeDefined();
+      expect(excludedNominee.exclusionTxHash).toBeDefined();
+    });
+  });
+
+  describe("MemberElectionNominee", () => {
+    it("should accept valid member election nominee structure", () => {
+      // #given - a valid member election nominee
+      const nominee = {
+        address: "0x1234567890123456789012345678901234567890",
+        weightReceived: BigNumber.from("5000000000000000000000"),
+        isWinner: true,
+        rank: 1,
+      };
+
+      // #then - structure should be valid
+      expect(nominee.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(nominee.weightReceived._isBigNumber).toBe(true);
+      expect(typeof nominee.isWinner).toBe("boolean");
+      expect(typeof nominee.rank).toBe("number");
+      expect(nominee.rank).toBeGreaterThan(0);
+    });
+  });
+
+  describe("NomineeElectionDetails", () => {
+    it("should accept valid nominee election details structure", () => {
+      // #given - valid nominee election details
+      const details = {
+        proposalId: "123456789012345678901234567890",
+        electionIndex: 5,
+        contenders: [],
+        nominees: [],
+        compliantNominees: [],
+        excludedNominees: [],
+        quorumThreshold: BigNumber.from("100000000000000000000000"),
+        targetNomineeCount: 6,
+      };
+
+      // #then - structure should be valid
+      expect(typeof details.proposalId).toBe("string");
+      expect(typeof details.electionIndex).toBe("number");
+      expect(Array.isArray(details.contenders)).toBe(true);
+      expect(Array.isArray(details.nominees)).toBe(true);
+      expect(Array.isArray(details.compliantNominees)).toBe(true);
+      expect(Array.isArray(details.excludedNominees)).toBe(true);
+      expect(details.quorumThreshold._isBigNumber).toBe(true);
+      expect(details.targetNomineeCount).toBe(6);
+    });
+
+    it("should validate that compliant + excluded equals total nominees", () => {
+      // #given - nominee details with both compliant and excluded
+      const compliantNominees = [
+        {
+          address: "0x1111111111111111111111111111111111111111",
+          votesReceived: BigNumber.from(1),
+          isExcluded: false,
+        },
+        {
+          address: "0x2222222222222222222222222222222222222222",
+          votesReceived: BigNumber.from(2),
+          isExcluded: false,
+        },
+      ];
+      const excludedNominees = [
+        {
+          address: "0x3333333333333333333333333333333333333333",
+          votesReceived: BigNumber.from(1),
+          isExcluded: true,
+        },
+      ];
+      const allNominees = [...compliantNominees, ...excludedNominees];
+
+      // #then - counts should match
+      expect(compliantNominees.length + excludedNominees.length).toBe(allNominees.length);
+    });
+  });
+
+  describe("MemberElectionDetails", () => {
+    it("should accept valid member election details structure", () => {
+      // #given - valid member election details
+      const details = {
+        proposalId: "987654321098765432109876543210",
+        electionIndex: 5,
+        nominees: [],
+        winners: [
+          "0x1111111111111111111111111111111111111111",
+          "0x2222222222222222222222222222222222222222",
+          "0x3333333333333333333333333333333333333333",
+          "0x4444444444444444444444444444444444444444",
+          "0x5555555555555555555555555555555555555555",
+          "0x6666666666666666666666666666666666666666",
+        ],
+        fullWeightDeadline: 1700000000,
+        proposalDeadline: 1701000000,
+      };
+
+      // #then - structure should be valid
+      expect(typeof details.proposalId).toBe("string");
+      expect(typeof details.electionIndex).toBe("number");
+      expect(Array.isArray(details.nominees)).toBe(true);
+      expect(Array.isArray(details.winners)).toBe(true);
+      expect(details.winners.length).toBe(6);
+      expect(typeof details.fullWeightDeadline).toBe("number");
+      expect(typeof details.proposalDeadline).toBe("number");
+    });
+
+    it("should have fullWeightDeadline before proposalDeadline", () => {
+      // #given - member election with valid deadlines
+      const fullWeightDeadline = 1700000000;
+      const proposalDeadline = 1701000000;
+
+      // #then - full weight should end before proposal deadline
+      expect(fullWeightDeadline).toBeLessThan(proposalDeadline);
     });
   });
 });

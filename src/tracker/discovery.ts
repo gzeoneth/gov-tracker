@@ -6,7 +6,14 @@
  */
 
 import { ethers } from "ethers";
-import { TrackingCheckpoint, DiscoveryWatermarks, DiscoveryTargets, CacheAdapter } from "../types";
+import {
+  TrackingCheckpoint,
+  DiscoveryWatermarks,
+  WatermarkHashes,
+  DiscoveryTargets,
+  DiscoveryKey,
+  CacheAdapter,
+} from "../types";
 import { ADDRESSES, GOVERNANCE_START_BLOCKS } from "../constants";
 import {
   discoverProposals as discoverProposalsInternal,
@@ -17,6 +24,7 @@ import {
   DiscoveredTimelockOp,
 } from "../discovery/timelock-discovery";
 import { loggers, withScope } from "../utils/logger";
+import { queryWithRetry } from "../utils/rpc-utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
 
@@ -29,25 +37,116 @@ export { DiscoveredProposal, DiscoveredTimelockOp };
 export const WATERMARKS_KEY = "discovery:watermarks";
 
 /**
+ * Loaded watermark data including block hashes for reorg detection.
+ */
+export interface LoadedWatermarks {
+  watermarks: DiscoveryWatermarks;
+  hashes: WatermarkHashes;
+}
+
+/**
  * Load discovery watermarks from cache.
  * Watermarks are stored as a TrackingCheckpoint for unified cache format.
- * Returns empty object if no watermarks are cached.
+ * Returns empty objects if no watermarks are cached.
  */
-export async function loadWatermarks(
-  cache: CacheAdapter | undefined
-): Promise<DiscoveryWatermarks> {
-  if (!cache) return {};
+export async function loadWatermarks(cache: CacheAdapter | undefined): Promise<LoadedWatermarks> {
+  if (!cache) return { watermarks: {}, hashes: {} };
   const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
-  return checkpoint?.cachedData.discoveryWatermarks ?? {};
+  return {
+    watermarks: checkpoint?.cachedData.discoveryWatermarks ?? {},
+    hashes: checkpoint?.cachedData.watermarkHashes ?? {},
+  };
+}
+
+/**
+ * Number of blocks to roll back when a reorg is detected.
+ * 1000 blocks on L2 Arbitrum ≈ ~4 minutes, provides safety margin.
+ */
+const REORG_ROLLBACK_BLOCKS = 1000;
+
+/**
+ * Verify a watermark's block hash against the chain.
+ * If the hash doesn't match (reorg detected), returns a rolled-back block number.
+ *
+ * @param key - Watermark key for logging
+ * @param blockNumber - The watermark block number to verify
+ * @param expectedHash - The stored block hash (undefined if not stored)
+ * @param provider - Provider to fetch current block hash
+ * @returns The verified block number (original if valid, rolled back if reorg detected)
+ */
+export async function verifyWatermark(
+  key: DiscoveryKey,
+  blockNumber: number,
+  expectedHash: string | undefined,
+  provider: ethers.providers.Provider
+): Promise<{ blockNumber: number; isValid: boolean; newHash?: string }> {
+  const rollback = (): { blockNumber: number; isValid: boolean } => ({
+    blockNumber: Math.max(0, blockNumber - REORG_ROLLBACK_BLOCKS),
+    isValid: false,
+  });
+
+  // No stored hash - can't verify, but fetch current hash for future verification
+  if (!expectedHash) {
+    try {
+      const block = await queryWithRetry(() => provider.getBlock(blockNumber));
+      if (block) {
+        logDiscovery("%s: no stored hash, establishing hash at block %d", key, blockNumber);
+        return { blockNumber, isValid: true, newHash: block.hash };
+      }
+    } catch {
+      // Block might not exist yet or provider error - continue without hash
+    }
+    return { blockNumber, isValid: true };
+  }
+
+  // Verify stored hash against chain
+  try {
+    const block = await queryWithRetry(() => provider.getBlock(blockNumber));
+    if (!block) {
+      const result = rollback();
+      logDiscovery(
+        "%s: block %d not found, rolling back to %d",
+        key,
+        blockNumber,
+        result.blockNumber
+      );
+      return result;
+    }
+
+    if (block.hash.toLowerCase() === expectedHash.toLowerCase()) {
+      return { blockNumber, isValid: true, newHash: block.hash };
+    }
+
+    // Hash mismatch - reorg detected
+    const result = rollback();
+    logDiscovery(
+      "%s: REORG DETECTED at block %d (expected %s, got %s), rolling back to %d",
+      key,
+      blockNumber,
+      expectedHash.slice(0, 10),
+      block.hash.slice(0, 10),
+      result.blockNumber
+    );
+    return result;
+  } catch {
+    // Provider error - be conservative and continue with stored watermark
+    logDiscovery("%s: failed to verify block %d, continuing with stored value", key, blockNumber);
+    return { blockNumber, isValid: true };
+  }
 }
 
 /**
  * Save discovery watermarks to cache.
  * Watermarks are stored as TrackingCheckpoint with proper metadata,
  * following the same pattern as proposal/timelock checkpoints.
+ *
+ * @param watermarks - Block numbers per discovery key
+ * @param hashes - Block hashes per discovery key (for reorg detection)
+ * @param cache - Cache adapter
  */
 export async function saveWatermarks(
   watermarks: DiscoveryWatermarks,
+  hashes: WatermarkHashes,
   cache: CacheAdapter | undefined
 ): Promise<void> {
   if (!cache) return;
@@ -72,6 +171,7 @@ export async function saveWatermarks(
     lastProcessedBlock: { l1: 0, l2: maxL2Block },
     cachedData: {
       discoveryWatermarks: watermarks,
+      watermarkHashes: hashes,
     },
     metadata: {
       errorCount: 0,
@@ -177,18 +277,21 @@ export async function createPendingCheckpoints(
  * Discover all proposals and timelock operations with auto-watermark management.
  *
  * This is the unified discovery API that handles everything internally:
+ * - Verifies watermark hashes to detect chain reorgs (rolls back if mismatch)
  * - Loads watermarks from provided watermarks or starts from governance deployment
  * - Discovers from all enabled targets in parallel (with scoped logging)
  * - Creates pending checkpoints for discovered items
- * - Returns updated watermarks for saving
+ * - Returns updated watermarks and hashes for saving
  *
  * @param targets - Which governors/timelocks to scan
  * @param toBlock - End block for discovery
  * @param l2Provider - L2 provider
  * @param cache - Cache adapter for pending checkpoint creation
- * @param fromWatermarks - Starting watermarks
+ * @param fromWatermarks - Starting watermarks (block numbers)
+ * @param fromHashes - Starting hashes for reorg detection
  * @param options.chunkSize - Optional chunk size for log searches
- * @returns Discovered proposals, timelock ops, and updated watermarks
+ * @param options.skipReorgCheck - Skip reorg verification (for testing)
+ * @returns Discovered proposals, timelock ops, updated watermarks and hashes
  */
 export async function discoverAll(
   targets: DiscoveryTargets,
@@ -196,14 +299,59 @@ export async function discoverAll(
   l2Provider: ethers.providers.Provider,
   cache: CacheAdapter | undefined,
   fromWatermarks: DiscoveryWatermarks,
-  options: { chunkSize?: number } = {}
+  fromHashes: WatermarkHashes = {},
+  options: { chunkSize?: number; skipReorgCheck?: boolean } = {}
 ): Promise<{
   proposals: DiscoveredProposal[];
   timelockOps: DiscoveredTimelockOp[];
   watermarks: DiscoveryWatermarks;
+  hashes: WatermarkHashes;
 }> {
-  const watermarks = fromWatermarks;
   const defaultStartBlock = GOVERNANCE_START_BLOCKS.L2;
+
+  // Determine which keys we'll be discovering
+  const allKeys: DiscoveryKey[] = [
+    "constitutionalGovernor",
+    "nonConstitutionalGovernor",
+    "electionNomineeGovernor",
+    "electionMemberGovernor",
+    "l2ConstitutionalTimelock",
+    "l2NonConstitutionalTimelock",
+  ];
+  const activeKeys = allKeys.filter((key) => targets[key]);
+
+  // Verify watermarks and get effective start blocks (with reorg detection)
+  const verifiedWatermarks: DiscoveryWatermarks = {};
+  const updatedHashes: WatermarkHashes = { ...fromHashes };
+
+  if (!options.skipReorgCheck) {
+    // Verify all active watermarks in parallel
+    const verificationPromises = activeKeys.map(async (key) => {
+      const storedBlock = fromWatermarks[key];
+      if (storedBlock === undefined) {
+        return { key, blockNumber: defaultStartBlock };
+      }
+
+      const result = await verifyWatermark(key, storedBlock, fromHashes[key], l2Provider);
+
+      // Update hash if we got a new one
+      if (result.newHash) {
+        updatedHashes[key] = result.newHash;
+      }
+
+      return { key, blockNumber: result.blockNumber };
+    });
+
+    const verificationResults = await Promise.all(verificationPromises);
+    for (const { key, blockNumber } of verificationResults) {
+      verifiedWatermarks[key] = blockNumber;
+    }
+  } else {
+    // Skip verification - use provided watermarks directly
+    for (const key of activeKeys) {
+      verifiedWatermarks[key] = fromWatermarks[key] ?? defaultStartBlock;
+    }
+  }
 
   // Helper to create scoped discovery task
   const scopedProposalTask = (
@@ -211,7 +359,7 @@ export async function discoverAll(
     scopeName: string,
     governorAddress: string
   ) => {
-    const fromBlock = watermarks[key] ?? defaultStartBlock;
+    const fromBlock = verifiedWatermarks[key] ?? defaultStartBlock;
     return withScope(scopeName, async () => {
       const proposals = await discoverProposals(governorAddress, fromBlock, toBlock, l2Provider, {
         chunkSize: options.chunkSize,
@@ -225,7 +373,7 @@ export async function discoverAll(
     scopeName: string,
     timelockAddress: string
   ) => {
-    const fromBlock = watermarks[key] ?? defaultStartBlock;
+    const fromBlock = verifiedWatermarks[key] ?? defaultStartBlock;
     return withScope(scopeName, async () => {
       const ops = await discoverTimelockOps(timelockAddress, fromBlock, toBlock, l2Provider, {
         chunkSize: options.chunkSize,
@@ -300,7 +448,7 @@ export async function discoverAll(
   // Collect results and update watermarks
   const allProposals: DiscoveredProposal[] = [];
   const allTimelockOps: DiscoveredTimelockOp[] = [];
-  const newWatermarks: DiscoveryWatermarks = { ...watermarks };
+  const newWatermarks: DiscoveryWatermarks = { ...verifiedWatermarks };
 
   for (const { key, proposals } of proposalResults) {
     allProposals.push(...proposals);
@@ -310,6 +458,29 @@ export async function discoverAll(
   for (const { key, ops } of timelockResults) {
     allTimelockOps.push(...ops);
     newWatermarks[key] = toBlock;
+  }
+
+  // Fetch toBlock hash for reorg detection on next run
+  // Only need to fetch once since all keys use the same toBlock
+  let toBlockHash: string | undefined;
+  if (activeKeys.length > 0) {
+    try {
+      const block = await queryWithRetry(() => l2Provider.getBlock(toBlock));
+      if (block) {
+        toBlockHash = block.hash;
+      }
+    } catch {
+      // Failed to get block hash - continue without it
+      logDiscovery("failed to fetch toBlock hash for reorg detection");
+    }
+  }
+
+  // Update hashes for all active keys with toBlock hash
+  const newHashes: WatermarkHashes = { ...updatedHashes };
+  if (toBlockHash) {
+    for (const key of activeKeys) {
+      newHashes[key] = toBlockHash;
+    }
   }
 
   // Create pending checkpoints for discovered items
@@ -325,5 +496,6 @@ export async function discoverAll(
     proposals: allProposals,
     timelockOps: allTimelockOps,
     watermarks: newWatermarks,
+    hashes: newHashes,
   };
 }

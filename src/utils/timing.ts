@@ -438,12 +438,8 @@ export function isStageStale(
   currentTimestamp: number,
   customThreshold?: number
 ): boolean | undefined {
-  if (stage.status !== "READY") {
-    return undefined;
-  }
-
   const eta = stage.timing?.eta;
-  if (eta === undefined) {
+  if (stage.status !== "READY" || eta === undefined) {
     return undefined;
   }
 

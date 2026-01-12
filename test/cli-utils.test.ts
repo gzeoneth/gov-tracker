@@ -509,7 +509,9 @@ describe("CLI Utilities", () => {
 
       const output = formatCacheStatus(checkpoints);
 
-      expect(output).toContain("Elections: 2 (1 complete)");
+      expect(output).toContain("Elections: 2");
+      expect(output).toContain("Complete: 1");
+      expect(output).toContain("Active: 1");
     });
 
     it("should not show elections section when none exist", () => {
@@ -899,6 +901,7 @@ describe("CLI Utilities", () => {
         isInVettingPeriod: false,
         vettingDeadline: null,
         canProceedToMemberPhase: false,
+        canExecuteMember: false,
         nomineeProposalId: null,
         nomineeProposalState: null,
         memberProposalId: null,

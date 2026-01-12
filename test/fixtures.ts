@@ -248,6 +248,54 @@ export const NON_CONSTITUTIONAL_GOVERNOR_FAILED_VOTING = {
   },
 };
 
+// ============================================================================
+// Election Fixtures
+// ============================================================================
+
+/**
+ * Test Case 10: Security Council Election - Completed (Election #0)
+ * First Security Council election, fully completed
+ *
+ * Election flow with actual transaction hashes:
+ * A) createElection() on NomineeGovernor creates nominee proposal
+ * B) execute() on NomineeGovernor after vetting creates member proposal
+ * C) execute() on MemberGovernor schedules Security Council timelock operations
+ */
+export const ELECTION_COMPLETED_0 = {
+  electionIndex: 0,
+  nomineeGovernorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+
+  // Step A: createElection() created the nominee proposal
+  nomineeCreationTxHash: "0x82a0baf3d7e6a6b3247d5848e88732c8ebad0c46b204ff2b7c81beb3158600a6",
+  nomineeProposalId: "9884312882007072108698168190939029598205394324410212982018382023912253424451",
+
+  // Step B: execute() on NomineeGovernor triggered member election creation
+  nomineeTriggerMemberTxHash: "0xd6d394edbe03cb46ddf8356d7fe8a53dc0e6502b8bd8d0388774de91e639ea04",
+
+  // Step C: execute() on MemberGovernor scheduled SC timelock operations
+  memberExecuteTxHash: "0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697",
+
+  // Expected final state
+  expectedPhase: "COMPLETED" as const,
+  expectedCohort: 1 as const, // March cohort
+  targetNomineeCount: 6,
+};
+
+/**
+ * Test Case 11: Security Council Election - Completed (Election #1)
+ * Second Security Council election
+ */
+export const ELECTION_COMPLETED_1 = {
+  electionIndex: 1,
+  nomineeGovernorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+
+  expectedPhase: "COMPLETED" as const,
+  expectedCohort: 0 as const, // September cohort (alternates)
+  targetNomineeCount: 6,
+};
+
 /**
  * Default chunking configuration - re-exported from main constants
  */

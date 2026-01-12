@@ -22,6 +22,7 @@ export function getTxHash(input: TrackingInput): string {
     case "timelock":
       return input.scheduledTxHash;
     case "discovery":
+    case "election":
       return "";
   }
 }
@@ -37,5 +38,7 @@ export function getProposalIdDisplay(input: TrackingInput): string {
       return input.operationId;
     case "discovery":
       return input.id;
+    case "election":
+      return `election-${input.electionIndex}`;
   }
 }

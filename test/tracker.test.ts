@@ -37,6 +37,7 @@ import {
   TrackedStage,
   StageTransaction,
   TrackingCheckpoint,
+  ElectionProposalStatus,
 } from "../src";
 import { extractTimelockLink } from "../src/tracker";
 
@@ -150,7 +151,7 @@ describe("Tracker Cache Methods (Mocked)", () => {
   const mockL2Provider = {} as ethers.providers.Provider;
 
   describe("loadWatermarks", () => {
-    it("should return empty object when no cache configured", async () => {
+    it("should return empty watermarks and hashes when no cache configured", async () => {
       // #given - tracker without cache
       const tracker = createTracker({
         l1Provider: mockL1Provider,
@@ -158,10 +159,10 @@ describe("Tracker Cache Methods (Mocked)", () => {
       });
 
       // #when - loading watermarks
-      const watermarks = await tracker.loadWatermarks();
+      const result = await tracker.loadWatermarks();
 
-      // #then - should return empty object
-      expect(watermarks).toEqual({});
+      // #then - should return empty watermarks and hashes
+      expect(result).toEqual({ watermarks: {}, hashes: {} });
     });
   });
 
@@ -352,7 +353,7 @@ describe("Tracker Cache Methods (Mocked)", () => {
         // Verify cache works by saving watermarks
         await tracker.saveWatermarks({ constitutionalGovernor: 12345 });
         const loaded = await tracker.loadWatermarks();
-        expect(loaded.constitutionalGovernor).toBe(12345);
+        expect(loaded.watermarks.constitutionalGovernor).toBe(12345);
       } finally {
         // Cleanup
         await fs.unlink(cachePath).catch(() => {});
@@ -386,13 +387,14 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
   }
 
   describe("loadWatermarks with cache", () => {
-    it("should return watermarks from cache when stored", async () => {
+    it("should return watermarks and hashes from cache when stored", async () => {
       // #given - cache with stored watermarks using valid DiscoveryKey values
       const mockCache = createMockCache();
       const storedWatermarks = {
         constitutionalGovernor: 100,
         l2ConstitutionalTimelock: 200,
       };
+      const storedHashes = { constitutionalGovernor: "0xhash123" };
       await mockCache.set("discovery:watermarks", {
         version: 1,
         createdAt: Date.now(),
@@ -400,6 +402,7 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
         input: { type: "watermarks" },
         cachedData: {
           discoveryWatermarks: storedWatermarks,
+          watermarkHashes: storedHashes,
         },
         metadata: { errorCount: 0 },
       });
@@ -411,15 +414,16 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
       });
 
       // #when - loading watermarks
-      const watermarks = await tracker.loadWatermarks();
+      const result = await tracker.loadWatermarks();
 
-      // #then - should return stored watermarks
-      expect(watermarks).toEqual(storedWatermarks);
+      // #then - should return stored watermarks and hashes
+      expect(result.watermarks).toEqual(storedWatermarks);
+      expect(result.hashes).toEqual(storedHashes);
     });
   });
 
   describe("saveWatermarks with cache", () => {
-    it("should save watermarks to cache", async () => {
+    it("should save watermarks and hashes to cache", async () => {
       // #given - empty cache
       const mockCache = createMockCache();
       const tracker = createTracker({
@@ -430,11 +434,13 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
 
       // #when - saving watermarks with valid DiscoveryKey
       const watermarksToSave = { constitutionalGovernor: 500 };
-      await tracker.saveWatermarks(watermarksToSave);
+      const hashesToSave = { constitutionalGovernor: "0xblock123" };
+      await tracker.saveWatermarks(watermarksToSave, hashesToSave);
 
       // #then - should be retrievable
       const retrieved = await tracker.loadWatermarks();
-      expect(retrieved).toEqual(watermarksToSave);
+      expect(retrieved.watermarks).toEqual(watermarksToSave);
+      expect(retrieved.hashes).toEqual(hashesToSave);
     });
   });
 
@@ -615,6 +621,145 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
       expect(stats.total).toBe(2);
       expect(stats.proposals.total).toBe(1);
       expect(stats.timelocks.total).toBe(1);
+    });
+  });
+
+  describe("saveElectionCheckpoint with cache", () => {
+    it("should save election checkpoint to cache", async () => {
+      // #given - tracker with cache
+      const mockCache = createMockCache();
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      const electionStatus: ElectionProposalStatus = {
+        electionIndex: 3,
+        phase: "MEMBER_ELECTION",
+        cohort: 0,
+        nomineeProposalId: "0x1234",
+        nomineeProposalState: "Executed",
+        memberProposalId: "0xabcd",
+        memberProposalState: "Active",
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+      };
+
+      // #when - saving election checkpoint
+      await tracker.saveElectionCheckpoint(electionStatus);
+
+      // #then - should be stored in cache with correct key
+      const stored = await mockCache.get<TrackingCheckpoint>("election:3");
+      expect(stored).toBeDefined();
+      expect(stored?.input?.type).toBe("election");
+      expect((stored?.input as { electionIndex: number })?.electionIndex).toBe(3);
+      expect(stored?.cachedData?.electionStatus?.phase).toBe("MEMBER_ELECTION");
+    });
+
+    it("should not error when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      const electionStatus: ElectionProposalStatus = {
+        electionIndex: 0,
+        phase: "COMPLETED",
+        cohort: 1,
+        nomineeProposalId: "0x1234",
+        nomineeProposalState: "Executed",
+        memberProposalId: "0xabcd",
+        memberProposalState: "Executed",
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+      };
+
+      // #when / #then - should not throw
+      await expect(tracker.saveElectionCheckpoint(electionStatus)).resolves.not.toThrow();
+    });
+  });
+
+  describe("getElectionCheckpoint with cache", () => {
+    it("should return election status from cache when exists", async () => {
+      // #given - tracker with cache containing election checkpoint
+      const mockCache = createMockCache();
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      const electionStatus = {
+        electionIndex: 2,
+        phase: "VETTING_PERIOD" as const,
+        phaseDescription: "Vetting period",
+        nomineeProposalId: "0x1234",
+        nomineeGovernor: "0x5678",
+        memberProposalId: null,
+        memberGovernor: "0xefgh",
+        nomineeVotingComplete: true,
+        memberVotingComplete: false,
+        memberElectionTriggered: false,
+        vettingDeadline: 1700000000,
+      };
+
+      await mockCache.set("election:2", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 2 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - getting election checkpoint
+      const result = await tracker.getElectionCheckpoint(2);
+
+      // #then - should return election status
+      expect(result).toBeDefined();
+      expect(result?.electionIndex).toBe(2);
+      expect(result?.phase).toBe("VETTING_PERIOD");
+    });
+
+    it("should return null when election checkpoint not found", async () => {
+      // #given - tracker with cache but no election checkpoint
+      const mockCache = createMockCache();
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting non-existent election checkpoint
+      const result = await tracker.getElectionCheckpoint(999);
+
+      // #then - should return null
+      expect(result).toBeNull();
+    });
+
+    it("should return null when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - getting election checkpoint
+      const result = await tracker.getElectionCheckpoint(0);
+
+      // #then - should return null
+      expect(result).toBeNull();
     });
   });
 });

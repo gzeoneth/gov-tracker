@@ -511,14 +511,104 @@ Security Council elections use a distinct state machine from regular proposals.
 | Election Nominee Governor | Nominate candidates |
 | Election Member Governor | Elect members |
 
-### 8.2 Election Tracking
+### 8.2 Election Phases
 
-Elections are tracked separately with `isElection: true` flag. The stage semantics differ:
-- No cross-chain messaging
-- Different timelock configurations
-- Election-specific data fields
+Elections progress through a 6-phase state machine:
 
-Implementations SHOULD document election-specific behavior in a separate section.
+```typescript
+type ElectionPhase =
+  | "NOT_STARTED"       // Election hasn't begun
+  | "NOMINEE_SELECTION" // Nominee governor voting active
+  | "VETTING_PERIOD"    // 7-day period after nominee voting
+  | "MEMBER_ELECTION"   // Member governor voting active
+  | "PENDING_EXECUTION" // Voting complete, awaiting execution
+  | "COMPLETED";        // Election fully executed
+```
+
+### 8.3 Election Status
+
+```typescript
+interface ElectionProposalStatus {
+  electionIndex: number;
+  phase: ElectionPhase;
+  cohort: 0 | 1;                        // 0=September, 1=March
+  nomineeProposalId: string | null;
+  memberProposalId: string | null;
+  nomineeProposalState: ProposalState | null;
+  memberProposalState: ProposalState | null;
+  compliantNomineeCount: number;
+  targetNomineeCount: number;           // Always 6
+  vettingDeadline: number | null;       // Unix timestamp
+  isInVettingPeriod: boolean;
+  canProceedToMemberPhase: boolean;
+}
+```
+
+### 8.4 Election Tracking Input
+
+Elections use a dedicated checkpoint type:
+
+```typescript
+interface ElectionTrackingInput {
+  type: "election";
+  electionIndex: number;
+}
+```
+
+Cache key pattern: `election:{electionIndex}`
+
+### 8.5 Election Tracking API
+
+#### Bulk Tracking
+
+```typescript
+// Track all elections (complete and active)
+trackAllElections(
+  l2Provider: Provider,
+  l1Provider: Provider
+): Promise<ElectionProposalStatus[]>
+
+// Track only incomplete elections
+trackIncompleteElections(
+  l2Provider: Provider,
+  l1Provider: Provider
+): Promise<ElectionProposalStatus[]>
+```
+
+#### Proposal-to-Election Mapping
+
+```typescript
+// Find which election contains a proposal ID
+getElectionIndexForProposalId(
+  proposalId: string,
+  l2Provider: Provider,
+  l1Provider: Provider
+): Promise<number | null>
+```
+
+#### Checkpoint Persistence
+
+```typescript
+// Save election status to cache
+tracker.saveElectionCheckpoint(
+  electionStatus: ElectionProposalStatus
+): Promise<void>
+
+// Retrieve cached election status
+tracker.getElectionCheckpoint(
+  electionIndex: number
+): Promise<ElectionProposalStatus | null>
+```
+
+### 8.6 Election vs Proposal Tracking
+
+| Aspect | Proposals | Elections |
+|--------|-----------|-----------|
+| State machine | 7 stages | 6 phases |
+| Cross-chain | L1 round-trip possible | L2-only |
+| Cache key | `tx:{hash}` | `election:{index}` |
+| Tracking method | `trackByTxHash()` | `trackElectionProposal()` |
+| Bulk API | `discoverAll()` | `trackAllElections()` |
 
 ---
 

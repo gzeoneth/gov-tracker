@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/gzeoneth/gov-tracker/graph/badge.svg?token=2WVH8Z82TE)](https://codecov.io/gh/gzeoneth/gov-tracker)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Track and execute Arbitrum DAO governance proposal lifecycle stages.
+Track and execute Arbitrum DAO governance proposal lifecycle stages and Security Council elections.
 
 ## Installation
 
@@ -80,6 +80,15 @@ npx @gzeoneth/gov-tracker track 0x... -w --private-key $PRIVATE_KEY
 # Discover and track all proposals
 npx @gzeoneth/gov-tracker run
 
+# Selective tracking (only track specific types)
+npx @gzeoneth/gov-tracker run --track-core            # Constitutional proposals only
+npx @gzeoneth/gov-tracker run --track-treasury        # Non-constitutional proposals only
+npx @gzeoneth/gov-tracker run --track-elections       # Election governors only
+npx @gzeoneth/gov-tracker run --track-timelocks       # Direct timelock operations only
+
+# Track with elections enabled in run loop
+npx @gzeoneth/gov-tracker run --loop --election
+
 # Disable caching
 npx @gzeoneth/gov-tracker track 0x... --no-cache
 
@@ -106,7 +115,7 @@ npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
 - View proposal details, voting statistics, and stage progress
 - Inspect decoded calldata with nested parameter display
 - View simulation data for Tenderly/Foundry fork testing
-- Monitor Security Council election status (requires RPC)
+- Monitor Security Council election status with detailed nominee/member info (requires RPC)
 - Live tracking and discovery when RPC providers are configured
 
 **Navigation:**
@@ -125,6 +134,30 @@ npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
 | `q` | Quit |
 
 **Note:** The TUI requires `ink` and `react` packages (installed as optional dependencies).
+
+### Elections
+
+```bash
+# Check election status (next election, can create)
+npx @gzeoneth/gov-tracker election
+
+# List all elections with statuses
+npx @gzeoneth/gov-tracker election --list
+
+# Track specific election by index
+npx @gzeoneth/gov-tracker election --track 0
+
+# Track with detailed nominee/member info
+npx @gzeoneth/gov-tracker election --track 0 --details -v
+
+# Create election or execute phase transition
+npx @gzeoneth/gov-tracker election --track 0 -w --private-key $PRIVATE_KEY
+
+# Monitor elections in loop mode
+npx @gzeoneth/gov-tracker election --loop --interval 300
+```
+
+**Election Phases:** `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
 
 **Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this eliminates initial discovery RPC calls. SDK users can access via `getBundledCachePath()` or direct JSON import - see [Examples](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 
@@ -175,7 +208,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development workflow.
 |----------|-------------|
 | Constitutional | Core proposals requiring L1 round-trip (8-day L2 timelock) |
 | Non-Constitutional | Treasury proposals, L2-only execution (3-day L2 timelock) |
-| Election | Security Council election proposals |
+| Election | Security Council election with 6-phase lifecycle |
+| Cohort | Security Council has two cohorts (0 and 1) that alternate elections |
 
 See [Arbitrum governance docs](https://docs.arbitrum.foundation/concepts/lifecycle-anatomy-aip-proposal) for more details.
 

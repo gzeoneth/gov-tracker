@@ -2026,6 +2026,7 @@ describe("CLI Utilities", () => {
           timelockOps: [],
           watermarks: {},
         }),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
         queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
@@ -2043,7 +2044,7 @@ describe("CLI Utilities", () => {
       expect(mockTracker.discoverAll).toHaveBeenCalledWith(
         customTargets,
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2060,6 +2061,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2077,7 +2079,7 @@ describe("CLI Utilities", () => {
           l2NonConstitutionalTimelock: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2094,6 +2096,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2147,6 +2150,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2166,7 +2170,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2209,6 +2213,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2228,7 +2233,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2271,6 +2276,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2290,7 +2296,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2333,6 +2339,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2352,7 +2359,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2395,6 +2402,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2414,7 +2422,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2457,6 +2465,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue(undefined),
       };
       const providers = createMockProviders();
 
@@ -2476,7 +2485,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
   });

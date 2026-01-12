@@ -147,6 +147,24 @@ describe("StageBuilder", () => {
       expect(stage.timing?.delaySeconds).toBe(86400);
     });
 
+    it("should set isStale flag", () => {
+      // #given - StageBuilder with stale set
+      // #when - building the stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").stale(true).build();
+
+      // #then - isStale is set correctly
+      expect(stage.isStale).toBe(true);
+    });
+
+    it("should not set isStale when false", () => {
+      // #given - StageBuilder with stale set to false
+      // #when - building the stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").stale(false).build();
+
+      // #then - isStale is false
+      expect(stage.isStale).toBe(false);
+    });
+
     it("should create SKIPPED status with skip method", () => {
       // #given - StageBuilder with skip() called
       // #when - building the stage

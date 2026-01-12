@@ -199,6 +199,7 @@ Query detailed participant information for elections:
 ```typescript
 import {
   getElectionProposalId,
+  getMemberElectionProposalId,
   getContenders,
   getNomineesWithVotes,
   getExcludedNominees,
@@ -206,8 +207,12 @@ import {
   getMemberElectionDetails,
 } from "@gzeoneth/gov-tracker";
 
-// Get proposal ID for an election
+// Get proposal ID for an election (same ID used by both governors)
+// Note: Nominee and member governors share the same proposal ID (derived from election index).
+// Each governor maintains its own state for this ID.
 const proposalId = await getElectionProposalId(0, l2Provider);
+const memberProposalId = await getMemberElectionProposalId(0, l2Provider);
+// proposalId === memberProposalId (same ID, different state per governor)
 
 // Get all contenders (people who registered)
 const contenders = await getContenders(proposalId, l2Provider);

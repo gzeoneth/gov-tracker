@@ -1019,27 +1019,28 @@ export async function getExcludedNominees(
     })
   );
 
-  const parsedLogs = logs.flatMap((eventLog) => {
-    try {
-      const parsed = iface.parseLog(eventLog);
-      return [{ addr: parsed.args.nominee as string, eventLog }];
-    } catch {
-      return [];
-    }
-  });
-
   const excluded = await Promise.all(
-    parsedLogs.map(async ({ addr, eventLog }) => {
-      const votesReceived = await queryWithRetry<BigNumber>(() =>
-        governor.votesReceived(proposalId, addr)
-      );
-      return {
-        address: addr,
-        votesReceived,
-        isExcluded: true,
-        excludedAtBlock: eventLog.blockNumber,
-        exclusionTxHash: eventLog.transactionHash,
-      };
+    logs.flatMap((eventLog) => {
+      try {
+        const parsed = iface.parseLog(eventLog);
+        const addr = parsed.args.nominee as string;
+        return [
+          (async () => {
+            const votesReceived = await queryWithRetry<BigNumber>(() =>
+              governor.votesReceived(proposalId, addr)
+            );
+            return {
+              address: addr,
+              votesReceived,
+              isExcluded: true,
+              excludedAtBlock: eventLog.blockNumber,
+              exclusionTxHash: eventLog.transactionHash,
+            };
+          })(),
+        ];
+      } catch {
+        return [];
+      }
     })
   );
 
@@ -1143,23 +1144,23 @@ export async function getMemberElectionDetails(
 
   const winnersSet = new Set(winners.map((w) => w.toLowerCase()));
 
-  const nomineeDetails: MemberElectionNominee[] = await Promise.all(
-    allNominees.map(async (addr) => {
-      const weight = await queryWithRetry<BigNumber>(() =>
+  const nomineeWeights = await Promise.all(
+    allNominees.map(async (addr) => ({
+      addr,
+      weight: await queryWithRetry<BigNumber>(() =>
         memberGovernor.weightReceived(memberProposalId, addr)
-      );
-      return {
-        address: addr,
-        weightReceived: weight,
-        isWinner: winnersSet.has(addr.toLowerCase()),
-        rank: 0,
-      };
-    })
+      ),
+    }))
   );
 
-  nomineeDetails
-    .sort((a, b) => (b.weightReceived.gt(a.weightReceived) ? 1 : -1))
-    .forEach((n, i) => (n.rank = i + 1));
+  const nomineeDetails: MemberElectionNominee[] = nomineeWeights
+    .sort((a, b) => (b.weight.gt(a.weight) ? 1 : -1))
+    .map((n, i) => ({
+      address: n.addr,
+      weightReceived: n.weight,
+      isWinner: winnersSet.has(n.addr.toLowerCase()),
+      rank: i + 1,
+    }));
 
   return {
     proposalId: memberProposalId,

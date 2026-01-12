@@ -816,8 +816,10 @@ electionCmd
       );
 
       if (election.nomineeProposalId) {
-        console.log(`\nNominee Election:`);
-        console.log(`  Proposal ID: ${election.nomineeProposalId}`);
+        // Note: Both governors use the same proposal ID (derived from election index)
+        // but track separate states
+        console.log(`\nElection ID: ${election.nomineeProposalId}`);
+        console.log(`\nNominee Phase:`);
         console.log(`  State: ${election.nomineeProposalState}`);
         if (election.vettingDeadline) {
           console.log(`  Vetting Deadline: block ${election.vettingDeadline}`);
@@ -826,8 +828,7 @@ electionCmd
       }
 
       if (election.memberProposalId) {
-        console.log(`\nMember Election:`);
-        console.log(`  Proposal ID: ${election.memberProposalId}`);
+        console.log(`\nMember Phase:`);
         console.log(`  State: ${election.memberProposalState}`);
       }
 

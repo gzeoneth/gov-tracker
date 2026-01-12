@@ -12,6 +12,8 @@ import {
   getChildCheckpoints,
   getDeduplicationStats,
   isSecurityCouncilTimelockOp,
+  findPotentialParent,
+  autoLinkOrphanedCheckpoints,
 } from "../src/deduplication";
 import { MemoryCache } from "../src/tracker/cache";
 import { TrackingCheckpoint, TrackingResult } from "../src/types";
@@ -440,6 +442,348 @@ describe("Deduplication Helpers", () => {
       expect(stats.childCheckpoints).toBe(2);
       expect(stats.parentTypes.fromElections).toBe(1);
       expect(stats.parentTypes.fromProposals).toBe(1);
+    });
+
+    it("should skip discovery:watermarks key", async () => {
+      // #given
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 1 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+      await cache.set("election:1", checkpoint);
+      await cache.set("discovery:watermarks", { some: "data" });
+
+      // #when
+      const stats = await getDeduplicationStats(cache);
+
+      // #then
+      expect(stats.totalCheckpoints).toBe(1);
+    });
+  });
+
+  describe("linkCheckpointToChild - edge cases", () => {
+    it("should initialize metadata when checkpoint has none", async () => {
+      // #given
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: "0x123",
+          operationId: "0xabc",
+          scheduledTxHash: "0x456",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        // no metadata
+      };
+      await cache.set("tx:0x456", checkpoint);
+
+      // #when
+      await linkCheckpointToChild("tx:0x456", "election:5", cache);
+
+      // #then
+      const updated = await cache.get<TrackingCheckpoint>("tx:0x456");
+      expect(updated?.metadata).toBeDefined();
+      expect(updated?.metadata?.sourceCheckpoint).toBe("election:5");
+      expect(updated?.metadata?.errorCount).toBe(0);
+    });
+
+    it("should preserve existing metadata fields when linking", async () => {
+      // #given
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: "0x123",
+          operationId: "0xabc",
+          scheduledTxHash: "0x456",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: { errorCount: 3, lastTrackedAt: 12345 },
+      };
+      await cache.set("tx:0x456", checkpoint);
+
+      // #when
+      await linkCheckpointToChild("tx:0x456", "tx:0x789", cache);
+
+      // #then
+      const updated = await cache.get<TrackingCheckpoint>("tx:0x456");
+      expect(updated?.metadata?.sourceCheckpoint).toBe("tx:0x789");
+      expect(updated?.metadata?.errorCount).toBe(3);
+      expect(updated?.metadata?.lastTrackedAt).toBe(12345);
+    });
+  });
+
+  describe("findPotentialParent", () => {
+    it("should return null for non-timelock checkpoints", async () => {
+      // #given
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          governorAddress: "0x123",
+          proposalId: "1",
+          creationTxHash: "0xabc",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+
+      // #when
+      const parent = await findPotentialParent(checkpoint, cache);
+
+      // #then
+      expect(parent).toBeNull();
+    });
+
+    it("should find completed election as parent for L2 constitutional timelock", async () => {
+      // #given
+      const l2ConstitutionalTimelock = ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
+      const completedElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 2 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {
+          electionStatus: {
+            electionIndex: 2,
+            phase: "COMPLETED",
+            cohort: 0,
+            nomineeProposalId: "111",
+            memberProposalId: "222",
+            nomineeProposalState: "Executed",
+            memberProposalState: "Executed",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+      };
+      await cache.set("election:2", completedElection);
+
+      const timelockCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: l2ConstitutionalTimelock,
+          operationId: "0xabc",
+          scheduledTxHash: "0x456",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+
+      // #when
+      const parent = await findPotentialParent(timelockCheckpoint, cache);
+
+      // #then
+      expect(parent).toBe("election:2");
+    });
+
+    it("should return null when no completed election exists", async () => {
+      // #given
+      const l2ConstitutionalTimelock = ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
+      const activeElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 3 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {
+          electionStatus: {
+            electionIndex: 3,
+            phase: "MEMBER_ELECTION",
+            cohort: 1,
+            nomineeProposalId: "333",
+            memberProposalId: "444",
+            nomineeProposalState: "Executed",
+            memberProposalState: "Active",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+      };
+      await cache.set("election:3", activeElection);
+
+      const timelockCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: l2ConstitutionalTimelock,
+          operationId: "0xdef",
+          scheduledTxHash: "0x789",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+
+      // #when
+      const parent = await findPotentialParent(timelockCheckpoint, cache);
+
+      // #then
+      expect(parent).toBeNull();
+    });
+  });
+
+  describe("autoLinkOrphanedCheckpoints", () => {
+    it("should link orphaned timelock checkpoints to potential parents", async () => {
+      // #given
+      const l2ConstitutionalTimelock = ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
+
+      const completedElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 1 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {
+          electionStatus: {
+            electionIndex: 1,
+            phase: "COMPLETED",
+            cohort: 0,
+            nomineeProposalId: "111",
+            memberProposalId: "222",
+            nomineeProposalState: "Executed",
+            memberProposalState: "Executed",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+      };
+      const orphanedTimelock: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: l2ConstitutionalTimelock,
+          operationId: "0xorphan",
+          scheduledTxHash: "0xorphantx",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        // no sourceCheckpoint - orphaned
+      };
+
+      await cache.set("election:1", completedElection);
+      await cache.set("tx:0xorphantx", orphanedTimelock);
+
+      // #when
+      const linkedCount = await autoLinkOrphanedCheckpoints(cache);
+
+      // #then
+      expect(linkedCount).toBe(1);
+      const updated = await cache.get<TrackingCheckpoint>("tx:0xorphantx");
+      expect(updated?.metadata?.sourceCheckpoint).toBe("election:1");
+    });
+
+    it("should skip already linked checkpoints", async () => {
+      // #given
+      const l2ConstitutionalTimelock = ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
+
+      const completedElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 1 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {
+          electionStatus: {
+            electionIndex: 1,
+            phase: "COMPLETED",
+            cohort: 0,
+            nomineeProposalId: "111",
+            memberProposalId: "222",
+            nomineeProposalState: "Executed",
+            memberProposalState: "Executed",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+      };
+      const alreadyLinked: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "timelock",
+          timelockAddress: l2ConstitutionalTimelock,
+          operationId: "0xlinked",
+          scheduledTxHash: "0xlinkedtx",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          sourceCheckpoint: "election:1",
+        },
+      };
+
+      await cache.set("election:1", completedElection);
+      await cache.set("tx:0xlinkedtx", alreadyLinked);
+
+      // #when
+      const linkedCount = await autoLinkOrphanedCheckpoints(cache);
+
+      // #then
+      expect(linkedCount).toBe(0);
+    });
+
+    it("should skip non-timelock checkpoints", async () => {
+      // #given
+      const governorCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          governorAddress: "0x123",
+          proposalId: "1",
+          creationTxHash: "0xgov",
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+
+      await cache.set("tx:0xgov", governorCheckpoint);
+
+      // #when
+      const linkedCount = await autoLinkOrphanedCheckpoints(cache);
+
+      // #then
+      expect(linkedCount).toBe(0);
     });
   });
 });

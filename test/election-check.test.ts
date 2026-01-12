@@ -150,6 +150,59 @@ describe("Election Check Utilities", () => {
       expect(output).not.toContain("In Vetting Period:");
     });
 
+    it("should format completed election status correctly", () => {
+      // #given a completed election
+      const electionStatus: ElectionProposalStatus = {
+        electionIndex: 0,
+        phase: "COMPLETED",
+        cohort: 0,
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        nomineeProposalId: "123456789",
+        nomineeProposalState: "Executed",
+        memberProposalId: "987654321",
+        memberProposalState: "Executed",
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+      };
+
+      // #when formatting
+      const output = formatElectionStatus(baseStatus, electionStatus);
+
+      // #then should show COMPLETED phase with no actions available
+      expect(output).toContain("Phase: COMPLETED");
+      expect(output).toContain("Member State: Executed");
+      expect(output).toContain("Can Proceed to Member Phase: NO");
+    });
+
+    it("should format PENDING_EXECUTION phase with canExecuteMember true", () => {
+      // #given an election in PENDING_EXECUTION phase
+      const electionStatus: ElectionProposalStatus = {
+        electionIndex: 1,
+        phase: "PENDING_EXECUTION",
+        cohort: 1,
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        nomineeProposalId: "111",
+        nomineeProposalState: "Executed",
+        memberProposalId: "222",
+        memberProposalState: "Succeeded",
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: true,
+      };
+
+      // #when formatting
+      const output = formatElectionStatus(baseStatus, electionStatus);
+
+      // #then should show executable action
+      expect(output).toContain("Phase: PENDING_EXECUTION");
+      expect(output).toContain("Member State: Succeeded");
+    });
+
     it("should format all fields together correctly", () => {
       const status: ElectionStatus = {
         electionCount: 5,

@@ -264,25 +264,53 @@ function formatDuration(seconds: number): string {
   return parts.join(" ") || "0s";
 }
 
-/**
- * Convert numeric proposal state to string
- */
+const PROPOSAL_STATES: readonly ProposalState[] = [
+  "Pending",
+  "Active",
+  "Canceled",
+  "Defeated",
+  "Succeeded",
+  "Queued",
+  "Expired",
+  "Executed",
+] as const;
+
 function stateToString(state: number): ProposalState {
-  const states: ProposalState[] = [
-    "Pending",
-    "Active",
-    "Canceled",
-    "Defeated",
-    "Succeeded",
-    "Queued",
-    "Expired",
-    "Executed",
-  ];
-  const result = states[state];
+  const result = PROPOSAL_STATES[state];
   if (!result) {
     throw new Error(`Unknown proposal state number: ${state}`);
   }
   return result;
+}
+
+function determineElectionPhase(
+  nomineeProposalState: ProposalState | null,
+  memberProposalId: string | null,
+  memberProposalState: ProposalState | null,
+  isInVettingPeriod: boolean
+): ElectionPhase {
+  if (memberProposalState === "Executed") {
+    return "COMPLETED";
+  }
+  if (memberProposalId) {
+    if (memberProposalState === "Succeeded" || memberProposalState === "Queued") {
+      return "PENDING_EXECUTION";
+    }
+    return "MEMBER_ELECTION";
+  }
+  if (nomineeProposalState === "Executed") {
+    return "PENDING_EXECUTION";
+  }
+  if (isInVettingPeriod) {
+    return "VETTING_PERIOD";
+  }
+  if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
+    return "NOMINEE_SELECTION";
+  }
+  if (nomineeProposalState === "Succeeded") {
+    return "PENDING_EXECUTION";
+  }
+  return "NOT_STARTED";
 }
 
 // Election Proposal Tracking
@@ -397,9 +425,8 @@ export async function trackElectionProposal(
   const computedMemberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
 
   try {
-    const memberState = await queryWithRetry<number>(() =>
-      memberGovernor.state(computedMemberProposalId)
-    );
+    // Don't use queryWithRetry - we expect this to revert for non-existent proposals
+    const memberState: number = await memberGovernor.state(computedMemberProposalId);
     // If we get here without reverting, the proposal exists
     memberProposalId = computedMemberProposalId;
     memberProposalState = stateToString(memberState);
@@ -407,40 +434,19 @@ export async function trackElectionProposal(
     // Member election not yet created (state() reverts for non-existent proposals)
   }
 
-  // Determine phase based on both nominee and member election states
-  let phase: ElectionPhase;
-  if (memberProposalState === "Executed") {
-    // Member election completed = full election completed
-    phase = "COMPLETED";
-  } else if (memberProposalId) {
-    if (memberProposalState === "Succeeded" || memberProposalState === "Queued") {
-      phase = "PENDING_EXECUTION";
-    } else {
-      phase = "MEMBER_ELECTION";
-    }
-  } else if (nomineeProposalState === "Executed") {
-    // Nominee executed but no member proposal yet - this shouldn't happen in normal flow
-    // but treat as pending execution (waiting for member election creation)
-    phase = "PENDING_EXECUTION";
-  } else if (isInVettingPeriod) {
-    phase = "VETTING_PERIOD";
-  } else if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
-    phase = "NOMINEE_SELECTION";
-  } else if (nomineeProposalState === "Succeeded") {
-    // Past vetting, waiting for member election creation
-    phase = "PENDING_EXECUTION";
-  } else {
-    phase = "NOT_STARTED";
-  }
+  const phase = determineElectionPhase(
+    nomineeProposalState,
+    memberProposalId,
+    memberProposalState,
+    isInVettingPeriod
+  );
 
-  // Can proceed if vetting ended and has enough compliant nominees
   const canProceedToMemberPhase =
     nomineeProposalState === "Succeeded" &&
     !isInVettingPeriod &&
     compliantNomineeCount >= TIMING.SECURITY_COUNCIL_TARGET_NOMINEES &&
     !memberProposalId;
 
-  // Can execute member election if it succeeded (installs new council members)
   const canExecuteMember = memberProposalState === "Succeeded";
 
   return {
@@ -499,6 +505,7 @@ async function computeElectionProposalId(
  * Get the proposal ID for a given election index
  *
  * Uses getProposeArgs to get proposal parameters and hashProposal to calculate the proposal ID.
+ * Verifies the proposal exists by checking state() - returns null if proposal doesn't exist.
  *
  * @param electionIndex - Election index
  * @param provider - L2 provider
@@ -511,7 +518,16 @@ export async function getElectionProposalId(
   nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
 ): Promise<string | null> {
   const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
-  return computeElectionProposalId(electionIndex, governor);
+  const proposalId = await computeElectionProposalId(electionIndex, governor);
+
+  // Verify the proposal exists by checking state() - reverts for non-existent proposals
+  try {
+    await governor.state(proposalId);
+    return proposalId;
+  } catch {
+    // Proposal doesn't exist (state() reverts for unknown proposal IDs)
+    return null;
+  }
 }
 
 /**
@@ -1019,28 +1035,27 @@ export async function getExcludedNominees(
     })
   );
 
+  const parsedLogs = logs.flatMap((eventLog) => {
+    try {
+      const parsed = iface.parseLog(eventLog);
+      return [{ eventLog, nominee: parsed.args.nominee as string }];
+    } catch {
+      return [];
+    }
+  });
+
   const excluded = await Promise.all(
-    logs.flatMap((eventLog) => {
-      try {
-        const parsed = iface.parseLog(eventLog);
-        const addr = parsed.args.nominee as string;
-        return [
-          (async () => {
-            const votesReceived = await queryWithRetry<BigNumber>(() =>
-              governor.votesReceived(proposalId, addr)
-            );
-            return {
-              address: addr,
-              votesReceived,
-              isExcluded: true,
-              excludedAtBlock: eventLog.blockNumber,
-              exclusionTxHash: eventLog.transactionHash,
-            };
-          })(),
-        ];
-      } catch {
-        return [];
-      }
+    parsedLogs.map(async ({ eventLog, nominee }) => {
+      const votesReceived = await queryWithRetry<BigNumber>(() =>
+        governor.votesReceived(proposalId, nominee)
+      );
+      return {
+        address: nominee,
+        votesReceived,
+        isExcluded: true,
+        excludedAtBlock: eventLog.blockNumber,
+        exclusionTxHash: eventLog.transactionHash,
+      };
     })
   );
 

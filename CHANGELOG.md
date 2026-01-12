@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CLI: Election Auto-Switch** - When tracking a transaction that creates an election (`createElection`), the CLI automatically displays election-specific status (phase, cohort, nominees, vetting) instead of 7 NOT_STARTED proposal stages. Works in both `track` and `run` commands.
+
 - **CLI: `--inspect` flag with `-i` shorthand** - New flag for `track` command that performs normal tracking AND decodes calldata (unlike `--inspect-only` which skips tracking)
 
 - **Security: Sanitization utilities** - New `src/utils/sanitize.ts` module:

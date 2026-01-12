@@ -91,9 +91,14 @@ npx @gzeoneth/gov-tracker run --loop --election
 
 # Disable caching
 npx @gzeoneth/gov-tracker track 0x... --no-cache
+
+# Track election creation tx (auto-switches to election view)
+npx @gzeoneth/gov-tracker track 0x82a0baf3...
 ```
 
 **Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
+
+**Auto-Switch:** When tracking a `createElection` transaction, the CLI automatically displays election-specific status (phase, cohort, nominees) instead of proposal stages.
 
 ### Elections
 

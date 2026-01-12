@@ -24,7 +24,11 @@ import {
   getExcludedNominees,
   getNomineeElectionDetails,
   getMemberElectionDetails,
+  getElectionIndexForProposalId,
+  trackAllElections,
+  trackIncompleteElections,
 } from "../src";
+import { getMemberElectionProposalId } from "../src/election";
 
 dotenv.config({ quiet: true });
 
@@ -775,6 +779,217 @@ describe("Election Lifecycle Fixture Tests", () => {
       expect(details!.electionIndex).toBe(ELECTION_FIXTURES.ELECTION_INDEX);
       expect(details!.winners.length).toBe(6); // Security Council has 6 winners per cohort
       expect(details!.nominees.length).toBeGreaterThan(0);
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+});
+
+/**
+ * Election Discovery and Index Lookup Tests
+ *
+ * Tests for functions that discover elections by proposal ID and
+ * track multiple elections at once.
+ */
+describe("Election Discovery Functions", () => {
+  let forks: DualForkResult | null = null;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+
+  // Election #0 completed around L2 block ~287M (Dec 2023)
+  const ELECTION_0_COMPLETE_BLOCK = 287_000_000;
+
+  beforeAll(() => {
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
+  });
+
+  afterAll(async () => {
+    if (forks) {
+      await forks.stopAll();
+    }
+  });
+
+  describe("getElectionIndexForProposalId", () => {
+    it("should find election index for a known nominee proposal ID", async () => {
+      // #given Fork at block after election #0 completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #given Get the known proposal ID for election #0
+      const knownProposalId = await getElectionProposalId(0, forks.l2.provider);
+      expect(knownProposalId).not.toBeNull();
+
+      // #when searching for election index by proposal ID
+      const electionIndex = await getElectionIndexForProposalId(
+        knownProposalId!,
+        forks.l2.provider,
+        forks.l1.provider
+      );
+
+      // #then should return election index 0
+      expect(electionIndex).toBe(0);
+
+      await forks.stopAll();
+      forks = null;
+    });
+
+    it("should return null for unknown proposal ID", async () => {
+      // #given Fork at block after election #0 completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #given A proposal ID that does not correspond to any election
+      const unknownProposalId =
+        "0x0000000000000000000000000000000000000000000000000000000000000001";
+
+      // #when searching for election index by unknown proposal ID
+      const electionIndex = await getElectionIndexForProposalId(
+        unknownProposalId,
+        forks.l2.provider,
+        forks.l1.provider
+      );
+
+      // #then should return null
+      expect(electionIndex).toBeNull();
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("trackAllElections", () => {
+    it("should return array of all election statuses", async () => {
+      // #given Fork at block after multiple elections have occurred
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when tracking all elections
+      const allElections = await trackAllElections(forks.l2.provider, forks.l1.provider);
+
+      // #then should return an array with at least one election
+      expect(Array.isArray(allElections)).toBe(true);
+      expect(allElections.length).toBeGreaterThan(0);
+
+      // Each election should have valid structure
+      const election = allElections[0];
+      expect(election).toHaveProperty("electionIndex");
+      expect(election).toHaveProperty("phase");
+      expect(election).toHaveProperty("cohort");
+      expect(election).toHaveProperty("targetNomineeCount");
+      expect(election.electionIndex).toBe(0);
+      expect([0, 1]).toContain(election.cohort);
+
+      await forks.stopAll();
+      forks = null;
+    });
+
+    it("should include both completed and in-progress elections", async () => {
+      // #given Fork at block after election #2 completed (recent block)
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_FIXTURES.MEMBER_ELECTION_EXECUTED.block + 1000,
+      });
+
+      // #when tracking all elections
+      const allElections = await trackAllElections(forks.l2.provider, forks.l1.provider);
+
+      // #then should include completed election #2
+      expect(allElections.length).toBeGreaterThanOrEqual(3); // At least elections 0, 1, 2
+
+      // Election #2 should be completed at this block
+      const election2 = allElections.find((e) => e.electionIndex === 2);
+      expect(election2).toBeDefined();
+      expect(election2!.phase).toBe("COMPLETED");
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("trackIncompleteElections", () => {
+    it("should filter out completed elections", async () => {
+      // #given Fork at block after election #0 completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when tracking incomplete elections
+      const incompleteElections = await trackIncompleteElections(
+        forks.l2.provider,
+        forks.l1.provider
+      );
+
+      // #then all returned elections should not be COMPLETED
+      for (const election of incompleteElections) {
+        expect(election.phase).not.toBe("COMPLETED");
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+
+    it("should return subset of all elections (only incomplete ones)", async () => {
+      // #given Fork at block after election #0 completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when tracking all vs incomplete elections
+      const allElections = await trackAllElections(forks.l2.provider, forks.l1.provider);
+      const incompleteElections = await trackIncompleteElections(
+        forks.l2.provider,
+        forks.l1.provider
+      );
+
+      // #then incomplete should be subset of all (and exclude any COMPLETED)
+      expect(incompleteElections.length).toBeLessThanOrEqual(allElections.length);
+      for (const election of incompleteElections) {
+        expect(election.phase).not.toBe("COMPLETED");
+      }
+
+      await forks.stopAll();
+      forks = null;
+    });
+  });
+
+  describe("getMemberElectionProposalId", () => {
+    it("should return member proposal ID for completed election", async () => {
+      // #given Fork at block after election #0 member election completed
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_0_COMPLETE_BLOCK,
+      });
+
+      // #when getting member election proposal ID for election #0
+      const memberProposalId = await getMemberElectionProposalId(0, forks.l2.provider);
+
+      // #then should return a valid proposal ID string
+      expect(memberProposalId).toBeDefined();
+      expect(typeof memberProposalId).toBe("string");
+      expect(memberProposalId.length).toBeGreaterThan(0);
+      // Proposal ID should be a numeric string (BigNumber.toString())
+      expect(/^\d+$/.test(memberProposalId)).toBe(true);
 
       await forks.stopAll();
       forks = null;

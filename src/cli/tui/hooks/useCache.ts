@@ -3,20 +3,38 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { TrackingCheckpoint, TrackerStats } from "../../../types/index.js";
+import type { TrackingCheckpoint, TrackerStats, TrackedStage } from "../../../types/index.js";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
 import type { CacheData } from "../types.js";
 
-interface VotingData {
-  proposalState?: string;
-}
+type CategoryStats = { total: number; complete: number; active: number; errored: number };
 
-function isDefeatedOrCanceled(checkpoint: TrackingCheckpoint): boolean {
+function isFailed(checkpoint: TrackingCheckpoint): boolean {
+  if ((checkpoint.metadata?.errorCount ?? 0) >= 5) return true;
   const stages = checkpoint.cachedData.completedStages ?? [];
   const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
-  if (!votingStage?.data) return false;
-  const votingData = votingStage.data as VotingData;
-  return votingData.proposalState === "Defeated" || votingData.proposalState === "Canceled";
+  const state = (votingStage?.data as { proposalState?: string } | undefined)?.proposalState;
+  return state === "Defeated" || state === "Canceled";
+}
+
+function isComplete(stages: TrackedStage[]): boolean {
+  const lastStage = stages[stages.length - 1];
+  return (
+    stages.length === 7 && (lastStage?.status === "COMPLETED" || lastStage?.status === "SKIPPED")
+  );
+}
+
+function isElection(stages: TrackedStage[]): boolean {
+  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
+  const proposalType = (createdStage?.data as { proposalType?: string } | undefined)?.proposalType;
+  return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
+}
+
+function updateCategoryStats(stats: CategoryStats, complete: boolean, failed: boolean): void {
+  stats.total++;
+  if (complete) stats.complete++;
+  else if (failed) stats.errored++;
+  else stats.active++;
 }
 
 function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStats {
@@ -27,40 +45,23 @@ function computeStats(checkpoints: Map<string, TrackingCheckpoint>): TrackerStat
     elections: { total: 0, complete: 0 },
   };
 
-  for (const [, checkpoint] of checkpoints) {
+  for (const checkpoint of checkpoints.values()) {
     if (checkpoint.input.type === "discovery") continue;
-
     stats.total++;
-    const stages = checkpoint.cachedData.completedStages ?? [];
-    const lastStage = stages[stages.length - 1];
-    const isComplete =
-      stages.length === 7 && (lastStage?.status === "COMPLETED" || lastStage?.status === "SKIPPED");
-    const hasError = (checkpoint.metadata?.errorCount ?? 0) >= 5;
-    const isFailed = hasError || isDefeatedOrCanceled(checkpoint);
 
-    const isElection = stages.some((s) => {
-      if (s.type === "PROPOSAL_CREATED" && s.data) {
-        const data = s.data as { proposalType?: string };
-        return data.proposalType === "ELECTION_NOMINEE" || data.proposalType === "ELECTION_MEMBER";
-      }
-      return false;
-    });
+    const stages = checkpoint.cachedData.completedStages ?? [];
+    const complete = isComplete(stages);
+    const failed = isFailed(checkpoint);
 
     if (checkpoint.input.type === "governor") {
-      if (isElection) {
+      if (isElection(stages)) {
         stats.elections.total++;
-        if (isComplete) stats.elections.complete++;
+        if (complete) stats.elections.complete++;
       } else {
-        stats.proposals.total++;
-        if (isComplete) stats.proposals.complete++;
-        else if (isFailed) stats.proposals.errored++;
-        else stats.proposals.active++;
+        updateCategoryStats(stats.proposals, complete, failed);
       }
     } else if (checkpoint.input.type === "timelock") {
-      stats.timelocks.total++;
-      if (isComplete) stats.timelocks.complete++;
-      else if (isFailed) stats.timelocks.errored++;
-      else stats.timelocks.active++;
+      updateCategoryStats(stats.timelocks, complete, failed);
     }
   }
 

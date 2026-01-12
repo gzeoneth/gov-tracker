@@ -3,7 +3,7 @@
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { UseNavigationResult } from "../hooks/index.js";
 import type { TuiConfig } from "../config.js";
 import { loadConfig, saveConfig, getDefaultConfig } from "../config.js";
@@ -28,13 +28,13 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showMessage = useCallback((msg: string, isError = false) => {
+  function showMessage(msg: string, isError = false): void {
     if (messageTimeoutRef.current) {
       clearTimeout(messageTimeoutRef.current);
     }
     setMessage({ text: msg, isError });
     messageTimeoutRef.current = setTimeout(() => setMessage(null), 2000);
-  }, []);
+  }
 
   useEffect(() => {
     setConfig(loadConfig());
@@ -47,7 +47,7 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
 
   const items = getSettingItems(config);
 
-  const handleUpdateConfig = (item: SettingItem, newValue: string): void => {
+  function handleUpdateConfig(item: SettingItem, newValue: string): void {
     const result = updateConfigValue(config, item, newValue);
     if (!result.success) {
       showMessage(result.error.message, true);
@@ -58,32 +58,9 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     const saved = saveConfig(result.config);
     onConfigChange?.(result.config);
     showMessage(saved ? "Settings saved" : "Failed to save settings", !saved);
-  };
+  }
 
-  const handleEditInput = (input: string, key: KeyInput): boolean => {
-    if (key.escape) {
-      setIsEditing(false);
-      setEditValue("");
-      return true;
-    }
-    if (key.return) {
-      handleUpdateConfig(items[selectedIndex], editValue);
-      setIsEditing(false);
-      setEditValue("");
-      return true;
-    }
-    if (key.backspace || key.delete) {
-      setEditValue((v) => v.slice(0, -1));
-      return true;
-    }
-    if (input && input.length === 1 && !key.ctrl && !key.meta) {
-      setEditValue((v) => v + input);
-      return true;
-    }
-    return true;
-  };
-
-  const handleItemSelect = (item: SettingItem): void => {
+  function handleItemSelect(item: SettingItem): void {
     if (item.type === "boolean") {
       handleUpdateConfig(item, item.value === "yes" ? "no" : "yes");
       return;
@@ -96,43 +73,43 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
     setIsEditing(true);
     const isPlaceholder = item.value === "(default)" || item.value === "(auto)";
     setEditValue(isPlaceholder ? "" : item.value);
-  };
+  }
 
-  const handleResetToDefaults = (): void => {
+  function handleResetToDefaults(): void {
     const defaults = getDefaultConfig();
     setConfig(defaults);
     const saved = saveConfig(defaults);
     showMessage(saved ? "Settings reset to defaults" : "Failed to save defaults", !saved);
-  };
-
-  const handleNavigationInput = (input: string, key: KeyInput): void => {
-    if (key.escape || input === "b") {
-      navigation.back();
-      return;
-    }
-    if (key.upArrow || input === "k") {
-      setSelectedIndex((i) => Math.max(0, i - 1));
-      return;
-    }
-    if (key.downArrow || input === "j") {
-      setSelectedIndex((i) => Math.min(items.length - 1, i + 1));
-      return;
-    }
-    if (key.return || input === " ") {
-      handleItemSelect(items[selectedIndex]);
-      return;
-    }
-    if (input === "r") {
-      handleResetToDefaults();
-    }
-  };
+  }
 
   useInput((input: string, key: KeyInput) => {
     if (isEditing) {
-      handleEditInput(input, key);
+      if (key.escape) {
+        setIsEditing(false);
+        setEditValue("");
+      } else if (key.return) {
+        handleUpdateConfig(items[selectedIndex], editValue);
+        setIsEditing(false);
+        setEditValue("");
+      } else if (key.backspace || key.delete) {
+        setEditValue((v) => v.slice(0, -1));
+      } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
+        setEditValue((v) => v + input);
+      }
       return;
     }
-    handleNavigationInput(input, key);
+
+    if (key.escape || input === "b") {
+      navigation.back();
+    } else if (key.upArrow || input === "k") {
+      setSelectedIndex((i) => Math.max(0, i - 1));
+    } else if (key.downArrow || input === "j") {
+      setSelectedIndex((i) => Math.min(items.length - 1, i + 1));
+    } else if (key.return || input === " ") {
+      handleItemSelect(items[selectedIndex]);
+    } else if (input === "r") {
+      handleResetToDefaults();
+    }
   });
 
   const renderItem = (item: SettingItem, index: number): React.ReactElement => {

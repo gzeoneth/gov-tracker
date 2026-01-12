@@ -17,6 +17,7 @@ import { isStageType } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
 import { ErrorBanner } from "../components/ErrorDisplay.js";
 import { formatDate, getTxHash, getProposalIdDisplay } from "../utils/proposal-detail-helpers.js";
+import { truncate } from "../utils/index.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;
@@ -38,53 +39,23 @@ export function ProposalDetail({
   const proposalId = getProposalIdDisplay(input);
 
   useInput((inputKey: string, key: KeyInput) => {
-    switch (true) {
-      case inputKey === "b" || key.escape:
-        navigation.back();
-        break;
-      case key.upArrow || inputKey === "k":
-        navigation.moveUp();
-        break;
-      case key.downArrow || inputKey === "j":
-        navigation.moveDown(STAGE_COUNT);
-        break;
-      case key.return && !!stages[state.selectedStageIndex]:
-        navigation.goToStage(state.selectedStageIndex);
-        break;
-      case inputKey === "c":
-        navigation.goToCalldata();
-        break;
-      case inputKey === "s":
-        navigation.goToSimulation();
-        break;
-      case inputKey === "d":
-        navigation.goToDescription();
-        break;
-      case inputKey === "r" && tracker.canTrack && !tracker.isTracking:
-        void tracker.track(proposal);
-        break;
-      case inputKey === "g":
-        navigation.goToTop();
-        break;
-      case inputKey === "G":
-        navigation.goToBottom(STAGE_COUNT);
-        break;
-      case inputKey >= "1" && inputKey <= "7": {
-        const stageIndex = parseInt(inputKey, 10) - 1;
-        if (stages[stageIndex]) {
-          navigation.goToStage(stageIndex);
-        }
-        break;
-      }
-      case inputKey === "?":
-        navigation.goToHelp();
-        break;
-      case inputKey === "y":
-        copy(proposalId, "Proposal ID");
-        break;
-      case inputKey === "Y" && !!txHash:
-        copy(txHash, "TX Hash");
-        break;
+    if (inputKey === "b" || key.escape) return navigation.back();
+    if (key.upArrow || inputKey === "k") return navigation.moveUp();
+    if (key.downArrow || inputKey === "j") return navigation.moveDown(STAGE_COUNT);
+    if (key.return && stages[state.selectedStageIndex]) return navigation.goToStage(state.selectedStageIndex);
+    if (inputKey === "c") return navigation.goToCalldata();
+    if (inputKey === "s") return navigation.goToSimulation();
+    if (inputKey === "d") return navigation.goToDescription();
+    if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) return void tracker.track(proposal);
+    if (inputKey === "g") return navigation.goToTop();
+    if (inputKey === "G") return navigation.goToBottom(STAGE_COUNT);
+    if (inputKey === "?") return navigation.goToHelp();
+    if (inputKey === "y") return copy(proposalId, "Proposal ID");
+    if (inputKey === "Y" && txHash) return copy(txHash, "TX Hash");
+
+    if (inputKey >= "1" && inputKey <= "7") {
+      const stageIndex = parseInt(inputKey, 10) - 1;
+      if (stages[stageIndex]) navigation.goToStage(stageIndex);
     }
   });
   const txUrl = txHash ? getTxUrl(CHAIN_IDS.ARB_ONE, txHash) : null;
@@ -92,9 +63,7 @@ export function ProposalDetail({
   const votingStage = stages.find((s) => isStageType(s, "VOTING_ACTIVE"));
   const votingData = votingStage?.data;
 
-  const shortTitle = proposal.title.length > 40
-    ? proposal.title.substring(0, 40) + "..."
-    : proposal.title;
+  const shortTitle = truncate(proposal.title, 40);
 
   return (
     <Box flexDirection="column" height="100%">

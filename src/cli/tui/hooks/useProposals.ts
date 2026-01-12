@@ -16,44 +16,42 @@ interface VotingData {
   proposalState?: string;
 }
 
-const stageHelpers = {
-  getAll(checkpoint: TrackingCheckpoint): TrackedStage[] {
-    return checkpoint.cachedData.completedStages ?? [];
-  },
+function getAllStages(checkpoint: TrackingCheckpoint): TrackedStage[] {
+  return checkpoint.cachedData.completedStages ?? [];
+}
 
-  findByType(stages: TrackedStage[], type: StageType): TrackedStage | undefined {
-    return stages.find((s) => s.type === type);
-  },
+function findStageByType(stages: TrackedStage[], type: StageType): TrackedStage | undefined {
+  return stages.find((s) => s.type === type);
+}
 
-  getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined {
-    return this.findByType(stages, "PROPOSAL_CREATED")?.data as ProposalCreatedData | undefined;
-  },
+function getCreatedData(stages: TrackedStage[]): ProposalCreatedData | undefined {
+  return findStageByType(stages, "PROPOSAL_CREATED")?.data as ProposalCreatedData | undefined;
+}
 
-  getCreationTimestamp(stages: TrackedStage[]): number | null {
-    const createdStage = this.findByType(stages, "PROPOSAL_CREATED");
-    if (createdStage?.timing?.startedAt) {
-      return createdStage.timing.startedAt * 1000;
-    }
-    const l2TimelockStage = this.findByType(stages, "L2_TIMELOCK");
-    if (l2TimelockStage?.timing?.startedAt) {
-      return l2TimelockStage.timing.startedAt * 1000;
-    }
-    return null;
-  },
+function getCreationTimestamp(stages: TrackedStage[]): number | null {
+  const createdStage = findStageByType(stages, "PROPOSAL_CREATED");
+  if (createdStage?.timing?.startedAt) {
+    return createdStage.timing.startedAt * 1000;
+  }
+  const l2TimelockStage = findStageByType(stages, "L2_TIMELOCK");
+  if (l2TimelockStage?.timing?.startedAt) {
+    return l2TimelockStage.timing.startedAt * 1000;
+  }
+  return null;
+}
 
-  hasExecutable(stages: TrackedStage[]): boolean {
-    return stages.some((s) => s.status === "READY" || s.executable === true);
-  },
+function hasExecutableStage(stages: TrackedStage[]): boolean {
+  return stages.some((s) => s.status === "READY" || s.executable === true);
+}
 
-  isElection(stages: TrackedStage[]): boolean {
-    const proposalType = this.getCreatedData(stages)?.proposalType;
-    return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
-  },
+function isElectionProposal(stages: TrackedStage[]): boolean {
+  const proposalType = getCreatedData(stages)?.proposalType;
+  return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
+}
 
-  countCompleted(stages: TrackedStage[]): number {
-    return stages.filter((s) => s.status === "COMPLETED" || s.status === "SKIPPED").length;
-  },
-};
+function countCompletedStages(stages: TrackedStage[]): number {
+  return stages.filter((s) => s.status === "COMPLETED" || s.status === "SKIPPED").length;
+}
 
 function extractMarkdownTitle(description: string | undefined | null): string | null {
   if (!description) return null;
@@ -69,7 +67,7 @@ function extractMarkdownTitle(description: string | undefined | null): string | 
 }
 
 function getProposalTitle(checkpoint: TrackingCheckpoint): string {
-  const data = stageHelpers.getCreatedData(stageHelpers.getAll(checkpoint));
+  const data = getCreatedData(getAllStages(checkpoint));
   if (data?.description) {
     const mdTitle = extractMarkdownTitle(data.description);
     if (mdTitle) return mdTitle;
@@ -91,9 +89,9 @@ function getProposalTitle(checkpoint: TrackingCheckpoint): string {
 }
 
 function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete" | "failed" {
-  const stages = stageHelpers.getAll(checkpoint);
+  const stages = getAllStages(checkpoint);
 
-  const votingStage = stageHelpers.findByType(stages, "VOTING_ACTIVE");
+  const votingStage = findStageByType(stages, "VOTING_ACTIVE");
   const votingData = votingStage?.data as VotingData | undefined;
   if (votingData?.proposalState === "Defeated" || votingData?.proposalState === "Canceled") {
     return "failed";
@@ -115,7 +113,7 @@ function getProposalStatus(checkpoint: TrackingCheckpoint): "active" | "complete
 }
 
 function getCurrentStageType(checkpoint: TrackingCheckpoint): StageType | null {
-  const stages = stageHelpers.getAll(checkpoint);
+  const stages = getAllStages(checkpoint);
   for (let i = stages.length - 1; i >= 0; i--) {
     if (stages[i].status !== "COMPLETED" && stages[i].status !== "SKIPPED") {
       return stages[i].type;
@@ -128,7 +126,7 @@ function getItemType(
   checkpoint: TrackingCheckpoint,
   stages: TrackedStage[]
 ): ProposalListItem["type"] {
-  if (stageHelpers.isElection(stages)) return "election";
+  if (isElectionProposal(stages)) return "election";
   if (checkpoint.input.type === "timelock") return "timelock";
   return "governor";
 }
@@ -186,7 +184,7 @@ export function useProposals(
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery") continue;
 
-      const stages = stageHelpers.getAll(checkpoint);
+      const stages = getAllStages(checkpoint);
 
       if (stages.length === 0) {
         if (
@@ -224,12 +222,12 @@ export function useProposals(
         key,
         title: getProposalTitle(checkpoint),
         type: getItemType(checkpoint, stages),
-        proposalType: stageHelpers.getCreatedData(stages)?.proposalType,
+        proposalType: getCreatedData(stages)?.proposalType,
         status: getProposalStatus(checkpoint),
-        stageProgress: `${stageHelpers.countCompleted(stages)}/7`,
+        stageProgress: `${countCompletedStages(stages)}/7`,
         currentStage: getCurrentStageType(checkpoint),
-        hasExecutable: stageHelpers.hasExecutable(stages),
-        createdAt: stageHelpers.getCreationTimestamp(stages),
+        hasExecutable: hasExecutableStage(stages),
+        createdAt: getCreationTimestamp(stages),
         checkpoint,
       });
     }

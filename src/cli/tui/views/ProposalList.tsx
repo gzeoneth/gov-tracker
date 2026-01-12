@@ -25,6 +25,26 @@ interface ProposalListProps {
 
 const RESERVED_LINES = 8;
 
+function getEmptyStateMessage(searchQuery: string, filter: string, totalCount: number): string {
+  if (searchQuery) {
+    return `No results for "${searchQuery}"`;
+  }
+  if (totalCount === 0) {
+    return "Cache is empty";
+  }
+  return `No proposals match filter [${filter}]`;
+}
+
+function getEmptyStateHint(searchQuery: string, totalCount: number, canTrack: boolean): string {
+  if (searchQuery) {
+    return "Press / to modify search";
+  }
+  if (totalCount === 0) {
+    return canTrack ? "Press d to discover proposals" : "Use --l2-rpc to enable discovery";
+  }
+  return "Press Tab to change filter";
+}
+
 export function ProposalList({
   items,
   data,
@@ -157,22 +177,8 @@ export function ProposalList({
         {items.length === 0 ? (
           <EmptyState
             title="No proposals found"
-            message={
-              state.searchQuery
-                ? `No results for "${state.searchQuery}"`
-                : (data?.stats?.total ?? 0) === 0
-                  ? "Cache is empty"
-                  : `No proposals match filter [${state.filter}]`
-            }
-            hint={
-              state.searchQuery
-                ? "Press / to modify search"
-                : (data?.stats?.total ?? 0) === 0
-                  ? tracker.canTrack
-                    ? "Press d to discover proposals"
-                    : "Use --l2-rpc to enable discovery"
-                  : "Press Tab to change filter"
-            }
+            message={getEmptyStateMessage(state.searchQuery, state.filter, data?.stats?.total ?? 0)}
+            hint={getEmptyStateHint(state.searchQuery, data?.stats?.total ?? 0, tracker.canTrack)}
           />
         ) : (
           <Box flexDirection="column">

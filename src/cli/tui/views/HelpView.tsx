@@ -17,47 +17,72 @@ interface HelpViewProps {
 
 const RESERVED_LINES = 6;
 
+interface HelpLine {
+  text: React.ReactNode;
+  type: "header" | "shortcut" | "spacer";
+}
+
+function buildHelpLines(): HelpLine[] {
+  return HELP_SECTIONS.flatMap((section) => [
+    { text: `${section.icon ?? "•"} ${section.title}`, type: "header" as const },
+    ...section.shortcuts.map((shortcut) => ({
+      text: (
+        <Box key={`${section.title}-${shortcut.key}`}>
+          <Text color="cyan">{shortcut.key.padEnd(12)}</Text>
+          <Text>{shortcut.description}</Text>
+          {shortcut.note && <Text color="gray"> ({shortcut.note})</Text>}
+        </Box>
+      ),
+      type: "shortcut" as const,
+    })),
+    { text: "", type: "spacer" as const },
+  ]);
+}
+
+function renderHelpLine(line: HelpLine, index: number): React.ReactNode {
+  switch (line.type) {
+    case "header":
+      return (
+        <Box key={index} marginTop={index === 0 ? 0 : 1}>
+          <Text bold color="yellow">{line.text as string}</Text>
+        </Box>
+      );
+    case "shortcut":
+      return <Box key={index} marginLeft={2}>{line.text}</Box>;
+    case "spacer":
+      return null;
+  }
+}
+
 export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
   const { state } = navigation;
   const visibleRows = getVisibleRows(RESERVED_LINES);
-
-  const allLines: Array<{ text: React.ReactNode; isHeader?: boolean; isSpacer?: boolean }> = [];
-
-  for (const section of HELP_SECTIONS) {
-    allLines.push({ text: `${section.icon ?? "•"} ${section.title}`, isHeader: true });
-    for (const shortcut of section.shortcuts) {
-      allLines.push({
-        text: (
-          <Box key={`${section.title}-${shortcut.key}`}>
-            <Text color="cyan">{shortcut.key.padEnd(12)}</Text>
-            <Text>{shortcut.description}</Text>
-            {shortcut.note && <Text color="gray"> ({shortcut.note})</Text>}
-          </Box>
-        ),
-      });
-    }
-    allLines.push({ text: "", isSpacer: true });
-  }
-
+  const allLines = buildHelpLines();
   const visibleLines = allLines.slice(state.scrollOffset, state.scrollOffset + visibleRows);
-  const hasMore = state.scrollOffset + visibleRows < allLines.length;
-  const hasLess = state.scrollOffset > 0;
 
   useInput((input: string, key: KeyInput) => {
-    if (input === "?" || input === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(allLines.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(allLines.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(allLines.length);
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(allLines.length);
+    switch (true) {
+      case input === "?" || input === "b" || key.escape:
+        navigation.back();
+        break;
+      case key.upArrow || input === "k":
+        navigation.moveUp();
+        break;
+      case key.downArrow || input === "j":
+        navigation.moveDown(allLines.length);
+        break;
+      case key.pageUp || (key.ctrl && input === "u"):
+        navigation.pageUp(allLines.length);
+        break;
+      case key.pageDown || (key.ctrl && input === "d"):
+        navigation.pageDown(allLines.length);
+        break;
+      case input === "g":
+        navigation.goToTop();
+        break;
+      case input === "G":
+        navigation.goToBottom(allLines.length);
+        break;
     }
   });
 
@@ -78,27 +103,15 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
             />
           </Box>
         )}
-        {hasLess && (
+        {state.scrollOffset > 0 && (
           <Box marginBottom={1}>
             <ScrollIndicatorTop scrollOffset={state.scrollOffset} />
           </Box>
         )}
 
-        {visibleLines.map((line, i) => {
-          if (line.isHeader) {
-            return (
-              <Box key={i} marginTop={i === 0 ? 0 : 1}>
-                <Text bold color="yellow">{line.text as string}</Text>
-              </Box>
-            );
-          }
-          if (line.isSpacer) {
-            return null;
-          }
-          return <Box key={i} marginLeft={2}>{line.text}</Box>;
-        })}
+        {visibleLines.map(renderHelpLine)}
 
-        {hasMore && (
+        {state.scrollOffset + visibleRows < allLines.length && (
           <Box marginTop={1}>
             <ScrollIndicatorBottom
               scrollOffset={state.scrollOffset}

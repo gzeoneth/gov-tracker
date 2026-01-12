@@ -49,50 +49,32 @@ export function CalldataView({
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       navigation.back();
-      return;
-    }
-
-    if (input === "?") {
+    } else if (input === "?") {
       navigation.goToHelp();
-      return;
-    }
-
-    switch (true) {
-      case key.upArrow || input === "k":
-        navigation.moveUp();
-        break;
-      case key.downArrow || input === "j":
-        navigation.moveDown(displayLines.length);
-        break;
-      case key.pageUp || (key.ctrl && input === "u"):
-        navigation.pageUp(displayLines.length);
-        break;
-      case key.pageDown || (key.ctrl && input === "d"):
-        navigation.pageDown(displayLines.length);
-        break;
-      case key.leftArrow:
-        navigation.prevAction();
-        break;
-      case key.rightArrow:
-        navigation.nextAction(actions.length);
-        break;
-      case input === "e":
-        setExpandedKeys(new Set(allFoldableKeys));
-        navigation.goToTop();
-        break;
-      case input === "c":
-        setExpandedKeys(new Set());
-        navigation.goToTop();
-        break;
-      case input === "g":
-        navigation.goToTop();
-        break;
-      case input === "G":
-        navigation.goToBottom(displayLines.length);
-        break;
-      case key.return:
-        handleToggleFold();
-        break;
+    } else if (key.upArrow || input === "k") {
+      navigation.moveUp();
+    } else if (key.downArrow || input === "j") {
+      navigation.moveDown(displayLines.length);
+    } else if (key.pageUp || (key.ctrl && input === "u")) {
+      navigation.pageUp(displayLines.length);
+    } else if (key.pageDown || (key.ctrl && input === "d")) {
+      navigation.pageDown(displayLines.length);
+    } else if (key.leftArrow) {
+      navigation.prevAction();
+    } else if (key.rightArrow) {
+      navigation.nextAction(actions.length);
+    } else if (input === "e") {
+      setExpandedKeys(new Set(allFoldableKeys));
+      navigation.goToTop();
+    } else if (input === "c") {
+      setExpandedKeys(new Set());
+      navigation.goToTop();
+    } else if (input === "g") {
+      navigation.goToTop();
+    } else if (input === "G") {
+      navigation.goToBottom(displayLines.length);
+    } else if (key.return) {
+      handleToggleFold();
     }
   });
 

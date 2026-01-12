@@ -8,6 +8,7 @@ import { React, Box, Text, useApp } from "./ink-wrapper.js";
 import { useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import type { ProviderBundle } from "../lib/cli.js";
 import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
+import type { ProposalListItem } from "./types.js";
 import { loadConfigWithStatus } from "./config.js";
 import { ProposalList } from "./views/ProposalList.js";
 import { ProposalDetail } from "./views/ProposalDetail.js";
@@ -140,63 +141,62 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
 
   const { view, selectedProposal } = navigation.state;
 
-  const renderView = (): React.ReactElement => {
-    if (view === "help") {
-      return <HelpView navigation={navigation} />;
-    }
-
-    if (view === "settings") {
-      return <SettingsView navigation={navigation} />;
-    }
-
-    if (view === "list") {
-      return (
-        <ProposalList
-          items={items}
-          data={cache.data}
-          navigation={navigation}
-          tracker={tracker}
-          onQuit={handleQuit}
-          onReload={cache.reload}
-        />
-      );
-    }
-
-    if (view === "election") {
-      return <ElectionView navigation={navigation} providers={providerBundle} />;
-    }
-
-    if (!selectedProposal) {
-      navigation.back();
-      return <Text>Returning to list...</Text>;
-    }
-
+  function renderView(): React.ReactElement {
     switch (view) {
-      case "detail":
+      case "help":
+        return <HelpView navigation={navigation} />;
+
+      case "settings":
+        return <SettingsView navigation={navigation} />;
+
+      case "list":
         return (
-          <ProposalDetail
-            proposal={selectedProposal}
+          <ProposalList
+            items={items}
+            data={cache.data}
             navigation={navigation}
             tracker={tracker}
+            onQuit={handleQuit}
+            onReload={cache.reload}
           />
         );
 
+      case "election":
+        return <ElectionView navigation={navigation} providers={providerBundle} />;
+
+      case "detail":
       case "calldata":
-        return <CalldataView proposal={selectedProposal} navigation={navigation} />;
-
       case "stage":
-        return <StageView proposal={selectedProposal} navigation={navigation} />;
-
       case "simulation":
-        return <SimulationView proposal={selectedProposal} navigation={navigation} />;
-
       case "description":
-        return <DescriptionView proposal={selectedProposal} navigation={navigation} />;
+        if (!selectedProposal) {
+          navigation.back();
+          return <Text>Returning to list...</Text>;
+        }
+        return renderProposalView(view, selectedProposal);
 
       default:
         return <Text>Unknown view: {view}</Text>;
     }
-  };
+  }
+
+  function renderProposalView(
+    proposalView: "detail" | "calldata" | "stage" | "simulation" | "description",
+    proposal: ProposalListItem
+  ): React.ReactElement {
+    switch (proposalView) {
+      case "detail":
+        return <ProposalDetail proposal={proposal} navigation={navigation} tracker={tracker} />;
+      case "calldata":
+        return <CalldataView proposal={proposal} navigation={navigation} />;
+      case "stage":
+        return <StageView proposal={proposal} navigation={navigation} />;
+      case "simulation":
+        return <SimulationView proposal={proposal} navigation={navigation} />;
+      case "description":
+        return <DescriptionView proposal={proposal} navigation={navigation} />;
+    }
+  }
 
   return (
     <ErrorBoundary>

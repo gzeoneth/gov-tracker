@@ -389,28 +389,28 @@ export async function trackElectionProposal(
     // May fail if no nominees yet
   }
 
-  // Check for member proposal
+  // Check for member proposal using computed proposal ID (same scheme as nominee governor)
   let memberProposalId: string | null = null;
   let memberProposalState: ProposalState | null = null;
 
+  // Compute member proposal ID using getProposeArgs + hashProposal (same as nominee)
+  const computedMemberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
+
   try {
-    const memberPropId = await queryWithRetry<BigNumber>(() =>
-      memberGovernor.electionIndexToProposalId(electionIndex)
+    const memberState = await queryWithRetry<number>(() =>
+      memberGovernor.state(computedMemberProposalId)
     );
-    if (!memberPropId.isZero()) {
-      memberProposalId = memberPropId.toString();
-      const memberState = await queryWithRetry<number>(() =>
-        memberGovernor.state(memberProposalId)
-      );
-      memberProposalState = stateToString(memberState);
-    }
+    // If we get here without reverting, the proposal exists
+    memberProposalId = computedMemberProposalId;
+    memberProposalState = stateToString(memberState);
   } catch {
-    // Member election not yet created
+    // Member election not yet created (state() reverts for non-existent proposals)
   }
 
-  // Determine phase
+  // Determine phase based on both nominee and member election states
   let phase: ElectionPhase;
   if (memberProposalState === "Executed") {
+    // Member election completed = full election completed
     phase = "COMPLETED";
   } else if (memberProposalId) {
     if (memberProposalState === "Succeeded" || memberProposalState === "Queued") {
@@ -418,6 +418,10 @@ export async function trackElectionProposal(
     } else {
       phase = "MEMBER_ELECTION";
     }
+  } else if (nomineeProposalState === "Executed") {
+    // Nominee executed but no member proposal yet - this shouldn't happen in normal flow
+    // but treat as pending execution (waiting for member election creation)
+    phase = "PENDING_EXECUTION";
   } else if (isInVettingPeriod) {
     phase = "VETTING_PERIOD";
   } else if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
@@ -457,23 +461,19 @@ export async function trackElectionProposal(
 }
 
 /**
- * Get the proposal ID for a given election index
+ * Get the proposal ID for a given election index from any election governor
  *
  * Uses getProposeArgs to get proposal parameters and hashProposal to calculate the proposal ID.
+ * Both nominee and member governors use the same proposal ID scheme via ElectionGovernor base.
  *
  * @param electionIndex - Election index
- * @param provider - L2 provider
- * @param nomineeGovernorAddress - Optional governor address override
- * @returns Proposal ID or null if election not yet created
+ * @param governor - Election governor contract instance
+ * @returns Proposal ID as string
  */
-export async function getElectionProposalId(
+async function computeElectionProposalId(
   electionIndex: number,
-  provider: ethers.providers.Provider,
-  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-): Promise<string | null> {
-  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
-
-  // Get proposal arguments for this election
+  governor: ethers.Contract
+): Promise<string> {
   // getProposeArgs returns: [targets, values, calldatas, description]
   const proposeArgs = (await queryWithRetry(() => governor.getProposeArgs(electionIndex))) as [
     string[],
@@ -492,8 +492,43 @@ export async function getElectionProposalId(
     governor.hashProposal(targets, values, calldatas, descriptionHash)
   );
 
-  // Convert bytes32 to decimal string
   return BigNumber.from(proposalId).toString();
+}
+
+/**
+ * Get the proposal ID for a given election index
+ *
+ * Uses getProposeArgs to get proposal parameters and hashProposal to calculate the proposal ID.
+ *
+ * @param electionIndex - Election index
+ * @param provider - L2 provider
+ * @param nomineeGovernorAddress - Optional governor address override
+ * @returns Proposal ID or null if election not yet created
+ */
+export async function getElectionProposalId(
+  electionIndex: number,
+  provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<string | null> {
+  const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
+  return computeElectionProposalId(electionIndex, governor);
+}
+
+/**
+ * Get the member election proposal ID for a given election index
+ *
+ * @param electionIndex - Election index
+ * @param provider - L2 provider
+ * @param memberGovernorAddress - Optional governor address override
+ * @returns Member proposal ID as string
+ */
+export async function getMemberElectionProposalId(
+  electionIndex: number,
+  provider: ethers.providers.Provider,
+  memberGovernorAddress: string = ADDRESSES.ELECTION_MEMBER_GOVERNOR
+): Promise<string> {
+  const governor = getMemberGovernor(memberGovernorAddress, provider);
+  return computeElectionProposalId(electionIndex, governor);
 }
 
 // Member Election Trigger Functions
@@ -685,21 +720,14 @@ export async function getMemberElectionProposalParams(
 
   const memberGovernor = getMemberGovernor(memberGovernorAddress, provider);
 
-  let memberProposalId: string | null = null;
-  try {
-    const propId = await queryWithRetry<ethers.BigNumber>(() =>
-      memberGovernor.electionIndexToProposalId(electionIndex)
-    );
-    if (propId && !propId.isZero()) {
-      memberProposalId = propId.toString();
-    }
-  } catch {
-    log("No member proposal ID found for election %d", electionIndex);
-    return null;
-  }
+  // Compute proposal ID using getProposeArgs + hashProposal
+  const memberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
 
-  if (!memberProposalId) {
-    log("No member proposal ID found for election %d", electionIndex);
+  // Verify proposal exists by checking state
+  try {
+    await queryWithRetry<number>(() => memberGovernor.state(memberProposalId));
+  } catch {
+    log("No member proposal found for election %d", electionIndex);
     return null;
   }
 
@@ -1091,15 +1119,16 @@ export async function getMemberElectionDetails(
   const memberGovernor = getMemberGovernor(memberGovernorAddress, provider);
   const nomineeGovernor = getNomineeGovernor(nomineeGovernorAddress, provider);
 
-  const propId = await queryWithRetry<BigNumber>(() =>
-    memberGovernor.electionIndexToProposalId(electionIndex)
-  ).catch(() => null);
+  // Compute proposal ID using getProposeArgs + hashProposal (same scheme as nominee governor)
+  const memberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
 
-  if (!propId || propId.isZero()) {
+  // Verify proposal exists by checking state (reverts for non-existent proposals)
+  try {
+    await queryWithRetry<number>(() => memberGovernor.state(memberProposalId));
+  } catch {
     log("No member proposal found for election %d", electionIndex);
     return null;
   }
-  const memberProposalId = propId.toString();
 
   const [winners, deadline, fullWeightDeadline, nomineeProposalId] = await Promise.all([
     queryWithRetry<string[]>(() => memberGovernor.topNominees(memberProposalId)).catch(() => []),

@@ -158,7 +158,9 @@ export const MEMBER_ELECTION_GOVERNOR_ABI = [
   "function state(uint256 proposalId) view returns (uint8)",
   "function proposalDeadline(uint256 proposalId) view returns (uint256)",
   "function proposalSnapshot(uint256 proposalId) view returns (uint256)",
-  "function electionIndexToProposalId(uint256 electionIndex) view returns (uint256)",
+  // From ElectionGovernor base - used to compute proposal ID
+  "function getProposeArgs(uint256 electionIndex) view returns (address[], uint256[], bytes[], string)",
+  "function hashProposal(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) view returns (bytes32)",
   // Detailed member election tracking
   "function weightReceived(uint256 proposalId, address nominee) view returns (uint256)",
   "function topNominees(uint256 proposalId) view returns (address[])",

@@ -17,3 +17,6 @@ export type { UseCliProcessResult, CliProcessResult } from "./useCliProcess.js";
 
 export { useElectionData } from "./useElectionData.js";
 export type { ElectionData } from "./useElectionData.js";
+
+export { useElectionDetails } from "./useElectionDetails.js";
+export type { ElectionDetails, UseElectionDetailsResult } from "./useElectionDetails.js";

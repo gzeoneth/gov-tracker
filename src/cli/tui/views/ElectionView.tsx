@@ -2,187 +2,383 @@
  * Security Council Election Status View
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
-import { useState, useEffect } from "react";
+import { React, Box, Text, useInput, KeyInput, useState, useEffect, useMemo } from "../ink-wrapper.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import type { ProviderBundle } from "../../lib/cli.js";
 import { ViewLayout } from "../components/ViewLayout.js";
-import type { ElectionStatus, ElectionProposalStatus } from "../../../types/index.js";
+import {
+  ScrollIndicatorTop,
+  ScrollIndicatorBottom,
+  ScrollPosition,
+} from "../components/ScrollIndicator.js";
+import { getVisibleRows } from "../utils/index.js";
+import type {
+  ElectionStatus,
+  ElectionProposalStatus,
+  NomineeElectionDetails,
+  MemberElectionDetails,
+} from "../../../types/index.js";
 import { useElectionData } from "../hooks/useElectionData.js";
+import { useElectionDetails } from "../hooks/useElectionDetails.js";
 
 interface ElectionViewProps {
   navigation: UseNavigationResult;
   providers?: ProviderBundle;
 }
 
-const PHASE_DISPLAY: Record<string, { icon: string; iconColor: string; labelColor: string }> = {
-  COMPLETED: { icon: "✓", iconColor: "green", labelColor: "green" },
-  MEMBER_ELECTION: { icon: "●", iconColor: "yellow", labelColor: "yellow" },
-  NOMINEE_SELECTION: { icon: "●", iconColor: "yellow", labelColor: "yellow" },
-  VETTING_PERIOD: { icon: "◐", iconColor: "cyan", labelColor: "yellow" },
-  PENDING_EXECUTION: { icon: "→", iconColor: "magenta", labelColor: "yellow" },
-  NOT_STARTED: { icon: "○", iconColor: "gray", labelColor: "gray" },
+interface DisplayLine {
+  text: string;
+  color?: string;
+  bold?: boolean;
+  dimColor?: boolean;
+}
+
+const PHASE_COLORS: Record<string, string> = {
+  COMPLETED: "green",
+  MEMBER_ELECTION: "yellow",
+  NOMINEE_SELECTION: "yellow",
+  VETTING_PERIOD: "cyan",
+  PENDING_EXECUTION: "magenta",
+  NOT_STARTED: "gray",
 };
 
-const DEFAULT_PHASE_DISPLAY = { icon: "○", iconColor: "gray", labelColor: "yellow" };
-
-function getPhaseDisplay(phase: string): { icon: string; iconColor: string; labelColor: string } {
-  return PHASE_DISPLAY[phase] ?? DEFAULT_PHASE_DISPLAY;
-}
+const PHASE_ICONS: Record<string, string> = {
+  COMPLETED: "✓",
+  MEMBER_ELECTION: "●",
+  NOMINEE_SELECTION: "●",
+  VETTING_PERIOD: "◐",
+  PENDING_EXECUTION: "→",
+  NOT_STARTED: "○",
+};
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
 }
 
+function formatVotes(votes: { toString(): string }): string {
+  const str = votes.toString();
+  if (str.length > 18) {
+    const intPart = str.slice(0, str.length - 18);
+    return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  return str;
+}
+
+function buildStatusLines(status: ElectionStatus): DisplayLine[] {
+  const lines: DisplayLine[] = [];
+  const cohortName = status.cohort === 0 ? "FIRST" : "SECOND";
+
+  lines.push({ text: "Security Council Election Status", bold: true });
+  lines.push({ text: `  Election Count: ${status.electionCount}` });
+  lines.push({ text: `  Current Cohort: ${cohortName}`, color: status.cohort === 0 ? "cyan" : "magenta" });
+  lines.push({ text: `  Can Create: ${status.canCreateElection ? "Yes" : "No"}`, color: status.canCreateElection ? "green" : "gray" });
+
+  if (!status.canCreateElection) {
+    lines.push({ text: `  Next Election: ${formatTimestamp(status.nextElectionTimestamp)} (${status.timeUntilElection})` });
+  }
+
+  lines.push({ text: "" });
+  return lines;
+}
+
+function buildListLines(
+  proposals: ElectionProposalStatus[],
+  selectedIndex: number
+): DisplayLine[] {
+  const lines: DisplayLine[] = [];
+
+  for (let i = 0; i < proposals.length; i++) {
+    const election = proposals[i];
+    const isSelected = i === selectedIndex;
+    const icon = PHASE_ICONS[election.phase] ?? "○";
+    const phaseColor = PHASE_COLORS[election.phase] ?? "gray";
+    const prefix = isSelected ? "> " : "  ";
+    const phaseName = election.phase.replace(/_/g, " ");
+
+    lines.push({
+      text: `${prefix}${icon} Election #${election.electionIndex} - ${phaseName}`,
+      color: isSelected ? "cyan" : phaseColor,
+      bold: isSelected,
+    });
+
+    if (isSelected) {
+      const cohortName = election.cohort === 0 ? "FIRST" : "SECOND";
+      lines.push({ text: `      Cohort: ${cohortName}`, color: "gray" });
+
+      if (election.nomineeProposalId) {
+        lines.push({ text: `      Nominee State: ${election.nomineeProposalState}`, color: "gray" });
+      }
+      if (election.memberProposalId) {
+        lines.push({ text: `      Member State: ${election.memberProposalState}`, color: "gray" });
+      }
+
+      const nomineeColor = election.compliantNomineeCount >= election.targetNomineeCount ? "green" : "yellow";
+      lines.push({
+        text: `      Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`,
+        color: nomineeColor,
+      });
+
+      if (election.isInVettingPeriod) {
+        lines.push({ text: `      In vetting period until block ${election.vettingDeadline}`, color: "cyan" });
+      }
+      if (election.canProceedToMemberPhase) {
+        lines.push({ text: "      Ready to trigger member election!", color: "green" });
+      }
+      if (election.canExecuteMember) {
+        lines.push({ text: "      Ready to execute member election!", color: "green" });
+      }
+    }
+  }
+
+  return lines;
+}
+
+function buildDetailLines(
+  election: ElectionProposalStatus,
+  nomineeDetails: NomineeElectionDetails | null,
+  memberDetails: MemberElectionDetails | null
+): DisplayLine[] {
+  const lines: DisplayLine[] = [];
+  const icon = PHASE_ICONS[election.phase] ?? "○";
+  const phaseColor = PHASE_COLORS[election.phase] ?? "gray";
+  const phaseName = election.phase.replace(/_/g, " ");
+  const cohortName = election.cohort === 0 ? "FIRST" : "SECOND";
+
+  lines.push({ text: `${icon} Election #${election.electionIndex} - ${phaseName}`, color: phaseColor, bold: true });
+  lines.push({ text: "" });
+  lines.push({ text: `  Cohort: ${cohortName}` });
+
+  if (election.nomineeProposalId) {
+    lines.push({ text: `  Nominee Proposal ID: ${election.nomineeProposalId}`, dimColor: true });
+  }
+  if (election.memberProposalId) {
+    lines.push({ text: `  Member Proposal ID: ${election.memberProposalId}`, dimColor: true });
+  }
+
+  if (nomineeDetails) {
+    lines.push({ text: "" });
+    lines.push({ text: "  ── Nominee Phase ──", color: "cyan", bold: true });
+    lines.push({ text: `     Quorum: ${formatVotes(nomineeDetails.quorumThreshold)} votes` });
+    lines.push({ text: `     Target: ${nomineeDetails.targetNomineeCount} nominees needed` });
+
+    if (nomineeDetails.contenders.length > 0) {
+      lines.push({ text: "" });
+      lines.push({ text: `     Contenders (${nomineeDetails.contenders.length})`, color: "yellow" });
+      for (const contender of nomineeDetails.contenders.slice(0, 10)) {
+        lines.push({ text: `       ${contender.address}  (block ${contender.registeredAtBlock})`, color: "gray" });
+      }
+      if (nomineeDetails.contenders.length > 10) {
+        lines.push({ text: `       ... and ${nomineeDetails.contenders.length - 10} more`, color: "gray" });
+      }
+    }
+
+    if (nomineeDetails.compliantNominees.length > 0) {
+      lines.push({ text: "" });
+      lines.push({ text: `     Qualified Nominees (${nomineeDetails.compliantNominees.length})`, color: "green" });
+      for (const nominee of nomineeDetails.compliantNominees.slice(0, 10)) {
+        lines.push({ text: `       ${nominee.address}  ${formatVotes(nominee.votesReceived)} votes`, color: "gray" });
+      }
+      if (nomineeDetails.compliantNominees.length > 10) {
+        lines.push({ text: `       ... and ${nomineeDetails.compliantNominees.length - 10} more`, color: "gray" });
+      }
+    }
+
+    if (nomineeDetails.excludedNominees.length > 0) {
+      lines.push({ text: "" });
+      lines.push({ text: `     Excluded (${nomineeDetails.excludedNominees.length})`, color: "red" });
+      for (const nominee of nomineeDetails.excludedNominees.slice(0, 5)) {
+        lines.push({ text: `       ${nominee.address}  (excluded)`, color: "gray" });
+      }
+      if (nomineeDetails.excludedNominees.length > 5) {
+        lines.push({ text: `       ... and ${nomineeDetails.excludedNominees.length - 5} more`, color: "gray" });
+      }
+    }
+  }
+
+  if (memberDetails) {
+    lines.push({ text: "" });
+    lines.push({ text: "  ── Member Phase ──", color: "magenta", bold: true });
+    lines.push({ text: `     Full Weight Deadline: block ${memberDetails.fullWeightDeadline}` });
+    lines.push({ text: `     Proposal Deadline: block ${memberDetails.proposalDeadline}` });
+
+    if (memberDetails.nominees.length > 0) {
+      lines.push({ text: "" });
+      lines.push({ text: `     Candidates by Weight (${memberDetails.nominees.length})`, color: "yellow" });
+      for (const nominee of memberDetails.nominees.slice(0, 12)) {
+        const rank = `#${nominee.rank.toString().padStart(2)}`;
+        const winner = nominee.isWinner ? " [WINNER]" : "";
+        const color = nominee.isWinner ? "green" : "gray";
+        lines.push({ text: `       ${rank} ${nominee.address}  ${formatVotes(nominee.weightReceived)}${winner}`, color });
+      }
+      if (memberDetails.nominees.length > 12) {
+        lines.push({ text: `       ... and ${memberDetails.nominees.length - 12} more`, color: "gray" });
+      }
+    }
+
+    if (memberDetails.winners.length > 0) {
+      lines.push({ text: "" });
+      lines.push({ text: `     Elected Members (${memberDetails.winners.length})`, color: "green" });
+      for (const winner of memberDetails.winners) {
+        lines.push({ text: `       ✓ ${winner}`, color: "green" });
+      }
+    }
+  }
+
+  return lines;
+}
+
+const RESERVED_LINES = 8;
+
 export function ElectionView({ navigation, providers }: ElectionViewProps): React.ReactElement {
   const data = useElectionData(providers);
+  const { details, loadDetails, clearDetails } = useElectionDetails(providers);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+  const [scrollOffset, setScrollOffset] = useState(0);
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [data.proposals.length]);
+    setShowDetails(false);
+    setScrollOffset(0);
+    clearDetails();
+  }, [data.proposals.length, clearDetails]);
+
+  const selectedElection = data.proposals[selectedIndex];
+
+  const lines = useMemo(() => {
+    const result: DisplayLine[] = [];
+    const selected = data.proposals[selectedIndex];
+
+    if (data.status) {
+      result.push(...buildStatusLines(data.status));
+    }
+
+    const headerText = showDetails ? "Recent Elections • Press b to go back" : "Recent Elections • Press Enter for details";
+    result.push({ text: headerText, bold: true });
+    result.push({ text: "" });
+
+    if (data.proposals.length === 0) {
+      result.push({ text: "  No elections found", color: "gray" });
+    } else if (showDetails && selected) {
+      if (details.loading) {
+        result.push({ text: "  Loading election details...", color: "cyan" });
+      } else if (details.error) {
+        result.push({ text: `  Error: ${details.error}`, color: "red" });
+      } else {
+        result.push(...buildDetailLines(selected, details.nomineeDetails, details.memberDetails));
+      }
+    } else {
+      result.push(...buildListLines(data.proposals, selectedIndex));
+    }
+
+    return result;
+  }, [data.status, data.proposals, selectedIndex, showDetails, details]);
+
+  const visibleCount = getVisibleRows(RESERVED_LINES);
+  const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleCount);
+  const hasMore = scrollOffset + visibleCount < lines.length;
+  const hasLess = scrollOffset > 0;
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
+      if (showDetails) {
+        setShowDetails(false);
+        setScrollOffset(0);
+        clearDetails();
+        return;
+      }
       navigation.back();
       return;
     }
+
     if (input === "?") {
       navigation.goToHelp();
       return;
     }
-    if (key.upArrow || input === "k") {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
+
+    if (showDetails) {
+      // In detail view: scroll up/down
+      if (key.upArrow || input === "k") {
+        setScrollOffset((prev) => Math.max(0, prev - 1));
+      } else if (key.downArrow || input === "j") {
+        setScrollOffset((prev) => Math.min(lines.length - visibleCount, prev + 1));
+      } else if (key.pageUp || (key.ctrl && input === "u")) {
+        setScrollOffset((prev) => Math.max(0, prev - 10));
+      } else if (key.pageDown || (key.ctrl && input === "d")) {
+        setScrollOffset((prev) => Math.min(lines.length - visibleCount, prev + 10));
+      } else if (input === "g") {
+        setScrollOffset(0);
+      } else if (input === "G") {
+        setScrollOffset(Math.max(0, lines.length - visibleCount));
+      }
       return;
     }
-    if (input === "g") {
-      setSelectedIndex(0);
-      return;
-    }
+
+    // In list view: navigate elections
     if (data.proposals.length === 0) return;
 
-    if (key.downArrow || input === "j") {
+    if (key.upArrow || input === "k") {
+      setSelectedIndex((prev) => Math.max(0, prev - 1));
+    } else if (key.downArrow || input === "j") {
       setSelectedIndex((prev) => Math.min(data.proposals.length - 1, prev + 1));
+    } else if (input === "g") {
+      setSelectedIndex(0);
     } else if (input === "G") {
       setSelectedIndex(data.proposals.length - 1);
+    } else if ((key.return || input === "l") && selectedElection && providers) {
+      setShowDetails(true);
+      setScrollOffset(0);
+      loadDetails(selectedElection.electionIndex);
     }
   });
-
-  const { status, proposals, warning } = data;
 
   return (
     <ViewLayout
       view="election"
       hasProviders={!!providers}
-      isTracking={data.loading}
+      isTracking={data.loading || details.loading}
       loading={data.loading}
       loadingText="Loading election status..."
       skeletonType="detail"
       error={data.error}
     >
-      {warning && (
+      {data.warning && (
         <Box marginBottom={1}>
-          <Text color="yellow">[Warning] {warning}</Text>
+          <Text color="yellow">[Warning] {data.warning}</Text>
         </Box>
       )}
-      {status && <ElectionStatusSection status={status} />}
-      <Box flexDirection="column">
-        <Text bold>Recent Elections</Text>
-        {proposals.length === 0 ? (
-          <Text color="gray" marginLeft={1}>No elections found</Text>
-        ) : (
-          proposals.map((election, i) => (
-            <ElectionItem
-              key={election.electionIndex}
-              election={election}
-              isSelected={i === selectedIndex}
-            />
-          ))
-        )}
-      </Box>
+
+      {lines.length > visibleCount && (
+        <Box marginBottom={1}>
+          <ScrollPosition
+            scrollOffset={scrollOffset}
+            visibleRows={visibleCount}
+            totalItems={lines.length}
+          />
+        </Box>
+      )}
+
+      {hasLess && <ScrollIndicatorTop scrollOffset={scrollOffset} unit="lines" />}
+
+      {visibleLines.map((line, i) => (
+        <Text
+          key={i}
+          color={line.color}
+          bold={line.bold}
+          dimColor={line.dimColor}
+        >
+          {line.text}
+        </Text>
+      ))}
+
+      {hasMore && (
+        <ScrollIndicatorBottom
+          scrollOffset={scrollOffset}
+          visibleRows={visibleCount}
+          totalItems={lines.length}
+          unit="lines"
+        />
+      )}
     </ViewLayout>
-  );
-}
-
-interface ElectionStatusSectionProps {
-  status: ElectionStatus;
-}
-
-function ElectionStatusSection({ status }: ElectionStatusSectionProps): React.ReactElement {
-  return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text bold>Security Council Election Status</Text>
-      <Box marginLeft={1} flexDirection="column">
-        <Box><Text color="gray">Election Count: </Text><Text>{status.electionCount}</Text></Box>
-        <Box>
-          <Text color="gray">Current Cohort: </Text>
-          <Text color={status.cohort === 0 ? "cyan" : "magenta"}>{status.cohort === 0 ? "FIRST" : "SECOND"}</Text>
-        </Box>
-        <Box>
-          <Text color="gray">Can Create Election: </Text>
-          <Text color={status.canCreateElection ? "green" : "gray"}>{status.canCreateElection ? "Yes" : "No"}</Text>
-        </Box>
-        {!status.canCreateElection && (
-          <Box>
-            <Text color="gray">Next Election: </Text>
-            <Text>{formatTimestamp(status.nextElectionTimestamp)}</Text>
-            <Text color="gray"> ({status.timeUntilElection})</Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
-  );
-}
-
-interface ElectionItemProps {
-  election: ElectionProposalStatus;
-  isSelected: boolean;
-}
-
-function ElectionItem({ election, isSelected }: ElectionItemProps): React.ReactElement {
-  const phaseDisplay = getPhaseDisplay(election.phase);
-
-  return (
-    <Box marginLeft={1} flexDirection="column">
-      <Box>
-        <Text color={isSelected ? "cyan" : undefined}>{isSelected ? "> " : "  "}</Text>
-        <Text color={phaseDisplay.iconColor}>{phaseDisplay.icon}</Text>
-        <Text> </Text>
-        <Text color={isSelected ? "cyan" : undefined} bold={isSelected}>Election #{election.electionIndex}</Text>
-        <Text color="gray"> - </Text>
-        <Text color={phaseDisplay.labelColor}>{election.phase.replace(/_/g, " ")}</Text>
-      </Box>
-      {isSelected && <ElectionItemDetails election={election} />}
-    </Box>
-  );
-}
-
-interface ElectionItemDetailsProps {
-  election: ElectionProposalStatus;
-}
-
-function ElectionItemDetails({ election }: ElectionItemDetailsProps): React.ReactElement {
-  const nomineeCountColor = election.compliantNomineeCount >= election.targetNomineeCount ? "green" : "yellow";
-
-  return (
-    <Box marginLeft={4} flexDirection="column">
-      <Box><Text color="gray">Cohort: </Text><Text>{election.cohort === 0 ? "FIRST" : "SECOND"}</Text></Box>
-      {election.nomineeProposalId && (
-        <Box><Text color="gray">Nominee State: </Text><Text>{election.nomineeProposalState}</Text></Box>
-      )}
-      {election.memberProposalId && (
-        <Box><Text color="gray">Member State: </Text><Text>{election.memberProposalState}</Text></Box>
-      )}
-      <Box>
-        <Text color="gray">Compliant Nominees: </Text>
-        <Text color={nomineeCountColor}>{election.compliantNomineeCount}/{election.targetNomineeCount}</Text>
-      </Box>
-      {election.isInVettingPeriod && (
-        <Box><Text color="cyan">In vetting period until block {election.vettingDeadline}</Text></Box>
-      )}
-      {election.canProceedToMemberPhase && (
-        <Box><Text color="green">Ready to trigger member election!</Text></Box>
-      )}
-    </Box>
   );
 }

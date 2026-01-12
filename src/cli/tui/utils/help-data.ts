@@ -67,6 +67,15 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    title: "Election View",
+    icon: "🗳",
+    shortcuts: [
+      { key: "j/k", description: "Navigate elections" },
+      { key: "Enter/l", description: "View detailed info", note: "contenders, nominees, members" },
+      { key: "b/Esc", description: "Go back / Close details" },
+    ],
+  },
+  {
     title: "Settings View",
     icon: "⚙",
     shortcuts: [

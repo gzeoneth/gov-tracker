@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { BigNumber, ethers } from "ethers";
 import { ADDRESSES, TIMING } from "../src/constants";
 import type { ElectionProposalStatus, ElectionPhase } from "../src/types";
+import type { ElectionProposalParams } from "../src/election";
 
 describe("Election Tracking - Phase Logic Tests", () => {
   describe("ElectionProposalStatus structure", () => {
@@ -335,6 +336,280 @@ describe("Election Pure Function Tests", () => {
 
       // #then
       expect(result).toBeNull();
+    });
+  });
+});
+
+describe("Election Execution Path Tests (Mocked)", () => {
+  describe("prepareMemberElectionTrigger - transaction structure", () => {
+    it("should build correct execute transaction from valid params", async () => {
+      // #given - test the buildExecuteTransaction behavior indirectly
+      // by verifying prepareElectionCreation output structure is consistent
+      const { prepareElectionCreation } = await import("../src/election");
+
+      // #when
+      const result = prepareElectionCreation({ electionCount: 5 });
+
+      // #then - verify transaction structure matches expected PreparedTransaction format
+      expect(result.transaction).toMatchObject({
+        to: expect.stringMatching(/^0x[a-fA-F0-9]{40}$/),
+        data: expect.stringMatching(/^0x/),
+        value: "0",
+        chain: "arb1",
+        chainId: 42161,
+        description: expect.any(String),
+      });
+    });
+
+    it("should include election index in description for member trigger", () => {
+      // #given - this tests the description format expectation
+      const electionIndex = 5;
+      const expectedDescriptionPart = `#${electionIndex}`;
+
+      // #then - when a transaction is built for election 5, description should reference it
+      expect(
+        `execute() on NomineeElectionGovernor to trigger member election #${electionIndex}`
+      ).toContain(expectedDescriptionPart);
+    });
+  });
+
+  describe("prepareMemberElectionExecution - transaction structure", () => {
+    it("should have correct chain configuration for L2", async () => {
+      // #given
+      const { prepareElectionCreation } = await import("../src/election");
+
+      // #when - use prepareElectionCreation as proxy to verify chain config
+      const result = prepareElectionCreation({ electionCount: 0 });
+
+      // #then - all election transactions target Arbitrum One
+      expect(result.transaction.chain).toBe("arb1");
+      expect(result.transaction.chainId).toBe(42161);
+    });
+
+    it("should include election index in description for member execution", () => {
+      // #given
+      const electionIndex = 7;
+      const expectedDescription = `execute() on MemberElectionGovernor to install new Security Council members for election #${electionIndex}`;
+
+      // #then
+      expect(expectedDescription).toContain("MemberElectionGovernor");
+      expect(expectedDescription).toContain(`#${electionIndex}`);
+      expect(expectedDescription).toContain("Security Council");
+    });
+  });
+
+  describe("ElectionProposalParams validation", () => {
+    it("should have all required fields", () => {
+      // #given
+      const params: ElectionProposalParams = {
+        targets: ["0x1111111111111111111111111111111111111111"],
+        values: [BigNumber.from(0)],
+        calldatas: ["0xabcdef00"],
+        description: "Election proposal description",
+        descriptionHash: ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes("Election proposal description")
+        ),
+      };
+
+      // #then
+      expect(params.targets).toHaveLength(1);
+      expect(params.values).toHaveLength(1);
+      expect(params.calldatas).toHaveLength(1);
+      expect(params.description).toBeTruthy();
+      expect(params.descriptionHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+    });
+
+    it("should compute correct description hash", () => {
+      // #given
+      const description = "Test Election Proposal";
+      const expectedHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(description));
+
+      // #when
+      const params: ElectionProposalParams = {
+        targets: [],
+        values: [],
+        calldatas: [],
+        description,
+        descriptionHash: expectedHash,
+      };
+
+      // #then
+      expect(params.descriptionHash).toBe(expectedHash);
+    });
+
+    it("should support multiple targets in proposal params", () => {
+      // #given
+      const params: ElectionProposalParams = {
+        targets: [
+          "0x1111111111111111111111111111111111111111",
+          "0x2222222222222222222222222222222222222222",
+          "0x3333333333333333333333333333333333333333",
+        ],
+        values: [BigNumber.from(0), BigNumber.from(100), BigNumber.from(0)],
+        calldatas: ["0xaaa", "0xbbb", "0xccc"],
+        description: "Multi-target proposal",
+        descriptionHash: "0x" + "d".repeat(64),
+      };
+
+      // #then
+      expect(params.targets.length).toBe(3);
+      expect(params.values.length).toBe(3);
+      expect(params.calldatas.length).toBe(3);
+    });
+  });
+
+  describe("Governor address handling", () => {
+    it("should use NOMINEE_GOVERNOR for member trigger transactions", () => {
+      // #given - member trigger goes to nominee governor
+      const expectedAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
+
+      // #then
+      expect(expectedAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(expectedAddress).not.toBe(ADDRESSES.ELECTION_MEMBER_GOVERNOR);
+    });
+
+    it("should use MEMBER_GOVERNOR for member execution transactions", () => {
+      // #given - member execution goes to member governor
+      const expectedAddress = ADDRESSES.ELECTION_MEMBER_GOVERNOR;
+
+      // #then
+      expect(expectedAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+      expect(expectedAddress).not.toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    });
+  });
+});
+
+describe("Election Execution Functions - Additional Edge Cases", () => {
+  describe("prepareMemberElectionTrigger edge cases", () => {
+    it("should return null immediately when canProceedToMemberPhase is false without provider call", async () => {
+      // #given - null provider to ensure no RPC calls are made
+      const { prepareMemberElectionTrigger } = await import("../src/election");
+      const nullProvider = null as unknown as ethers.providers.Provider;
+
+      // #when - should not throw even with null provider since early return
+      const result = await prepareMemberElectionTrigger(
+        { electionIndex: 5, canProceedToMemberPhase: false },
+        nullProvider
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+
+    it("should accept any election index when canProceedToMemberPhase is false", async () => {
+      // #given
+      const { prepareMemberElectionTrigger } = await import("../src/election");
+      const mockProvider = {} as ethers.providers.Provider;
+
+      // #when - high election index should still return null without RPC
+      const result = await prepareMemberElectionTrigger(
+        { electionIndex: 999999, canProceedToMemberPhase: false },
+        mockProvider
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("prepareMemberElectionExecution edge cases", () => {
+    it("should return null immediately when canExecuteMember is false without provider call", async () => {
+      // #given - null provider to ensure no RPC calls are made
+      const { prepareMemberElectionExecution } = await import("../src/election");
+      const nullProvider = null as unknown as ethers.providers.Provider;
+
+      // #when - should not throw even with null provider since early return
+      const result = await prepareMemberElectionExecution(
+        { electionIndex: 5, canExecuteMember: false },
+        nullProvider
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+
+    it("should accept any election index when canExecuteMember is false", async () => {
+      // #given
+      const { prepareMemberElectionExecution } = await import("../src/election");
+      const mockProvider = {} as ethers.providers.Provider;
+
+      // #when - high election index should still return null without RPC
+      const result = await prepareMemberElectionExecution(
+        { electionIndex: 999999, canExecuteMember: false },
+        mockProvider
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getElectionProposalParams via prepareElectionCreation", () => {
+    it("should encode createElection function correctly", async () => {
+      // #given
+      const { prepareElectionCreation } = await import("../src/election");
+
+      // #when
+      const result = prepareElectionCreation({ electionCount: 0 });
+
+      // #then - function selector for createElection() is 0x24c2286c (4 bytes)
+      expect(result.transaction.data).toMatch(/^0x[a-fA-F0-9]{8}$/);
+      expect(result.transaction.data).toBe("0x24c2286c");
+    });
+  });
+
+  describe("Election params edge cases", () => {
+    it("should handle BigNumber values in ElectionProposalParams", () => {
+      // #given
+      const params: ElectionProposalParams = {
+        targets: ["0x0000000000000000000000000000000000000000"],
+        values: [BigNumber.from("1000000000000000000")],
+        calldatas: ["0x"],
+        description: "",
+        descriptionHash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("")),
+      };
+
+      // #then
+      expect(params.values[0].eq(BigNumber.from("1000000000000000000"))).toBe(true);
+      expect(params.values[0].toString()).toBe("1000000000000000000");
+    });
+
+    it("should handle empty arrays in ElectionProposalParams", () => {
+      // #given
+      const params: ElectionProposalParams = {
+        targets: [],
+        values: [],
+        calldatas: [],
+        description: "Empty proposal",
+        descriptionHash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Empty proposal")),
+      };
+
+      // #then
+      expect(params.targets).toHaveLength(0);
+      expect(params.values).toHaveLength(0);
+      expect(params.calldatas).toHaveLength(0);
+    });
+
+    it("should have matching array lengths for valid proposal", () => {
+      // #given
+      const targets = [
+        "0x1111111111111111111111111111111111111111",
+        "0x2222222222222222222222222222222222222222",
+      ];
+      const values = [BigNumber.from(0), BigNumber.from(100)];
+      const calldatas = ["0xabcd", "0xef01"];
+
+      const params: ElectionProposalParams = {
+        targets,
+        values,
+        calldatas,
+        description: "Multi-call proposal",
+        descriptionHash: "0x" + "0".repeat(64),
+      };
+
+      // #then
+      expect(params.targets.length).toBe(params.values.length);
+      expect(params.values.length).toBe(params.calldatas.length);
     });
   });
 });

@@ -37,6 +37,7 @@ import {
   TrackingCheckpoint,
   StageStatus,
   ProposalStageTracker,
+  DiscoveryTargets,
 } from "../src/index";
 import { ADDRESSES } from "../src/constants";
 import { StageBuilder } from "../src/stages/builder";
@@ -521,6 +522,231 @@ describe("CLI Utilities", () => {
       const output = formatCacheStatus(checkpoints);
 
       expect(output).not.toContain("Elections:");
+    });
+
+    it("should count election type checkpoint with COMPLETED phase as complete", () => {
+      // #given - an election type checkpoint with COMPLETED phase
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const electionCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 5,
+        },
+        cachedData: {
+          completedStages: [],
+          electionStatus: {
+            electionIndex: 5,
+            phase: "COMPLETED",
+            cohort: 0,
+            nomineeProposalId: null,
+            memberProposalId: null,
+            nomineeProposalState: null,
+            memberProposalState: null,
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+      checkpoints.set("election:5", electionCheckpoint);
+
+      // #when
+      const output = formatCacheStatus(checkpoints);
+
+      // #then
+      expect(output).toContain("Elections: 1");
+      expect(output).toContain("Complete: 1");
+      expect(output).toContain("Active: 0");
+    });
+
+    it("should count election type checkpoint with non-COMPLETED phase as active", () => {
+      // #given - an election type checkpoint with NOMINEE_SELECTION phase
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const electionCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 6,
+        },
+        cachedData: {
+          completedStages: [],
+          electionStatus: {
+            electionIndex: 6,
+            phase: "NOMINEE_SELECTION",
+            cohort: 1,
+            nomineeProposalId: "123",
+            memberProposalId: null,
+            nomineeProposalState: "Active",
+            memberProposalState: null,
+            compliantNomineeCount: 3,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+      checkpoints.set("election:6", electionCheckpoint);
+
+      // #when
+      const output = formatCacheStatus(checkpoints);
+
+      // #then
+      expect(output).toContain("Elections: 1");
+      expect(output).toContain("Complete: 0");
+      expect(output).toContain("Active: 1");
+    });
+
+    it("should count mixed election type checkpoints correctly", () => {
+      // #given - multiple election checkpoints with different phases
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+
+      // Completed election
+      const completedElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 4,
+        },
+        cachedData: {
+          completedStages: [],
+          electionStatus: {
+            electionIndex: 4,
+            phase: "COMPLETED",
+            cohort: 0,
+            nomineeProposalId: null,
+            memberProposalId: null,
+            nomineeProposalState: null,
+            memberProposalState: null,
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // Active election in vetting period
+      const vettingElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 5,
+        },
+        cachedData: {
+          completedStages: [],
+          electionStatus: {
+            electionIndex: 5,
+            phase: "VETTING_PERIOD",
+            cohort: 1,
+            nomineeProposalId: "456",
+            memberProposalId: null,
+            nomineeProposalState: "Succeeded",
+            memberProposalState: null,
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: 20000000,
+            isInVettingPeriod: true,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // Active election pending execution
+      const pendingElection: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 6,
+        },
+        cachedData: {
+          completedStages: [],
+          electionStatus: {
+            electionIndex: 6,
+            phase: "PENDING_EXECUTION",
+            cohort: 0,
+            nomineeProposalId: "789",
+            memberProposalId: "101112",
+            nomineeProposalState: "Executed",
+            memberProposalState: "Succeeded",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: true,
+          },
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      checkpoints.set("election:4", completedElection);
+      checkpoints.set("election:5", vettingElection);
+      checkpoints.set("election:6", pendingElection);
+
+      // #when
+      const output = formatCacheStatus(checkpoints);
+
+      // #then
+      expect(output).toContain("Elections: 3");
+      expect(output).toContain("Complete: 1");
+      expect(output).toContain("Active: 2");
+    });
+
+    it("should handle election type checkpoint without electionStatus as active", () => {
+      // #given - an election checkpoint with missing electionStatus in cachedData
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const electionCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 7,
+        },
+        cachedData: {
+          completedStages: [],
+          // electionStatus is undefined
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+      checkpoints.set("election:7", electionCheckpoint);
+
+      // #when
+      const output = formatCacheStatus(checkpoints);
+
+      // #then - should count as active since electionStatus?.phase !== "COMPLETED"
+      expect(output).toContain("Elections: 1");
+      expect(output).toContain("Complete: 0");
+      expect(output).toContain("Active: 1");
     });
   });
 
@@ -1768,6 +1994,477 @@ describe("CLI Utilities", () => {
       // #then
       expect(mockTracker.trackFromCheckpoint).toHaveBeenCalledWith(mockCheckpoint);
       expect(result.result.retracked).toBe(1);
+    });
+
+    it("should use custom targets when provided in options", async () => {
+      // #given - custom targets that disable all governors except constitutional
+      const customTargets: DiscoveryTargets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with custom targets
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - discoverAll should be called with the custom targets
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        customTargets,
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should use default targets when targets option not provided", async () => {
+      // #given - no targets option provided
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle without targets option
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers);
+
+      // #then - discoverAll should be called with default targets (all enabled)
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: true,
+          nonConstitutionalGovernor: true,
+          electionNomineeGovernor: true,
+          electionMemberGovernor: true,
+          l2ConstitutionalTimelock: true,
+          l2NonConstitutionalTimelock: true,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should return elections array in result", async () => {
+      // #given - tracker that will have elections tracked via trackAllElections
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers
+      );
+
+      // #then - result should have elections array (may be empty if trackAllElections fails)
+      expect(result.elections).toBeDefined();
+      expect(Array.isArray(result.elections)).toBe(true);
+    });
+
+    it("should enable only core governor when --track-core flag is set", async () => {
+      // #given - simulating CLI --track-core flag behavior
+      const opts = {
+        trackCore: true,
+        trackTreasury: false,
+        trackTimelocks: false,
+        trackElections: false,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with --track-core style targets
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - only constitutional governor should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: true,
+          nonConstitutionalGovernor: false,
+          l2ConstitutionalTimelock: false,
+          l2NonConstitutionalTimelock: false,
+          electionNomineeGovernor: false,
+          electionMemberGovernor: false,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should enable only treasury governor when --track-treasury flag is set", async () => {
+      // #given - simulating CLI --track-treasury flag behavior
+      const opts = {
+        trackCore: false,
+        trackTreasury: true,
+        trackTimelocks: false,
+        trackElections: false,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with --track-treasury style targets
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - only non-constitutional governor should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: false,
+          nonConstitutionalGovernor: true,
+          l2ConstitutionalTimelock: false,
+          l2NonConstitutionalTimelock: false,
+          electionNomineeGovernor: false,
+          electionMemberGovernor: false,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should enable only timelocks when --track-timelocks flag is set", async () => {
+      // #given - simulating CLI --track-timelocks flag behavior
+      const opts = {
+        trackCore: false,
+        trackTreasury: false,
+        trackTimelocks: true,
+        trackElections: false,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with --track-timelocks style targets
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - only timelocks should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: false,
+          nonConstitutionalGovernor: false,
+          l2ConstitutionalTimelock: true,
+          l2NonConstitutionalTimelock: true,
+          electionNomineeGovernor: false,
+          electionMemberGovernor: false,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should enable only election governors when --track-elections flag is set", async () => {
+      // #given - simulating CLI --track-elections flag behavior
+      const opts = {
+        trackCore: false,
+        trackTreasury: false,
+        trackTimelocks: false,
+        trackElections: true,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with --track-elections style targets
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - only election governors should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: false,
+          nonConstitutionalGovernor: false,
+          l2ConstitutionalTimelock: false,
+          l2NonConstitutionalTimelock: false,
+          electionNomineeGovernor: true,
+          electionMemberGovernor: true,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should enable multiple targets when multiple --track-* flags are set", async () => {
+      // #given - simulating CLI --track-core --track-timelocks flags
+      const opts = {
+        trackCore: true,
+        trackTreasury: false,
+        trackTimelocks: true,
+        trackElections: false,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with multiple flags
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - constitutional governor and timelocks should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: true,
+          nonConstitutionalGovernor: false,
+          l2ConstitutionalTimelock: true,
+          l2NonConstitutionalTimelock: true,
+          electionNomineeGovernor: false,
+          electionMemberGovernor: false,
+        }),
+        expect.any(Number),
+        undefined
+      );
+    });
+
+    it("should enable all targets when no --track-* flags are set", async () => {
+      // #given - simulating CLI with no --track-* flags
+      const opts = {
+        trackCore: false,
+        trackTreasury: false,
+        trackTimelocks: false,
+        trackElections: false,
+      };
+      const hasTrackFlags =
+        opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+      const customTargets: DiscoveryTargets = hasTrackFlags
+        ? {
+            constitutionalGovernor: opts.trackCore,
+            nonConstitutionalGovernor: opts.trackTreasury,
+            l2ConstitutionalTimelock: opts.trackTimelocks,
+            l2NonConstitutionalTimelock: opts.trackTimelocks,
+            electionNomineeGovernor: opts.trackElections,
+            electionMemberGovernor: opts.trackElections,
+          }
+        : {
+            constitutionalGovernor: true,
+            nonConstitutionalGovernor: true,
+            l2ConstitutionalTimelock: true,
+            l2NonConstitutionalTimelock: true,
+            electionNomineeGovernor: true,
+            electionMemberGovernor: true,
+          };
+
+      const mockTracker = {
+        discoverAll: vi.fn().mockResolvedValue({
+          proposals: [],
+          timelockOps: [],
+          watermarks: {},
+        }),
+        queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        saveElectionCheckpoint: vi.fn(),
+      };
+      const providers = createMockProviders();
+
+      // #when - running monitor cycle with default (all enabled)
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        targets: customTargets,
+      });
+
+      // #then - all targets should be enabled
+      expect(mockTracker.discoverAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          constitutionalGovernor: true,
+          nonConstitutionalGovernor: true,
+          l2ConstitutionalTimelock: true,
+          l2NonConstitutionalTimelock: true,
+          electionNomineeGovernor: true,
+          electionMemberGovernor: true,
+        }),
+        expect.any(Number),
+        undefined
+      );
     });
   });
 });

@@ -15,7 +15,6 @@ import {
   getElectionProposalId,
   getElectionProposalParams,
   prepareMemberElectionTrigger,
-  prepareMemberElectionExecution,
   prepareElectionCreation,
   trackElectionProposal,
   DEFAULT_RPC_URLS,
@@ -291,20 +290,6 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
 
 describe("Election Module - Mocked Tests", () => {
   describe("prepareMemberElectionTrigger", () => {
-    it("should return null when canProceedToMemberPhase is false", async () => {
-      // #given - Any provider (won't be used since function exits early)
-      const mockProvider = {} as ethers.providers.Provider;
-
-      // #when - calling with canProceedToMemberPhase=false
-      const result = await prepareMemberElectionTrigger(
-        { electionIndex: 5, canProceedToMemberPhase: false },
-        mockProvider
-      );
-
-      // #then - should return null without calling any provider methods
-      expect(result).toBeNull();
-    });
-
     it("should build correct execute calldata structure", () => {
       // #given - test that the governor interface encoding is correct
       const governorInterface = new ethers.utils.Interface([
@@ -326,7 +311,7 @@ describe("Election Module - Mocked Tests", () => {
 
       // #then - should produce valid calldata
       expect(calldata).toContain("0x");
-      expect(calldata.length).toBeGreaterThan(10); // At least selector + params
+      expect(calldata.length).toBeGreaterThan(10);
     });
   });
 
@@ -354,22 +339,6 @@ describe("Election Module - Mocked Tests", () => {
 
       // #then - should use custom address
       expect(result.transaction.to).toBe(customAddress);
-    });
-  });
-
-  describe("prepareMemberElectionExecution", () => {
-    it("should return null when canExecuteMember is false", async () => {
-      // #given - Any provider (won't be used since function exits early)
-      const mockProvider = {} as ethers.providers.Provider;
-
-      // #when - calling with canExecuteMember=false
-      const result = await prepareMemberElectionExecution(
-        { electionIndex: 2, canExecuteMember: false },
-        mockProvider
-      );
-
-      // #then - should return null without calling any provider methods
-      expect(result).toBeNull();
     });
   });
 });

@@ -94,6 +94,9 @@ npx @gzeoneth/gov-tracker track 0x... --no-cache
 
 # Interactive TUI (requires ink)
 npx @gzeoneth/gov-tracker ui
+
+# Track election creation tx (auto-switches to election view)
+npx @gzeoneth/gov-tracker track 0x82a0baf3...
 ```
 
 **Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
@@ -134,6 +137,8 @@ npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
 | `q` | Quit |
 
 **Note:** The TUI requires `ink` and `react` packages (installed as optional dependencies).
+
+**Auto-Switch:** When tracking a `createElection` transaction, the CLI automatically displays election-specific status (phase, cohort, nominees) instead of proposal stages.
 
 ### Elections
 

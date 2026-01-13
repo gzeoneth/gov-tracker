@@ -105,7 +105,14 @@ export type StageType =
   | "L1_TIMELOCK"
   | "RETRYABLE_EXECUTED";
 
-export type StageStatus = "NOT_STARTED" | "PENDING" | "READY" | "COMPLETED" | "FAILED" | "SKIPPED";
+export type StageStatus =
+  | "NOT_STARTED"
+  | "PENDING"
+  | "READY"
+  | "COMPLETED"
+  | "FAILED"
+  | "SKIPPED"
+  | "CANCELED";
 
 export interface StageTransaction {
   hash: string;

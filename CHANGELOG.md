@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CLI: Election Auto-Switch** - When tracking a transaction that creates an election (`createElection`), the CLI automatically displays election-specific status (phase, cohort, nominees, vetting) instead of 7 NOT_STARTED proposal stages. Works in both `track` and `run` commands.
+
 - **CLI: `--inspect` flag with `-i` shorthand** - New flag for `track` command that performs normal tracking AND decodes calldata (unlike `--inspect-only` which skips tracking)
 
 - **Security: Sanitization utilities** - New `src/utils/sanitize.ts` module:
@@ -21,6 +23,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bundled cache JSON export** - Importable via `import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json"` for bundlers
 
 - **`LookupSignatureOptions` type** - New exported type for configuring signature lookup
+
+- **Election Tracking Integration** - Elections now tracked as first-class entities in the bundled cache:
+  - `ElectionTrackingInput` type for election checkpoint identification
+  - `trackAllElections(l2Provider, l1Provider)`: Track all Security Council elections
+  - `trackIncompleteElections(l2Provider, l1Provider)`: Track only active elections
+  - `getElectionIndexForProposalId(proposalId, l2Provider, l1Provider)`: Map proposal ID to election index
+  - `tracker.saveElectionCheckpoint(electionStatus)`: Persist election status to cache
+  - `tracker.getElectionCheckpoint(electionIndex)`: Retrieve cached election status
+  - CLI `run` command now tracks elections in Phase 3 after proposals/timelocks
+  - Cache key pattern: `election:{index}`
+
+- **Full Election Lifecycle Preparation** - Complete A→B→C election transaction preparation:
+  - `prepareElectionCreation()`: Step A - Create nominee election proposal
+  - `prepareMemberElectionTrigger()`: Step B - Execute nominee election to create member proposal
+  - `prepareMemberElectionExecution()`: Step C - Execute member election to install council members
+  - `getMemberElectionProposalParams()`: Get member election proposal parameters
+  - `canExecuteMember` flag in `ElectionProposalStatus` indicates Step C readiness
+  - `ElectionCheckResult.prepared.executeMember`: Prepared transaction for Step C
+
+- **Detailed Election Tracking** - Track election participant data and votes:
+  - `ElectionContender` type: Contender address, registration block, and tx hash
+  - `ElectionNominee` type: Nominee address, votes received, exclusion status
+  - `MemberElectionNominee` type: Nominee weight received, winner status, rank
+  - `NomineeElectionDetails` type: Full nominee election aggregate (contenders, nominees, quorum)
+  - `MemberElectionDetails` type: Full member election aggregate (weighted votes, winners)
+  - `getContenders(proposalId, provider)`: Fetch ContenderAdded events
+  - `getNomineesWithVotes(proposalId, provider)`: Fetch nominees with vote counts
+  - `getExcludedNominees(proposalId, provider)`: Fetch NomineeExcluded events
+  - `getNomineeElectionDetails(electionIndex, provider)`: Aggregate nominee election data
+  - `getMemberElectionDetails(electionIndex, provider)`: Aggregate member election data with rankings
+
+- **Reorg Detection for Discovery Watermarks** - Watermarks now include block hashes for chain reorganization detection:
+  - `WatermarkHashes` type for storing block hashes alongside watermarks
+  - `verifyWatermark(key, blockNumber, hash, provider)`: Verify watermark validity
+  - `loadWatermarks()` returns `{ watermarks, hashes }` tuple
+  - `saveWatermarks(watermarks, hashes, cache)`: Save both watermarks and hashes
+  - `TrackingCheckpoint.cachedData.watermarkHashes`: Persisted hash storage
 
 ### Changed
 

@@ -17,6 +17,7 @@ import {
   blockAfterDelay,
   getCurrentBlockInfo,
   invalidateBlockInfoCache,
+  isStageStale,
 } from "../src/utils/timing";
 import { BigNumber } from "ethers";
 import { BLOCK_TIMES, GOVERNANCE_STAGE_DURATION_DAYS } from "../src/constants";
@@ -692,6 +693,249 @@ describe("Timing Utilities", () => {
       expect(result1.blockNumber).toBe(22222);
       expect(result2.blockNumber).toBe(22222);
       expect(mockProvider.getBlock).toHaveBeenCalledTimes(2); // Initial + after invalidation
+    });
+  });
+
+  describe("isStageStale", () => {
+    it("should return undefined when stage status is not READY", () => {
+      // #given - a stage with status PENDING
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("PENDING")
+        .timing({ eta: 1700000000 })
+        .build();
+      const currentTimestamp = 1700100000;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when stage status is COMPLETED", () => {
+      // #given - a completed stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("COMPLETED")
+        .timing({ eta: 1700000000 })
+        .build();
+
+      // #when
+      const result = isStageStale(stage, 1700100000);
+
+      // #then
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when eta is undefined", () => {
+      // #given - a READY stage without eta
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build();
+
+      // #when
+      const result = isStageStale(stage, 1700000000);
+
+      // #then
+      expect(result).toBeUndefined();
+    });
+
+    it("should return true when current time exceeds eta + threshold", () => {
+      // #given - a READY stage with eta well in the past
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      // L2_TIMELOCK default threshold is 7 days = 604800 seconds
+      const currentTimestamp = eta + 604800 + 1;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(true);
+    });
+
+    it("should return false when current time is within threshold", () => {
+      // #given - a READY stage with eta recently passed
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      // Just past eta but within 7-day threshold
+      const currentTimestamp = eta + 1000;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(false);
+    });
+
+    it("should return false when current time equals eta + threshold exactly", () => {
+      // #given - exactly at boundary
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      const currentTimestamp = eta + 604800; // exactly at threshold
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(false);
+    });
+
+    it("should use custom threshold when provided", () => {
+      // #given - a READY stage with custom threshold
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      const customThreshold = 3600; // 1 hour
+      const currentTimestamp = eta + 3601; // just past custom threshold
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp, customThreshold);
+
+      // #then
+      expect(result).toBe(true);
+    });
+
+    it("should not be stale with custom threshold when within bounds", () => {
+      // #given - within custom threshold
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      const customThreshold = 3600;
+      const currentTimestamp = eta + 3000; // within custom threshold
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp, customThreshold);
+
+      // #then
+      expect(result).toBe(false);
+    });
+
+    it("should use RETRYABLE_EXECUTED default threshold (14 days)", () => {
+      // #given - a retryable stage (14-day threshold)
+      const eta = 1700000000;
+      const stage = new StageBuilder("RETRYABLE_EXECUTED", "ethereum")
+        .status("READY")
+        .timing({ eta })
+        .build();
+      // 14 days = 1209600 seconds
+      const currentTimestamp = eta + 1209600 + 1;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(true);
+    });
+
+    it("should not be stale within RETRYABLE_EXECUTED threshold", () => {
+      // #given - within 14-day retryable threshold
+      const eta = 1700000000;
+      const stage = new StageBuilder("RETRYABLE_EXECUTED", "ethereum")
+        .status("READY")
+        .timing({ eta })
+        .build();
+      // Within 14 days but past 7 days (to show it uses 14-day threshold)
+      const currentTimestamp = eta + 1000000; // ~11.5 days
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(false);
+    });
+
+    it("should use default threshold for stage types without specific threshold", () => {
+      // #given - PROPOSAL_CREATED has no specific threshold, uses 7-day default
+      const eta = 1700000000;
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("READY")
+        .timing({ eta })
+        .build();
+      // 7 days + 1 second
+      const currentTimestamp = eta + 604801;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(true);
+    });
+
+    it("should use L1_TIMELOCK default threshold (7 days)", () => {
+      // #given - L1_TIMELOCK stage with 7-day threshold
+      const eta = 1700000000;
+      const stage = new StageBuilder("L1_TIMELOCK", "ethereum")
+        .status("READY")
+        .timing({ eta })
+        .build();
+      // 7 days = 604800 seconds
+      const sevenDays = 7 * 24 * 60 * 60;
+
+      // #when - just past threshold
+      const resultStale = isStageStale(stage, eta + sevenDays + 1);
+      // #when - within threshold
+      const resultNotStale = isStageStale(stage, eta + sevenDays - 1);
+
+      // #then
+      expect(resultStale).toBe(true);
+      expect(resultNotStale).toBe(false);
+    });
+
+    it("should use L2_TO_L1_MESSAGE default threshold (7 days)", () => {
+      // #given - L2_TO_L1_MESSAGE stage with 7-day threshold
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TO_L1_MESSAGE", "arb1")
+        .status("READY")
+        .timing({ eta })
+        .build();
+      // 7 days = 604800 seconds
+      const sevenDays = 7 * 24 * 60 * 60;
+
+      // #when - just past threshold
+      const resultStale = isStageStale(stage, eta + sevenDays + 1);
+      // #when - within threshold
+      const resultNotStale = isStageStale(stage, eta + sevenDays - 1);
+
+      // #then
+      expect(resultStale).toBe(true);
+      expect(resultNotStale).toBe(false);
+    });
+
+    it("should return false when currentTimestamp is before eta", () => {
+      // #given - current time is before the ETA
+      const eta = 1700000000;
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1").status("READY").timing({ eta }).build();
+      const currentTimestamp = eta - 1000;
+
+      // #when
+      const result = isStageStale(stage, currentTimestamp);
+
+      // #then
+      expect(result).toBe(false);
+    });
+
+    it("should return undefined when status is NOT_STARTED", () => {
+      // #given - a NOT_STARTED stage
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("NOT_STARTED")
+        .timing({ eta: 1700000000 })
+        .build();
+
+      // #when
+      const result = isStageStale(stage, 1800000000);
+
+      // #then
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when timing object exists but eta is missing", () => {
+      // #given - a READY stage with timing but no eta
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("READY")
+        .timing({ delaySeconds: 1000 })
+        .build();
+
+      // #when
+      const result = isStageStale(stage, 1700000000);
+
+      // #then
+      expect(result).toBeUndefined();
     });
   });
 });

@@ -64,6 +64,7 @@ describe("checkAndExecuteElection (Mocked)", () => {
     isInVettingPeriod: false,
     vettingDeadline: null,
     canProceedToMemberPhase: false,
+    canExecuteMember: false,
   };
 
   beforeEach(() => {

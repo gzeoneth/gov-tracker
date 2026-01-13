@@ -234,8 +234,9 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
-      // #then - stage should be FAILED
+      // #then - stage should be FAILED with reason "Defeated"
       expect(result.stage.status).toBe("FAILED");
+      expect(result.stage.data.reason).toBe("Defeated");
     });
 
     it("should handle election proposal with vetting period", async () => {
@@ -427,8 +428,9 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
-      // #then - stage should be FAILED
-      expect(result.stage.status).toBe("FAILED");
+      // #then - stage should be CANCELED (not FAILED)
+      expect(result.stage.status).toBe("CANCELED");
+      expect(result.stage.data.reason).toBe("Proposal was canceled by proposer");
     });
 
     it("should handle Expired proposal state", async () => {
@@ -460,8 +462,9 @@ describe("Voting Stage Tracking", () => {
         mockProvider
       );
 
-      // #then - stage should be FAILED
+      // #then - stage should be FAILED with reason "Expired"
       expect(result.stage.status).toBe("FAILED");
+      expect(result.stage.data.reason).toBe("Expired");
     });
 
     it("should handle Pending proposal state when voting has not started", async () => {

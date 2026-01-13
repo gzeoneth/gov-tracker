@@ -34,15 +34,148 @@ import {
   discoverProposals,
   discoverTimelockOps,
   discoverAll,
+  verifyWatermark,
   WATERMARKS_KEY,
   DiscoveredProposal,
   DiscoveredTimelockOp,
 } from "../src/tracker/discovery";
 
-import { ADDRESSES } from "../src/constants";
+import { ADDRESSES, buildDefaultTargets } from "../src/constants";
 import { proposalCreatedInterface, timelockInterface } from "../src/abis";
 
 dotenv.config({ quiet: true });
+
+describe("buildDefaultTargets", () => {
+  describe("default behavior (no options)", () => {
+    it("should return object with all boolean properties", () => {
+      // #given no options provided
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets();
+
+      // #then should return object with all expected keys
+      expect(typeof targets.constitutionalGovernor).toBe("boolean");
+      expect(typeof targets.nonConstitutionalGovernor).toBe("boolean");
+      expect(typeof targets.electionNomineeGovernor).toBe("boolean");
+      expect(typeof targets.electionMemberGovernor).toBe("boolean");
+      expect(typeof targets.l2ConstitutionalTimelock).toBe("boolean");
+      expect(typeof targets.l2NonConstitutionalTimelock).toBe("boolean");
+    });
+
+    it("should have all core targets enabled by default", () => {
+      // #given no options provided
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets();
+
+      // #then all targets should be enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(true);
+      expect(targets.electionMemberGovernor).toBe(true);
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("includeElections option", () => {
+    it("should disable election governors when includeElections is false", () => {
+      // #given includeElections set to false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ includeElections: false });
+
+      // #then election governors should be disabled
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+
+    it("should keep non-election targets enabled when includeElections is false", () => {
+      // #given includeElections set to false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ includeElections: false });
+
+      // #then non-election targets should remain enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("governorsOnly option", () => {
+    it("should disable timelocks when governorsOnly is true", () => {
+      // #given governorsOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true });
+
+      // #then timelocks should be disabled
+      expect(targets.l2ConstitutionalTimelock).toBe(false);
+      expect(targets.l2NonConstitutionalTimelock).toBe(false);
+    });
+
+    it("should keep all governors enabled when governorsOnly is true", () => {
+      // #given governorsOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true });
+
+      // #then all governors should remain enabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(true);
+      expect(targets.electionMemberGovernor).toBe(true);
+    });
+  });
+
+  describe("timelocksOnly option", () => {
+    it("should disable governors when timelocksOnly is true", () => {
+      // #given timelocksOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true });
+
+      // #then all governors should be disabled
+      expect(targets.constitutionalGovernor).toBe(false);
+      expect(targets.nonConstitutionalGovernor).toBe(false);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+
+    it("should keep timelocks enabled when timelocksOnly is true", () => {
+      // #given timelocksOnly set to true
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true });
+
+      // #then timelocks should remain enabled
+      expect(targets.l2ConstitutionalTimelock).toBe(true);
+      expect(targets.l2NonConstitutionalTimelock).toBe(true);
+    });
+  });
+
+  describe("combined options", () => {
+    it("should disable election governors when governorsOnly and includeElections false", () => {
+      // #given governorsOnly is true and includeElections is false
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ governorsOnly: true, includeElections: false });
+
+      // #then election governors should be disabled, core governors enabled, timelocks disabled
+      expect(targets.constitutionalGovernor).toBe(true);
+      expect(targets.nonConstitutionalGovernor).toBe(true);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+      expect(targets.l2ConstitutionalTimelock).toBe(false);
+      expect(targets.l2NonConstitutionalTimelock).toBe(false);
+    });
+
+    it("should disable all governors when timelocksOnly even if includeElections true", () => {
+      // #given timelocksOnly is true and includeElections is true (default)
+      // #when calling buildDefaultTargets
+      const targets = buildDefaultTargets({ timelocksOnly: true, includeElections: true });
+
+      // #then all governors should be disabled (timelocksOnly takes precedence)
+      expect(targets.constitutionalGovernor).toBe(false);
+      expect(targets.nonConstitutionalGovernor).toBe(false);
+      expect(targets.electionNomineeGovernor).toBe(false);
+      expect(targets.electionMemberGovernor).toBe(false);
+    });
+  });
+});
 
 describe("Governor Discovery", () => {
   describe("detectProposalType", () => {
@@ -611,17 +744,17 @@ describe("Tracker Discovery Module", () => {
   });
 
   describe("loadWatermarks", () => {
-    it("should return empty object for undefined cache", async () => {
+    it("should return empty watermarks and hashes for undefined cache", async () => {
       const result = await loadWatermarks(undefined);
-      expect(result).toEqual({});
+      expect(result).toEqual({ watermarks: {}, hashes: {} });
     });
 
-    it("should return empty object for empty cache", async () => {
+    it("should return empty watermarks and hashes for empty cache", async () => {
       const result = await loadWatermarks(cache);
-      expect(result).toEqual({});
+      expect(result).toEqual({ watermarks: {}, hashes: {} });
     });
 
-    it("should return watermarks from cached checkpoint", async () => {
+    it("should return watermarks and hashes from cached checkpoint", async () => {
       const watermarks: DiscoveryWatermarks = {
         constitutionalGovernor: 100000,
         nonConstitutionalGovernor: 200000,
@@ -635,6 +768,7 @@ describe("Tracker Discovery Module", () => {
         lastProcessedBlock: { l1: 0, l2: 200000 },
         cachedData: {
           discoveryWatermarks: watermarks,
+          watermarkHashes: { constitutionalGovernor: "0xabc" },
         },
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
@@ -642,10 +776,11 @@ describe("Tracker Discovery Module", () => {
       await cache.set(WATERMARKS_KEY, checkpoint);
 
       const result = await loadWatermarks(cache);
-      expect(result).toEqual(watermarks);
+      expect(result.watermarks).toEqual(watermarks);
+      expect(result.hashes).toEqual({ constitutionalGovernor: "0xabc" });
     });
 
-    it("should return empty object if checkpoint has no discoveryWatermarks", async () => {
+    it("should return empty objects if checkpoint has no discoveryWatermarks", async () => {
       const checkpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -659,7 +794,7 @@ describe("Tracker Discovery Module", () => {
       await cache.set(WATERMARKS_KEY, checkpoint);
 
       const result = await loadWatermarks(cache);
-      expect(result).toEqual({});
+      expect(result).toEqual({ watermarks: {}, hashes: {} });
     });
   });
 
@@ -670,22 +805,24 @@ describe("Tracker Discovery Module", () => {
       };
 
       // Should not throw
-      await saveWatermarks(watermarks, undefined);
+      await saveWatermarks(watermarks, {}, undefined);
     });
 
-    it("should save watermarks as checkpoint", async () => {
+    it("should save watermarks and hashes as checkpoint", async () => {
       const watermarks: DiscoveryWatermarks = {
         constitutionalGovernor: 100000,
         nonConstitutionalGovernor: 200000,
         l2ConstitutionalTimelock: 150000,
       };
+      const hashes = { constitutionalGovernor: "0xabc123" };
 
-      await saveWatermarks(watermarks, cache);
+      await saveWatermarks(watermarks, hashes, cache);
 
       const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
       expect(checkpoint).toBeDefined();
       expect(checkpoint!.input).toEqual({ type: "discovery", id: "watermarks" });
       expect(checkpoint!.cachedData.discoveryWatermarks).toEqual(watermarks);
+      expect(checkpoint!.cachedData.watermarkHashes).toEqual(hashes);
       // Max L2 block should be 200000
       expect(checkpoint!.lastProcessedBlock.l2).toBe(200000);
       expect(checkpoint!.version).toBe(1);
@@ -701,18 +838,124 @@ describe("Tracker Discovery Module", () => {
         l2NonConstitutionalTimelock: 250000,
       };
 
-      await saveWatermarks(watermarks, cache);
+      await saveWatermarks(watermarks, {}, cache);
 
       const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
       expect(checkpoint!.lastProcessedBlock.l2).toBe(300000);
     });
 
     it("should handle empty watermarks", async () => {
-      await saveWatermarks({}, cache);
+      await saveWatermarks({}, {}, cache);
 
       const checkpoint = await cache.get<TrackingCheckpoint>(WATERMARKS_KEY);
       expect(checkpoint).toBeDefined();
       expect(checkpoint!.lastProcessedBlock.l2).toBe(0);
+    });
+  });
+
+  describe("verifyWatermark", () => {
+    it("should return valid when no expected hash is provided", async () => {
+      // #given - no expected hash
+      const mockProvider = {
+        getBlock: async () => ({ hash: "0x" + "a".repeat(64) }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        undefined,
+        mockProvider
+      );
+
+      // #then - should return valid with new hash
+      expect(result.isValid).toBe(true);
+      expect(result.blockNumber).toBe(100000);
+      expect(result.newHash).toBe("0x" + "a".repeat(64));
+    });
+
+    it("should return valid when hash matches", async () => {
+      // #given - matching hash
+      const expectedHash = "0x" + "b".repeat(64);
+      const mockProvider = {
+        getBlock: async () => ({ hash: expectedHash }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        expectedHash,
+        mockProvider
+      );
+
+      // #then - should return valid
+      expect(result.isValid).toBe(true);
+      expect(result.blockNumber).toBe(100000);
+    });
+
+    it("should detect reorg when hash does not match", async () => {
+      // #given - mismatched hash
+      const expectedHash = "0x" + "a".repeat(64);
+      const actualHash = "0x" + "b".repeat(64);
+      const mockProvider = {
+        getBlock: async () => ({ hash: actualHash }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        expectedHash,
+        mockProvider
+      );
+
+      // #then - should detect reorg and roll back
+      expect(result.isValid).toBe(false);
+      // Rolled back by REORG_ROLLBACK_BLOCKS (1000) blocks
+      expect(result.blockNumber).toBe(100000 - 1000);
+    });
+
+    it("should not roll back past block 0", async () => {
+      // #given - mismatched hash at low block number
+      const expectedHash = "0x" + "a".repeat(64);
+      const actualHash = "0x" + "b".repeat(64);
+      const mockProvider = {
+        getBlock: async () => ({ hash: actualHash }),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark at low block number
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        500, // Less than REORG_ROLLBACK_BLOCKS
+        expectedHash,
+        mockProvider
+      );
+
+      // #then - should roll back to 0
+      expect(result.isValid).toBe(false);
+      expect(result.blockNumber).toBe(0);
+    });
+
+    it("should continue with stored value on provider error", async () => {
+      // #given - provider that throws
+      const mockProvider = {
+        getBlock: async () => {
+          throw new Error("RPC error");
+        },
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        "0x" + "a".repeat(64),
+        mockProvider
+      );
+
+      // #then - should return valid (continue with stored value)
+      expect(result.isValid).toBe(true);
+      expect(result.blockNumber).toBe(100000);
     });
   });
 
@@ -964,13 +1207,24 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
         l2NonConstitutionalTimelock: TEST_FROM_BLOCK,
       };
 
-      // #when discovering all
-      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+      // #when discovering all (with empty hashes, skipping reorg check for this test)
+      const result = await discoverAll(
+        targets,
+        TEST_TO_BLOCK,
+        l2Provider,
+        cache,
+        watermarks,
+        {},
+        {
+          skipReorgCheck: true,
+        }
+      );
 
-      // #then should return proposals, timelockOps, and updated watermarks
+      // #then should return proposals, timelockOps, updated watermarks, and hashes
       expect(result.proposals).toBeDefined();
       expect(result.timelockOps).toBeDefined();
       expect(result.watermarks).toBeDefined();
+      expect(result.hashes).toBeDefined();
       expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
       expect(result.watermarks.nonConstitutionalGovernor).toBe(TEST_TO_BLOCK);
     }, 120000);
@@ -989,8 +1243,18 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
         constitutionalGovernor: TEST_FROM_BLOCK,
       };
 
-      // #when discovering
-      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+      // #when discovering (skip reorg check for this test)
+      const result = await discoverAll(
+        targets,
+        TEST_TO_BLOCK,
+        l2Provider,
+        cache,
+        watermarks,
+        {},
+        {
+          skipReorgCheck: true,
+        }
+      );
 
       // #then if proposals found, pending checkpoints should be created
       if (result.proposals.length > 0) {
@@ -1014,8 +1278,18 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
         constitutionalGovernor: TEST_FROM_BLOCK,
       };
 
-      // #when discovering
-      const result = await discoverAll(targets, TEST_TO_BLOCK, l2Provider, cache, watermarks);
+      // #when discovering (skip reorg check for this test)
+      const result = await discoverAll(
+        targets,
+        TEST_TO_BLOCK,
+        l2Provider,
+        cache,
+        watermarks,
+        {},
+        {
+          skipReorgCheck: true,
+        }
+      );
 
       // #then only constitutional watermark should be updated
       expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
@@ -1039,13 +1313,15 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
         constitutionalGovernor: TEST_FROM_BLOCK,
       };
 
-      // #when discovering
+      // #when discovering (skip reorg check for this test)
       const result = await discoverAll(
         targets,
         TEST_FROM_BLOCK + 1_000_000,
         l2Provider,
         cache,
-        watermarks
+        watermarks,
+        {},
+        { skipReorgCheck: true }
       );
 
       // #then should succeed with updated watermarks

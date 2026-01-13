@@ -81,10 +81,13 @@ export {
   GovernorTrackingInput,
   TimelockTrackingInput,
   DiscoveryTrackingInput,
+  ElectionTrackingInput,
   TrackingInput,
   NextStageHints,
   StageTrackResult,
+  DiscoveryKey,
   DiscoveryWatermarks,
+  WatermarkHashes,
   DiscoveryTargets,
   TrackingCheckpoint,
   TrackerStats,
@@ -108,6 +111,14 @@ export {
   ElectionProposalStatus,
   ElectionStatus,
   ElectionCheckResult,
+  // Detailed election participant types
+  ElectionContender,
+  ElectionNominee,
+  MemberElectionVote,
+  MemberElectionNominee,
+  // Election detail aggregates
+  NomineeElectionDetails,
+  MemberElectionDetails,
 } from "./election";
 
 // Calldata decoding types

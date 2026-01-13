@@ -41,12 +41,10 @@ import debug from "debug";
 
 // Check for required CLI dependencies (optional in package.json)
 let Command: typeof import("commander").Command;
-let Option: typeof import("commander").Option;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const commander = require("commander");
   Command = commander.Command;
-  Option = commander.Option;
 } catch {
   console.error("Error: CLI requires 'commander' package.");
   console.error("Install it with: yarn add commander");
@@ -76,6 +74,9 @@ import {
   ChunkingConfig,
   extractAllSimulationsFromDecoded,
   getBundledCachePath,
+  buildDefaultTargets,
+  DiscoveryTargets,
+  PreparedTransaction,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
@@ -87,9 +88,10 @@ import {
   createSigner,
   requirePrivateKeyForWrite,
   executeTransaction,
+  formatDryRun,
   formatMultiplePreparedTransactions,
-  formatTrackingResult,
   formatCacheStatus,
+  displayTrackingResult,
   runWithLoop,
   runMonitorCycle,
   trackAndPrepare,
@@ -307,6 +309,10 @@ runCmd
   .option("--json-output <path>", "Write JSON state for dashboard integration")
   .option("--election", "Also check for Security Council elections each cycle")
   .option("--concurrency <n>", "Number of concurrent tracking operations", "1")
+  .option("--track-core", "Track constitutional (core) governor proposals")
+  .option("--track-treasury", "Track non-constitutional (treasury) governor proposals")
+  .option("--track-timelocks", "Track L2 timelock operations (direct schedules)")
+  .option("--track-elections", "Track election governor proposals")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
@@ -336,12 +342,33 @@ runCmd
 
     const gasSettings: GasSettings = parseGasSettings(opts);
 
+    // Build discovery targets from --track-* flags
+    // If any --track-* flag is specified, only track those; otherwise track all
+    const hasTrackFlags =
+      opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+    const discoveryTargets: DiscoveryTargets = hasTrackFlags
+      ? {
+          constitutionalGovernor: opts.trackCore,
+          nonConstitutionalGovernor: opts.trackTreasury,
+          l2ConstitutionalTimelock: opts.trackTimelocks,
+          l2NonConstitutionalTimelock: opts.trackTimelocks,
+          electionNomineeGovernor: opts.trackElections,
+          electionMemberGovernor: opts.trackElections,
+        }
+      : buildDefaultTargets();
+
     if (opts.verbose) {
       if (startBlock !== undefined) console.log(`Starting discovery from block ${startBlock}`);
       console.log(`Block lag: ${blockLag} blocks behind tip`);
       console.log(`Max age for re-tracking: ${maxAgeDays} days`);
       console.log(`Max consecutive errors before skip: ${MAX_CONSECUTIVE_ERRORS}`);
       if (concurrency > 1) console.log(`Concurrency: ${concurrency}`);
+      if (hasTrackFlags) {
+        const enabled = Object.entries(discoveryTargets)
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        console.log(`Tracking targets: ${enabled.join(", ")}`);
+      }
       console.log(
         `L2 gas: ${gasSettings.maxFeePerGas} gwei maxFee, ${gasSettings.maxPriorityFeePerGas} gwei priority`
       );
@@ -367,6 +394,7 @@ runCmd
         blockLag,
         maxAgeDays,
         concurrency,
+        targets: discoveryTargets,
         onTrack: async (r): Promise<TrackCallbackReturn> => {
           // Skip showing complete elections
           if (r.result?.isElection && r.result?.isComplete) {
@@ -376,7 +404,7 @@ runCmd
 
           if (r.result) {
             console.log(`\n[${r.key}]`);
-            console.log(formatTrackingResult(r.result));
+            await displayTrackingResult(r.result, providers);
           } else if (r.error) {
             console.log(`\n[${r.key}] ERROR: ${r.error}`);
           }
@@ -553,10 +581,11 @@ trackCmd
         );
 
         // Format tracking output
-        results.forEach((r, i) => {
+        for (let i = 0; i < results.length; i++) {
+          const r = results[i];
           const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-          console.log(formatTrackingResult(r, label));
-        });
+          await displayTrackingResult(r, providers, label);
+        }
 
         // Show all prepared transactions
         if (preparedTransactions.length > 0) {
@@ -610,13 +639,14 @@ trackCmd
             console.log(`\nRe-tracking to find next stages...`);
             const retracked = await trackAndPrepare(tracker, txHash, { prepare: true }, providers);
 
-            retracked.results.forEach((r, i) => {
+            for (let i = 0; i < retracked.results.length; i++) {
+              const r = retracked.results[i];
               const label =
                 retracked.results.length > 1
                   ? `Operation ${i + 1}/${retracked.results.length}`
                   : undefined;
-              console.log(formatTrackingResult(r, label));
-            });
+              await displayTrackingResult(r, providers, label);
+            }
 
             if (retracked.preparedTransactions.length > 0) {
               console.log(
@@ -704,13 +734,15 @@ program
 
 const electionCmd = program
   .command("election")
-  .description("Check Security Council election status");
+  .description("Check Security Council election status and track elections");
 addOptions(electionCmd, rpcOptions);
 addOptions(electionCmd, loopOptions);
+addOptions(electionCmd, executionOptions);
 electionCmd
   .addOption(verboseOption)
-  .option("--write", "Create election if ready (requires --private-key)")
-  .addOption(new Option("--private-key <key>", "Private key for execution").env("PRIVATE_KEY"))
+  .option("--list", "List all elections with their statuses")
+  .option("--track <index>", "Track a specific election by index")
+  .option("--details", "Show detailed nominee/member info (use with --track)")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
     requirePrivateKeyForWrite(opts);
@@ -718,6 +750,240 @@ electionCmd
     const providers = createProvidersFromOptions(opts);
     const signer = opts.write ? createSigner(opts.privateKey) : null;
 
+    // Import election tracking functions
+    const {
+      trackAllElections,
+      trackElectionProposal,
+      getNomineeElectionDetails,
+      getMemberElectionDetails,
+      prepareMemberElectionTrigger,
+      prepareMemberElectionExecution,
+    } = await import("../index");
+
+    // --list: Show all elections
+    if (opts.list) {
+      console.log("Fetching all elections...\n");
+      const elections = await trackAllElections(providers.l2Provider, providers.l1Provider);
+
+      if (elections.length === 0) {
+        console.log("No elections found.");
+        return;
+      }
+
+      console.log(`=== Security Council Elections (${elections.length} total) ===\n`);
+      for (const election of elections) {
+        const cohortName = election.cohort === 0 ? "First" : "Second";
+        console.log(`Election #${election.electionIndex}`);
+        console.log(`  Phase: ${election.phase}`);
+        console.log(`  Cohort: ${cohortName} (${election.cohort})`);
+        console.log(
+          `  Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`
+        );
+        if (election.nomineeProposalId) {
+          console.log(`  Nominee Proposal: ${election.nomineeProposalState}`);
+        }
+        if (election.memberProposalId) {
+          console.log(`  Member Proposal: ${election.memberProposalState}`);
+        }
+        if (election.canProceedToMemberPhase) {
+          console.log(`  → Ready to trigger member election`);
+        }
+        if (election.canExecuteMember) {
+          console.log(`  → Ready to execute member election`);
+        }
+        console.log("");
+      }
+      return;
+    }
+
+    // --track <index>: Track specific election
+    if (opts.track !== undefined) {
+      const electionIndex = parseInt(opts.track, 10);
+      console.log(`Tracking election #${electionIndex}...\n`);
+
+      const election = await trackElectionProposal(
+        electionIndex,
+        providers.l2Provider,
+        providers.l1Provider
+      );
+
+      const cohortName = election.cohort === 0 ? "First" : "Second";
+      console.log(`=== Election #${electionIndex} ===`);
+      console.log(`Phase: ${election.phase}`);
+      console.log(`Cohort: ${cohortName} (${election.cohort})`);
+      console.log(
+        `Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`
+      );
+
+      if (election.nomineeProposalId) {
+        // Note: Both governors use the same proposal ID (derived from election index)
+        // but track separate states
+        console.log(`\nElection ID: ${election.nomineeProposalId}`);
+        console.log(`\nNominee Phase:`);
+        console.log(`  State: ${election.nomineeProposalState}`);
+        if (election.vettingDeadline) {
+          console.log(`  Vetting Deadline: block ${election.vettingDeadline}`);
+        }
+        console.log(`  In Vetting Period: ${election.isInVettingPeriod ? "YES" : "NO"}`);
+      }
+
+      if (election.memberProposalId) {
+        console.log(`\nMember Phase:`);
+        console.log(`  State: ${election.memberProposalState}`);
+      }
+
+      // Show detailed info if requested
+      if (opts.details) {
+        console.log(`\n--- Detailed Information ---`);
+
+        if (election.nomineeProposalId) {
+          const nomineeDetails = await getNomineeElectionDetails(
+            electionIndex,
+            providers.l2Provider
+          );
+          if (nomineeDetails) {
+            console.log(`\nNominee Election Details:`);
+            console.log(`  Contenders: ${nomineeDetails.contenders.length}`);
+            console.log(`  Total Nominees: ${nomineeDetails.nominees.length}`);
+            console.log(`  Compliant: ${nomineeDetails.compliantNominees.length}`);
+            console.log(`  Excluded: ${nomineeDetails.excludedNominees.length}`);
+            console.log(`  Quorum Threshold: ${nomineeDetails.quorumThreshold.toString()} votes`);
+
+            if (nomineeDetails.contenders.length > 0) {
+              console.log(`\n  Registered Contenders (${nomineeDetails.contenders.length}):`);
+              for (const contender of nomineeDetails.contenders) {
+                const extra = opts.verbose ? ` (block ${contender.registeredAtBlock})` : "";
+                console.log(`    ${contender.address}${extra}`);
+              }
+            }
+
+            if (nomineeDetails.compliantNominees.length > 0) {
+              console.log(`\n  Qualified Nominees (${nomineeDetails.compliantNominees.length}):`);
+              for (const nominee of nomineeDetails.compliantNominees) {
+                const extra =
+                  opts.verbose && nominee.nominatedAtBlock
+                    ? ` (block ${nominee.nominatedAtBlock})`
+                    : "";
+                console.log(
+                  `    ${nominee.address}: ${nominee.votesReceived.toString()} votes${extra}`
+                );
+              }
+            }
+
+            if (nomineeDetails.excludedNominees.length > 0) {
+              console.log(`\n  Excluded Nominees (${nomineeDetails.excludedNominees.length}):`);
+              for (const nominee of nomineeDetails.excludedNominees) {
+                const extra =
+                  opts.verbose && nominee.excludedAtBlock
+                    ? ` (block ${nominee.excludedAtBlock})`
+                    : "";
+                console.log(`    ${nominee.address}: excluded${extra}`);
+              }
+            }
+          }
+        }
+
+        if (election.memberProposalId) {
+          const memberDetails = await getMemberElectionDetails(electionIndex, providers.l2Provider);
+          if (memberDetails) {
+            console.log(`\nMember Election Details:`);
+            console.log(`  Full Weight Deadline: block ${memberDetails.fullWeightDeadline}`);
+            console.log(`  Proposal Deadline: block ${memberDetails.proposalDeadline}`);
+
+            if (memberDetails.nominees.length > 0) {
+              console.log(`\n  Candidates by Weight (${memberDetails.nominees.length}):`);
+              for (const nominee of memberDetails.nominees) {
+                const winnerTag = nominee.isWinner ? " [WINNER]" : "";
+                console.log(
+                  `    #${nominee.rank} ${nominee.address}: ${nominee.weightReceived.toString()}${winnerTag}`
+                );
+              }
+            }
+
+            if (memberDetails.winners.length > 0) {
+              console.log(`\n  Elected Members (${memberDetails.winners.length}):`);
+              for (const winner of memberDetails.winners) {
+                console.log(`    ${winner}`);
+              }
+            }
+          }
+        }
+      }
+
+      // Determine action status: READY (can execute), PENDING (waiting), or COMPLETED
+      type ActionStatus = "READY" | "PENDING" | "COMPLETED";
+      function getActionStatus(
+        isReady: boolean,
+        isPending: boolean,
+        isCompleted: boolean
+      ): ActionStatus {
+        if (isReady) return "READY";
+        if (isCompleted) return "COMPLETED";
+        if (isPending) return "PENDING";
+        return "PENDING";
+      }
+
+      // Should we show/prepare this action based on flags?
+      function shouldShowAction(status: ActionStatus): boolean {
+        // Always show READY actions
+        if (status === "READY") return true;
+        // Otherwise, only if --prepare* flags match the status
+        if (opts.preparePending && status === "PENDING") return true;
+        if (opts.prepareCompleted && status === "COMPLETED") return true;
+        return false;
+      }
+
+      // Helper to prepare and optionally execute an election action
+      async function handleElectionAction(
+        actionName: string,
+        prepareFunc: () => Promise<PreparedTransaction | null>,
+        status: ActionStatus
+      ): Promise<void> {
+        if (!shouldShowAction(status)) return;
+
+        console.log(`\n[ACTION] ${actionName} (${status})`);
+        const prepared = await prepareFunc();
+        if (!prepared) return;
+
+        console.log(formatDryRun(prepared));
+        if (signer && opts.write && status === "READY") {
+          const execResult = await executeTransaction(prepared, signer, providers);
+          if (execResult.success) {
+            console.log(`\n[EXECUTED] ${actionName} succeeded! Tx: ${execResult.txHash}`);
+          } else {
+            console.error(`\n[ERROR] Execution failed: ${execResult.error}`);
+          }
+        }
+      }
+
+      // Trigger member election
+      const triggerStatus = getActionStatus(
+        election.canProceedToMemberPhase,
+        election.phase === "VETTING_PERIOD" && !election.canProceedToMemberPhase,
+        election.memberProposalId !== null
+      );
+      await handleElectionAction(
+        "Trigger member election",
+        () => prepareMemberElectionTrigger(election, providers.l2Provider),
+        triggerStatus
+      );
+
+      // Execute member election
+      const executeStatus = getActionStatus(
+        election.canExecuteMember,
+        election.phase === "MEMBER_ELECTION" && !election.canExecuteMember,
+        election.phase === "COMPLETED"
+      );
+      await handleElectionAction(
+        "Execute member election - install new council",
+        () => prepareMemberElectionExecution(election, providers.l2Provider),
+        executeStatus
+      );
+
+      return;
+    }
+
+    // Default: Check election status (original behavior)
     async function checkElection(): Promise<void> {
       try {
         const result = await checkAndExecuteElection(providers, signer, {

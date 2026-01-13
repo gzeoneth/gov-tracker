@@ -33,11 +33,16 @@ import {
   DiscoveredProposal,
   DiscoveredTimelockOp,
   DiscoveryWatermarks,
+  DiscoveryTargets,
   calculateExpectedEta,
   prepareRetryableStage,
   prepareL2ToL1MessageStage,
   getStageData,
   invalidateBlockInfoCache,
+  trackAllElections,
+  trackElectionProposal,
+  getElectionIndexForProposalId,
+  ElectionProposalStatus,
 } from "../../index";
 import { withScope } from "../../utils/logger";
 
@@ -454,7 +459,8 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
     timelockActive = 0,
     timelockFailed = 0;
   let electionTotal = 0,
-    electionComplete = 0;
+    electionComplete = 0,
+    electionActive = 0;
 
   for (const [, checkpoint] of checkpoints) {
     const stages = checkpoint.cachedData?.completedStages ?? [];
@@ -465,8 +471,11 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
 
     if (input.type === "governor") {
       if (isElectionGovernor(input.governorAddress)) {
+        // Legacy election governor checkpoints (discovered but not tracked)
+        // These will be replaced by proper election checkpoints
         electionTotal++;
         if (isComplete) electionComplete++;
+        else electionActive++;
       } else {
         proposalTotal++;
         if (isComplete) proposalComplete++;
@@ -478,6 +487,15 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
       if (isComplete) timelockComplete++;
       else if (isFailed) timelockFailed++;
       else timelockActive++;
+    } else if (input.type === "election") {
+      // Proper election checkpoints with phase tracking
+      electionTotal++;
+      const electionStatus = checkpoint.cachedData?.electionStatus;
+      if (electionStatus?.phase === "COMPLETED") {
+        electionComplete++;
+      } else {
+        electionActive++;
+      }
     }
   }
 
@@ -497,10 +515,74 @@ export function formatCacheStatus(checkpoints: Map<string, TrackingCheckpoint>):
     `  Active: ${timelockActive}`
   );
   if (timelockFailed > 0) lines.push(`  Failed: ${timelockFailed}`);
-  if (electionTotal > 0)
-    lines.push(``, `Elections: ${electionTotal} (${electionComplete} complete)`);
+  if (electionTotal > 0) {
+    lines.push(
+      ``,
+      `Elections: ${electionTotal}`,
+      `  Complete: ${electionComplete}`,
+      `  Active: ${electionActive}`
+    );
+  }
 
   return lines.join("\n");
+}
+
+/**
+ * Display a tracking result, automatically switching to election display for election proposals.
+ * Handles the election auto-switch logic internally, falling back to formatTrackingResult for non-elections.
+ */
+export async function displayTrackingResult(
+  result: TrackingResult,
+  providers: ProviderBundle,
+  label?: string
+): Promise<void> {
+  if (result.isElection) {
+    const proposalId = result.input.type === "governor" ? result.input.proposalId : undefined;
+    const electionIndex = proposalId
+      ? await getElectionIndexForProposalId(proposalId, providers.l2Provider, providers.l1Provider)
+      : null;
+
+    if (electionIndex !== null) {
+      const election = await trackElectionProposal(
+        electionIndex,
+        providers.l2Provider,
+        providers.l1Provider
+      );
+      const cohortName = election.cohort === 0 ? "First" : "Second";
+      console.log(`=== Election #${electionIndex} ===`);
+      console.log(`Phase: ${election.phase}`);
+      console.log(`Cohort: ${cohortName} (${election.cohort})`);
+      console.log(
+        `Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`
+      );
+
+      if (election.nomineeProposalId) {
+        console.log(`\nElection ID: ${election.nomineeProposalId}`);
+        console.log(`\nNominee Phase:`);
+        console.log(`  State: ${election.nomineeProposalState}`);
+        if (election.vettingDeadline) {
+          console.log(`  Vetting Deadline: block ${election.vettingDeadline}`);
+        }
+        console.log(`  In Vetting Period: ${election.isInVettingPeriod ? "YES" : "NO"}`);
+      }
+
+      if (election.memberProposalId) {
+        console.log(`\nMember Phase:`);
+        console.log(`  State: ${election.memberProposalState}`);
+      }
+
+      if (election.canProceedToMemberPhase) {
+        console.log(`\n→ Ready to trigger member election`);
+      }
+      if (election.canExecuteMember) {
+        console.log(`\n→ Ready to execute member election`);
+      }
+      console.log("");
+      return;
+    }
+  }
+
+  console.log(formatTrackingResult(result, label));
 }
 
 // ============================================================================
@@ -603,6 +685,8 @@ export interface MonitorRunOptions {
   maxAgeDays?: number;
   /** Number of concurrent tracking operations (default: 1 = sequential) */
   concurrency?: number;
+  /** Custom discovery targets (default: all enabled via buildDefaultTargets()) */
+  targets?: DiscoveryTargets;
 }
 
 export interface MonitorRunResult {
@@ -743,6 +827,7 @@ export async function runMonitorCycle(
   proposals: DiscoveredProposal[];
   timelockOps: DiscoveredTimelockOp[];
   watermarks: DiscoveryWatermarks;
+  elections: ElectionProposalStatus[];
 }> {
   const l2Provider = providers.l2Provider;
   const tipBlock = await l2Provider.getBlockNumber();
@@ -763,7 +848,7 @@ export async function runMonitorCycle(
       }
     : undefined;
 
-  const targets = buildDefaultTargets();
+  const targets = options.targets ?? buildDefaultTargets();
   const discoveryResult = await tracker.discoverAll(targets, currentBlock, startBlockWatermarks);
 
   const result: MonitorRunResult = { tracked: 0, prepared: 0, errors: 0, retracked: 0 };
@@ -933,11 +1018,28 @@ export async function runMonitorCycle(
   // Run timelock tasks
   await Promise.all(timelockTasks.map((task) => limit(() => track(task.key, task.fn))));
 
+  // Phase 3: Track elections
+  // This tracks all elections and stores their status in the cache
+  const elections: ElectionProposalStatus[] = [];
+  if (!isShuttingDown()) {
+    try {
+      const allElections = await trackAllElections(providers.l2Provider, providers.l1Provider);
+      for (const electionStatus of allElections) {
+        elections.push(electionStatus);
+        await tracker.saveElectionCheckpoint(electionStatus);
+      }
+    } catch (err) {
+      // Election tracking is non-critical, log and continue
+      console.error("Election tracking failed:", err);
+    }
+  }
+
   return {
     result,
     proposals: discoveryResult.proposals,
     timelockOps: discoveryResult.timelockOps,
     watermarks: discoveryResult.watermarks,
+    elections,
   };
 }
 

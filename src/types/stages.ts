@@ -188,6 +188,12 @@ interface TrackedStageBase {
   timing?: StageTiming;
   executable?: boolean;
   error?: string;
+  /**
+   * Indicates if stage is stale (READY but past expected completion time).
+   * Computed based on configurable staleness threshold.
+   * Undefined means staleness was not computed (e.g., stage not READY).
+   */
+  isStale?: boolean;
 }
 
 /**

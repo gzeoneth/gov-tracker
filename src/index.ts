@@ -201,6 +201,7 @@ export {
   estimateTimestampFromBlock,
   getL1BlockNumberFromL2,
   invalidateBlockInfoCache,
+  isStageStale,
 } from "./utils/timing";
 
 // Salt utilities
@@ -295,9 +296,35 @@ export {
   trackElectionProposal,
   getElectionProposalId,
   getElectionProposalParams,
+  getMemberElectionProposalParams,
   prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+  getElectionIndexForProposalId,
+  trackAllElections,
+  trackIncompleteElections,
+  // Detailed election tracking
+  getContenders,
+  getNomineesWithVotes,
+  getExcludedNominees,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
 } from "./election";
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
+
+// Checkpoint deduplication helpers
+export {
+  isSecurityCouncilTimelockOp,
+  linkCheckpointToChild,
+  getParentCheckpoint,
+  isChildCheckpoint,
+  filterChildCheckpoints,
+  getChildToParentMap,
+  getChildCheckpoints,
+  getDeduplicationStats,
+  findPotentialParent,
+  autoLinkOrphanedCheckpoints,
+} from "./deduplication";
+export type { DeduplicationStats } from "./deduplication";
 
 // ============================================================================
 // TIER 6: Calldata Decoding

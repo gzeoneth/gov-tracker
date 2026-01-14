@@ -19,7 +19,8 @@ import { findAndParseLogs } from "../utils/log-filters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { getCurrentBlockInfo } from "../utils/timing";
 import { addressEquals, isAddressIn } from "../utils/chain";
-import { TIMELOCK_ABI, timelockInterface } from "../abis";
+import { timelockInterface } from "../abis";
+import { multicall, buildCallInput } from "../utils/multicall";
 
 const L2_TIMELOCKS = [
   ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
@@ -88,16 +89,22 @@ export async function getTimelockOperationState(
   isDone: boolean;
   timestamp: BigNumber;
 }> {
-  const timelock = new ethers.Contract(timelockAddress, TIMELOCK_ABI, provider);
-
-  // Fast parallel state checks
-  const [isOperation, isPending, isReady, isDone, timestamp] = await Promise.all([
-    queryWithRetry(() => timelock.isOperation(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationPending(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationReady(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationDone(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.getTimestamp(operationId)) as Promise<BigNumber>,
+  // Batch all 5 state checks into a single RPC request
+  const results = await multicall(provider, [
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperation", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationPending", [
+      operationId,
+    ]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationReady", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationDone", [operationId]),
+    buildCallInput<BigNumber>(timelockAddress, timelockInterface, "getTimestamp", [operationId]),
   ]);
+
+  const isOperation = (results[0] as boolean) ?? false;
+  const isPending = (results[1] as boolean) ?? false;
+  const isReady = (results[2] as boolean) ?? false;
+  const isDone = (results[3] as boolean) ?? false;
+  const timestamp = (results[4] as BigNumber) ?? BigNumber.from(0);
 
   let state: TimelockOperationState = "UNKNOWN";
 

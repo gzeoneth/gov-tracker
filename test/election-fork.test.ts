@@ -681,6 +681,38 @@ describe("Election Lifecycle Fixture Tests", () => {
       await forks.stopAll();
       forks = null;
     });
+
+    it("should populate electionStatus when tracking election proposal by tx hash", async () => {
+      // #given Fork at block after the election creation tx with enough history for election tracking
+      forks = await startDualForksAtL2Block({
+        l1Url: rpcUrls!.l1,
+        l2Url: rpcUrls!.l2Archive,
+        l2BlockNumber: ELECTION_FIXTURES.MEMBER_ELECTION_EXECUTED.block + 1000,
+      });
+
+      // #when tracking by the creation tx hash
+      const tracker = createTracker({
+        l1Provider: forks.l1.provider,
+        l2Provider: forks.l2.provider,
+        novaProvider: forks.l2.provider,
+      });
+
+      const results = await tracker.trackByTxHash(
+        ELECTION_FIXTURES.NOMINEE_ELECTION_CREATED.txHash
+      );
+
+      // #then should have electionStatus populated
+      expect(results.length).toBeGreaterThan(0);
+
+      const result = results[0];
+      expect(result.isElection).toBe(true);
+      expect(result.electionStatus).toBeDefined();
+      expect(result.electionStatus?.electionIndex).toBe(ELECTION_FIXTURES.ELECTION_INDEX);
+      expect(result.electionStatus?.phase).toBe("COMPLETED");
+
+      await forks.stopAll();
+      forks = null;
+    });
   });
 
   describe("Election #2 - Complete Lifecycle Verification", () => {

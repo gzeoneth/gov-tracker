@@ -36,8 +36,28 @@ Pipeline: track each stage sequentially
   1. PROPOSAL_CREATED → 2. VOTING → 3. QUEUED → 4. L2_TIMELOCK
   → 5. L2_TO_L1_MESSAGE → 6. L1_TIMELOCK → 7. RETRYABLE_EXECUTED
         ↓
+[If election governor] → Track election lifecycle
+        ↓
 TrackingResult + Checkpoint saved to cache
 ```
+
+### Election Auto-Detection
+
+When `trackByTxHash` discovers a proposal on an election governor (nominee or member), it automatically tracks the full election lifecycle:
+
+```
+Proposal from Election Governor detected
+        ↓
+getElectionIndexForProposalId() → find election index
+        ↓
+trackElectionProposal() → get phase, cohort, nominees
+        ↓
+TrackingResult.electionStatus populated
+        ↓
+saveElectionCheckpoint() → cache with key `election:{index}`
+```
+
+Election phases: `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
 
 ### Stage State Machine
 

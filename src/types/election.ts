@@ -39,18 +39,6 @@ export interface ElectionNominee {
 }
 
 /**
- * Vote cast in the member election (with decreasing weight over time)
- */
-export interface MemberElectionVote {
-  voter: string;
-  nominee: string;
-  votes: BigNumber;
-  weight: BigNumber;
-  blockNumber: number;
-  txHash: string;
-}
-
-/**
  * Nominee's standing in the member election
  */
 export interface MemberElectionNominee {

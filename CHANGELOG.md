@@ -33,7 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`LookupSignatureOptions` type** - New exported type for configuring signature lookup
 
-- **Election Tracking Integration** - Elections now tracked as first-class entities in the bundled cache:
+- **Unified Election Tracking via `trackByTxHash`** - Election proposals are now automatically detected and tracked with full lifecycle status:
+  - `TrackingResult.electionStatus?: ElectionProposalStatus` - When tracking an election governor proposal, the result now includes full election lifecycle status (phase, cohort, nominees, vetting deadlines)
+  - `tracker.trackElection(electionIndex)`: New public method for direct election tracking by index
+  - Auto-detection: `trackByTxHash` automatically detects election governor proposals and populates `electionStatus`
+  - Cache integration: Election checkpoints saved with key pattern `election:{index}` for fast lookups
+
+- **Election Tracking Infrastructure** - Elections as first-class entities in the bundled cache:
   - `ElectionTrackingInput` type for election checkpoint identification
   - `trackAllElections(l2Provider, l1Provider)`: Track all Security Council elections
   - `trackIncompleteElections(l2Provider, l1Provider)`: Track only active elections
@@ -41,7 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tracker.saveElectionCheckpoint(electionStatus)`: Persist election status to cache
   - `tracker.getElectionCheckpoint(electionIndex)`: Retrieve cached election status
   - CLI `run` command now tracks elections in Phase 3 after proposals/timelocks
-  - Cache key pattern: `election:{index}`
 
 - **Full Election Lifecycle Preparation** - Complete A→B→C election transaction preparation:
   - `prepareElectionCreation()`: Step A - Create nominee election proposal

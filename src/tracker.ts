@@ -40,6 +40,7 @@ import {
   trackElectionProposal,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
+  getElectionIndexForProposalId,
 } from "./election";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
@@ -222,17 +223,18 @@ export class ProposalStageTracker {
     if (!this.cache) return;
 
     const key = `election:${electionStatus.electionIndex}`;
-    const checkpoint: TrackingCheckpoint = {
+    const now = Date.now();
+
+    await this.cache.set(key, {
       version: 1,
-      createdAt: Date.now(),
+      createdAt: now,
       input: { type: "election", electionIndex: electionStatus.electionIndex },
       lastProcessedStage: null,
       lastProcessedBlock: { l1: 0, l2: 0 },
       cachedData: { electionStatus },
-      metadata: { errorCount: 0, lastTrackedAt: Date.now() },
-    };
+      metadata: { errorCount: 0, lastTrackedAt: now },
+    } satisfies TrackingCheckpoint);
 
-    await this.cache.set(key, checkpoint);
     logTracker("saved election checkpoint: %s (phase: %s)", key, electionStatus.phase);
   }
 
@@ -569,6 +571,15 @@ export class ProposalStageTracker {
     // Build result from state
     const result = this.buildResultFromState(finalState);
 
+    // Track election status if this is an election governor proposal
+    if (result.isElection) {
+      const electionStatus = await this.trackElectionStatus(proposalId);
+      if (electionStatus) {
+        result.electionStatus = electionStatus;
+        await this.saveElectionCheckpoint(electionStatus);
+      }
+    }
+
     // Save checkpoint to cache
     if (this.cache && cacheKey) {
       result.checkpoint.metadata = { errorCount: 0, lastTrackedAt: Date.now() };
@@ -771,6 +782,60 @@ export class ProposalStageTracker {
       l2: this.l2Provider,
       nova: this.novaProvider,
     };
+  }
+
+  // Election Tracking
+
+  /**
+   * Track election status for a given proposal ID.
+   *
+   * Searches through elections to find the one containing this proposal,
+   * then tracks the full election lifecycle.
+   */
+  private async trackElectionStatus(proposalId: string): Promise<ElectionProposalStatus | null> {
+    logTracker("trackElectionStatus for proposal %s", proposalId);
+
+    try {
+      const electionIndex = await getElectionIndexForProposalId(
+        proposalId,
+        this.l2Provider,
+        this.l1Provider
+      );
+
+      if (electionIndex === null) {
+        logTracker("no election found for proposal %s", proposalId);
+        return null;
+      }
+
+      logTracker("found election index %d for proposal %s", electionIndex, proposalId);
+      return trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider);
+    } catch (error) {
+      // Election tracking is non-critical - log and return null
+      // The proposal stages are already tracked successfully
+      logTracker("election tracking failed for proposal %s: %O", proposalId, error);
+      return null;
+    }
+  }
+
+  /**
+   * Track an election by its index.
+   *
+   * This method provides direct election tracking when you have the election index.
+   * For tracking via tx hash, use trackByTxHash() which auto-detects elections.
+   *
+   * @param electionIndex - Election index (0-based)
+   * @returns Election status
+   */
+  async trackElection(electionIndex: number): Promise<ElectionProposalStatus> {
+    logTracker("trackElection for index %d", electionIndex);
+
+    const status = await trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider);
+
+    if (this.cache) {
+      await this.saveElectionCheckpoint(status);
+    }
+
+    return status;
   }
 
   // Election Support

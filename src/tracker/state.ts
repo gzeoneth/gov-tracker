@@ -355,16 +355,3 @@ async function emitProgress(ctx: TrackingState, s: TrackedStage): Promise<void> 
     isComplete: isComplete(ctx),
   });
 }
-
-export function toResult(ctx: TrackingState) {
-  return {
-    input: ctx.input,
-    stages: ctx.stages,
-    checkpoint: createCheckpoint(ctx),
-    isComplete: isComplete(ctx),
-    proposalType: getProposalType(ctx),
-    proposalData: getProposalData(ctx),
-    currentState: getProposalState(ctx),
-    isElection: getIsElection(ctx),
-  };
-}

@@ -114,7 +114,6 @@ export {
   // Detailed election participant types
   ElectionContender,
   ElectionNominee,
-  MemberElectionVote,
   MemberElectionNominee,
   // Election detail aggregates
   NomineeElectionDetails,

@@ -34,7 +34,9 @@ import {
   MEMBER_ELECTION_GOVERNOR_ABI,
   proposalCreatedInterface,
   governorInterface,
+  nomineeElectionGovernorInterface,
 } from "./abis";
+import { multicall, buildCallInput } from "./utils/multicall";
 
 /**
  * Prepared election creation transaction
@@ -990,15 +992,35 @@ export async function getNomineesWithVotes(
   const governor = getNomineeGovernor(nomineeGovernorAddress, provider);
   const nomineeAddresses = await queryWithRetry<string[]>(() => governor.nominees(proposalId));
 
-  const nominees = await Promise.all(
-    nomineeAddresses.map(async (addr) => {
-      const [votesReceived, isExcluded] = await Promise.all([
-        queryWithRetry<BigNumber>(() => governor.votesReceived(proposalId, addr)),
-        queryWithRetry<boolean>(() => governor.isExcluded(proposalId, addr)),
-      ]);
-      return { address: addr, votesReceived, isExcluded };
-    })
-  );
+  if (nomineeAddresses.length === 0) {
+    return [];
+  }
+
+  // Batch all votesReceived and isExcluded calls into a single RPC request
+  // Order: [votes0, excluded0, votes1, excluded1, ...]
+  const calls = nomineeAddresses.flatMap((addr) => [
+    buildCallInput<BigNumber>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "votesReceived",
+      [proposalId, addr]
+    ),
+    buildCallInput<boolean>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "isExcluded",
+      [proposalId, addr]
+    ),
+  ]);
+
+  const results = await multicall(provider, calls);
+
+  // Reconstruct nominees from interleaved results
+  const nominees: ElectionNominee[] = nomineeAddresses.map((addr, i) => ({
+    address: addr,
+    votesReceived: (results[i * 2] as BigNumber) ?? BigNumber.from(0),
+    isExcluded: (results[i * 2 + 1] as boolean) ?? false,
+  }));
 
   log("Found %d nominees for proposal %s", nominees.length, proposalId);
   return nominees;

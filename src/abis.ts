@@ -193,3 +193,9 @@ export const upgradeExecutorInterface = new ethers.utils.Interface(UPGRADE_EXECU
 export const memberSyncActionInterface = new ethers.utils.Interface(MEMBER_SYNC_ACTION_ABI);
 export const proposalCreatedInterface = new ethers.utils.Interface([PROPOSAL_CREATED_EVENT]);
 export const proposalQueuedInterface = new ethers.utils.Interface([PROPOSAL_QUEUED_EVENT]);
+export const nomineeElectionGovernorInterface = new ethers.utils.Interface(
+  NOMINEE_ELECTION_GOVERNOR_ABI
+);
+export const memberElectionGovernorInterface = new ethers.utils.Interface(
+  MEMBER_ELECTION_GOVERNOR_ABI
+);

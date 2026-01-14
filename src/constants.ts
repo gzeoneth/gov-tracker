@@ -136,7 +136,7 @@ export const CHAIN_IDS = {
  * configure dedicated RPC URLs via environment variables.
  */
 export const DEFAULT_RPC_URLS = {
-  ETHEREUM: "https://eth.llamarpc.com",
+  ETHEREUM: "https://eth.drpc.org",
   ARB_ONE: "https://arb1.arbitrum.io/rpc",
   NOVA: "https://nova.arbitrum.io/rpc",
 } as const;

@@ -392,33 +392,37 @@ export async function trackElectionProposal(
     };
   }
 
-  // Get nominee proposal state
-  const nomineeState = await queryWithRetry<number>(() => nomineeGovernor.state(nomineeProposalId));
+  // Batch nominee governor calls: state, proposalVettingDeadline, compliantNomineeCount
+  const [nomineeResults, currentL1Block] = await Promise.all([
+    multicall(l2Provider, [
+      buildCallInput<number>(nomineeGovernorAddress, nomineeElectionGovernorInterface, "state", [
+        nomineeProposalId,
+      ]),
+      buildCallInput<BigNumber>(
+        nomineeGovernorAddress,
+        nomineeElectionGovernorInterface,
+        "proposalVettingDeadline",
+        [nomineeProposalId]
+      ),
+      buildCallInput<BigNumber>(
+        nomineeGovernorAddress,
+        nomineeElectionGovernorInterface,
+        "compliantNomineeCount",
+        [nomineeProposalId]
+      ),
+    ]),
+    getL1BlockNumberFromL2(l2Provider),
+  ]);
+
+  const nomineeState = nomineeResults[0] as number;
   const nomineeProposalState = stateToString(nomineeState);
-
-  // Get vetting deadline
-  const vettingDeadlineBN = await queryWithRetry<BigNumber>(() =>
-    nomineeGovernor.proposalVettingDeadline(nomineeProposalId)
-  );
+  const vettingDeadlineBN = (nomineeResults[1] as BigNumber) ?? BigNumber.from(0);
   const vettingDeadline = vettingDeadlineBN.toNumber();
-
-  // Get current L1 block number
-  const currentL1Block = await getL1BlockNumberFromL2(l2Provider);
+  const compliantNomineeCount = ((nomineeResults[2] as BigNumber) ?? BigNumber.from(0)).toNumber();
 
   // Determine if in vetting period
   const isInVettingPeriod =
     nomineeProposalState === "Succeeded" && currentL1Block.lte(vettingDeadlineBN);
-
-  // Get compliant nominee count
-  let compliantNomineeCount = 0;
-  try {
-    const count = await queryWithRetry<BigNumber>(() =>
-      nomineeGovernor.compliantNomineeCount(nomineeProposalId)
-    );
-    compliantNomineeCount = count.toNumber();
-  } catch {
-    // May fail if no nominees yet
-  }
 
   // Check for member proposal using computed proposal ID (same scheme as nominee governor)
   let memberProposalId: string | null = null;

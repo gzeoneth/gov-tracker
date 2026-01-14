@@ -72,7 +72,7 @@ async function hasTimelock(
 ): Promise<boolean> {
   const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
   try {
-    await governor.timelock();
+    await queryWithRetry(() => governor.timelock());
     return true;
   } catch {
     return false;
@@ -249,7 +249,9 @@ export async function getVotingData(
   // Check for extended deadline (late quorum)
   let extendedDeadline: BigNumber | undefined;
   try {
-    const extended = await governor.proposalExtendedDeadline(proposalIdBN);
+    const extended = await queryWithRetry<BigNumber>(() =>
+      governor.proposalExtendedDeadline(proposalIdBN)
+    );
     if (extended.gt(0)) {
       extendedDeadline = extended;
     }
@@ -262,7 +264,9 @@ export async function getVotingData(
   let vettingDeadline: BigNumber | undefined;
   let isVettingPeriod = false;
   try {
-    const vetting = await governor.proposalVettingDeadline(proposalIdBN);
+    const vetting = await queryWithRetry<BigNumber>(() =>
+      governor.proposalVettingDeadline(proposalIdBN)
+    );
     if (vetting.gt(0)) {
       vettingDeadline = vetting;
       // Use L1 block number for comparison since vetting deadline is L1-based

@@ -237,7 +237,8 @@ export async function getFirstL2BlockForL1Block(
     if (l1Block <= 0) break;
 
     try {
-      const range = await nodeInterface.l2BlockRangeForL1(l1Block);
+      // queryWithRetry handles rate limits; reverts (no L2 block for L1) won't be retried
+      const range = await queryWithRetry(() => nodeInterface.l2BlockRangeForL1(l1Block));
       // For exact match (offset=0), return firstBlock
       // For nearby blocks, return lastBlock+1 as the first block >= targetL1Block
       const result = offset === 0 ? range.firstBlock.toNumber() : range.lastBlock.toNumber() + 1;

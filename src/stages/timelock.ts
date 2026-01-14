@@ -394,7 +394,8 @@ async function trackTimelock(
     }
 
     if (options.cachedExecutionTxHash) {
-      const receipt = await provider.getTransactionReceipt(options.cachedExecutionTxHash);
+      const cachedTxHash = options.cachedExecutionTxHash;
+      const receipt = await queryWithRetry(() => provider.getTransactionReceipt(cachedTxHash));
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
         const chainId = chainToChainId(config.chain) ?? 0;

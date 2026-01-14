@@ -248,7 +248,7 @@ export async function trackL2ToL1Message(
   const childReceipt = new ChildTransactionReceipt(receipt);
 
   // Get L2→L1 messages from the receipt
-  const messages = await childReceipt.getChildToParentMessages(l1Provider);
+  const messages = await queryWithRetry(() => childReceipt.getChildToParentMessages(l1Provider));
 
   if (messages.length === 0) {
     // No L2→L1 messages - this path doesn't go through L1
@@ -573,7 +573,7 @@ export async function getL2ToL1Messages(
   }
 
   const childReceipt = new ChildTransactionReceipt(receipt);
-  return childReceipt.getChildToParentMessages(l1Provider);
+  return queryWithRetry(() => childReceipt.getChildToParentMessages(l1Provider));
 }
 
 /**

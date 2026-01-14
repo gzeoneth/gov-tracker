@@ -16,6 +16,7 @@ import {
   findProposalQueuedEvent,
   getTimelockAddress,
 } from "../discovery/governor-discovery";
+import { queryWithRetry } from "../utils/rpc-utils";
 import {
   findCallScheduledByTxHash,
   getL2TimelockForGovernor,
@@ -143,7 +144,7 @@ export async function prepareGovernorQueue(
   logExecution("Preparing governor queue for proposal %s", proposalId);
 
   const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
-  const state = await governor.state(proposalId);
+  const state = await queryWithRetry<number>(() => governor.state(proposalId));
   const stateName = PROPOSAL_STATE_MAP[state] ?? `Unknown(${state})`;
   logExecution("Proposal state: %s", stateName);
 

@@ -103,7 +103,20 @@ Event arg name `values` collides with ethers.js internals. Access by index inste
 - Prefer pure functions over stateful classes
 - Use `readonly` and `const` for immutability
 - Prefer returning safe defaults over throwing errors
-- Use `queryWithRetry` for RPC calls
+
+### RPC Calls
+**All external RPC calls must use `queryWithRetry`** from `src/utils/rpc-utils.ts`:
+```typescript
+import { queryWithRetry } from "../utils/rpc-utils";
+
+// Direct provider calls
+const block = await queryWithRetry(() => provider.getBlock("latest"));
+
+// Contract calls
+const state = await queryWithRetry<number>(() => governor.state(proposalId));
+```
+
+`queryWithRetry` handles transient failures (rate limits, timeouts, network errors) with exponential backoff, but does NOT retry permanent failures (reverts, non-existent functions). This makes it safe to use for capability checks.
 
 ### Logging
 ```typescript

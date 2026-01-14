@@ -88,10 +88,10 @@ async function getLogQueryBlockRange(
   offsetFromSnapshot: number = 1000,
   fallbackRange: number = 100000
 ): Promise<{ fromBlock: number; toBlock: number }> {
-  const toBlock = await provider.getBlockNumber();
+  const toBlock = await queryWithRetry(() => provider.getBlockNumber());
   let fromBlock: number;
   try {
-    const snapshot = await governor.proposalSnapshot(proposalId);
+    const snapshot = await queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId));
     fromBlock = Math.max(0, snapshot.toNumber() - offsetFromSnapshot);
   } catch {
     fromBlock = Math.max(0, toBlock - fallbackRange);
@@ -233,7 +233,7 @@ export async function hasVettingPeriod(
   const governor = getNomineeGovernor(governorAddress, provider);
 
   try {
-    await governor.nomineeVetter();
+    await queryWithRetry(() => governor.nomineeVetter());
     return true;
   } catch {
     return false;
@@ -425,8 +425,10 @@ export async function trackElectionProposal(
   const computedMemberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
 
   try {
-    // Don't use queryWithRetry - we expect this to revert for non-existent proposals
-    const memberState: number = await memberGovernor.state(computedMemberProposalId);
+    // queryWithRetry handles rate limits but won't retry on revert (non-existent proposals)
+    const memberState: number = await queryWithRetry(() =>
+      memberGovernor.state(computedMemberProposalId)
+    );
     // If we get here without reverting, the proposal exists
     memberProposalId = computedMemberProposalId;
     memberProposalState = stateToString(memberState);
@@ -522,7 +524,7 @@ export async function getElectionProposalId(
 
   // Verify the proposal exists by checking state() - reverts for non-existent proposals
   try {
-    await governor.state(proposalId);
+    await queryWithRetry(() => governor.state(proposalId));
     return proposalId;
   } catch {
     // Proposal doesn't exist (state() reverts for unknown proposal IDs)
@@ -564,14 +566,14 @@ async function findProposalCreatedParams(
 
   let startBlock: number;
   try {
-    const snapshot = await governor.proposalSnapshot(proposalId);
+    const snapshot = await queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId));
     startBlock = Math.max(0, snapshot.toNumber() - 1000);
   } catch {
-    const currentBlock = await provider.getBlockNumber();
+    const currentBlock = await queryWithRetry(() => provider.getBlockNumber());
     startBlock = Math.max(0, currentBlock - 10000);
   }
 
-  const currentBlock = await provider.getBlockNumber();
+  const currentBlock = await queryWithRetry(() => provider.getBlockNumber());
 
   const logs = await queryWithRetry(() =>
     provider.getLogs({

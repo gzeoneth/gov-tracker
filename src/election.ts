@@ -35,6 +35,7 @@ import {
   proposalCreatedInterface,
   governorInterface,
   nomineeElectionGovernorInterface,
+  memberElectionGovernorInterface,
 } from "./abis";
 import { multicall, buildCallInput } from "./utils/multicall";
 
@@ -1170,12 +1171,34 @@ export async function getMemberElectionDetails(
     return null;
   }
 
-  const [winners, deadline, fullWeightDeadline, nomineeProposalId] = await Promise.all([
-    queryWithRetry<string[]>(() => memberGovernor.topNominees(memberProposalId)).catch(() => []),
-    queryWithRetry<BigNumber>(() => memberGovernor.proposalDeadline(memberProposalId)),
-    queryWithRetry<BigNumber>(() => memberGovernor.fullWeightVotingDeadline(memberProposalId)),
+  // Batch member governor calls: topNominees, proposalDeadline, fullWeightVotingDeadline
+  const [memberResults, nomineeProposalId] = await Promise.all([
+    multicall(provider, [
+      buildCallInput<string[]>(
+        memberGovernorAddress,
+        memberElectionGovernorInterface,
+        "topNominees",
+        [memberProposalId]
+      ),
+      buildCallInput<BigNumber>(
+        memberGovernorAddress,
+        memberElectionGovernorInterface,
+        "proposalDeadline",
+        [memberProposalId]
+      ),
+      buildCallInput<BigNumber>(
+        memberGovernorAddress,
+        memberElectionGovernorInterface,
+        "fullWeightVotingDeadline",
+        [memberProposalId]
+      ),
+    ]),
     getElectionProposalId(electionIndex, provider, nomineeGovernorAddress),
   ]);
+
+  const winners = (memberResults[0] as string[]) ?? [];
+  const deadline = (memberResults[1] as BigNumber) ?? BigNumber.from(0);
+  const fullWeightDeadline = (memberResults[2] as BigNumber) ?? BigNumber.from(0);
 
   const allNominees = nomineeProposalId
     ? await queryWithRetry<string[]>(() => nomineeGovernor.compliantNominees(nomineeProposalId))
@@ -1183,14 +1206,23 @@ export async function getMemberElectionDetails(
 
   const winnersSet = new Set(winners.map((w) => w.toLowerCase()));
 
-  const nomineeWeights = await Promise.all(
-    allNominees.map(async (addr) => ({
+  // Batch all weightReceived calls into a single RPC request
+  let nomineeWeights: { addr: string; weight: BigNumber }[] = [];
+  if (allNominees.length > 0) {
+    const weightCalls = allNominees.map((addr) =>
+      buildCallInput<BigNumber>(
+        memberGovernorAddress,
+        memberElectionGovernorInterface,
+        "weightReceived",
+        [memberProposalId, addr]
+      )
+    );
+    const weights = await multicall(provider, weightCalls);
+    nomineeWeights = allNominees.map((addr, i) => ({
       addr,
-      weight: await queryWithRetry<BigNumber>(() =>
-        memberGovernor.weightReceived(memberProposalId, addr)
-      ),
-    }))
-  );
+      weight: (weights[i] as BigNumber) ?? BigNumber.from(0),
+    }));
+  }
 
   const nomineeDetails: MemberElectionNominee[] = nomineeWeights
     .sort((a, b) => (b.weight.gt(a.weight) ? 1 : -1))

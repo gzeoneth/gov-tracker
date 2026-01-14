@@ -93,14 +93,17 @@ interface TrackingCheckpoint {
 5. **Bounded L1→L2 conversion**: Narrow binary search range for block conversion
 6. **Concurrent tracking**: Built-in concurrency limiter for bounded parallel operations
 7. **L2→L1 sendProps caching**: Cache SDK's sendRootSize/sendRootHash from tracking phase to skip redundant ~3-4s `getSendProps()` call during preparation
+8. **Automatic retry with backoff**: All RPC calls wrapped with `queryWithRetry` for rate limit handling
 
 ```typescript
 chunkingConfig: {
-  l1ChunkSize: 10_000,    // Blocks per chunk
+  l1ChunkSize: 10_000,    // Blocks per chunk (flows through entire pipeline)
   l2ChunkSize: 10_000_000,
   delayBetweenChunks: 100, // ms
 }
 ```
+
+User-provided `chunkingConfig` is respected throughout the entire tracking pipeline, from discovery functions through stage tracking.
 
 ---
 
@@ -118,7 +121,8 @@ L2 (Arb1/Nova): ArbRetryableTx.redeem()
 
 ## Error Handling
 
-- **Retry**: Exponential backoff (1s → 2s → 4s)
+- **Retry**: All RPC calls use `queryWithRetry` with exponential backoff (1s → 2s → 4s → 8s, max 30s)
+- **Rate limit handling**: Automatic retry on HTTP 429 and transient network errors
 - **Error tracking**: `errorCount` in checkpoint metadata
 - **Graceful degradation**: Missing data = NOT_STARTED (not FAILED)
 

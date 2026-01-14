@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Interactive TUI** - New `ui` command launches a terminal interface for browsing proposals:
+  - Browse 105+ bundled proposals with filter tabs (All, Active, Complete, Timelocks)
+  - View proposal details, voting statistics, and stage progress
+  - Inspect decoded calldata with nested parameter display
+  - View simulation data for Tenderly/Foundry fork testing
+  - Monitor Security Council election status with detailed nominee/member info
+  - Vim-style navigation (j/k, Ctrl+u/d), clipboard support, settings persistence
+  - Debug logging to file with configurable namespaces
+
 - **CLI: Election Auto-Switch** - When tracking a transaction that creates an election (`createElection`), the CLI automatically displays election-specific status (phase, cohort, nominees, vetting) instead of 7 NOT_STARTED proposal stages. Works in both `track` and `run` commands.
 
 - **CLI: `--inspect` flag with `-i` shorthand** - New flag for `track` command that performs normal tracking AND decodes calldata (unlike `--inspect-only` which skips tracking)
@@ -80,6 +89,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI: Default command is `run`** - `npx gov-tracker` now runs discovery
 
 - **CLI: Renamed scripts** - `monitor:*` -> `cli:*`
+
+### Fixed
+
+- **ChunkingConfig now respected throughout pipeline** - User-provided `chunkingConfig` in `TrackerOptions` was stored but ignored; functions used hardcoded `CHUNK_SIZES` constants. Now `l1ChunkSize`/`l2ChunkSize` properly flow through all discovery and stage tracking functions.
+
+- **All RPC calls wrapped with queryWithRetry** - Ensures consistent rate limit handling and transient failure recovery across all external RPC calls.
 
 ### Security
 

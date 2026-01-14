@@ -23,7 +23,7 @@ import {
 } from "@arbitrum/sdk";
 import { ChildToParentMessageReaderNitro } from "@arbitrum/sdk/dist/lib/message/ChildToParentMessageNitro";
 import { TrackedStage, TypedTrackedStage, PrepareResult, getStageData } from "../types";
-import { ADDRESSES, BLOCK_TIMES, TIMING } from "../constants";
+import { ADDRESSES, BLOCK_TIMES, CHUNK_SIZES, TIMING } from "../constants";
 import { loggers } from "../utils/logger";
 
 const logStage = loggers.stage.l2ToL1;
@@ -118,8 +118,8 @@ export async function findOutboxExecutionTransaction(
       toBlock,
     },
     {
-      chunkSize: options.chunkSize ?? 1000,
-      delayBetweenChunks: 100,
+      chunkSize: options.chunkSize ?? CHUNK_SIZES.L1,
+      delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
       earlyExitCheck: (chunkLogs: ethers.providers.Log[]) => {
         for (const log of chunkLogs) {
           try {

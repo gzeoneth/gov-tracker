@@ -20,10 +20,11 @@ import {
   TimelockState,
   TrackedStage,
 } from "../types";
-import { TIMELOCK_ABI } from "../abis";
+import { timelockInterface } from "../abis";
 import { ADDRESSES } from "../constants";
 import { isAddressIn } from "../utils/chain";
 import { queryWithRetry } from "../utils/rpc-utils";
+import { multicall, buildCallInput } from "../utils/multicall";
 import { StageBuilder } from "./builder";
 import { findCallExecutedEvent } from "../discovery/timelock-discovery";
 
@@ -392,11 +393,16 @@ export async function checkOperationReady(
   operationId: string,
   provider: ethers.providers.Provider
 ): Promise<PrepareResult | null> {
-  const timelock = new ethers.Contract(timelockAddress, TIMELOCK_ABI, provider);
-  const isReady = await queryWithRetry(() => timelock.isOperationReady(operationId));
-  if (isReady) return null; // Ready - no error
+  // Batch both state checks into a single RPC request
+  const results = await multicall(provider, [
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationReady", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationDone", [operationId]),
+  ]);
 
-  const isDone = await queryWithRetry(() => timelock.isOperationDone(operationId));
+  const isReady = results[0] as boolean;
+  const isDone = results[1] as boolean;
+
+  if (isReady) return null; // Ready - no error
   if (isDone) {
     return failPrepare("Operation already executed");
   }

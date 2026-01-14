@@ -132,13 +132,23 @@ export async function checkElectionStatus(
 ): Promise<ElectionStatus> {
   log("checkElectionStatus for %s", nomineeGovernorAddress);
 
-  const governor = getNomineeGovernor(nomineeGovernorAddress, l2Provider);
+  // Get L1 block number and election count in parallel (both are L2 calls)
+  const [l1BlockNumber, electionCountResult] = await Promise.all([
+    getL1BlockNumberFromL2(l2Provider),
+    multicall(l2Provider, [
+      buildCallInput<BigNumber>(
+        nomineeGovernorAddress,
+        nomineeElectionGovernorInterface,
+        "electionCount",
+        []
+      ),
+    ]),
+  ]);
 
-  // Get L1 block number as seen from L2
-  const l1BlockNumber = await getL1BlockNumberFromL2(l2Provider);
+  const electionCount = electionCountResult[0] as BigNumber;
   log("L1 block number from L2: %s", l1BlockNumber.toString());
 
-  // Get L1 timestamp for that block
+  // Get L1 timestamp for that block (L1 call - can't batch with L2)
   const l1Block = await queryWithRetry(() => l1Provider.getBlock(l1BlockNumber.toNumber()));
   if (!l1Block) {
     throw new Error(
@@ -149,12 +159,24 @@ export async function checkElectionStatus(
   const currentL1Timestamp = l1Block.timestamp;
   log("L1 timestamp: %d", currentL1Timestamp);
 
-  // Get election count, cohort, and next election timestamp
-  const electionCount = await queryWithRetry<BigNumber>(() => governor.electionCount());
-  const [nextElectionTimestamp, cohort] = await Promise.all([
-    queryWithRetry<BigNumber>(() => governor.electionToTimestamp(electionCount)),
-    queryWithRetry<number>(() => governor.electionIndexToCohort(electionCount)),
+  // Batch electionToTimestamp and electionIndexToCohort into single RPC
+  const electionResults = await multicall(l2Provider, [
+    buildCallInput<BigNumber>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "electionToTimestamp",
+      [electionCount]
+    ),
+    buildCallInput<number>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "electionIndexToCohort",
+      [electionCount]
+    ),
   ]);
+
+  const nextElectionTimestamp = electionResults[0] as BigNumber;
+  const cohort = electionResults[1] as number;
   log(
     "electionCount=%s nextTimestamp=%s cohort=%d",
     electionCount.toString(),

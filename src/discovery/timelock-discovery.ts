@@ -43,6 +43,8 @@ export function isL1Timelock(address: string): boolean {
 /**
  * Get search defaults for timelock event searches.
  * Encapsulates chain-appropriate chunk sizes, default blocks, and direction logic.
+ *
+ * @param hint.chunkSize - Override chunk size (uses chain-appropriate default if not specified)
  */
 async function getSearchDefaults(
   timelockAddress: string,
@@ -55,7 +57,8 @@ async function getSearchDefaults(
   reverseDirection: boolean;
 }> {
   const isL1 = isL1Timelock(timelockAddress);
-  const chunkSize = isL1 ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
+  const defaultChunkSize = isL1 ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
+  const chunkSize = hint?.chunkSize ?? defaultChunkSize;
   const defaultStartBlock = isL1 ? GOVERNANCE_START_BLOCKS.L1 : GOVERNANCE_START_BLOCKS.L2;
   const toBlock = hint?.endBlock ?? (await getCurrentBlockInfo(provider)).blockNumber;
   const fromBlock = hint?.startBlock ?? defaultStartBlock;
@@ -256,6 +259,7 @@ export async function findCallExecutedEvent(
  *
  * @param options.fromBlock - REQUIRED when not skipping log search. Start block for event searches.
  * @param options.scheduledData - Pre-fetched CallScheduledData to skip log search
+ * @param options.chunkSize - Override chunk size for log searches (uses chain-appropriate default if not specified)
  */
 export async function getTimelockState(
   timelockAddress: string,
@@ -271,6 +275,8 @@ export async function getTimelockState(
     scheduledData?: CallScheduledData;
     /** All scheduled data for batch operations */
     allScheduledData?: CallScheduledData[];
+    /** Override chunk size for log searches */
+    chunkSize?: number;
   } = {}
 ): Promise<TimelockState> {
   // FAST PATH: Check state before expensive log search
@@ -310,6 +316,7 @@ export async function getTimelockState(
       const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
         startBlock: fromBlock,
         endBlock: options.toBlock,
+        chunkSize: options.chunkSize,
       });
       if (scheduledData) {
         state.scheduledData = scheduledData;
@@ -341,6 +348,7 @@ export async function getTimelockState(
     const executedData = await findCallExecutedEvent(timelockAddress, operationId, provider, {
       startBlock: executedSearchStart,
       endBlock: options.toBlock,
+      chunkSize: options.chunkSize,
     });
     if (executedData) {
       state.executedData = executedData;
@@ -430,10 +438,12 @@ export async function discoverTimelockOps(
 ): Promise<DiscoveredTimelockOp[]> {
   if (fromBlock >= toBlock) return [];
 
+  // Use chain-appropriate default chunk size
+  const defaultChunkSize = isL1Timelock(timelockAddress) ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
   const { logs } = await searchLogsInChunks(
     provider,
     { address: timelockAddress, topics: [EVENT_TOPICS.CALL_SCHEDULED], fromBlock, toBlock },
-    { chunkSize: options.chunkSize ?? CHUNK_SIZES.L2 }
+    { chunkSize: options.chunkSize ?? defaultChunkSize }
   );
 
   const seen = new Set<string>();

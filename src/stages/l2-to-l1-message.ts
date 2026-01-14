@@ -209,7 +209,8 @@ export interface L2ToL1MessageResult {
 export async function trackL2ToL1Message(
   executionTxHash: string,
   l2Provider: ethers.providers.Provider,
-  l1Provider: ethers.providers.Provider
+  l1Provider: ethers.providers.Provider,
+  options: { chunkSize?: number } = {}
 ): Promise<L2ToL1MessageResult> {
   const builder = new StageBuilder("L2_TO_L1_MESSAGE", "arb1");
 
@@ -394,7 +395,7 @@ export async function trackL2ToL1Message(
           messagePosition,
           l2Provider,
           l1Provider,
-          { fromBlock: l1SearchFromBlock }
+          { fromBlock: l1SearchFromBlock, chunkSize: options.chunkSize }
         );
 
         if (outboxExecutionTx) {

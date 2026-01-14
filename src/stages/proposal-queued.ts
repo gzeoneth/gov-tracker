@@ -42,6 +42,7 @@ export async function trackProposalQueued(
     toBlock?: number;
     /** Voting end block - enables forward search optimization (queuing happens right after voting ends) */
     votingEndBlock?: number;
+    chunkSize?: number;
   } = {}
 ): Promise<{
   stage: TypedTrackedStage<"PROPOSAL_QUEUED">;
@@ -77,6 +78,7 @@ export async function trackProposalQueued(
     startBlock: searchStart,
     endBlock: options.toBlock,
     direction: useForwardSearch ? "forward" : "backward",
+    chunkSize: options.chunkSize,
   });
 
   if (!queueEvent) {

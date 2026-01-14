@@ -139,4 +139,6 @@ export interface SearchHint {
   startBlock: number;
   endBlock?: number;
   direction?: "forward" | "backward";
+  /** Override chunk size for this search (uses chain-appropriate default if not specified) */
+  chunkSize?: number;
 }

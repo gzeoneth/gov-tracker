@@ -196,7 +196,7 @@ export async function findProposalCreatedEvent(
     { address: governorAddress, topics: [EVENT_TOPICS.PROPOSAL_CREATED], fromBlock, toBlock },
     (l) => parseProposalCreatedEvent(l)?.proposalId === proposalId,
     parseProposalCreatedEvent,
-    { chunkSize: 10_000_000, reverseDirection }
+    { chunkSize: hint?.chunkSize ?? CHUNK_SIZES.L2, reverseDirection }
   );
 }
 
@@ -343,7 +343,7 @@ export async function findProposalQueuedEvent(
         return false;
       }
     },
-    { chunkSize: 10_000_000, reverseDirection }
+    { chunkSize: hint?.chunkSize ?? CHUNK_SIZES.L2, reverseDirection }
   );
 
   if (!log) {

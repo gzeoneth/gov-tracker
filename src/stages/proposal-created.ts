@@ -27,6 +27,7 @@ export async function trackProposalCreated(
   options: {
     creationTxHash?: string;
     fromBlock?: number;
+    chunkSize?: number;
   } = {}
 ): Promise<{
   stage: TypedTrackedStage<"PROPOSAL_CREATED">;
@@ -50,6 +51,7 @@ export async function trackProposalCreated(
   if (!proposalData) {
     proposalData = await findProposalCreatedEvent(governorAddress, proposalId, provider, {
       startBlock: options.fromBlock ?? GOVERNANCE_START_BLOCKS.L2,
+      chunkSize: options.chunkSize,
     });
   }
 

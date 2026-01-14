@@ -95,6 +95,8 @@ interface TrackTimelockOptions {
   additionalPayload?: Record<string, unknown>;
   /** All tracked stages (used for salt computation from other stages) */
   allStages?: TrackedStage[];
+  /** Override chunk size for log searches */
+  chunkSize?: number;
 }
 
 /**
@@ -258,6 +260,7 @@ async function trackTimelock(
     skipLogSearch: false,
     // Skip CallExecuted search here - we do an optimized search below starting after the delay
     skipExecutedSearch: true,
+    chunkSize: options.chunkSize,
   });
 
   const { timestamp: currentTimestamp } = await getCurrentBlockInfo(provider);
@@ -498,13 +501,14 @@ export async function trackL2Timelock(
   provider: ethers.providers.Provider,
   fromBlock: number,
   callScheduledData: CallScheduledData,
-  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[] } = {}
+  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[]; chunkSize?: number } = {}
 ): Promise<TimelockStageResult> {
   return trackTimelock(L2_TIMELOCK_CONFIG, timelockAddress, operationId, provider, fromBlock, {
     callScheduledData,
     cachedExecutionTxHash: options.cachedExecutionTxHash,
     checkSecurityCouncil: true,
     allStages: options.allStages,
+    chunkSize: options.chunkSize,
   });
 }
 
@@ -518,6 +522,7 @@ export async function trackL1Timelock(
     fromBlock?: number;
     knownL1OperationId?: string;
     allStages?: TrackedStage[];
+    chunkSize?: number;
   } = {}
 ): Promise<L1TimelockResult> {
   let l1OperationId = options.knownL1OperationId ?? null;
@@ -570,7 +575,7 @@ export async function trackL1Timelock(
     l1OperationId,
     l1Provider,
     fromBlock,
-    { allStages: options.allStages }
+    { allStages: options.allStages, chunkSize: options.chunkSize }
   );
 
   return { ...result, l1OperationId, l1ScheduleTxHash, l1ScheduleBlock };

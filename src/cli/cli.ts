@@ -77,6 +77,7 @@ import {
   buildDefaultTargets,
   DiscoveryTargets,
   PreparedTransaction,
+  FileCache,
 } from "../index";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
@@ -87,6 +88,7 @@ import {
   createProvidersFromOptions,
   createSigner,
   requirePrivateKeyForWrite,
+  validateCliOptions,
   executeTransaction,
   formatDryRun,
   formatMultiplePreparedTransactions,
@@ -100,6 +102,9 @@ import {
   MAX_CONSECUTIVE_ERRORS,
   isShuttingDown,
   GasSettings,
+  formatElectionResult,
+  calculateFilteredStats,
+  filterCheckpointsByTargets,
   // Common options
   verboseOption,
   cacheOptions,
@@ -315,15 +320,17 @@ runCmd
   .option("--track-elections", "Track election governor proposals")
   .action(async (opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
+    validateCliOptions(opts, "run");
     requirePrivateKeyForWrite(opts);
 
     const providers = createProvidersFromOptions(opts);
     const chunkingConfig: ChunkingConfig = parseChunkingConfig(opts, CHUNK_SIZES.DELAY_MS);
-    // --no-cache disables cache entirely
+    // --no-cache disables cache entirely; use autoFlush: false for batch writes
     const cachePath = opts.noCache ? undefined : opts.cache;
+    const cache = cachePath ? new FileCache(cachePath, { autoFlush: false }) : undefined;
     const tracker = createTracker({
       ...providers,
-      cachePath,
+      cache,
       chunkingConfig,
       onProgress: createProgressCallback(),
     });
@@ -346,6 +353,13 @@ runCmd
     // If any --track-* flag is specified, only track those; otherwise track all
     const hasTrackFlags =
       opts.trackCore || opts.trackTreasury || opts.trackTimelocks || opts.trackElections;
+    // Detect what types are being tracked
+    const trackingProposals = !hasTrackFlags || opts.trackCore || opts.trackTreasury;
+    const trackingTimelocks = !hasTrackFlags || opts.trackTimelocks;
+    const trackingElections = !hasTrackFlags || opts.trackElections;
+    // Detect elections-only mode (only --track-elections, no other --track-* flags)
+    const electionsOnly =
+      opts.trackElections && !opts.trackCore && !opts.trackTreasury && !opts.trackTimelocks;
     const discoveryTargets: DiscoveryTargets = hasTrackFlags
       ? {
           constitutionalGovernor: opts.trackCore,
@@ -379,80 +393,118 @@ runCmd
     let isFirstCycle = true;
 
     async function runCycle(): Promise<void> {
-      console.log("Discovering proposals and operations...\n");
+      if (electionsOnly) {
+        console.log("Tracking elections...\n");
+      } else {
+        console.log("Discovering proposals and operations...\n");
+      }
       let electionsSkipped = 0;
 
       // Only use startBlock on the first cycle; subsequent cycles resume from watermarks
       const cycleStartBlock = isFirstCycle ? startBlock : undefined;
       isFirstCycle = false;
 
-      const { result, proposals, timelockOps } = await runMonitorCycle(tracker, providers, {
-        prepare: opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending,
-        prepareCompleted: opts.prepareCompleted,
-        preparePending: opts.preparePending,
-        startBlock: cycleStartBlock,
-        blockLag,
-        maxAgeDays,
-        concurrency,
-        targets: discoveryTargets,
-        onTrack: async (r): Promise<TrackCallbackReturn> => {
-          // Skip showing complete elections
-          if (r.result?.isElection && r.result?.isComplete) {
-            electionsSkipped++;
-            return {};
-          }
+      const { result, proposals, timelockOps, elections } = await runMonitorCycle(
+        tracker,
+        providers,
+        {
+          prepare: opts.prepare || opts.write || opts.prepareCompleted || opts.preparePending,
+          prepareCompleted: opts.prepareCompleted,
+          preparePending: opts.preparePending,
+          startBlock: cycleStartBlock,
+          blockLag,
+          maxAgeDays,
+          concurrency,
+          targets: discoveryTargets,
+          electionsOnly,
+          forceElections: opts.force,
+          onTrack: async (r): Promise<TrackCallbackReturn> => {
+            // Skip showing complete elections
+            if (r.result?.isElection && r.result?.isComplete) {
+              electionsSkipped++;
+              return {};
+            }
 
-          if (r.result) {
-            console.log(`\n[${r.key}]`);
-            await displayTrackingResult(r.result, providers);
-          } else if (r.error) {
-            console.log(`\n[${r.key}] ERROR: ${r.error}`);
-          }
+            if (r.result) {
+              console.log(`\n[${r.key}]`);
+              displayTrackingResult(r.result);
+            } else if (r.error) {
+              console.log(`\n[${r.key}] ERROR: ${r.error}`);
+            }
 
-          const txsToDisplay = r.preparedTransactions ?? [];
-          if (txsToDisplay.length > 0) {
-            console.log(`\n[PREPARED] ${r.key}`);
-            console.log(formatMultiplePreparedTransactions(txsToDisplay));
+            const txsToDisplay = r.preparedTransactions ?? [];
+            if (txsToDisplay.length > 0) {
+              console.log(`\n[PREPARED] ${r.key}`);
+              console.log(formatMultiplePreparedTransactions(txsToDisplay));
 
-            if (signer) {
-              let executedAny = false;
-              for (const prepared of txsToDisplay) {
-                const execResult = await executeTransaction(
-                  prepared,
-                  signer,
-                  providers,
-                  gasSettings
-                );
-                if (!execResult.success) {
-                  console.error(`  Execution failed: ${execResult.error}`);
-                } else {
-                  executedAny = true;
+              if (signer) {
+                let executedAny = false;
+                for (const prepared of txsToDisplay) {
+                  const execResult = await executeTransaction(
+                    prepared,
+                    signer,
+                    providers,
+                    gasSettings
+                  );
+                  if (!execResult.success) {
+                    console.error(`  Execution failed: ${execResult.error}`);
+                  } else {
+                    executedAny = true;
+                  }
+                }
+                if (executedAny) {
+                  console.log(`  Executed! Re-tracking to find next stages...`);
+                  return { shouldRetrack: true };
                 }
               }
-              if (executedAny) {
-                console.log(`  Executed! Re-tracking to find next stages...`);
-                return { shouldRetrack: true };
-              }
             }
-          }
-          return {};
-        },
-      });
+            return {};
+          },
+        }
+      );
 
       // Skip output if shutting down
       if (isShuttingDown()) return;
 
-      const stats = await tracker.getStats();
-      console.log(
-        `\nFound ${proposals.length} new proposals, ${timelockOps.length} new ops | ` +
-          `Incomplete: ${stats.proposals.active} proposals, ${stats.timelocks.active} timelocks | ` +
-          `Tracked: ${result.tracked}, Prepared: ${result.prepared}` +
-          (electionsSkipped > 0 ? ` (${electionsSkipped} elections skipped)` : "")
-      );
+      // Get checkpoints and calculate filtered stats based on enabled targets
+      const checkpoints = await tracker.getAllCheckpoints();
+      const stats = calculateFilteredStats(checkpoints, discoveryTargets);
+
+      // Build summary based on what was tracked this run
+      if (electionsOnly) {
+        // Elections-only mode: count from tracked elections, not cache
+        const electionComplete = elections.filter((e) => e.phase === "COMPLETED").length;
+        console.log(
+          `\nTracked ${elections.length} elections (${electionComplete}/${elections.length} complete)`
+        );
+      } else {
+        // Discovery mode: show stats for tracked types only
+        const electionSummary =
+          trackingElections && elections.length > 0
+            ? `, ${elections.length} elections (${stats.elections.complete}/${stats.elections.total} complete)`
+            : "";
+
+        // Build incomplete stats for tracked types
+        const incompleteParts: string[] = [];
+        if (trackingProposals && stats.proposals.active > 0) {
+          incompleteParts.push(`${stats.proposals.active} proposals`);
+        }
+        if (trackingTimelocks && stats.timelocks.active > 0) {
+          incompleteParts.push(`${stats.timelocks.active} timelocks`);
+        }
+        const incompleteSummary =
+          incompleteParts.length > 0 ? ` | Incomplete: ${incompleteParts.join(", ")}` : "";
+
+        console.log(
+          `\nFound ${proposals.length} new proposals, ${timelockOps.length} new ops${electionSummary}${incompleteSummary} | ` +
+            `Tracked: ${result.tracked}, Prepared: ${result.prepared}` +
+            (electionsSkipped > 0 ? ` (${electionsSkipped} elections skipped)` : "")
+        );
+      }
 
       if (opts.jsonOutput) {
-        const checkpoints = await tracker.getAllCheckpoints();
-        writeDashboardState(buildDashboardState(checkpoints), opts.jsonOutput);
+        const filteredCheckpoints = filterCheckpointsByTargets(checkpoints, discoveryTargets);
+        writeDashboardState(buildDashboardState(filteredCheckpoints), opts.jsonOutput);
         if (opts.verbose) console.log(`JSON state written to ${opts.jsonOutput}`);
       }
 
@@ -483,6 +535,9 @@ runCmd
       intervalMs,
       healthCheckUrl: opts.healthCheckUrl,
     });
+
+    // Flush cache at end (single write instead of per-item)
+    await cache?.flush();
   });
 
 // ============================================================================
@@ -507,6 +562,7 @@ trackCmd
   .option("--show-simulation", "Show simulation data for each call")
   .action(async (txHash: string, opts) => {
     if (opts.verbose) debug.enable("gov-tracker:*");
+    validateCliOptions(opts, "track");
     requirePrivateKeyForWrite(opts);
 
     try {
@@ -523,14 +579,21 @@ trackCmd
         if (opts.force) console.log(`Force: ignoring cached data`);
       }
 
-      // Use cache unless --force or --no-cache is specified
-      const cachePath = opts.noCache ? undefined : opts.force ? undefined : opts.cache;
+      // Use cache unless --no-cache is specified
+      // --force clears the cache entry before tracking but still writes results
+      const cachePath = opts.noCache ? undefined : opts.cache;
       const tracker = createTracker({
         ...providers,
         cachePath,
         chunkingConfig,
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });
+
+      // Clear cache entry if --force to ensure fresh tracking
+      if (opts.force && cachePath) {
+        const cacheKey = `tx:${txHash.toLowerCase()}`;
+        await tracker.clearCacheEntry(cacheKey);
+      }
 
       let calldatas: string[] = [];
       let targets: string[] = [];
@@ -580,11 +643,16 @@ trackCmd
           providers
         );
 
+        if (results.length === 0) {
+          console.error("No proposal or timelock operation found in transaction");
+          process.exit(1);
+        }
+
         // Format tracking output
         for (let i = 0; i < results.length; i++) {
           const r = results[i];
           const label = results.length > 1 ? `Operation ${i + 1}/${results.length}` : undefined;
-          await displayTrackingResult(r, providers, label);
+          displayTrackingResult(r, label);
         }
 
         // Show all prepared transactions
@@ -645,7 +713,7 @@ trackCmd
                 retracked.results.length > 1
                   ? `Operation ${i + 1}/${retracked.results.length}`
                   : undefined;
-              await displayTrackingResult(r, providers, label);
+              displayTrackingResult(r, label);
             }
 
             if (retracked.preparedTransactions.length > 0) {
@@ -715,16 +783,21 @@ program
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .option("--json", "Output as JSON")
   .action(async (opts) => {
-    const { watermarks, checkpoints } = await ProposalStageTracker.readCacheStatus(opts.cache);
+    const { watermarks, checkpoints, elections } = await ProposalStageTracker.readCacheStatus(
+      opts.cache
+    );
 
     if (opts.json) {
       const checkpointsObj: Record<string, unknown> = {};
       for (const [key, checkpoint] of checkpoints) {
         checkpointsObj[key] = checkpoint;
       }
+      for (const [index, checkpoint] of elections) {
+        checkpointsObj[`election:${index}`] = checkpoint;
+      }
       console.log(JSON.stringify({ watermarks, checkpoints: checkpointsObj }, null, 2));
     } else {
-      console.log(formatCacheStatus(checkpoints));
+      console.log(formatCacheStatus(checkpoints, elections));
     }
   });
 
@@ -739,6 +812,9 @@ addOptions(electionCmd, rpcOptions);
 addOptions(electionCmd, loopOptions);
 addOptions(electionCmd, executionOptions);
 electionCmd
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
+  .addOption(cacheOptions.noCache)
+  .addOption(cacheOptions.force)
   .addOption(verboseOption)
   .option("--list", "List all elections with their statuses")
   .option("--track <index>", "Track a specific election by index")
@@ -750,20 +826,26 @@ electionCmd
     const providers = createProvidersFromOptions(opts);
     const signer = opts.write ? createSigner(opts.privateKey) : null;
 
-    // Import election tracking functions
+    // Create tracker with cache (unless --no-cache)
+    const cachePath = opts.noCache ? undefined : opts.cache;
+    const tracker = createTracker({
+      ...providers,
+      cachePath,
+    });
+
+    // Import election tracking functions for detailed queries
     const {
-      trackAllElections,
-      trackElectionProposal,
       getNomineeElectionDetails,
       getMemberElectionDetails,
       prepareMemberElectionTrigger,
       prepareMemberElectionExecution,
     } = await import("../index");
 
-    // --list: Show all elections
+    // --list: Show all elections (uses cached data for completed elections)
     if (opts.list) {
       console.log("Fetching all elections...\n");
-      const elections = await trackAllElections(providers.l2Provider, providers.l1Provider);
+      // Use --force to bypass cache and re-track all elections
+      const elections = await tracker.trackAllElections({ force: opts.force });
 
       if (elections.length === 0) {
         console.log("No elections found.");
@@ -796,41 +878,15 @@ electionCmd
       return;
     }
 
-    // --track <index>: Track specific election
+    // --track <index>: Track specific election (uses cache unless --force)
     if (opts.track !== undefined) {
       const electionIndex = parseInt(opts.track, 10);
       console.log(`Tracking election #${electionIndex}...\n`);
 
-      const election = await trackElectionProposal(
-        electionIndex,
-        providers.l2Provider,
-        providers.l1Provider
-      );
+      const election = await tracker.trackElection(electionIndex, { force: opts.force });
 
-      const cohortName = election.cohort === 0 ? "First" : "Second";
-      console.log(`=== Election #${electionIndex} ===`);
-      console.log(`Phase: ${election.phase}`);
-      console.log(`Cohort: ${cohortName} (${election.cohort})`);
-      console.log(
-        `Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}`
-      );
-
-      if (election.nomineeProposalId) {
-        // Note: Both governors use the same proposal ID (derived from election index)
-        // but track separate states
-        console.log(`\nElection ID: ${election.nomineeProposalId}`);
-        console.log(`\nNominee Phase:`);
-        console.log(`  State: ${election.nomineeProposalState}`);
-        if (election.vettingDeadline) {
-          console.log(`  Vetting Deadline: block ${election.vettingDeadline}`);
-        }
-        console.log(`  In Vetting Period: ${election.isInVettingPeriod ? "YES" : "NO"}`);
-      }
-
-      if (election.memberProposalId) {
-        console.log(`\nMember Phase:`);
-        console.log(`  State: ${election.memberProposalState}`);
-      }
+      // Use shared formatter for consistent output with stages
+      console.log(formatElectionResult(election));
 
       // Show detailed info if requested
       if (opts.details) {

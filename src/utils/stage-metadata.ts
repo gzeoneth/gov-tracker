@@ -69,6 +69,30 @@ const BASE_METADATA: Record<StageType, Omit<StageMetadata, "estimatedDays">> = {
     chain: "CROSS_CHAIN",
     requiresAction: true,
   },
+  CREATE_ELECTION: {
+    title: "Create Election",
+    description: "Security Council election created on-chain",
+    chain: "arb1",
+    requiresAction: true,
+  },
+  NOMINEE_ELECTION: {
+    title: "Nominee Election",
+    description: "Token holders voting on nominee candidates",
+    chain: "arb1",
+    requiresAction: false,
+  },
+  NOMINEE_VETTING: {
+    title: "Nominee Vetting",
+    description: "Vetting period for nominated candidates before member election",
+    chain: "arb1",
+    requiresAction: true,
+  },
+  MEMBER_ELECTION: {
+    title: "Member Election",
+    description: "Token holders voting to elect Security Council members",
+    chain: "arb1",
+    requiresAction: true,
+  },
 };
 
 const DEFAULT_DURATIONS: Record<StageType, number> = {
@@ -82,6 +106,11 @@ const DEFAULT_DURATIONS: Record<StageType, number> = {
   // L1_TIMELOCK combines delay (3 days) + execution (0 days)
   L1_TIMELOCK: GOVERNANCE_STAGE_DURATION_DAYS.L1_TIMELOCK,
   RETRYABLE_EXECUTED: 0,
+  // Election stages
+  CREATE_ELECTION: 0,
+  NOMINEE_ELECTION: 7, // ~7 days voting
+  NOMINEE_VETTING: 7, // ~7 days vetting
+  MEMBER_ELECTION: 21, // ~21 days voting
 };
 
 /**
@@ -108,45 +137,6 @@ export function getStageMetadata(
 }
 
 /**
- * Get metadata for all stages in order
- *
- * @example
- * ```typescript
- * const allMeta = getAllStageMetadata();
- * for (const [type, meta] of Object.entries(allMeta)) {
- *   console.log(`${meta.title} (${meta.estimatedDays}d)`);
- * }
- * ```
- */
-export function getAllStageMetadata(proposalType?: ProposalType): Record<StageType, StageMetadata> {
-  const stages: StageType[] = [
-    "PROPOSAL_CREATED",
-    "VOTING_ACTIVE",
-    "PROPOSAL_QUEUED",
-    "L2_TIMELOCK",
-    "L2_TO_L1_MESSAGE",
-    "L1_TIMELOCK",
-    "RETRYABLE_EXECUTED",
-  ];
-
-  const result: Partial<Record<StageType, StageMetadata>> = {};
-  for (const stage of stages) {
-    result[stage] = getStageMetadata(stage, proposalType);
-  }
-
-  return result as Record<StageType, StageMetadata>;
-}
-
-/**
- * Get stages that require user action (executable stages)
- */
-export function getActionableStages(): StageType[] {
-  return Object.entries(BASE_METADATA)
-    .filter(([, meta]) => meta.requiresAction)
-    .map(([type]) => type as StageType);
-}
-
-/**
  * Format stage type as human-readable title
  *
  * @example
@@ -156,11 +146,4 @@ export function getActionableStages(): StageType[] {
  */
 export function formatStageTitle(stageType: StageType): string {
   return BASE_METADATA[stageType].title;
-}
-
-/**
- * Get total expected duration for the full governance lifecycle in days
- */
-export function getTotalExpectedDuration(): number {
-  return Object.values(DEFAULT_DURATIONS).reduce((sum, d) => sum + d, 0);
 }

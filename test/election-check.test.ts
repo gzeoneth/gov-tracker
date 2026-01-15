@@ -251,7 +251,7 @@ describe("Election Check Utilities", () => {
 describe.skipIf(process.env.NO_RPC === "1")(
   "checkAndExecuteElection (RPC)",
   {
-    timeout: 60000,
+    timeout: 180000, // 3 minutes - election tracking queries L1, L2, and Nova
   },
   () => {
     // Import checkAndExecuteElection dynamically to avoid mock conflicts

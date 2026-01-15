@@ -105,26 +105,10 @@ export interface TrackingState {
 
 // State Creation
 
-/**
- * Create a new TrackingState.
- */
-function getAddressForPath(input: TrackingInput): string {
-  switch (input.type) {
-    case "governor":
-      return input.governorAddress;
-    case "timelock":
-      return input.timelockAddress;
-    default:
-      return "";
-  }
-}
-
 export function createTrackingState(options: CreateTrackingStateOptions): TrackingState {
   // Initialize stages based on tracking path
   const includeProposal = options.input.type === "governor";
-  const addressForPath = getAddressForPath(options.input);
-
-  const initialStages = initializeStagesForPath(addressForPath, includeProposal);
+  const initialStages = initializeStagesForPath(includeProposal);
 
   let ctx: TrackingState = {
     providers: options.providers,
@@ -354,17 +338,4 @@ async function emitProgress(ctx: TrackingState, s: TrackedStage): Promise<void> 
     totalStages: ctx.stages.length,
     isComplete: isComplete(ctx),
   });
-}
-
-export function toResult(ctx: TrackingState) {
-  return {
-    input: ctx.input,
-    stages: ctx.stages,
-    checkpoint: createCheckpoint(ctx),
-    isComplete: isComplete(ctx),
-    proposalType: getProposalType(ctx),
-    proposalData: getProposalData(ctx),
-    currentState: getProposalState(ctx),
-    isElection: getIsElection(ctx),
-  };
 }

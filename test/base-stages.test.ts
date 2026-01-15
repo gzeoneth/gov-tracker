@@ -329,9 +329,9 @@ describe("Stages Base Utilities", () => {
 
   describe("getStagesForPath", () => {
     it("should return all 7 stages with proposal stages", () => {
-      // #given - Constitutional Governor address with proposal stages flag
+      // #given - includeProposalStages = true
       // #when - getting stages for path
-      const stages = getStagesForPath(ADDRESSES.CONSTITUTIONAL_GOVERNOR, true);
+      const stages = getStagesForPath(true);
 
       // #then - returns all 7 governance stages in order
       expect(stages.length).toBe(7);
@@ -345,9 +345,9 @@ describe("Stages Base Utilities", () => {
     });
 
     it("should return 4 stages without proposal stages", () => {
-      // #given - timelock address without proposal stages flag
+      // #given - includeProposalStages = false
       // #when - getting stages for path
-      const stages = getStagesForPath(ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK, false);
+      const stages = getStagesForPath(false);
 
       // #then - returns only timelock/execution stages
       expect(stages.length).toBe(4);
@@ -360,9 +360,9 @@ describe("Stages Base Utilities", () => {
 
   describe("initializeStagesForPath", () => {
     it("should create all stages with correct chains", () => {
-      // #given - Constitutional Governor address with proposal stages flag
+      // #given - includeProposalStages = true
       // #when - initializing stages for path
-      const stages = initializeStagesForPath(ADDRESSES.CONSTITUTIONAL_GOVERNOR, true);
+      const stages = initializeStagesForPath(true);
 
       // #then - creates stages with appropriate chain assignments
       expect(stages.length).toBe(7);
@@ -373,9 +373,9 @@ describe("Stages Base Utilities", () => {
     });
 
     it("should set all stages to NOT_STARTED", () => {
-      // #given - Constitutional Governor address with proposal stages flag
+      // #given - includeProposalStages = true
       // #when - initializing stages for path
-      const stages = initializeStagesForPath(ADDRESSES.CONSTITUTIONAL_GOVERNOR, true);
+      const stages = initializeStagesForPath(true);
 
       // #then - all stages have NOT_STARTED status
       expect(stages.every((s) => s.status === "NOT_STARTED")).toBe(true);
@@ -384,8 +384,8 @@ describe("Stages Base Utilities", () => {
 
   describe("findStage", () => {
     it("should find stage by type", () => {
-      // #given - initialized stages for Constitutional Governor
-      const stages = initializeStagesForPath(ADDRESSES.CONSTITUTIONAL_GOVERNOR, true);
+      // #given - initialized stages with proposal stages
+      const stages = initializeStagesForPath(true);
 
       // #when - finding stage by type
       const found = findStage(stages, "L2_TIMELOCK");

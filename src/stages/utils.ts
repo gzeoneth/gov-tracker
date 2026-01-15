@@ -20,10 +20,11 @@ import {
   TimelockState,
   TrackedStage,
 } from "../types";
-import { TIMELOCK_ABI } from "../abis";
+import { timelockInterface } from "../abis";
 import { ADDRESSES } from "../constants";
 import { isAddressIn } from "../utils/chain";
 import { queryWithRetry } from "../utils/rpc-utils";
+import { multicall, buildCallInput } from "../utils/multicall";
 import { StageBuilder } from "./builder";
 import { findCallExecutedEvent } from "../discovery/timelock-discovery";
 
@@ -102,39 +103,38 @@ function createStage(
   } as TrackedStage;
 }
 
-/**
- * Get all stages for a governor path
- *
- * Always returns all 7 stages to ensure consistent stage arrays.
- * For L2-only paths (Treasury Governor), the L2→L1 and L1 stages
- * will be marked as SKIPPED during tracking.
- */
-export function getStagesForPath(
-  _governorAddress: string,
-  includeProposalStages: boolean = true
-): StageType[] {
-  const proposalStages: StageType[] = includeProposalStages
-    ? ["PROPOSAL_CREATED", "VOTING_ACTIVE", "PROPOSAL_QUEUED"]
-    : [];
+/** Full proposal stages (from governor proposal) */
+const FULL_PROPOSAL_STAGES: StageType[] = [
+  "PROPOSAL_CREATED",
+  "VOTING_ACTIVE",
+  "PROPOSAL_QUEUED",
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+];
 
-  // Always return all 7 stages - L2-only paths mark extra stages as SKIPPED
-  return [
-    ...proposalStages,
-    "L2_TIMELOCK",
-    "L2_TO_L1_MESSAGE",
-    "L1_TIMELOCK",
-    "RETRYABLE_EXECUTED",
-  ];
+/** Timelock-only stages (direct timelock entry) */
+const TIMELOCK_ONLY_STAGES: StageType[] = [
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+];
+
+/**
+ * Get stage types for a tracking path.
+ * @param includeProposalStages - Include proposal stages (default: true)
+ */
+export function getStagesForPath(includeProposalStages: boolean = true): StageType[] {
+  return includeProposalStages ? FULL_PROPOSAL_STAGES : TIMELOCK_ONLY_STAGES;
 }
 
 /**
  * Initialize all stages for a path
  */
-export function initializeStagesForPath(
-  governorAddress: string,
-  includeProposalStages: boolean = true
-): TrackedStage[] {
-  const stageTypes = getStagesForPath(governorAddress, includeProposalStages);
+export function initializeStagesForPath(includeProposalStages: boolean = true): TrackedStage[] {
+  const stageTypes = getStagesForPath(includeProposalStages);
 
   return stageTypes.map((type) => {
     // L1_TIMELOCK and RETRYABLE_EXECUTED are L1 stages
@@ -392,11 +392,16 @@ export async function checkOperationReady(
   operationId: string,
   provider: ethers.providers.Provider
 ): Promise<PrepareResult | null> {
-  const timelock = new ethers.Contract(timelockAddress, TIMELOCK_ABI, provider);
-  const isReady = await queryWithRetry(() => timelock.isOperationReady(operationId));
-  if (isReady) return null; // Ready - no error
+  // Batch both state checks into a single RPC request
+  const results = await multicall(provider, [
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationReady", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationDone", [operationId]),
+  ]);
 
-  const isDone = await queryWithRetry(() => timelock.isOperationDone(operationId));
+  const isReady = results[0] as boolean;
+  const isDone = results[1] as boolean;
+
+  if (isReady) return null; // Ready - no error
   if (isDone) {
     return failPrepare("Operation already executed");
   }

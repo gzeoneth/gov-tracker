@@ -32,3 +32,6 @@ coverage/
 .env.local
 .env.*.local
 coverage-fork/
+
+# opensrc - source code for packages
+opensrc/

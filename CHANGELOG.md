@@ -9,89 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **CLI: Election Auto-Switch** - When tracking a transaction that creates an election (`createElection`), the CLI automatically displays election-specific status (phase, cohort, nominees, vetting) instead of 7 NOT_STARTED proposal stages. Works in both `track` and `run` commands.
+- **Unified Election Tracking** - Elections are now first-class entities:
+  - `trackByTxHash` auto-detects election proposals and populates `TrackingResult.electionStatus`
+  - `tracker.trackElection(electionIndex)` for direct election tracking
+  - `trackAllElections()` / `trackIncompleteElections()` for bulk tracking
+  - Election checkpoints cached with key pattern `election:{index}`
+  - Full A→B→C transaction preparation: `prepareElectionCreation()`, `prepareMemberElectionTrigger()`, `prepareMemberElectionExecution()`
+  - Detailed participant tracking: contenders, nominees, votes, rankings
 
-- **CLI: `--inspect` flag with `-i` shorthand** - New flag for `track` command that performs normal tracking AND decodes calldata (unlike `--inspect-only` which skips tracking)
+- **CLI Enhancements**:
+  - Election auto-switch: displays election status instead of 7 NOT_STARTED stages when tracking `createElection` tx
+  - `--inspect` / `-i` flag: track AND decode calldata (vs `--inspect-only` which skips tracking)
+  - Shorthand flags: `-v` (verbose), `-p` (prepare), `-w` (write)
+  - Selective tracking: `--track-core`, `--track-treasury`, `--track-elections`, `--track-timelocks`
 
-- **Security: Sanitization utilities** - New `src/utils/sanitize.ts` module:
-  - `truncateDescription(description)`: Limits strings to 100KB to prevent DoS
-  - `sanitizeForDisplay(str)`: Removes ANSI escape codes and control characters
-  - `safeJsonParse<T>(json)`: JSON parsing with prototype pollution protection
+- **Reorg Detection** - Discovery watermarks now include block hashes for chain reorganization detection
 
-- **CLI: Shorthand flags** - `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)
-
-- **Bundled cache JSON export** - Importable via `import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json"` for bundlers
-
-- **`LookupSignatureOptions` type** - New exported type for configuring signature lookup
-
-- **Election Tracking Integration** - Elections now tracked as first-class entities in the bundled cache:
-  - `ElectionTrackingInput` type for election checkpoint identification
-  - `trackAllElections(l2Provider, l1Provider)`: Track all Security Council elections
-  - `trackIncompleteElections(l2Provider, l1Provider)`: Track only active elections
-  - `getElectionIndexForProposalId(proposalId, l2Provider, l1Provider)`: Map proposal ID to election index
-  - `tracker.saveElectionCheckpoint(electionStatus)`: Persist election status to cache
-  - `tracker.getElectionCheckpoint(electionIndex)`: Retrieve cached election status
-  - CLI `run` command now tracks elections in Phase 3 after proposals/timelocks
-  - Cache key pattern: `election:{index}`
-
-- **Full Election Lifecycle Preparation** - Complete A→B→C election transaction preparation:
-  - `prepareElectionCreation()`: Step A - Create nominee election proposal
-  - `prepareMemberElectionTrigger()`: Step B - Execute nominee election to create member proposal
-  - `prepareMemberElectionExecution()`: Step C - Execute member election to install council members
-  - `getMemberElectionProposalParams()`: Get member election proposal parameters
-  - `canExecuteMember` flag in `ElectionProposalStatus` indicates Step C readiness
-  - `ElectionCheckResult.prepared.executeMember`: Prepared transaction for Step C
-
-- **Detailed Election Tracking** - Track election participant data and votes:
-  - `ElectionContender` type: Contender address, registration block, and tx hash
-  - `ElectionNominee` type: Nominee address, votes received, exclusion status
-  - `MemberElectionNominee` type: Nominee weight received, winner status, rank
-  - `NomineeElectionDetails` type: Full nominee election aggregate (contenders, nominees, quorum)
-  - `MemberElectionDetails` type: Full member election aggregate (weighted votes, winners)
-  - `getContenders(proposalId, provider)`: Fetch ContenderAdded events
-  - `getNomineesWithVotes(proposalId, provider)`: Fetch nominees with vote counts
-  - `getExcludedNominees(proposalId, provider)`: Fetch NomineeExcluded events
-  - `getNomineeElectionDetails(electionIndex, provider)`: Aggregate nominee election data
-  - `getMemberElectionDetails(electionIndex, provider)`: Aggregate member election data with rankings
-
-- **Reorg Detection for Discovery Watermarks** - Watermarks now include block hashes for chain reorganization detection:
-  - `WatermarkHashes` type for storing block hashes alongside watermarks
-  - `verifyWatermark(key, blockNumber, hash, provider)`: Verify watermark validity
-  - `loadWatermarks()` returns `{ watermarks, hashes }` tuple
-  - `saveWatermarks(watermarks, hashes, cache)`: Save both watermarks and hashes
-  - `TrackingCheckpoint.cachedData.watermarkHashes`: Persisted hash storage
+- **Security Utilities** - `truncateDescription()`, `sanitizeForDisplay()`, `safeJsonParse()` for input sanitization
 
 ### Changed
 
-- **CLI: Public RPC warning** - Warns when using default public RPC URLs
+- **Cache: Remove L2_TIMELOCK callScheduledData duplication** - Reduces cache size ~100KB per proposal. Breaking: `callScheduledData` now optional in `TimelockStageData`
+- **Performance: Cache L2→L1 sendProps** - Skips ~3-4s redundant `getSendProps()` call during preparation
+- **Dependencies** - `dotenv` to devDeps, `commander` to optionalDeps, removed `p-limit`
+- **CLI** - Default command is `run`, default L1 RPC falls back to `https://eth.llamarpc.com`, warns on public RPCs
 
-- **CLI: Health check timeout** - 5-second timeout to prevent loop stalls
+### Fixed
 
-- **Cache: Remove L2_TIMELOCK callScheduledData duplication** - Reduces cache size by ~100KB per proposal. Breaking: `callScheduledData` now optional in `TimelockStageData`
-
-- **Performance: Cache L2->L1 sendProps** - Skip ~3-4s redundant `getSendProps()` call during preparation
-
-- **Dependencies: Reduced production footprint** - `dotenv` to devDependencies, `commander` to optionalDependencies, removed `p-limit`
-
-- **Dependencies: Version bumps** - ethers ^5.8.0, debug ^4.4.0, typescript ^5.8.0
-
-- **CLI: Default L1 RPC** - Falls back to `https://eth.llamarpc.com`
-
-- **CLI: Default command is `run`** - `npx gov-tracker` now runs discovery
-
-- **CLI: Renamed scripts** - `monitor:*` -> `cli:*`
+- **ChunkingConfig respected throughout pipeline** - User-provided config now flows through all discovery and tracking functions
+- **All RPC calls use queryWithRetry** - Consistent rate limit and transient failure handling
 
 ### Security
 
-- **Graceful calldata decode failures** - `decodeParameters()` returns `null` instead of throwing
-
-- **4byte.directory lookup opt-out** - `DISABLE_4BYTE_LOOKUP=1` env var or `{ disableApiLookup: true }` option
-
-- **Prototype pollution protection** - `FileCache` and `LocalStorageCache` use `safeJsonParse()`
-
-- **Description size limit** - Truncates to 100KB in `parseProposalCreatedEvent()`
-
-- **CLI: Version shown in help** - Displays version in description
+- **Calldata decode failures** - `decodeParameters()` returns `null` instead of throwing
+- **4byte.directory opt-out** - `DISABLE_4BYTE_LOOKUP=1` env var or `{ disableApiLookup: true }`
+- **Prototype pollution protection** - Cache implementations use `safeJsonParse()`
+- **Description size limit** - Truncates to 100KB
 
 ## [0.2.1] - 2026-01-09
 

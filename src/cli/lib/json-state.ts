@@ -16,8 +16,9 @@ import {
   getTrackingStatusSummary,
   getStageTransactionUrl,
   Chain,
-  areAllStagesComplete,
   TrackingCheckpoint,
+  isCheckpointComplete,
+  isCheckpointErrored,
 } from "../../index";
 
 // ============================================================================
@@ -66,6 +67,29 @@ export interface JsonTrackingEntry {
 }
 
 /**
+ * Election entry for JSON output
+ */
+export interface JsonElectionEntry {
+  id: string;
+  electionIndex: number;
+  phase: string;
+  cohort: number;
+  isComplete: boolean;
+  stages: JsonStageStatus[];
+  summary: {
+    total: number;
+    completed: number;
+    pending: number;
+    ready: number;
+    failed: number;
+  };
+  nomineeProposalId?: string;
+  memberProposalId?: string;
+  updatedAt: string;
+  error?: string;
+}
+
+/**
  * Full JSON state for dashboard
  */
 export interface JsonDashboardState {
@@ -79,6 +103,7 @@ export interface JsonDashboardState {
   };
   proposals: JsonTrackingEntry[];
   timelockOps: JsonTrackingEntry[];
+  elections: JsonElectionEntry[];
 }
 
 // ============================================================================
@@ -126,6 +151,52 @@ function stageToJson(stage: TrackedStage): JsonStageStatus {
 }
 
 /**
+ * Convert election checkpoint to JSON entry for dashboard
+ */
+function electionCheckpointToJson(key: string, checkpoint: TrackingCheckpoint): JsonElectionEntry {
+  const electionStatus = checkpoint.cachedData?.electionStatus as
+    | {
+        electionIndex: number;
+        phase?: string;
+        cohort?: number;
+        stages?: TrackedStage[];
+        nomineeProposalId?: string;
+        memberProposalId?: string;
+      }
+    | undefined;
+
+  const stages = electionStatus?.stages ?? [];
+  const summary =
+    stages.length > 0
+      ? getTrackingStatusSummary(stages)
+      : { total: 0, completed: 0, pending: 0, ready: 0, failed: 0, skipped: 0 };
+
+  const complete = isCheckpointComplete(checkpoint);
+  const errorCount = checkpoint.metadata?.errorCount ?? 0;
+  const inputIndex = checkpoint.input.type === "election" ? checkpoint.input.electionIndex : -1;
+
+  return {
+    id: key,
+    electionIndex: electionStatus?.electionIndex ?? inputIndex,
+    phase: electionStatus?.phase ?? "UNKNOWN",
+    cohort: electionStatus?.cohort ?? 0,
+    isComplete: complete,
+    stages: stages.map(stageToJson),
+    summary: {
+      total: summary.total,
+      completed: summary.completed,
+      pending: summary.pending,
+      ready: summary.ready,
+      failed: summary.failed,
+    },
+    nomineeProposalId: electionStatus?.nomineeProposalId,
+    memberProposalId: electionStatus?.memberProposalId,
+    updatedAt: new Date().toISOString(),
+    error: errorCount > 0 ? `${errorCount} consecutive errors` : undefined,
+  };
+}
+
+/**
  * Convert TrackingCheckpoint to JSON entry for dashboard
  */
 function checkpointToJsonEntry(key: string, checkpoint: TrackingCheckpoint): JsonTrackingEntry {
@@ -141,7 +212,7 @@ function checkpointToJsonEntry(key: string, checkpoint: TrackingCheckpoint): Jso
   const entry: JsonTrackingEntry = {
     id: key,
     type: input.type === "governor" ? "governor" : "timelock",
-    isComplete: stages.length > 0 && areAllStagesComplete(stages),
+    isComplete: isCheckpointComplete(checkpoint),
     currentStage: currentStage?.type,
     currentStatus: currentStage?.status,
     stages: stages.map(stageToJson),
@@ -179,6 +250,7 @@ export function buildDashboardState(
 ): JsonDashboardState {
   const proposals: JsonTrackingEntry[] = [];
   const timelockOps: JsonTrackingEntry[] = [];
+  const elections: JsonElectionEntry[] = [];
 
   let complete = 0;
   let inProgress = 0;
@@ -186,16 +258,31 @@ export function buildDashboardState(
 
   for (const [key, checkpoint] of checkpoints) {
     const inputType = checkpoint.input.type;
+
+    if (inputType === "election") {
+      const electionEntry = electionCheckpointToJson(key, checkpoint);
+
+      if (electionEntry.isComplete) {
+        complete++;
+      } else if (electionEntry.summary.failed > 0 || isCheckpointErrored(checkpoint)) {
+        failed++;
+      } else {
+        inProgress++;
+      }
+
+      elections.push(electionEntry);
+      continue;
+    }
+
     if (inputType !== "governor" && inputType !== "timelock") {
       continue;
     }
 
     const jsonEntry = checkpointToJsonEntry(key, checkpoint);
-    const errorCount = checkpoint?.metadata?.errorCount ?? 0;
 
     if (jsonEntry.isComplete) {
       complete++;
-    } else if (jsonEntry.summary.failed > 0 || errorCount >= 5) {
+    } else if (jsonEntry.summary.failed > 0 || isCheckpointErrored(checkpoint)) {
       failed++;
     } else {
       inProgress++;
@@ -212,13 +299,14 @@ export function buildDashboardState(
     version: "1.0",
     generatedAt: new Date().toISOString(),
     monitorStats: {
-      totalTracked: proposals.length + timelockOps.length,
+      totalTracked: proposals.length + timelockOps.length + elections.length,
       complete,
       inProgress,
       failed,
     },
     proposals,
     timelockOps,
+    elections,
   };
 }
 

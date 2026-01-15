@@ -31,7 +31,6 @@ import {
   getOutboxExecutionTx,
   getL1ExecutionTxHash,
   createCheckpoint,
-  toResult,
   Providers,
 } from "../src/tracker/state";
 import { StageBuilder } from "../src/stages/builder";
@@ -1256,46 +1255,6 @@ describe("TrackingState", () => {
       const cached = checkpoint.cachedData.completedStages?.find((s) => s.type === "L2_TIMELOCK");
       expect(cached).toBeDefined();
       expect(cached?.status).toBe("PENDING");
-    });
-  });
-
-  describe("toResult", () => {
-    it("should generate complete tracking result", async () => {
-      // #given - a context with a COMPLETED PROPOSAL_CREATED stage
-      let ctx = createTrackingState({
-        providers: mockProviders,
-        input: createGovernorInput({ governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR } as any),
-      });
-
-      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
-        .status("COMPLETED")
-        .data({
-          proposalId: "12345",
-          proposer: "0x1111111111111111111111111111111111111111",
-          description: "Test",
-          targets: ["0x2222222222222222222222222222222222222222"],
-          values: ["0"],
-          signatures: [""],
-          calldatas: ["0x"],
-          startBlock: "100",
-          endBlock: "200",
-          proposalType: "CONSTITUTIONAL",
-        })
-        .tx("0xabc", 50, "arb1", 42161)
-        .build();
-      ctx = await addStage(ctx, stage);
-
-      // #when - converting context to result
-      const result = toResult(ctx);
-
-      // #then - result should contain all tracking data
-      expect(result.input).toBe(ctx.input);
-      expect(result.stages).toBe(ctx.stages);
-      expect(result.checkpoint).toBeDefined();
-      expect(result.isComplete).toBe(false);
-      expect(result.proposalType).toBe("CONSTITUTIONAL");
-      expect(result.proposalData).toBeDefined();
-      expect(result.isElection).toBe(false);
     });
   });
 });

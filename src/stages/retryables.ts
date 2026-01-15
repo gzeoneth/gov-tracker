@@ -210,7 +210,7 @@ export async function trackRetryables(
 
     // Get messages for this chain
     const parentReceipt = new ParentTransactionReceipt(l1Receipt);
-    const messages = await parentReceipt.getParentToChildMessages(provider);
+    const messages = await queryWithRetry(() => parentReceipt.getParentToChildMessages(provider));
     allMessages.push(...messages);
 
     // Add creation details and transactions
@@ -416,7 +416,7 @@ export async function prepareAllRetryables(
   if (!receipt) return bulkPrepareError("L1 transaction receipt not found", "arb1");
 
   const parentReceipt = new ParentTransactionReceipt(receipt);
-  const messages = await parentReceipt.getParentToChildMessages(l2Provider);
+  const messages = await queryWithRetry(() => parentReceipt.getParentToChildMessages(l2Provider));
   if (messages.length === 0) return bulkPrepareError("No retryable tickets found", "arb1");
 
   log("Preparing %d retryable tickets", messages.length);

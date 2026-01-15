@@ -91,7 +91,11 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
 
-  beforeAll(() => {
+  // Cached election tracking results - populated once in beforeAll
+  type ElectionProposalStatusWithTx = Awaited<ReturnType<typeof trackElectionProposal>>;
+  const electionCache = new Map<number, ElectionProposalStatusWithTx>();
+
+  beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
     const arbRpc = process.env.ARB1_ARCHIVE_RPC || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
 
@@ -103,7 +107,14 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
 
     l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
     l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-  });
+
+    // Track elections 0-4 once upfront for all tests in this suite
+    const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {
+      const status = await trackElectionProposal(i, l2Provider, l1Provider);
+      electionCache.set(i, status);
+    });
+    await Promise.all(trackingPromises);
+  }, 180000); // 3 minutes - tracks 5 elections with multiple RPC calls
 
   describe("hasVettingPeriod", () => {
     it("should detect nominee election governor has vetting", async () => {
@@ -242,17 +253,132 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
     });
   });
 
-  describe("Election Phase Tracking", () => {
-    it("should correctly identify completed election phases", async () => {
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+  describe("Election TX Hash Discovery", () => {
+    // Known tx hashes from production data - regression tests
+    const KNOWN_ELECTION_TX_HASHES: Record<number, string> = {
+      0: "0xcb6787863f4001e1190f76ae29f14927ba8a7af0ba4f42f1f8b74730948f11db",
+      1: "0xedb92c48fd8b10c121d08620a1f3c5f8c8c270cd4f278cde86f940c0cf4ee0ce",
+      2: "0x8551b140f50104393d273942bc1b80637d6077791b8f68d3be825c2684af8dc3",
+      3: "0xb1d2df615f4abd98dcef744ce902d84ba3cd83238e99aa04816787f858d30d62",
+      4: "0x82a0baf3d7e6a6b3247d5848e88732c8ebad0c46b204ff2b7c81beb3158600a6",
+    };
+
+    // Known execute tx hashes
+    const KNOWN_ELECTION_EXECUTE_TX_HASHES: Record<
+      number,
+      { nomineeExecute: string; memberExecute: string }
+    > = {
+      4: {
+        nomineeExecute: "0xd6d394edbe03cb46ddf8356d7fe8a53dc0e6502b8bd8d0388774de91e639ea04",
+        memberExecute: "0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697",
+      },
+    };
+
+    // Known timelock operation IDs from member execute
+    const KNOWN_TIMELOCK_OPERATION_IDS: Record<number, string> = {
+      0: "0x2aa636db2693091e72991d6dcaa0d1d22d8bbad0d6dc0d7bd0509148c8a5842d",
+      1: "0x96252a7db617494beaf8c5d43bb906099e4032f82c7979e7335285dacc5c6162",
+      4: "0x59b7e93c50a31204ee62b7a881a78b49046ccb10a5a770b9cf4fbdbcefbba2fb",
+    };
+
+    it("should find creation tx hash for election #0", () => {
+      const electionStatus = electionCache.get(0)!;
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[0]);
+    });
+
+    it("should find creation tx hash for election #1", () => {
+      const electionStatus = electionCache.get(1)!;
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
+    });
+
+    it("should find creation tx hash for election #2", () => {
+      const electionStatus = electionCache.get(2)!;
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[2]);
+    });
+
+    it("should find creation tx hash for election #3", () => {
+      const electionStatus = electionCache.get(3)!;
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[3]);
+    });
+
+    it("should find creation tx hash for election #4", () => {
+      const electionStatus = electionCache.get(4)!;
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[4]);
+    });
+
+    it("should have creation tx in stages for tracked elections", () => {
+      const electionStatus = electionCache.get(1)!;
+      const createStage = electionStatus.stages?.find((s) => s.type === "CREATE_ELECTION");
+      expect(createStage).toBeDefined();
+      expect(createStage?.transactions.length).toBeGreaterThan(0);
+      expect(createStage?.transactions[0].hash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
+    });
+
+    it("should find nominee execute tx hash for election #4", () => {
+      const electionStatus = electionCache.get(4)!;
+      expect(electionStatus.nomineeExecuteTxHash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].nomineeExecute
+      );
+    });
+
+    it("should find member execute tx hash for election #4", () => {
+      const electionStatus = electionCache.get(4)!;
+      expect(electionStatus.memberExecuteTxHash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].memberExecute
+      );
+    });
+
+    it("should have execute tx in stages for completed elections", () => {
+      const electionStatus = electionCache.get(4)!;
+
+      const vettingStage = electionStatus.stages?.find((s) => s.type === "NOMINEE_VETTING");
+      expect(vettingStage).toBeDefined();
+      expect(vettingStage?.transactions.length).toBeGreaterThan(0);
+      expect(vettingStage?.transactions[0].hash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].nomineeExecute
       );
 
-      // Track all completed elections and verify phase data
-      for (let i = 0; i < Math.min(status.electionCount, 3); i++) {
-        const electionStatus = await trackElectionProposal(i, l2Provider, l1Provider);
+      const memberStage = electionStatus.stages?.find((s) => s.type === "MEMBER_ELECTION");
+      expect(memberStage).toBeDefined();
+      expect(memberStage?.transactions.length).toBeGreaterThan(0);
+      expect(memberStage?.transactions[0].hash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].memberExecute
+      );
+    });
+
+    it("should find timelock operation ID for election #4", () => {
+      const electionStatus = electionCache.get(4)!;
+      expect(electionStatus.timelockOperationId).toBe(KNOWN_TIMELOCK_OPERATION_IDS[4]);
+    });
+
+    it("should track post-member-execute stages for completed election #4", () => {
+      const electionStatus = electionCache.get(4)!;
+
+      expect(electionStatus.stages?.length).toBe(8);
+
+      const l2TimelockStage = electionStatus.stages?.find((s) => s.type === "L2_TIMELOCK");
+      expect(l2TimelockStage).toBeDefined();
+      expect(l2TimelockStage?.status).toBe("COMPLETED");
+      expect(l2TimelockStage?.transactions.length).toBeGreaterThan(0);
+
+      const l2ToL1Stage = electionStatus.stages?.find((s) => s.type === "L2_TO_L1_MESSAGE");
+      expect(l2ToL1Stage).toBeDefined();
+      expect(l2ToL1Stage?.status).toBe("COMPLETED");
+
+      const l1TimelockStage = electionStatus.stages?.find((s) => s.type === "L1_TIMELOCK");
+      expect(l1TimelockStage).toBeDefined();
+      expect(l1TimelockStage?.status).toBe("COMPLETED");
+
+      const retryableStage = electionStatus.stages?.find((s) => s.type === "RETRYABLE_EXECUTED");
+      expect(retryableStage).toBeDefined();
+    });
+  });
+
+  describe("Election Phase Tracking", () => {
+    it("should correctly identify completed election phases", () => {
+      // Use cached elections 0-2 for phase data verification
+      for (let i = 0; i < 3; i++) {
+        const electionStatus = electionCache.get(i)!;
 
         expect(electionStatus.electionIndex).toBe(i);
         expect(electionStatus.targetNomineeCount).toBe(6);
@@ -270,20 +396,12 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       }
     });
 
-    it("should track cohort alternation across elections", async () => {
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
+    it("should track cohort alternation across elections", () => {
+      const election0 = electionCache.get(0)!;
+      const election1 = electionCache.get(1)!;
 
-      if (status.electionCount >= 2) {
-        const election0 = await trackElectionProposal(0, l2Provider, l1Provider);
-        const election1 = await trackElectionProposal(1, l2Provider, l1Provider);
-
-        // Cohorts should alternate
-        expect(election0.cohort).not.toBe(election1.cohort);
-      }
+      // Cohorts should alternate
+      expect(election0.cohort).not.toBe(election1.cohort);
     });
   });
 });

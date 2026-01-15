@@ -16,18 +16,26 @@ import { TrackingCheckpoint, DiscoveryWatermarks, CacheAdapter } from "../types"
 import { WATERMARKS_KEY } from "./discovery";
 import { safeJsonParse } from "../utils/sanitize";
 
+export interface FileCacheOptions {
+  autoFlush?: boolean;
+}
+
 /**
  * File-based cache that persists to JSON file.
- * Synchronously loads on construction, persists on every write.
+ * Synchronously loads on construction.
+ * By default, persists on every write. Set autoFlush: false and call flush() manually for batch operations.
  * Uses a write queue to prevent race conditions from concurrent writes.
  */
 export class FileCache implements CacheAdapter {
   private readonly path: string;
   private cache: Map<string, unknown>;
   private writeQueue: Promise<void> = Promise.resolve();
+  private readonly autoFlush: boolean;
+  private dirty: boolean = false;
 
-  constructor(path: string) {
+  constructor(path: string, options: FileCacheOptions = {}) {
     this.path = path;
+    this.autoFlush = options.autoFlush ?? true;
     this.cache = this.load();
   }
 
@@ -41,6 +49,10 @@ export class FileCache implements CacheAdapter {
   }
 
   private persistSync(): void {
+    const dir = path.dirname(this.path);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const obj = Object.fromEntries(this.cache);
     fs.writeFileSync(this.path, JSON.stringify(obj, null, 2));
   }
@@ -68,17 +80,33 @@ export class FileCache implements CacheAdapter {
 
   async set<T>(key: string, value: T): Promise<void> {
     this.cache.set(key, value);
-    await this.persist();
+    this.dirty = true;
+    if (this.autoFlush) {
+      await this.persist();
+    }
   }
 
   async delete(key: string): Promise<void> {
     this.cache.delete(key);
-    await this.persist();
+    this.dirty = true;
+    if (this.autoFlush) {
+      await this.persist();
+    }
   }
 
   async clear(): Promise<void> {
     this.cache.clear();
-    await this.persist();
+    this.dirty = true;
+    if (this.autoFlush) {
+      await this.persist();
+    }
+  }
+
+  async flush(): Promise<void> {
+    if (this.dirty) {
+      await this.persist();
+      this.dirty = false;
+    }
   }
 
   async has(key: string): Promise<boolean> {
@@ -252,13 +280,6 @@ export class MemoryCache implements CacheAdapter {
 }
 
 /**
- * Generate cache key from transaction hash (primary cache key format)
- */
-export function txHashCacheKey(txHash: string): string {
-  return `tx:${txHash.toLowerCase()}`;
-}
-
-/**
  * Read all cache data without requiring RPC providers.
  * Use this for status/dashboard views that only need cached data.
  *
@@ -267,6 +288,7 @@ export function txHashCacheKey(txHash: string): string {
 export async function readCacheStatus(cachePath: string): Promise<{
   watermarks: DiscoveryWatermarks;
   checkpoints: Map<string, TrackingCheckpoint>;
+  elections: Map<number, TrackingCheckpoint>;
 }> {
   const cache = new FileCache(cachePath);
 
@@ -275,6 +297,7 @@ export async function readCacheStatus(cachePath: string): Promise<{
   const watermarks = discoveryCheckpoint?.cachedData.discoveryWatermarks ?? {};
 
   const checkpoints = new Map<string, TrackingCheckpoint>();
+  const elections = new Map<number, TrackingCheckpoint>();
   const allKeys = cache.keys();
   const keys = Array.from(allKeys as Iterable<string>);
 
@@ -284,10 +307,16 @@ export async function readCacheStatus(cachePath: string): Promise<{
       if (checkpoint) {
         checkpoints.set(key, checkpoint);
       }
+    } else if (key.startsWith("election:")) {
+      const checkpoint = await cache.get<TrackingCheckpoint>(key);
+      if (checkpoint) {
+        const index = parseInt(key.slice("election:".length), 10);
+        elections.set(index, checkpoint);
+      }
     }
   }
 
-  return { watermarks, checkpoints };
+  return { watermarks, checkpoints, elections };
 }
 
 /**

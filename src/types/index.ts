@@ -5,8 +5,7 @@
  * - core: Primitives (StageType, Chain, timing/ETA types)
  * - governor: Governor, proposal, voting types
  * - timelock: Timelock operations and state
- * - cross-chain: L2→L1 messages and retryables
- * - stages: Stage data types and TrackedStage
+ * - stages: Stage data types, TrackedStage, cross-chain types
  * - tracking: Context, results, checkpoints, execution
  * - config: TrackerOptions, ChunkingConfig
  * - election: Security Council election types
@@ -53,10 +52,7 @@ export {
   TimelockLink,
 } from "./timelock";
 
-// Cross-chain types
-export { RetryableCreationDetail, RetryableRedemptionDetail } from "./cross-chain";
-
-// Stage data types
+// Stage data types (includes cross-chain types)
 export {
   BaseStageData,
   ProposalCreatedData,
@@ -66,6 +62,12 @@ export {
   TimelockStageData,
   L2ToL1MessageStageData,
   RetryableStageData,
+  RetryableCreationDetail,
+  RetryableRedemptionDetail,
+  CreateElectionData,
+  NomineeElectionData,
+  NomineeVettingData,
+  MemberElectionData,
   StageDataMap,
   TrackedStage,
   TypedTrackedStage,
@@ -96,6 +98,7 @@ export {
 
 // Config types
 export {
+  TrackingContext,
   ChunkingConfig,
   RetryConfig,
   TrackingProgress,
@@ -114,7 +117,6 @@ export {
   // Detailed election participant types
   ElectionContender,
   ElectionNominee,
-  MemberElectionVote,
   MemberElectionNominee,
   // Election detail aggregates
   NomineeElectionDetails,

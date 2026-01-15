@@ -12,7 +12,28 @@ import {
   StageTiming,
 } from "./core";
 import { SerializedCallScheduledData } from "./timelock";
-import { RetryableCreationDetail, RetryableRedemptionDetail } from "./cross-chain";
+import { CohortType } from "./election";
+
+/**
+ * Retryable creation detail
+ */
+export interface RetryableCreationDetail {
+  index: number;
+  targetChain: L2Chain;
+  targetChainId: ChainId;
+  l2TxHash: string;
+}
+
+/**
+ * Retryable redemption detail
+ */
+export interface RetryableRedemptionDetail {
+  index: number;
+  targetChain: L2Chain;
+  targetChainId: ChainId;
+  status: string;
+  l2TxHash: string | null;
+}
 
 /**
  * Base stage data with common fields
@@ -160,6 +181,54 @@ export interface RetryableStageData extends BaseStageData {
   txNotIndexedYet?: boolean;
 }
 
+// ============================================================================
+// Election Stage Data Types
+// ============================================================================
+
+/**
+ * Data for CREATE_ELECTION stage
+ */
+export interface CreateElectionData extends BaseStageData {
+  electionIndex: number;
+  cohort: CohortType;
+  startTimestamp: number;
+  nomineeProposalId?: string;
+}
+
+/**
+ * Data for NOMINEE_ELECTION stage
+ */
+export interface NomineeElectionData extends BaseStageData {
+  nomineeProposalId: string;
+  proposalState: string;
+  contenderCount: number;
+  compliantNomineeCount: number;
+  targetNomineeCount: number;
+  quorumThreshold?: string;
+}
+
+/**
+ * Data for NOMINEE_VETTING stage
+ */
+export interface NomineeVettingData extends BaseStageData {
+  nomineeProposalId: string;
+  vettingDeadline: number;
+  currentL1Block: number;
+  compliantNomineeCount: number;
+  memberProposalId?: string;
+}
+
+/**
+ * Data for MEMBER_ELECTION stage
+ */
+export interface MemberElectionData extends BaseStageData {
+  memberProposalId: string;
+  proposalState: string;
+  winnersCount: number;
+  operationId?: string;
+  timelockAddress?: string;
+}
+
 /**
  * Maps each StageType to its corresponding data interface.
  *
@@ -175,6 +244,10 @@ export interface StageDataMap {
   L2_TO_L1_MESSAGE: L2ToL1MessageStageData;
   L1_TIMELOCK: TimelockStageData;
   RETRYABLE_EXECUTED: RetryableStageData;
+  CREATE_ELECTION: CreateElectionData;
+  NOMINEE_ELECTION: NomineeElectionData;
+  NOMINEE_VETTING: NomineeVettingData;
+  MEMBER_ELECTION: MemberElectionData;
 }
 
 /**

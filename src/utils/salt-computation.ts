@@ -155,6 +155,31 @@ export async function computeL2TimelockSalt(
 }
 
 /**
+ * Extract calldata from L2ToL1Tx event
+ *
+ * Handles both live event object (with .data property) and serialized array format
+ * where the data field is at index 8 (the 9th element):
+ *   [caller, destination, hash, position, arbBlockNum, ethBlockNum, timestamp, callvalue, data]
+ */
+function extractL2ToL1TxData(l2ToL1TxEvent: unknown): string | null {
+  if (!l2ToL1TxEvent) return null;
+
+  // Handle object format (live event)
+  if (typeof l2ToL1TxEvent === "object" && !Array.isArray(l2ToL1TxEvent)) {
+    const data = (l2ToL1TxEvent as { data?: string }).data;
+    if (typeof data === "string") return data;
+  }
+
+  // Handle array format (serialized from cache)
+  if (Array.isArray(l2ToL1TxEvent) && l2ToL1TxEvent.length >= 9) {
+    const data = l2ToL1TxEvent[8];
+    if (typeof data === "string") return data;
+  }
+
+  return null;
+}
+
+/**
  * Compute salt for L1 timelock stage
  *
  * Priority:
@@ -168,13 +193,15 @@ export function computeL1TimelockSalt(allStages?: TrackedStage[]): {
   if (allStages) {
     const l2ToL1Stage = allStages.find((s) => s.type === "L2_TO_L1_MESSAGE");
     if (l2ToL1Stage?.data.l2ToL1TxEvent) {
-      // Decode salt and predecessor from the L2ToL1Tx event data
-      const decoded = decodeL1TimelockSchedule(l2ToL1Stage.data.l2ToL1TxEvent.data);
-      if (decoded) {
-        return {
-          salt: decoded.salt,
-          predecessor: decoded.predecessor,
-        };
+      const l2ToL1TxData = extractL2ToL1TxData(l2ToL1Stage.data.l2ToL1TxEvent);
+      if (l2ToL1TxData) {
+        const decoded = decodeL1TimelockSchedule(l2ToL1TxData);
+        if (decoded) {
+          return {
+            salt: decoded.salt,
+            predecessor: decoded.predecessor,
+          };
+        }
       }
     }
   }

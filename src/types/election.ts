@@ -39,18 +39,6 @@ export interface ElectionNominee {
 }
 
 /**
- * Vote cast in the member election (with decreasing weight over time)
- */
-export interface MemberElectionVote {
-  voter: string;
-  nominee: string;
-  votes: BigNumber;
-  weight: BigNumber;
-  blockNumber: number;
-  txHash: string;
-}
-
-/**
  * Nominee's standing in the member election
  */
 export interface MemberElectionNominee {
@@ -137,6 +125,22 @@ export interface ElectionProposalStatus {
   canProceedToMemberPhase: boolean;
   /** True when member election succeeded and can be executed to install new council */
   canExecuteMember: boolean;
+
+  /** Stage tracking fields (v0.3.0+) */
+  stages?: import("./stages").TrackedStage[];
+  isFailed?: boolean;
+  failureReason?: string;
+  /** L2 timelock operationId from member election execution */
+  timelockOperationId?: string;
+  /** Transaction hashes for each phase */
+  creationTxHash?: string;
+  nomineeExecuteTxHash?: string;
+  memberExecuteTxHash?: string;
+
+  /** Fields for next election (not yet created) - used for createElection preparation */
+  canCreateElection?: boolean;
+  secondsUntilElection?: number;
+  timeUntilElection?: string;
 }
 
 /**

@@ -53,19 +53,41 @@ class MockCache implements CacheAdapter {
 function createCheckpoint(
   overrides: Partial<TrackingCheckpoint> & {
     stages?: TrackedStage[];
-    inputType?: "governor" | "timelock";
+    inputType?: "governor" | "timelock" | "election";
     governorAddress?: string;
+    electionStatus?: { phase: string };
   } = {}
 ): TrackingCheckpoint {
   const stages = overrides.stages ?? [];
+  const inputType = overrides.inputType ?? "governor";
+
+  let input: TrackingCheckpoint["input"];
+  if (inputType === "election") {
+    input = {
+      type: "election" as const,
+      electionIndex: 0,
+    };
+  } else if (inputType === "timelock") {
+    input = {
+      type: "timelock" as const,
+      operationId: "0x" + "a".repeat(64),
+      timelockAddress: "0x" + "b".repeat(40),
+      scheduledTxHash: "0x" + "c".repeat(64),
+    };
+  } else {
+    input = {
+      type: "governor" as const,
+      governorAddress: overrides.governorAddress ?? ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+      proposalId: "12345",
+      creationTxHash: "0x" + "a".repeat(64),
+    };
+  }
+
   return {
-    input: {
-      type: overrides.inputType ?? "governor",
-      txHash: "0x" + "a".repeat(64),
-      governorAddress: overrides.governorAddress,
-    },
+    input,
     cachedData: {
       completedStages: stages,
+      electionStatus: overrides.electionStatus,
     },
     metadata: overrides.metadata ?? { errorCount: 0, lastTrackedAt: Date.now() },
     createdAt: overrides.createdAt ?? Date.now(),
@@ -473,29 +495,20 @@ describe("Tracker Query Module", () => {
         })
       );
 
-      // Election (nominee governor)
+      // Elections (using election:* keys with election type)
       await cache.set(
-        "tx:0x222",
+        "election:0",
         createCheckpoint({
-          inputType: "governor",
-          governorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-          stages: [
-            createStage("PROPOSAL_CREATED", "COMPLETED"),
-            createStage("VOTING_ACTIVE", "COMPLETED"),
-          ],
+          inputType: "election",
+          electionStatus: { phase: "COMPLETED" },
         })
       );
 
-      // Election (member governor)
       await cache.set(
-        "tx:0x333",
+        "election:1",
         createCheckpoint({
-          inputType: "governor",
-          governorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
-          stages: [
-            createStage("PROPOSAL_CREATED", "COMPLETED"),
-            createStage("VOTING_ACTIVE", "COMPLETED"),
-          ],
+          inputType: "election",
+          electionStatus: { phase: "MEMBER_ELECTION" },
         })
       );
 
@@ -598,22 +611,34 @@ describe("Tracker Query Module", () => {
     });
 
     it("should count complete elections correctly", async () => {
-      // Complete election (all stages done)
+      // Complete election (uses election:* key with election type)
       await cache.set(
-        "tx:0x111",
+        "election:0",
         createCheckpoint({
-          inputType: "governor",
-          governorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-          stages: [
-            createStage("PROPOSAL_CREATED", "COMPLETED"),
-            createStage("VOTING_ACTIVE", "COMPLETED"),
-          ],
+          inputType: "election",
+          electionStatus: { phase: "COMPLETED" },
         })
       );
 
       const result = await getStats(cache);
       expect(result.elections.total).toBe(1);
       expect(result.elections.complete).toBe(1);
+    });
+
+    it("should skip legacy election governor checkpoints", async () => {
+      // Legacy election governor checkpoint (should be skipped)
+      await cache.set(
+        "tx:0x111",
+        createCheckpoint({
+          inputType: "governor",
+          governorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+          stages: [],
+        })
+      );
+
+      const result = await getStats(cache);
+      expect(result.elections.total).toBe(0);
+      expect(result.proposals.total).toBe(0);
     });
   });
 });

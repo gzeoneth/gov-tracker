@@ -19,7 +19,8 @@ import { findAndParseLogs } from "../utils/log-filters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { getCurrentBlockInfo } from "../utils/timing";
 import { addressEquals, isAddressIn } from "../utils/chain";
-import { TIMELOCK_ABI, timelockInterface } from "../abis";
+import { timelockInterface } from "../abis";
+import { multicall, buildCallInput } from "../utils/multicall";
 
 const L2_TIMELOCKS = [
   ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
@@ -43,6 +44,8 @@ export function isL1Timelock(address: string): boolean {
 /**
  * Get search defaults for timelock event searches.
  * Encapsulates chain-appropriate chunk sizes, default blocks, and direction logic.
+ *
+ * @param hint.chunkSize - Override chunk size (uses chain-appropriate default if not specified)
  */
 async function getSearchDefaults(
   timelockAddress: string,
@@ -55,7 +58,8 @@ async function getSearchDefaults(
   reverseDirection: boolean;
 }> {
   const isL1 = isL1Timelock(timelockAddress);
-  const chunkSize = isL1 ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
+  const defaultChunkSize = isL1 ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
+  const chunkSize = hint?.chunkSize ?? defaultChunkSize;
   const defaultStartBlock = isL1 ? GOVERNANCE_START_BLOCKS.L1 : GOVERNANCE_START_BLOCKS.L2;
   const toBlock = hint?.endBlock ?? (await getCurrentBlockInfo(provider)).blockNumber;
   const fromBlock = hint?.startBlock ?? defaultStartBlock;
@@ -68,6 +72,18 @@ async function getSearchDefaults(
 }
 
 /**
+ * Timelock operation state from contract reads
+ */
+export interface TimelockContractState {
+  state: TimelockOperationState;
+  isOperation: boolean;
+  isPending: boolean;
+  isReady: boolean;
+  isDone: boolean;
+  timestamp: BigNumber;
+}
+
+/**
  * Get timelock operation state directly from contract (fast path)
  *
  * This is the critical fast-path optimization: 4 cheap state reads
@@ -77,24 +93,23 @@ export async function getTimelockOperationState(
   timelockAddress: string,
   operationId: string,
   provider: ethers.providers.Provider
-): Promise<{
-  state: TimelockOperationState;
-  isOperation: boolean;
-  isPending: boolean;
-  isReady: boolean;
-  isDone: boolean;
-  timestamp: BigNumber;
-}> {
-  const timelock = new ethers.Contract(timelockAddress, TIMELOCK_ABI, provider);
-
-  // Fast parallel state checks
-  const [isOperation, isPending, isReady, isDone, timestamp] = await Promise.all([
-    queryWithRetry(() => timelock.isOperation(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationPending(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationReady(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.isOperationDone(operationId)) as Promise<boolean>,
-    queryWithRetry(() => timelock.getTimestamp(operationId)) as Promise<BigNumber>,
+): Promise<TimelockContractState> {
+  // Batch all 5 state checks into a single RPC request
+  const results = await multicall(provider, [
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperation", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationPending", [
+      operationId,
+    ]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationReady", [operationId]),
+    buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationDone", [operationId]),
+    buildCallInput<BigNumber>(timelockAddress, timelockInterface, "getTimestamp", [operationId]),
   ]);
+
+  const isOperation = (results[0] as boolean) ?? false;
+  const isPending = (results[1] as boolean) ?? false;
+  const isReady = (results[2] as boolean) ?? false;
+  const isDone = (results[3] as boolean) ?? false;
+  const timestamp = (results[4] as BigNumber) ?? BigNumber.from(0);
 
   let state: TimelockOperationState = "UNKNOWN";
 
@@ -256,6 +271,7 @@ export async function findCallExecutedEvent(
  *
  * @param options.fromBlock - REQUIRED when not skipping log search. Start block for event searches.
  * @param options.scheduledData - Pre-fetched CallScheduledData to skip log search
+ * @param options.chunkSize - Override chunk size for log searches (uses chain-appropriate default if not specified)
  */
 export async function getTimelockState(
   timelockAddress: string,
@@ -271,10 +287,16 @@ export async function getTimelockState(
     scheduledData?: CallScheduledData;
     /** All scheduled data for batch operations */
     allScheduledData?: CallScheduledData[];
+    /** Override chunk size for log searches */
+    chunkSize?: number;
+    /** Pre-fetched contract state to avoid duplicate multicalls */
+    contractState?: TimelockContractState;
   } = {}
 ): Promise<TimelockState> {
   // FAST PATH: Check state before expensive log search
-  const contractState = await getTimelockOperationState(timelockAddress, operationId, provider);
+  const contractState =
+    options.contractState ??
+    (await getTimelockOperationState(timelockAddress, operationId, provider));
 
   const state: TimelockState = {
     operationId,
@@ -310,6 +332,7 @@ export async function getTimelockState(
       const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
         startBlock: fromBlock,
         endBlock: options.toBlock,
+        chunkSize: options.chunkSize,
       });
       if (scheduledData) {
         state.scheduledData = scheduledData;
@@ -341,6 +364,7 @@ export async function getTimelockState(
     const executedData = await findCallExecutedEvent(timelockAddress, operationId, provider, {
       startBlock: executedSearchStart,
       endBlock: options.toBlock,
+      chunkSize: options.chunkSize,
     });
     if (executedData) {
       state.executedData = executedData;
@@ -430,10 +454,12 @@ export async function discoverTimelockOps(
 ): Promise<DiscoveredTimelockOp[]> {
   if (fromBlock >= toBlock) return [];
 
+  // Use chain-appropriate default chunk size
+  const defaultChunkSize = isL1Timelock(timelockAddress) ? CHUNK_SIZES.L1 : CHUNK_SIZES.L2;
   const { logs } = await searchLogsInChunks(
     provider,
     { address: timelockAddress, topics: [EVENT_TOPICS.CALL_SCHEDULED], fromBlock, toBlock },
-    { chunkSize: options.chunkSize ?? CHUNK_SIZES.L2 }
+    { chunkSize: options.chunkSize ?? defaultChunkSize }
   );
 
   const seen = new Set<string>();

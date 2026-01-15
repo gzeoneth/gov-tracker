@@ -114,7 +114,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       electionCache.set(i, status);
     });
     await Promise.all(trackingPromises);
-  });
+  }, 180000); // 3 minutes - tracks 5 elections with multiple RPC calls
 
   describe("hasVettingPeriod", () => {
     it("should detect nominee election governor has vetting", async () => {

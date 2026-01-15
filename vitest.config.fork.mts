@@ -21,7 +21,6 @@ export default defineConfig({
         "dist/**",
         "*.config.*",
         "src/cli/cli.ts",
-        "src/cli/lib/cli.ts", // CLI implementation - I/O heavy, tested via integration
       ],
       // Output to separate directory for merging
       reportsDirectory: "coverage-fork",

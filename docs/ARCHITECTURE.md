@@ -157,6 +157,47 @@ L2 (Arb1/Nova): ArbRetryableTx.redeem()
 
 ---
 
+## Interactive TUI
+
+The `ui` command provides a React/Ink-based terminal interface.
+
+### Component Architecture
+
+```
+App.tsx
+├── ProposalList (default view)
+│   ├── Header, SearchBar, FilterTabs
+│   ├── ProposalRow[] with StageProgress
+│   └── ScrollIndicator, KeyHelp
+├── ProposalDetail
+│   ├── StageView (timeline)
+│   ├── CalldataView (decoded params)
+│   ├── SimulationView (Tenderly/Foundry data)
+│   └── DescriptionView
+├── ElectionView
+│   ├── Phase timeline
+│   ├── Nominee/Member details
+│   └── Action buttons
+├── SettingsView
+└── HelpView
+```
+
+### Data Flow
+
+```
+useTracker() ─────► useProposals() ─────► ProposalList
+     │                   │
+     ▼                   ▼
+useCache() ◄──── useNavigation() ─────► Detail Views
+     │
+     ▼
+useElectionData() ─────► ElectionView
+```
+
+Hooks manage data fetching, caching, and navigation state. Views are pure render functions.
+
+---
+
 ## Testing Strategy
 
 ### Test Categories

@@ -91,11 +91,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
 
-  // Cached election tracking results - populated once in beforeAll
-  type ElectionProposalStatusWithTx = Awaited<ReturnType<typeof trackElectionProposal>>;
-  const electionCache = new Map<number, ElectionProposalStatusWithTx>();
-
-  beforeAll(async () => {
+  beforeAll(() => {
     const ethRpc = process.env.ETH_RPC;
     const arbRpc = process.env.ARB1_ARCHIVE_RPC || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
 
@@ -107,14 +103,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
 
     l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
     l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-
-    // Track elections 0-4 once upfront for all tests in this suite
-    const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {
-      const status = await trackElectionProposal(i, l2Provider, l1Provider);
-      electionCache.set(i, status);
-    });
-    await Promise.all(trackingPromises);
-  }, 180000); // 3 minutes - tracks 5 elections with multiple RPC calls
+  });
 
   describe("hasVettingPeriod", () => {
     it("should detect nominee election governor has vetting", async () => {
@@ -281,56 +270,91 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       4: "0x59b7e93c50a31204ee62b7a881a78b49046ccb10a5a770b9cf4fbdbcefbba2fb",
     };
 
-    it("should find creation tx hash for election #0", () => {
-      const electionStatus = electionCache.get(0)!;
+    it("should find creation tx hash for election #0", async () => {
+      // #given - election #0 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(0, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
       expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[0]);
     });
 
-    it("should find creation tx hash for election #1", () => {
-      const electionStatus = electionCache.get(1)!;
+    it("should find creation tx hash for election #1", async () => {
+      // #given - election #1 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(1, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
       expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
     });
 
-    it("should find creation tx hash for election #2", () => {
-      const electionStatus = electionCache.get(2)!;
+    it("should find creation tx hash for election #2", async () => {
+      // #given - election #2 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(2, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
       expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[2]);
     });
 
-    it("should find creation tx hash for election #3", () => {
-      const electionStatus = electionCache.get(3)!;
+    it("should find creation tx hash for election #3", async () => {
+      // #given - election #3 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(3, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
       expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[3]);
     });
 
-    it("should find creation tx hash for election #4", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should find creation tx hash for election #4", async () => {
+      // #given - election #4 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
       expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[4]);
     });
 
-    it("should have creation tx in stages for tracked elections", () => {
-      const electionStatus = electionCache.get(1)!;
+    it("should have creation tx in stages for tracked elections", async () => {
+      // #given - election #1 with known creation tx
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(1, l2Provider, l1Provider);
+
+      // #then - CREATE_ELECTION stage should have the tx
       const createStage = electionStatus.stages?.find((s) => s.type === "CREATE_ELECTION");
       expect(createStage).toBeDefined();
       expect(createStage?.transactions.length).toBeGreaterThan(0);
       expect(createStage?.transactions[0].hash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
     });
 
-    it("should find nominee execute tx hash for election #4", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should find nominee execute tx hash for election #4", async () => {
+      // #given - election #4 has a known nominee execute tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct nominee execute tx hash
       expect(electionStatus.nomineeExecuteTxHash).toBe(
         KNOWN_ELECTION_EXECUTE_TX_HASHES[4].nomineeExecute
       );
     });
 
-    it("should find member execute tx hash for election #4", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should find member execute tx hash for election #4", async () => {
+      // #given - election #4 has a known member execute tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct member execute tx hash
       expect(electionStatus.memberExecuteTxHash).toBe(
         KNOWN_ELECTION_EXECUTE_TX_HASHES[4].memberExecute
       );
     });
 
-    it("should have execute tx in stages for completed elections", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should have execute tx in stages for completed elections", async () => {
+      // #given - election #4 is completed with known execute txs
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
 
+      // #then - stages should have execute txs
       const vettingStage = electionStatus.stages?.find((s) => s.type === "NOMINEE_VETTING");
       expect(vettingStage).toBeDefined();
       expect(vettingStage?.transactions.length).toBeGreaterThan(0);
@@ -346,39 +370,56 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       );
     });
 
-    it("should find timelock operation ID for election #4", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should find timelock operation ID for election #4", async () => {
+      // #given - election #4 is completed and has a known timelock operation
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct timelock operation ID
       expect(electionStatus.timelockOperationId).toBe(KNOWN_TIMELOCK_OPERATION_IDS[4]);
     });
 
-    it("should track post-member-execute stages for completed election #4", () => {
-      const electionStatus = electionCache.get(4)!;
+    it("should track post-member-execute stages for completed election #4", async () => {
+      // #given - election #4 is completed with known post-execute stages
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
 
+      // #then - should have 8 stages (4 election + 4 post-execute)
       expect(electionStatus.stages?.length).toBe(8);
 
+      // #then - should have L2_TIMELOCK stage
       const l2TimelockStage = electionStatus.stages?.find((s) => s.type === "L2_TIMELOCK");
       expect(l2TimelockStage).toBeDefined();
       expect(l2TimelockStage?.status).toBe("COMPLETED");
       expect(l2TimelockStage?.transactions.length).toBeGreaterThan(0);
 
+      // #then - should have L2_TO_L1_MESSAGE stage
       const l2ToL1Stage = electionStatus.stages?.find((s) => s.type === "L2_TO_L1_MESSAGE");
       expect(l2ToL1Stage).toBeDefined();
       expect(l2ToL1Stage?.status).toBe("COMPLETED");
 
+      // #then - should have L1_TIMELOCK stage
       const l1TimelockStage = electionStatus.stages?.find((s) => s.type === "L1_TIMELOCK");
       expect(l1TimelockStage).toBeDefined();
       expect(l1TimelockStage?.status).toBe("COMPLETED");
 
+      // #then - should have RETRYABLE_EXECUTED stage
       const retryableStage = electionStatus.stages?.find((s) => s.type === "RETRYABLE_EXECUTED");
       expect(retryableStage).toBeDefined();
     });
   });
 
   describe("Election Phase Tracking", () => {
-    it("should correctly identify completed election phases", () => {
-      // Use cached elections 0-2 for phase data verification
-      for (let i = 0; i < 3; i++) {
-        const electionStatus = electionCache.get(i)!;
+    it("should correctly identify completed election phases", async () => {
+      const status = await checkElectionStatus(
+        l2Provider,
+        l1Provider,
+        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+      );
+
+      // Track all completed elections and verify phase data
+      for (let i = 0; i < Math.min(status.electionCount, 3); i++) {
+        const electionStatus = await trackElectionProposal(i, l2Provider, l1Provider);
 
         expect(electionStatus.electionIndex).toBe(i);
         expect(electionStatus.targetNomineeCount).toBe(6);
@@ -396,12 +437,20 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       }
     });
 
-    it("should track cohort alternation across elections", () => {
-      const election0 = electionCache.get(0)!;
-      const election1 = electionCache.get(1)!;
+    it("should track cohort alternation across elections", async () => {
+      const status = await checkElectionStatus(
+        l2Provider,
+        l1Provider,
+        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+      );
 
-      // Cohorts should alternate
-      expect(election0.cohort).not.toBe(election1.cohort);
+      if (status.electionCount >= 2) {
+        const election0 = await trackElectionProposal(0, l2Provider, l1Provider);
+        const election1 = await trackElectionProposal(1, l2Provider, l1Provider);
+
+        // Cohorts should alternate
+        expect(election0.cohort).not.toBe(election1.cohort);
+      }
     });
   });
 });

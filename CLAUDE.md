@@ -86,7 +86,13 @@ src/
 ├── discovery/              # Governor and timelock introspection
 ├── cli/
 │   ├── cli.ts              # CLI entry point
-│   └── lib/                # CLI utilities
+│   ├── lib/                # CLI utilities
+│   └── tui/                # Interactive terminal UI (React/Ink)
+│       ├── App.tsx         # Main TUI component
+│       ├── views/          # View components (List, Detail, Election, etc.)
+│       ├── components/     # Reusable UI components
+│       ├── hooks/          # React hooks for data fetching
+│       └── utils/          # TUI utilities
 ├── utils/                  # Timing, log search, operation IDs, etc.
 ├── types/                  # TypeScript type definitions
 └── constants.ts            # Addresses, timing constants

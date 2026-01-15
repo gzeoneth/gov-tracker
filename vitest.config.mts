@@ -15,7 +15,6 @@ export default defineConfig({
         "dist/**",
         "*.config.*",
         "src/cli/cli.ts", // CLI entrypoint - not library code
-        "src/cli/lib/cli.ts", // CLI implementation - I/O heavy, tested via integration
       ],
     },
     // 2 minute timeout covers 99% of tests

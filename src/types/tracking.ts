@@ -4,9 +4,8 @@
 
 import { Chain, ChainId, StageType } from "./core";
 import { TrackedStage } from "./stages";
-import { CallScheduledData } from "./timelock";
+import { CallScheduledData, TimelockLink } from "./timelock";
 import { ProposalType, ProposalData, ProposalState } from "./governor";
-import { TimelockState, TimelockLink } from "./timelock";
 import { ElectionProposalStatus } from "./election";
 
 // Execution Types (merged from execution.ts)
@@ -201,8 +200,9 @@ export interface TrackingResult {
   isComplete: boolean;
   proposalType?: ProposalType;
   proposalData?: ProposalData;
-  timelockState?: TimelockState;
   timelockLink?: TimelockLink;
   currentState?: ProposalState;
   isElection?: boolean;
+  /** Election status for election proposals - includes full lifecycle tracking */
+  electionStatus?: ElectionProposalStatus;
 }

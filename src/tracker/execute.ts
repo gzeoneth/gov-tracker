@@ -6,18 +6,12 @@
  */
 
 import { ethers } from "ethers";
-import {
-  TrackedStage,
-  PrepareResult,
-  PrepareOptions,
-  getStageData,
-  ProposalQueuedData,
-} from "../types";
+import { TrackedStage, PrepareResult, PrepareOptions, getStageData } from "../types";
 import { prepareGovernorQueue } from "../stages/proposal-queued";
 import { prepareTimelockStage } from "../stages/timelock";
 import { prepareL2ToL1MessageStage } from "../stages/l2-to-l1-message";
 import { prepareRetryableStage } from "../stages/retryables";
-import { failPrepare, deserializeCallScheduledDataArray } from "../stages/utils";
+import { failPrepare } from "../stages/utils";
 import { loggers } from "../utils/logger";
 
 const log = loggers.execution;
@@ -29,26 +23,6 @@ export interface ExecuteContext {
   l1Provider: ethers.providers.Provider;
   l2Provider: ethers.providers.Provider;
   novaProvider: ethers.providers.Provider;
-}
-
-/**
- * Resolve callScheduledData from PROPOSAL_QUEUED stage if not explicitly provided.
- */
-function resolveCallScheduledData(options: PrepareOptions): PrepareOptions {
-  if (options.callScheduledData || !options.stages) {
-    return options;
-  }
-
-  const proposalQueuedStage = options.stages.find((s) => s.type === "PROPOSAL_QUEUED");
-  const queuedData = proposalQueuedStage?.data as ProposalQueuedData | undefined;
-  if (!queuedData?.callScheduledData?.length) {
-    return options;
-  }
-
-  return {
-    ...options,
-    callScheduledData: deserializeCallScheduledDataArray(queuedData.callScheduledData),
-  };
 }
 
 /**
@@ -113,16 +87,7 @@ export async function prepareTransaction(
     }
 
     case "L2_TIMELOCK": {
-      // L2_TIMELOCK doesn't store callScheduledData to avoid duplication with PROPOSAL_QUEUED.
-      // Auto-resolve from options.stages if callScheduledData not explicitly provided.
-      if (!options.callScheduledData && !options.stages) {
-        log(
-          "L2_TIMELOCK preparation: no callScheduledData or stages provided. " +
-            "Pass options.stages to auto-resolve from PROPOSAL_QUEUED stage."
-        );
-      }
-      const resolvedOptions = resolveCallScheduledData(options);
-      return prepareTimelockStage(stage, l2Provider, resolvedOptions);
+      return prepareTimelockStage(stage, l2Provider, options);
     }
 
     case "L1_TIMELOCK": {

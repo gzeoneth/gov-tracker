@@ -15,9 +15,16 @@
 import { ethers } from "ethers";
 import { loggers } from "./utils/logger";
 import { isGasEstimationError } from "./utils/rpc-utils";
+import { getCurrentBlockInfo, getL1BlockNumberFromL2 } from "./utils/timing";
+import {
+  incrementErrorCount,
+  createCheckpointMetadata,
+  txHashCacheKey,
+} from "./tracker/checkpoint-helpers";
 import {
   TrackerOptions,
   TrackingResult,
+  TrackingContext,
   GovernorTrackingInput,
   TimelockTrackingInput,
   TrackedStage,
@@ -40,12 +47,63 @@ import {
   trackElectionProposal,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
+  getElectionIndexForProposalId,
 } from "./election";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
 import { findStage } from "./stages/utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
+
+/**
+ * Build a TrackingContext with current block numbers and timestamp.
+ * Called once at the start of a tracking session for consistent state.
+ */
+async function buildTrackingContext(options: {
+  l2Provider: ethers.providers.Provider;
+  l1Provider?: ethers.providers.Provider;
+  novaProvider?: ethers.providers.Provider;
+  chunkSize?: number;
+  skipCache?: boolean;
+}): Promise<TrackingContext> {
+  const { l2Provider, l1Provider, novaProvider, chunkSize, skipCache } = options;
+
+  const l2BlockInfo = await getCurrentBlockInfo(l2Provider);
+  const context: TrackingContext = {
+    l2BlockNumber: l2BlockInfo.blockNumber,
+    timestamp: l2BlockInfo.timestamp,
+    chunkSize,
+    skipCache,
+  };
+
+  logTracker(
+    "buildTrackingContext: l2Block=%d timestamp=%d",
+    context.l2BlockNumber,
+    context.timestamp
+  );
+
+  if (l1Provider) {
+    try {
+      const l1Block = await getL1BlockNumberFromL2(l2Provider);
+      context.l1BlockNumber = l1Block.toNumber();
+      logTracker("buildTrackingContext: l1Block=%d", context.l1BlockNumber);
+    } catch (err) {
+      logTracker("buildTrackingContext: failed to get L1 block: %s", (err as Error).message);
+    }
+  }
+
+  if (novaProvider) {
+    try {
+      const novaBlockInfo = await getCurrentBlockInfo(novaProvider);
+      context.novaBlockNumber = novaBlockInfo.blockNumber;
+      logTracker("buildTrackingContext: novaBlock=%d", context.novaBlockNumber);
+    } catch (err) {
+      logTracker("buildTrackingContext: failed to get Nova block: %s", (err as Error).message);
+    }
+  }
+
+  return context;
+}
 
 // Import context and pipeline from tracker modules
 import {
@@ -61,7 +119,7 @@ import {
 import { trackGovernorPipeline, trackTimelockPipeline } from "./tracker/pipeline";
 
 // Import from focused modules
-import { txHashCacheKey, readCacheStatus, FileCache } from "./tracker/cache";
+import { readCacheStatus, FileCache } from "./tracker/cache";
 import { loadWatermarks, saveWatermarks, LoadedWatermarks } from "./tracker/discovery";
 import { CacheAdapter, WatermarkHashes } from "./types";
 import {
@@ -182,8 +240,19 @@ export class ProposalStageTracker {
   static async readCacheStatus(cachePath: string): Promise<{
     watermarks: DiscoveryWatermarks;
     checkpoints: Map<string, TrackingCheckpoint>;
+    elections: Map<number, TrackingCheckpoint>;
   }> {
     return readCacheStatus(cachePath);
+  }
+
+  /**
+   * Clear a specific cache entry. Used by --force to ensure fresh tracking.
+   */
+  async clearCacheEntry(key: string): Promise<void> {
+    if (this.cache) {
+      await this.cache.delete(key);
+      logTracker("cleared cache entry: %s", key);
+    }
   }
 
   // Watermark Management
@@ -222,17 +291,18 @@ export class ProposalStageTracker {
     if (!this.cache) return;
 
     const key = `election:${electionStatus.electionIndex}`;
-    const checkpoint: TrackingCheckpoint = {
+    const now = Date.now();
+
+    await this.cache.set(key, {
       version: 1,
-      createdAt: Date.now(),
+      createdAt: now,
       input: { type: "election", electionIndex: electionStatus.electionIndex },
       lastProcessedStage: null,
       lastProcessedBlock: { l1: 0, l2: 0 },
       cachedData: { electionStatus },
-      metadata: { errorCount: 0, lastTrackedAt: Date.now() },
-    };
+      metadata: { errorCount: 0, lastTrackedAt: now },
+    } satisfies TrackingCheckpoint);
 
-    await this.cache.set(key, checkpoint);
     logTracker("saved election checkpoint: %s (phase: %s)", key, electionStatus.phase);
   }
 
@@ -426,8 +496,8 @@ export class ProposalStageTracker {
           creationTxHash: txHash,
         };
         const prevErrorCount = checkpoint?.metadata?.errorCount ?? 0;
+        const newErrorCount = incrementErrorCount(prevErrorCount, error as Error);
         const isGasError = isGasEstimationError(error);
-        const newErrorCount = isGasError ? prevErrorCount : prevErrorCount + 1;
 
         const errorCheckpoint: TrackingCheckpoint = checkpoint ?? {
           version: 1,
@@ -437,7 +507,7 @@ export class ProposalStageTracker {
           lastProcessedBlock: { l1: 0, l2: 0 },
           cachedData: {},
         };
-        errorCheckpoint.metadata = { errorCount: newErrorCount, lastTrackedAt: Date.now() };
+        errorCheckpoint.metadata = createCheckpointMetadata(newErrorCount);
         await this.cache.set(cacheKey, errorCheckpoint);
         logTracker(
           "saved checkpoint on error: %s (errorCount=%d%s)",
@@ -569,7 +639,27 @@ export class ProposalStageTracker {
     // Build result from state
     const result = this.buildResultFromState(finalState);
 
-    // Save checkpoint to cache
+    // Track election status if this is an election governor proposal
+    if (result.isElection) {
+      const electionStatus = await this.trackElectionStatus(proposalId);
+      if (electionStatus) {
+        result.electionStatus = electionStatus;
+        await this.saveElectionCheckpoint(electionStatus);
+        // Elections are fully tracked via election checkpoints, remove tx:* checkpoint
+        if (this.cache && cacheKey) {
+          await this.cache.delete(cacheKey);
+          logTracker(
+            "election tracked via election checkpoint, removed tx:* checkpoint: %s",
+            cacheKey
+          );
+        }
+        return result;
+      }
+      // If election tracking failed, fall through to save tx:* checkpoint for retry
+      logTracker("election tracking failed, saving tx:* checkpoint for retry");
+    }
+
+    // Save checkpoint to cache (non-elections and failed election tracking)
     if (this.cache && cacheKey) {
       result.checkpoint.metadata = { errorCount: 0, lastTrackedAt: Date.now() };
       await this.cache.set(cacheKey, result.checkpoint);
@@ -773,6 +863,190 @@ export class ProposalStageTracker {
     };
   }
 
+  // Election Tracking
+
+  /**
+   * Track election status for a given proposal ID.
+   *
+   * Searches through elections to find the one containing this proposal,
+   * then tracks the full election lifecycle.
+   */
+  private async trackElectionStatus(proposalId: string): Promise<ElectionProposalStatus | null> {
+    logTracker("trackElectionStatus for proposal %s", proposalId);
+
+    try {
+      // Get current L2 block for block-scoped caching
+      const { blockNumber: l2BlockNumber } = await getCurrentBlockInfo(this.l2Provider);
+
+      const electionIndex = await getElectionIndexForProposalId(
+        proposalId,
+        this.l2Provider,
+        this.l1Provider,
+        { novaProvider: this.novaProvider, blockNumber: l2BlockNumber }
+      );
+
+      if (electionIndex === null) {
+        logTracker("no election found for proposal %s", proposalId);
+        return null;
+      }
+
+      logTracker("found election index %d for proposal %s", electionIndex, proposalId);
+      return trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider, {
+        novaProvider: this.novaProvider,
+      });
+    } catch (error) {
+      // Election tracking is non-critical - log and return null
+      // The proposal stages are already tracked successfully
+      logTracker("election tracking failed for proposal %s: %O", proposalId, error);
+      return null;
+    }
+  }
+
+  /**
+   * Track an election by its index.
+   *
+   * This method provides direct election tracking when you have the election index.
+   * For tracking via tx hash, use trackByTxHash() which auto-detects elections.
+   *
+   * Caching behavior:
+   * - COMPLETED elections: Returns cached data immediately (0 RPC calls)
+   * - Incomplete elections: Makes fresh RPC calls and updates cache
+   * - No cache: Always makes fresh RPC calls
+   *
+   * @param electionIndex - Election index (0-based)
+   * @param options.force - Force fresh tracking even for completed elections
+   * @returns Election status
+   */
+  async trackElection(
+    electionIndex: number,
+    options: { force?: boolean } = {}
+  ): Promise<ElectionProposalStatus> {
+    logTracker("trackElection for index %d (force=%s)", electionIndex, options.force ?? false);
+
+    // Check cache first for completed elections (skip RPC calls)
+    if (this.cache && !options.force) {
+      const cached = await this.getElectionCheckpoint(electionIndex);
+      if (cached && cached.phase === "COMPLETED") {
+        logTracker("returning cached COMPLETED election %d (0 RPC calls)", electionIndex);
+        return cached;
+      }
+    }
+
+    // Build full tracking context for consistent state across all calls
+    const context = await buildTrackingContext({
+      l2Provider: this.l2Provider,
+      l1Provider: this.l1Provider,
+      novaProvider: this.novaProvider,
+      skipCache: options.force,
+    });
+
+    // Track fresh for incomplete elections or cache miss
+    const status = await trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider, {
+      novaProvider: this.novaProvider,
+      l2BlockNumber: context.l2BlockNumber,
+      timestamp: context.timestamp,
+      skipCache: context.skipCache,
+    });
+
+    if (this.cache) {
+      await this.saveElectionCheckpoint(status);
+    }
+
+    return status;
+  }
+
+  /**
+   * Track all elections with caching.
+   *
+   * Caching behavior:
+   * - COMPLETED elections: Returns cached data immediately (0 RPC calls)
+   * - Incomplete elections: Makes fresh RPC calls and updates cache
+   *
+   * @param options.includeNext - Include the "next" election slot (default: true)
+   * @param options.force - Force fresh tracking for all elections
+   * @returns Array of election statuses
+   */
+  async trackAllElections(
+    options: { includeNext?: boolean; force?: boolean } = {}
+  ): Promise<ElectionProposalStatus[]> {
+    logTracker(
+      "trackAllElections (includeNext=%s, force=%s)",
+      options.includeNext ?? true,
+      options.force ?? false
+    );
+
+    // Build context once at the start for consistent state across all elections
+    const context = await buildTrackingContext({
+      l2Provider: this.l2Provider,
+      l1Provider: this.l1Provider,
+      novaProvider: this.novaProvider,
+      skipCache: options.force,
+    });
+
+    const status = await checkElectionStatus(this.l2Provider, this.l1Provider);
+    const electionCount = status.electionCount;
+    const results: ElectionProposalStatus[] = [];
+
+    // Track existing elections (indices 0 to electionCount-1)
+    for (let i = 0; i < electionCount; i++) {
+      try {
+        // Check cache first for completed elections (skip RPC calls)
+        if (this.cache && !options.force) {
+          const cached = await this.getElectionCheckpoint(i);
+          if (cached && cached.phase === "COMPLETED") {
+            logTracker("returning cached COMPLETED election %d (0 RPC calls)", i);
+            results.push(cached);
+            continue;
+          }
+        }
+
+        // Track with shared context
+        const electionStatus = await trackElectionProposal(i, this.l2Provider, this.l1Provider, {
+          novaProvider: this.novaProvider,
+          l2BlockNumber: context.l2BlockNumber,
+          timestamp: context.timestamp,
+          skipCache: context.skipCache,
+        });
+        results.push(electionStatus);
+
+        if (this.cache) {
+          await this.saveElectionCheckpoint(electionStatus);
+        }
+      } catch (err) {
+        logTracker("Failed to track election %d: %s", i, err);
+      }
+    }
+
+    // Optionally track the next election (not yet created) for createElection preparation
+    if (options.includeNext ?? true) {
+      try {
+        // Next election always needs fresh RPC calls since it doesn't exist yet
+        const nextElectionStatus = await trackElectionProposal(
+          electionCount,
+          this.l2Provider,
+          this.l1Provider,
+          {
+            novaProvider: this.novaProvider,
+            l2BlockNumber: context.l2BlockNumber,
+            timestamp: context.timestamp,
+          }
+        );
+        results.push({
+          ...nextElectionStatus,
+          canCreateElection: status.canCreateElection,
+          secondsUntilElection: status.secondsUntilElection,
+          timeUntilElection: status.timeUntilElection,
+        });
+        // Don't cache the "next" election since it doesn't exist yet
+      } catch (err) {
+        logTracker("Failed to track next election %d: %s", electionCount, err);
+      }
+    }
+
+    logTracker("Tracked %d elections", results.length);
+    return results;
+  }
+
   // Election Support
 
   /**
@@ -805,11 +1079,8 @@ export class ProposalStageTracker {
 
     if (status.electionCount > 0) {
       const currentElectionIndex = status.electionCount - 1;
-      const electionStatus = await trackElectionProposal(
-        currentElectionIndex,
-        this.l2Provider,
-        this.l1Provider
-      );
+      // Use cached tracking for the current election
+      const electionStatus = await this.trackElection(currentElectionIndex);
 
       result.currentElection = electionStatus;
       result.canTriggerMember = electionStatus.canProceedToMemberPhase;

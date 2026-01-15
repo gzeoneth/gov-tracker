@@ -26,8 +26,14 @@ import { findLog, findAndParseEvent, searchLogsInChunks } from "../utils/log-sea
 import { findFirstLog } from "../utils/log-filters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { getCurrentBlockInfo, getL1BlockNumberFromL2 } from "../utils/timing";
-import { GOVERNOR_ABI, proposalCreatedInterface, proposalQueuedInterface } from "../abis";
+import {
+  GOVERNOR_ABI,
+  proposalCreatedInterface,
+  proposalQueuedInterface,
+  governorInterface,
+} from "../abis";
 import { hasVettingPeriod } from "../election";
+import { multicall, buildCallInput } from "../utils/multicall";
 import { addressEquals } from "../utils/chain";
 import { truncateDescription } from "../utils/sanitize";
 
@@ -72,7 +78,7 @@ async function hasTimelock(
 ): Promise<boolean> {
   const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
   try {
-    await governor.timelock();
+    await queryWithRetry(() => governor.timelock());
     return true;
   } catch {
     return false;
@@ -196,7 +202,7 @@ export async function findProposalCreatedEvent(
     { address: governorAddress, topics: [EVENT_TOPICS.PROPOSAL_CREATED], fromBlock, toBlock },
     (l) => parseProposalCreatedEvent(l)?.proposalId === proposalId,
     parseProposalCreatedEvent,
-    { chunkSize: 10_000_000, reverseDirection }
+    { chunkSize: hint?.chunkSize ?? CHUNK_SIZES.L2, reverseDirection }
   );
 }
 
@@ -220,6 +226,12 @@ export async function findProposalByTxHash(
   );
 }
 
+interface ProposalVotes {
+  againstVotes: BigNumber;
+  forVotes: BigNumber;
+  abstainVotes: BigNumber;
+}
+
 /**
  * Get voting information for a proposal
  */
@@ -228,49 +240,63 @@ export async function getVotingData(
   proposalId: string,
   provider: ethers.providers.Provider
 ): Promise<VotingData> {
-  const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
   const proposalIdBN = BigNumber.from(proposalId);
 
-  // Fetch all voting data in parallel
-  const [startBlock, deadline, votes, { blockNumber: currentBlock }] = await Promise.all([
-    queryWithRetry(() => governor.proposalSnapshot(proposalIdBN)) as Promise<BigNumber>,
-    queryWithRetry(() => governor.proposalDeadline(proposalIdBN)) as Promise<BigNumber>,
-    queryWithRetry(() => governor.proposalVotes(proposalIdBN)) as Promise<{
-      againstVotes: BigNumber;
-      forVotes: BigNumber;
-      abstainVotes: BigNumber;
-    }>,
+  // First batch: proposalSnapshot, proposalDeadline, proposalVotes + optional deadlines
+  const [firstBatchResults, { blockNumber: currentBlock }] = await Promise.all([
+    multicall(provider, [
+      buildCallInput<BigNumber>(governorAddress, governorInterface, "proposalSnapshot", [
+        proposalIdBN,
+      ]),
+      buildCallInput<BigNumber>(governorAddress, governorInterface, "proposalDeadline", [
+        proposalIdBN,
+      ]),
+      // Custom decoder for proposalVotes which returns multiple values
+      {
+        targetAddr: governorAddress,
+        encoder: () => governorInterface.encodeFunctionData("proposalVotes", [proposalIdBN]),
+        decoder: (returnData: string): ProposalVotes => {
+          const result = governorInterface.decodeFunctionResult("proposalVotes", returnData);
+          return {
+            againstVotes: result.againstVotes,
+            forVotes: result.forVotes,
+            abstainVotes: result.abstainVotes,
+          };
+        },
+      },
+      // Optional calls - may not exist on all governors
+      buildCallInput<BigNumber>(governorAddress, governorInterface, "proposalExtendedDeadline", [
+        proposalIdBN,
+      ]),
+      buildCallInput<BigNumber>(governorAddress, governorInterface, "proposalVettingDeadline", [
+        proposalIdBN,
+      ]),
+    ]),
     getCurrentBlockInfo(provider),
   ]);
 
-  // Get quorum at start block
-  const quorum = (await queryWithRetry(() => governor.quorum(startBlock))) as BigNumber;
+  const startBlock = firstBatchResults[0] as BigNumber;
+  const deadline = firstBatchResults[1] as BigNumber;
+  const votes = firstBatchResults[2] as ProposalVotes;
+  const extendedResult = firstBatchResults[3] as BigNumber | undefined;
+  const vettingResult = firstBatchResults[4] as BigNumber | undefined;
 
-  // Check for extended deadline (late quorum)
-  let extendedDeadline: BigNumber | undefined;
-  try {
-    const extended = await governor.proposalExtendedDeadline(proposalIdBN);
-    if (extended.gt(0)) {
-      extendedDeadline = extended;
-    }
-  } catch {
-    // Function not available on this governor
-  }
+  // Second batch: quorum (needs startBlock)
+  const quorumResults = await multicall(provider, [
+    buildCallInput<BigNumber>(governorAddress, governorInterface, "quorum", [startBlock]),
+  ]);
 
-  // Check for vetting deadline (Security Council)
-  // IMPORTANT: Vetting deadline is an L1 block number, not L2
+  const quorum = quorumResults[0] as BigNumber;
+
+  const extendedDeadline = extendedResult?.gt(0) ? extendedResult : undefined;
+
+  // Handle vetting deadline (L1 block number comparison)
   let vettingDeadline: BigNumber | undefined;
   let isVettingPeriod = false;
-  try {
-    const vetting = await governor.proposalVettingDeadline(proposalIdBN);
-    if (vetting.gt(0)) {
-      vettingDeadline = vetting;
-      // Use L1 block number for comparison since vetting deadline is L1-based
-      const l1Block = await getL1BlockNumberFromL2(provider);
-      isVettingPeriod = l1Block.lte(vetting);
-    }
-  } catch {
-    // Function not available on this governor
+  if (vettingResult?.gt(0)) {
+    vettingDeadline = vettingResult;
+    const l1Block = await getL1BlockNumberFromL2(provider);
+    isVettingPeriod = l1Block.lte(vettingResult);
   }
 
   const effectiveDeadline = extendedDeadline ?? deadline;
@@ -339,7 +365,7 @@ export async function findProposalQueuedEvent(
         return false;
       }
     },
-    { chunkSize: 10_000_000, reverseDirection }
+    { chunkSize: hint?.chunkSize ?? CHUNK_SIZES.L2, reverseDirection }
   );
 
   if (!log) {

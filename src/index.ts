@@ -152,6 +152,7 @@ export {
   areAllStagesComplete,
   extractOperationId,
   isTimelockStage,
+  isConstitutional,
   findStage,
 } from "./stages/utils";
 
@@ -257,17 +258,11 @@ export type { GovernorProposalParams } from "./stages/proposal-queued";
 // TIER 4: Framework Utilities
 // ============================================================================
 
-// URL generation
-export { getTxUrl, getStageTransactionUrl } from "./constants";
+// URL generation and constants
+export { getTxUrl, getStageTransactionUrl, GOVERNANCE_START_BLOCKS } from "./constants";
 
 // Stage metadata
-export {
-  getStageMetadata,
-  getAllStageMetadata,
-  getActionableStages,
-  formatStageTitle,
-  getTotalExpectedDuration,
-} from "./utils/stage-metadata";
+export { getStageMetadata, formatStageTitle } from "./utils/stage-metadata";
 export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
@@ -284,6 +279,25 @@ export {
   safeJsonParse,
   MAX_DESCRIPTION_LENGTH,
 } from "./utils/sanitize";
+
+// Display formatting utilities
+export {
+  wrapText,
+  truncate,
+  safeStringify,
+  formatValue,
+  formatDate,
+  CHAIN_TO_CHAIN_ID,
+  type StageDataItem,
+  formatStageData,
+  getTxHash,
+  getProposalIdDisplay,
+  type FormattedLine,
+  formatDecodedCalldata,
+  filterVisibleLines,
+  getAllFoldableKeys,
+  toggleFoldKey,
+} from "./utils/formatters";
 
 // ============================================================================
 // TIER 5: Election Tracking
@@ -373,3 +387,21 @@ export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "
 // ============================================================================
 
 export { createCheckpoint, createTrackingState } from "./tracker/state";
+
+export {
+  createCheckpointMetadata,
+  isCheckpointComplete,
+  isCheckpointErrored,
+  getCheckpointErrorCount,
+  computeCacheStats,
+  electionCacheKey,
+  txHashCacheKey,
+  isElectionKey,
+  isTxKey,
+  isDiscoveryKey,
+  parseElectionKey,
+  DEFAULT_ERROR_THRESHOLD,
+  ELECTION_KEY_PREFIX,
+  TX_KEY_PREFIX,
+  WATERMARKS_KEY,
+} from "./tracker/checkpoint-helpers";

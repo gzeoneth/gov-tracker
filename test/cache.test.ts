@@ -12,10 +12,10 @@ import {
   FileCache,
   MemoryCache,
   LocalStorageCache,
-  txHashCacheKey,
   readCacheStatus,
   getBundledCachePath,
 } from "../src/tracker/cache";
+import { txHashCacheKey } from "../src/tracker/checkpoint-helpers";
 import { WATERMARKS_KEY } from "../src/tracker/discovery";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
 

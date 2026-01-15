@@ -15,6 +15,15 @@ src/
 ├── tracker.ts           # ProposalStageTracker class
 ├── tracker/             # Pipeline, state, discovery, execute, query, cache
 ├── stages/              # Stage implementations (voting, timelock, etc.)
+├── election/            # Security Council election tracking
+│   ├── contracts.ts     # Governor contract factories
+│   ├── proposal-ids.ts  # ID computation + caching
+│   ├── params.ts        # Proposal parameters
+│   ├── participants.ts  # Contenders, nominees
+│   ├── details.ts       # Full election details
+│   ├── prepare.ts       # Transaction preparation
+│   ├── status.ts        # Phase determination
+│   └── tracking.ts      # Main orchestration
 ├── discovery/           # Governor & timelock introspection
 ├── utils/               # Timing, log search, operation IDs
 ├── types/               # Type definitions
@@ -36,8 +45,28 @@ Pipeline: track each stage sequentially
   1. PROPOSAL_CREATED → 2. VOTING → 3. QUEUED → 4. L2_TIMELOCK
   → 5. L2_TO_L1_MESSAGE → 6. L1_TIMELOCK → 7. RETRYABLE_EXECUTED
         ↓
+[If election governor] → Track election lifecycle
+        ↓
 TrackingResult + Checkpoint saved to cache
 ```
+
+### Election Auto-Detection
+
+When `trackByTxHash` discovers a proposal on an election governor (nominee or member), it automatically tracks the full election lifecycle:
+
+```
+Proposal from Election Governor detected
+        ↓
+getElectionIndexForProposalId() → find election index
+        ↓
+trackElectionProposal() → get phase, cohort, nominees
+        ↓
+TrackingResult.electionStatus populated
+        ↓
+saveElectionCheckpoint() → cache with key `election:{index}`
+```
+
+Election phases: `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
 
 ### Stage State Machine
 
@@ -93,14 +122,17 @@ interface TrackingCheckpoint {
 5. **Bounded L1→L2 conversion**: Narrow binary search range for block conversion
 6. **Concurrent tracking**: Built-in concurrency limiter for bounded parallel operations
 7. **L2→L1 sendProps caching**: Cache SDK's sendRootSize/sendRootHash from tracking phase to skip redundant ~3-4s `getSendProps()` call during preparation
+8. **Automatic retry with backoff**: All RPC calls wrapped with `queryWithRetry` for rate limit handling
 
 ```typescript
 chunkingConfig: {
-  l1ChunkSize: 10_000,    // Blocks per chunk
+  l1ChunkSize: 10_000,    // Blocks per chunk (flows through entire pipeline)
   l2ChunkSize: 10_000_000,
   delayBetweenChunks: 100, // ms
 }
 ```
+
+User-provided `chunkingConfig` is respected throughout the entire tracking pipeline, from discovery functions through stage tracking.
 
 ---
 
@@ -118,7 +150,8 @@ L2 (Arb1/Nova): ArbRetryableTx.redeem()
 
 ## Error Handling
 
-- **Retry**: Exponential backoff (1s → 2s → 4s)
+- **Retry**: All RPC calls use `queryWithRetry` with exponential backoff (1s → 2s → 4s → 8s, max 30s)
+- **Rate limit handling**: Automatic retry on HTTP 429 and transient network errors
 - **Error tracking**: `errorCount` in checkpoint metadata
 - **Graceful degradation**: Missing data = NOT_STARTED (not FAILED)
 

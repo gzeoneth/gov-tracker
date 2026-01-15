@@ -136,7 +136,7 @@ export const CHAIN_IDS = {
  * configure dedicated RPC URLs via environment variables.
  */
 export const DEFAULT_RPC_URLS = {
-  ETHEREUM: "https://eth.llamarpc.com",
+  ETHEREUM: "https://eth.drpc.org",
   ARB_ONE: "https://arb1.arbitrum.io/rpc",
   NOVA: "https://nova.arbitrum.io/rpc",
 } as const;
@@ -359,6 +359,21 @@ export const PROPOSAL_STATE = {
   EXPIRED: 6,
   EXECUTED: 7,
 } as const;
+
+/**
+ * Convert proposal state number to human-readable string
+ *
+ * @param state - The numeric state from governor.state()
+ * @returns The human-readable state string
+ * @throws Error if state number is not recognized
+ */
+export function proposalStateToString(state: number): ProposalState {
+  const result = PROPOSAL_STATE_MAP[state];
+  if (!result) {
+    throw new Error(`Unknown proposal state number: ${state}`);
+  }
+  return result;
+}
 
 // Explorer URLs
 

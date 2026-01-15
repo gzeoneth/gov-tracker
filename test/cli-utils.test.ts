@@ -439,9 +439,11 @@ describe("CLI Utilities", () => {
   });
 
   describe("formatCacheStatus", () => {
+    const emptyElections = new Map<number, TrackingCheckpoint>();
+
     it("should format empty cache", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).toContain("Total cached: 0");
       expect(output).toContain("Proposals: 0");
@@ -453,7 +455,7 @@ describe("CLI Utilities", () => {
       checkpoints.set("p1", createMockCheckpoint("governor", true, false));
       checkpoints.set("p2", createMockCheckpoint("governor", true, false));
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).toContain("Proposals: 2");
       expect(output).toContain("Complete: 2");
@@ -464,7 +466,7 @@ describe("CLI Utilities", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("p1", createMockCheckpoint("governor", false, false));
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).toContain("Active: 1");
     });
@@ -473,7 +475,7 @@ describe("CLI Utilities", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("p1", createMockCheckpoint("governor", false, true));
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).toContain("Failed: 1");
     });
@@ -483,7 +485,7 @@ describe("CLI Utilities", () => {
       checkpoints.set("t1", createMockCheckpoint("timelock", true, false));
       checkpoints.set("t2", createMockCheckpoint("timelock", false, false));
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).toContain("Timelock Ops: 2");
       expect(output).toContain("Complete: 1");
@@ -496,7 +498,7 @@ describe("CLI Utilities", () => {
       checkpoints.set("t1", createMockCheckpoint("timelock", false, true));
 
       // #when
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       // #then - should show failed count
       expect(output).toContain("Timelock Ops: 1");
@@ -504,11 +506,29 @@ describe("CLI Utilities", () => {
     });
 
     it("should count elections separately", () => {
+      // Elections are now passed in a separate map
       const checkpoints = new Map<string, TrackingCheckpoint>();
-      checkpoints.set("e1", createMockCheckpoint("governor", true, false, true));
-      checkpoints.set("e2", createMockCheckpoint("governor", false, false, true));
+      const elections = new Map<number, TrackingCheckpoint>();
+      elections.set(0, {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: { type: "election", electionIndex: 0 },
+        cachedData: { electionStatus: { phase: "COMPLETED" } as ElectionProposalStatus },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+      elections.set(1, {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: { type: "election", electionIndex: 1 },
+        cachedData: { electionStatus: { phase: "MEMBER_ELECTION" } as ElectionProposalStatus },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, elections);
 
       expect(output).toContain("Elections: 2");
       expect(output).toContain("Complete: 1");
@@ -519,7 +539,7 @@ describe("CLI Utilities", () => {
       const checkpoints = new Map<string, TrackingCheckpoint>();
       checkpoints.set("p1", createMockCheckpoint("governor", true, false, false));
 
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, emptyElections);
 
       expect(output).not.toContain("Elections:");
     });
@@ -527,6 +547,7 @@ describe("CLI Utilities", () => {
     it("should count election type checkpoint with COMPLETED phase as complete", () => {
       // #given - an election type checkpoint with COMPLETED phase
       const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
       const electionCheckpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -556,10 +577,10 @@ describe("CLI Utilities", () => {
         },
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
-      checkpoints.set("election:5", electionCheckpoint);
+      elections.set(5, electionCheckpoint);
 
       // #when
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, elections);
 
       // #then
       expect(output).toContain("Elections: 1");
@@ -570,6 +591,7 @@ describe("CLI Utilities", () => {
     it("should count election type checkpoint with non-COMPLETED phase as active", () => {
       // #given - an election type checkpoint with NOMINEE_SELECTION phase
       const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
       const electionCheckpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -599,10 +621,10 @@ describe("CLI Utilities", () => {
         },
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
-      checkpoints.set("election:6", electionCheckpoint);
+      elections.set(6, electionCheckpoint);
 
       // #when
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, elections);
 
       // #then
       expect(output).toContain("Elections: 1");
@@ -613,6 +635,7 @@ describe("CLI Utilities", () => {
     it("should count mixed election type checkpoints correctly", () => {
       // #given - multiple election checkpoints with different phases
       const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
 
       // Completed election
       const completedElection: TrackingCheckpoint = {
@@ -707,12 +730,12 @@ describe("CLI Utilities", () => {
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
 
-      checkpoints.set("election:4", completedElection);
-      checkpoints.set("election:5", vettingElection);
-      checkpoints.set("election:6", pendingElection);
+      elections.set(4, completedElection);
+      elections.set(5, vettingElection);
+      elections.set(6, pendingElection);
 
       // #when
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, elections);
 
       // #then
       expect(output).toContain("Elections: 3");
@@ -723,6 +746,7 @@ describe("CLI Utilities", () => {
     it("should handle election type checkpoint without electionStatus as active", () => {
       // #given - an election checkpoint with missing electionStatus in cachedData
       const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
       const electionCheckpoint: TrackingCheckpoint = {
         version: 1,
         createdAt: Date.now(),
@@ -738,10 +762,10 @@ describe("CLI Utilities", () => {
         },
         metadata: { errorCount: 0, lastTrackedAt: Date.now() },
       };
-      checkpoints.set("election:7", electionCheckpoint);
+      elections.set(7, electionCheckpoint);
 
       // #when
-      const output = formatCacheStatus(checkpoints);
+      const output = formatCacheStatus(checkpoints, elections);
 
       // #then - should count as active since electionStatus?.phase !== "COMPLETED"
       expect(output).toContain("Elections: 1");
@@ -1455,6 +1479,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1494,6 +1519,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1532,6 +1558,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1567,6 +1594,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockRejectedValue(new Error("RPC error")),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1616,6 +1644,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1661,6 +1690,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1687,6 +1717,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1731,6 +1762,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockTrackingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1785,6 +1817,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([mockProposalResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1834,6 +1867,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1868,6 +1902,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([]), // Returns empty array
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1924,6 +1959,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn().mockResolvedValue([nonMatchingResult, matchingResult]),
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -1982,6 +2018,7 @@ describe("CLI Utilities", () => {
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2013,6 +2050,7 @@ describe("CLI Utilities", () => {
           timelockOps: [],
           watermarks: {},
         }),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
         queryIncompleteCheckpoints: vi.fn().mockResolvedValue([]),
         trackByTxHash: vi.fn(),
         trackFromCheckpoint: vi.fn(),
@@ -2030,7 +2068,7 @@ describe("CLI Utilities", () => {
       expect(mockTracker.discoverAll).toHaveBeenCalledWith(
         customTargets,
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2047,6 +2085,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2064,7 +2103,7 @@ describe("CLI Utilities", () => {
           l2NonConstitutionalTimelock: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2081,6 +2120,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2134,6 +2174,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2153,7 +2194,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2196,6 +2237,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2215,7 +2257,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2258,6 +2300,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2277,7 +2320,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2320,6 +2363,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2339,7 +2383,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2382,6 +2426,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2401,7 +2446,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: false,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
 
@@ -2444,6 +2489,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
       };
       const providers = createMockProviders();
 
@@ -2463,7 +2509,7 @@ describe("CLI Utilities", () => {
           electionMemberGovernor: true,
         }),
         expect.any(Number),
-        undefined
+        expect.any(Object)
       );
     });
   });

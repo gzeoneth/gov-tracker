@@ -14,7 +14,13 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { TrackingCheckpoint, TrackedStage, StageStatus } from "../src/index";
+import {
+  TrackingCheckpoint,
+  TrackedStage,
+  StageStatus,
+  ElectionPhase,
+  CohortType,
+} from "../src/index";
 import { StageBuilder } from "../src/stages/builder";
 
 type MockStageType =
@@ -490,6 +496,139 @@ describe("JSON Dashboard State", () => {
     });
   });
 
+  describe("election checkpoints", () => {
+    function createMockElectionCheckpoint(
+      electionIndex: number,
+      phase: ElectionPhase,
+      cohort: CohortType,
+      stages: TrackedStage[] = [],
+      errorCount = 0
+    ): TrackingCheckpoint {
+      return {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex,
+        },
+        cachedData: {
+          electionStatus: {
+            electionIndex,
+            phase,
+            cohort,
+            stages,
+            nomineeProposalId: "123",
+            memberProposalId: "456",
+            nomineeProposalState: "Succeeded",
+            memberProposalState: "Executed",
+            compliantNomineeCount: 6,
+            targetNomineeCount: 6,
+            vettingDeadline: null,
+            isInVettingPeriod: false,
+            canProceedToMemberPhase: false,
+            canExecuteMember: false,
+          },
+        },
+        metadata: {
+          errorCount,
+          lastTrackedAt: Date.now(),
+        },
+      };
+    }
+
+    it("should include elections in dashboard state", () => {
+      // #given - an election checkpoint
+      const stages = [createMockStage("PROPOSAL_CREATED", "COMPLETED")];
+      const checkpoint = createMockElectionCheckpoint(0, "COMPLETED", 0, stages);
+
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("election:0", checkpoint);
+
+      // #when - building dashboard state
+      const state = buildDashboardState(checkpoints);
+
+      // #then - should include the election
+      expect(state.elections).toHaveLength(1);
+      expect(state.elections[0].electionIndex).toBe(0);
+      expect(state.elections[0].phase).toBe("COMPLETED");
+      expect(state.elections[0].cohort).toBe(0);
+      expect(state.elections[0].isComplete).toBe(true);
+    });
+
+    it("should count completed elections in stats", () => {
+      // #given - a completed election
+      const checkpoint = createMockElectionCheckpoint(0, "COMPLETED", 0);
+
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("election:0", checkpoint);
+
+      // #when - building dashboard state
+      const state = buildDashboardState(checkpoints);
+
+      // #then - should count as complete
+      expect(state.monitorStats.complete).toBe(1);
+      expect(state.monitorStats.inProgress).toBe(0);
+    });
+
+    it("should count incomplete elections as in progress", () => {
+      // #given - an in-progress election
+      const checkpoint = createMockElectionCheckpoint(0, "NOMINEE_SELECTION", 0);
+
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("election:0", checkpoint);
+
+      // #when - building dashboard state
+      const state = buildDashboardState(checkpoints);
+
+      // #then - should count as in progress
+      expect(state.monitorStats.inProgress).toBe(1);
+      expect(state.monitorStats.complete).toBe(0);
+    });
+
+    it("should include election proposal IDs", () => {
+      // #given - an election with proposal IDs
+      const checkpoint = createMockElectionCheckpoint(1, "COMPLETED", 1);
+
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("election:1", checkpoint);
+
+      // #when - building dashboard state
+      const state = buildDashboardState(checkpoints);
+
+      // #then - should include proposal IDs
+      expect(state.elections[0].nomineeProposalId).toBe("123");
+      expect(state.elections[0].memberProposalId).toBe("456");
+    });
+
+    it("should use input electionIndex as fallback", () => {
+      // #given - an election checkpoint without electionStatus
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        input: {
+          type: "election",
+          electionIndex: 2,
+        },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      checkpoints.set("election:2", checkpoint);
+
+      // #when - building dashboard state
+      const state = buildDashboardState(checkpoints);
+
+      // #then - should use input index as fallback
+      expect(state.elections[0].electionIndex).toBe(2);
+      expect(state.elections[0].phase).toBe("UNKNOWN");
+    });
+  });
+
   describe("writeDashboardState", () => {
     it("should write JSON state to file", () => {
       // #given - a valid dashboard state
@@ -504,6 +643,7 @@ describe("JSON Dashboard State", () => {
         },
         proposals: [],
         timelockOps: [],
+        elections: [],
       };
 
       const tmpDir = os.tmpdir();

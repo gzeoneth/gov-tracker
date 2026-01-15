@@ -60,7 +60,8 @@ src/
 │   ├── discovery.ts        # Discover proposals from multiple governors/timelocks
 │   ├── execute.ts          # Transaction preparation (never execution)
 │   ├── query.ts            # Cache query operations
-│   └── cache.ts            # Cache implementations (FileCache, MemoryCache, etc.)
+│   ├── cache.ts            # Cache implementations (FileCache, MemoryCache, etc.)
+│   └── checkpoint-helpers.ts # Shared checkpoint utilities
 ├── stages/                 # Individual stage implementations
 │   ├── utils.ts            # Stage utilities and helpers
 │   ├── builder.ts          # Stage builder functions
@@ -70,20 +71,24 @@ src/
 │   ├── timelock.ts         # Stages 4 & 6: L2/L1 timelock delays
 │   ├── l2-to-l1-message.ts # Stage 5: Cross-chain message
 │   └── retryables.ts       # Stage 7: Retryable ticket redemption
-├── calldata/               # Calldata decoding module (v0.1.1+)
-│   ├── decoder.ts          # Recursive calldata decoder
-│   ├── signature-lookup.ts # Function signature resolution
-│   ├── parameter-decoder.ts # ABI parameter decoding + address labeling
-│   ├── retryable-ticket.ts # Retryable ticket parsing
-│   └── index.ts            # Module exports
-├── simulation/             # Simulation data preparation (v0.1.1+)
-│   ├── simulation-data.ts  # Tenderly/Foundry data extraction + address aliasing
-│   └── index.ts            # Module exports
+├── election/               # Security Council election tracking
+│   ├── index.ts            # Module exports (public API)
+│   ├── contracts.ts        # Election governor contract factories
+│   ├── proposal-ids.ts     # Proposal ID computation and caching
+│   ├── params.ts           # Election proposal parameters
+│   ├── participants.ts     # Contenders, nominees, and vote tracking
+│   ├── details.ts          # Detailed election information
+│   ├── prepare.ts          # Transaction preparation for election actions
+│   ├── status.ts           # Election status and phase determination
+│   └── tracking.ts         # Main election tracking orchestration
+├── calldata/               # Calldata decoding module
+├── simulation/             # Simulation data preparation
 ├── discovery/              # Governor and timelock introspection
+├── cli/
+│   ├── cli.ts              # CLI entry point
+│   └── lib/                # CLI utilities
 ├── utils/                  # Timing, log search, operation IDs, etc.
 ├── types/                  # TypeScript type definitions
-│   ├── calldata.ts         # Calldata decoding types (v0.1.1+)
-│   └── simulation.ts       # Simulation data types (v0.1.1+)
 └── constants.ts            # Addresses, timing constants
 ```
 
@@ -103,7 +108,20 @@ Event arg name `values` collides with ethers.js internals. Access by index inste
 - Prefer pure functions over stateful classes
 - Use `readonly` and `const` for immutability
 - Prefer returning safe defaults over throwing errors
-- Use `queryWithRetry` for RPC calls
+
+### RPC Calls
+**All external RPC calls must use `queryWithRetry`** from `src/utils/rpc-utils.ts`:
+```typescript
+import { queryWithRetry } from "../utils/rpc-utils";
+
+// Direct provider calls
+const block = await queryWithRetry(() => provider.getBlock("latest"));
+
+// Contract calls
+const state = await queryWithRetry<number>(() => governor.state(proposalId));
+```
+
+`queryWithRetry` handles transient failures (rate limits, timeouts, network errors) with exponential backoff, but does NOT retry permanent failures (reverts, non-existent functions). This makes it safe to use for capability checks.
 
 ### Logging
 ```typescript

@@ -6,19 +6,26 @@
  */
 
 import { TrackingCheckpoint, TrackerStats, CacheAdapter } from "../types";
-import { areAllStagesComplete } from "../stages/utils";
-import { isElectionGovernor, TIMING } from "../constants";
+import { TIMING } from "../constants";
+import {
+  isCheckpointComplete,
+  isCheckpointErrored,
+  isTxKey,
+  isElectionKey,
+  parseElectionKey,
+  computeCacheStats,
+} from "./checkpoint-helpers";
 
 /**
  * List all checkpoint keys in the cache.
+ * Returns keys for both proposals/timelocks (tx:*) and elections (election:*).
  * @param cache - Cache adapter to query
  */
 export async function listCheckpointKeys(cache: CacheAdapter | undefined): Promise<string[]> {
   if (!cache) return [];
   const allKeys = await cache.keys();
   const keys = Array.from(allKeys as Iterable<string>);
-  // All tracking checkpoints use tx: prefix
-  return keys.filter((k) => k.startsWith("tx:"));
+  return keys.filter((k) => isTxKey(k) || isElectionKey(k));
 }
 
 /**
@@ -75,22 +82,20 @@ export async function queryIncompleteCheckpoints(
     const checkpoint = await getCheckpoint(cache, key);
     if (!checkpoint) continue;
 
-    const errorCount = checkpoint.metadata?.errorCount ?? 0;
-    const completedStages = checkpoint.cachedData.completedStages ?? [];
-
-    // Skip if already complete
-    if (completedStages.length > 0 && areAllStagesComplete(completedStages)) {
+    // Skip if already complete (works for both proposals and elections)
+    if (isCheckpointComplete(checkpoint)) {
       continue;
     }
 
     // Skip if voting failed (terminal state)
+    const completedStages = checkpoint.cachedData.completedStages ?? [];
     const votingStage = completedStages.find((s) => s.type === "VOTING_ACTIVE");
     if (votingStage?.status === "FAILED") {
       continue;
     }
 
     // Skip if exceeded error threshold
-    if (errorCount >= maxErrorCount) {
+    if (isCheckpointErrored(checkpoint, maxErrorCount)) {
       continue;
     }
 
@@ -121,62 +126,14 @@ export async function getStats(
 ): Promise<TrackerStats> {
   const checkpoints = await getAllCheckpoints(cache);
 
-  let proposalTotal = 0,
-    proposalComplete = 0,
-    proposalActive = 0,
-    proposalErrored = 0;
-  let timelockTotal = 0,
-    timelockComplete = 0,
-    timelockActive = 0,
-    timelockErrored = 0;
-  let electionTotal = 0,
-    electionComplete = 0;
-
-  for (const [, checkpoint] of checkpoints) {
-    const completedStages = checkpoint.cachedData?.completedStages ?? [];
-    const isComplete = completedStages.length > 0 && areAllStagesComplete(completedStages);
-    const errorCount = checkpoint.metadata?.errorCount ?? 0;
-    const isErrored = errorCount >= maxErrorCount;
-    const inputType = checkpoint.input.type;
-
-    if (inputType === "governor") {
-      if (
-        checkpoint.input.governorAddress &&
-        isElectionGovernor(checkpoint.input.governorAddress)
-      ) {
-        electionTotal++;
-        if (isComplete) electionComplete++;
-      } else {
-        proposalTotal++;
-        if (isComplete) proposalComplete++;
-        else if (isErrored) proposalErrored++;
-        else proposalActive++;
-      }
-    } else if (inputType === "timelock") {
-      timelockTotal++;
-      if (isComplete) timelockComplete++;
-      else if (isErrored) timelockErrored++;
-      else timelockActive++;
+  const elections = new Map<number, TrackingCheckpoint>();
+  for (const [key, checkpoint] of checkpoints) {
+    const electionIndex = parseElectionKey(key);
+    if (electionIndex !== null) {
+      elections.set(electionIndex, checkpoint);
+      checkpoints.delete(key);
     }
   }
 
-  return {
-    total: checkpoints.size,
-    proposals: {
-      total: proposalTotal,
-      complete: proposalComplete,
-      active: proposalActive,
-      errored: proposalErrored,
-    },
-    timelocks: {
-      total: timelockTotal,
-      complete: timelockComplete,
-      active: timelockActive,
-      errored: timelockErrored,
-    },
-    elections: {
-      total: electionTotal,
-      complete: electionComplete,
-    },
-  };
+  return computeCacheStats(checkpoints, elections, maxErrorCount);
 }

@@ -31,15 +31,26 @@ chunkingConfig: {
 
 | Method | Description |
 |--------|-------------|
-| `trackByTxHash(txHash)` | Track by transaction hash (auto-detects type) |
+| `trackByTxHash(txHash)` | Track by transaction hash (auto-detects type, includes election status) |
 | `trackFromGovernor(address, proposalId)` | Track governor proposal |
 | `trackFromTimelock(address, { operationId })` | Track timelock operation |
 | `trackFromCheckpoint(checkpoint)` | Resume from cached checkpoint |
+| `trackElection(electionIndex)` | Track election by index (returns `ElectionProposalStatus`) |
 
 ```typescript
 const results = await tracker.trackByTxHash("0x...");
 const result = results[0];
 console.log(result.stages, result.isComplete, result.proposalType);
+
+// Election proposals automatically include election lifecycle status
+if (result.isElection && result.electionStatus) {
+  console.log(result.electionStatus.phase); // "NOMINEE_SELECTION", "COMPLETED", etc.
+  console.log(result.electionStatus.cohort); // 0 or 1
+}
+
+// Or track election directly by index
+const election = await tracker.trackElection(0);
+console.log(election.phase, election.nomineeProposalId);
 ```
 
 ---

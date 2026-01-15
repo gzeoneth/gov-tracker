@@ -95,6 +95,8 @@ interface TrackTimelockOptions {
   additionalPayload?: Record<string, unknown>;
   /** All tracked stages (used for salt computation from other stages) */
   allStages?: TrackedStage[];
+  /** Override chunk size for log searches */
+  chunkSize?: number;
 }
 
 /**
@@ -258,6 +260,8 @@ async function trackTimelock(
     skipLogSearch: false,
     // Skip CallExecuted search here - we do an optimized search below starting after the delay
     skipExecutedSearch: true,
+    chunkSize: options.chunkSize,
+    contractState: operationState,
   });
 
   const { timestamp: currentTimestamp } = await getCurrentBlockInfo(provider);
@@ -266,11 +270,10 @@ async function trackTimelock(
   // Add base data
   builder.data({ operationId, timelockAddress, state: operationState.state, eta });
 
-  // Collect scheduled data - used for predecessor caching and batch detection.
-  // Only STORE in stage.data for L1_TIMELOCK (L2_TIMELOCK skips to avoid duplication
-  // with PROPOSAL_QUEUED - callers use options.stages during preparation).
+  // Collect scheduled data - used for predecessor caching, batch detection, and calldata display.
+  // Always store in both L2_TIMELOCK and L1_TIMELOCK for checkpoint resume compatibility.
   const allData = collectAllScheduledData(timelockState);
-  if (config.stageType === "L1_TIMELOCK" && allData.length > 0) {
+  if (allData.length > 0) {
     builder.data({ callScheduledData: serializeCallScheduledDataArray(allData) });
   }
 
@@ -393,7 +396,8 @@ async function trackTimelock(
     }
 
     if (options.cachedExecutionTxHash) {
-      const receipt = await provider.getTransactionReceipt(options.cachedExecutionTxHash);
+      const cachedTxHash = options.cachedExecutionTxHash;
+      const receipt = await queryWithRetry(() => provider.getTransactionReceipt(cachedTxHash));
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
         const chainId = chainToChainId(config.chain) ?? 0;
@@ -496,13 +500,14 @@ export async function trackL2Timelock(
   provider: ethers.providers.Provider,
   fromBlock: number,
   callScheduledData: CallScheduledData,
-  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[] } = {}
+  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[]; chunkSize?: number } = {}
 ): Promise<TimelockStageResult> {
   return trackTimelock(L2_TIMELOCK_CONFIG, timelockAddress, operationId, provider, fromBlock, {
     callScheduledData,
     cachedExecutionTxHash: options.cachedExecutionTxHash,
     checkSecurityCouncil: true,
     allStages: options.allStages,
+    chunkSize: options.chunkSize,
   });
 }
 
@@ -516,6 +521,7 @@ export async function trackL1Timelock(
     fromBlock?: number;
     knownL1OperationId?: string;
     allStages?: TrackedStage[];
+    chunkSize?: number;
   } = {}
 ): Promise<L1TimelockResult> {
   let l1OperationId = options.knownL1OperationId ?? null;
@@ -568,7 +574,7 @@ export async function trackL1Timelock(
     l1OperationId,
     l1Provider,
     fromBlock,
-    { allStages: options.allStages }
+    { allStages: options.allStages, chunkSize: options.chunkSize }
   );
 
   return { ...result, l1OperationId, l1ScheduleTxHash, l1ScheduleBlock };
@@ -582,11 +588,12 @@ export async function trackL1Timelock(
  * Calculate retryable execution value for L1 timelock operations.
  */
 export async function calculateRetryableExecutionValue(
-  _timelockAddress: string,
+  timelockAddress: string,
   target: string,
   data: string,
   provider: ethers.providers.Provider
 ): Promise<BigNumber | null> {
+  void timelockAddress;
   if (target.toLowerCase() !== ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase()) {
     return null;
   }

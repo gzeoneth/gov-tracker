@@ -18,6 +18,8 @@ import { ADDRESSES, GOVERNANCE_START_BLOCKS } from "../constants";
 import {
   discoverProposals as discoverProposalsInternal,
   DiscoveredProposal,
+  detectProposalType,
+  isElectionProposal,
 } from "../discovery/governor-discovery";
 import {
   discoverTimelockOps as discoverTimelockOpsInternal,
@@ -236,16 +238,25 @@ export async function discoverTimelockOps(
  */
 export async function createPendingCheckpoints(
   proposals: DiscoveredProposal[],
-  _timelockOps: DiscoveredTimelockOp[],
+  timelockOps: DiscoveredTimelockOp[],
   cache: CacheAdapter | undefined
 ): Promise<void> {
+  void timelockOps;
   if (!cache) return;
 
   let created = 0;
+  let skippedElections = 0;
 
   // Create pending checkpoints for proposals (if not already tracked)
   // Use tx: key format to match trackByTxHash cache keys
+  // Skip election proposals - they use election:* checkpoints
   for (const p of proposals) {
+    const proposalType = detectProposalType(p.governorAddress);
+    if (isElectionProposal(proposalType)) {
+      skippedElections++;
+      continue;
+    }
+
     const key = `tx:${p.creationTxHash.toLowerCase()}`;
     const existing = await cache.get<TrackingCheckpoint>(key);
     if (existing) continue; // Already has a checkpoint
@@ -268,8 +279,12 @@ export async function createPendingCheckpoints(
     created++;
   }
 
-  if (created > 0) {
-    logDiscovery("created pending checkpoints: %d proposals", created);
+  if (created > 0 || skippedElections > 0) {
+    logDiscovery(
+      "created pending checkpoints: %d proposals (skipped %d elections)",
+      created,
+      skippedElections
+    );
   }
 }
 

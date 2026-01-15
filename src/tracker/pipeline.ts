@@ -120,6 +120,7 @@ async function pipelineTrackProposalCreated(
       return track(state, "PROPOSAL_CREATED", "found", async () => {
         const r = await trackProposalCreated(governorAddress, proposalId, state.providers.l2, {
           creationTxHash,
+          chunkSize: state.chunkingConfig.l2ChunkSize,
         });
         return { stage: r.stage, result: r.proposalData !== null };
       });
@@ -191,7 +192,7 @@ async function pipelineTrackProposalQueued(
           proposalId,
           state.providers.l2,
           proposalData?.creationBlock ?? 0,
-          { votingEndBlock }
+          { votingEndBlock, chunkSize: state.chunkingConfig.l2ChunkSize }
         );
         let stage: TrackedStage = r.stage;
         if (stage.type === "PROPOSAL_QUEUED" && stage.status === "READY" && proposalData) {
@@ -220,34 +221,40 @@ async function pipelineTrackL2Timelock(
 ): Promise<{ state: TrackingState; executed: boolean }> {
   const timelockAddress = getTimelockAddress(state);
   const operationId = getOperationId(state);
+
+  // timelockAddress and operationId are needed for both cached and fresh tracking
+  if (!timelockAddress || !operationId) return { state, executed: false };
+
+  // Check for completed cached stage first (zero-RPC resume path)
+  const cached = getCompletedStage(state, "L2_TIMELOCK");
+  if (cached) {
+    log("L2_TIMELOCK: using cached stage");
+    return { state: await addStage(state, cached), executed: cached.status === "COMPLETED" };
+  }
+
+  // Fresh tracking requires callScheduledData
   const firstCallScheduledData = getFirstCallScheduledData(state);
-
-  if (!timelockAddress || !operationId || !firstCallScheduledData)
+  if (!firstCallScheduledData) {
+    log("L2_TIMELOCK: missing callScheduledData for fresh tracking");
     return { state, executed: false };
+  }
 
-  return withCache(
-    state,
-    "L2_TIMELOCK",
-    "executed",
-    (c) => c.status === "COMPLETED",
-    async () => {
-      log("L2_TIMELOCK: tracking");
-      return track(state, "L2_TIMELOCK", "executed", async () => {
-        const r = await trackL2Timelock(
-          timelockAddress,
-          operationId,
-          state.providers.l2,
-          getQueueBlockNumber(state) ?? 0,
-          firstCallScheduledData,
-          {
-            cachedExecutionTxHash: getL2ExecutionTxHash(state),
-            allStages: state.stages,
-          }
-        );
-        return { stage: r.stage, result: r.executionTxHash !== null };
-      });
-    }
-  );
+  log("L2_TIMELOCK: tracking");
+  return track(state, "L2_TIMELOCK", "executed", async () => {
+    const r = await trackL2Timelock(
+      timelockAddress,
+      operationId,
+      state.providers.l2,
+      getQueueBlockNumber(state) ?? 0,
+      firstCallScheduledData,
+      {
+        cachedExecutionTxHash: getL2ExecutionTxHash(state),
+        allStages: state.stages,
+        chunkSize: state.chunkingConfig.l2ChunkSize,
+      }
+    );
+    return { stage: r.stage, result: r.executionTxHash !== null };
+  });
 }
 
 // L2→L1 Message Stage (5) - Unified
@@ -313,7 +320,14 @@ async function pipelineTrackL2ToL1Message(
     "L2_TO_L1_MESSAGE",
     "executed",
     async () => {
-      const r = await trackL2ToL1Message(l2ExecutionTxHash, state.providers.l2, state.providers.l1);
+      const r = await trackL2ToL1Message(
+        l2ExecutionTxHash,
+        state.providers.l2,
+        state.providers.l1,
+        {
+          chunkSize: state.chunkingConfig.l1ChunkSize,
+        }
+      );
       return { stage: r.stage, result: r.isExecuted };
     }
   );
@@ -337,6 +351,7 @@ async function pipelineTrackL1Timelock(
           outboxExecutionTx: getOutboxExecutionTx(state),
           fromBlock: getFirstExecutableBlock(state),
           allStages: state.stages,
+          chunkSize: state.chunkingConfig.l1ChunkSize,
         });
         return { stage: r.stage, result: r.executionTxHash !== null };
       });

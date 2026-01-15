@@ -23,7 +23,7 @@ import {
 } from "@arbitrum/sdk";
 import { ChildToParentMessageReaderNitro } from "@arbitrum/sdk/dist/lib/message/ChildToParentMessageNitro";
 import { TrackedStage, TypedTrackedStage, PrepareResult, getStageData } from "../types";
-import { ADDRESSES, BLOCK_TIMES, TIMING } from "../constants";
+import { ADDRESSES, BLOCK_TIMES, CHUNK_SIZES, TIMING } from "../constants";
 import { loggers } from "../utils/logger";
 
 const logStage = loggers.stage.l2ToL1;
@@ -118,8 +118,8 @@ export async function findOutboxExecutionTransaction(
       toBlock,
     },
     {
-      chunkSize: options.chunkSize ?? 1000,
-      delayBetweenChunks: 100,
+      chunkSize: options.chunkSize ?? CHUNK_SIZES.L1,
+      delayBetweenChunks: CHUNK_SIZES.DELAY_MS,
       earlyExitCheck: (chunkLogs: ethers.providers.Log[]) => {
         for (const log of chunkLogs) {
           try {
@@ -209,7 +209,8 @@ export interface L2ToL1MessageResult {
 export async function trackL2ToL1Message(
   executionTxHash: string,
   l2Provider: ethers.providers.Provider,
-  l1Provider: ethers.providers.Provider
+  l1Provider: ethers.providers.Provider,
+  options: { chunkSize?: number } = {}
 ): Promise<L2ToL1MessageResult> {
   const builder = new StageBuilder("L2_TO_L1_MESSAGE", "arb1");
 
@@ -248,7 +249,7 @@ export async function trackL2ToL1Message(
   const childReceipt = new ChildTransactionReceipt(receipt);
 
   // Get L2→L1 messages from the receipt
-  const messages = await childReceipt.getChildToParentMessages(l1Provider);
+  const messages = await queryWithRetry(() => childReceipt.getChildToParentMessages(l1Provider));
 
   if (messages.length === 0) {
     // No L2→L1 messages - this path doesn't go through L1
@@ -394,7 +395,7 @@ export async function trackL2ToL1Message(
           messagePosition,
           l2Provider,
           l1Provider,
-          { fromBlock: l1SearchFromBlock }
+          { fromBlock: l1SearchFromBlock, chunkSize: options.chunkSize }
         );
 
         if (outboxExecutionTx) {
@@ -573,7 +574,7 @@ export async function getL2ToL1Messages(
   }
 
   const childReceipt = new ChildTransactionReceipt(receipt);
-  return childReceipt.getChildToParentMessages(l1Provider);
+  return queryWithRetry(() => childReceipt.getChildToParentMessages(l1Provider));
 }
 
 /**

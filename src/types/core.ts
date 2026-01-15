@@ -103,7 +103,11 @@ export type StageType =
   | "L2_TIMELOCK"
   | "L2_TO_L1_MESSAGE"
   | "L1_TIMELOCK"
-  | "RETRYABLE_EXECUTED";
+  | "RETRYABLE_EXECUTED"
+  | "CREATE_ELECTION"
+  | "NOMINEE_ELECTION"
+  | "NOMINEE_VETTING"
+  | "MEMBER_ELECTION";
 
 export type StageStatus =
   | "NOT_STARTED"
@@ -139,4 +143,6 @@ export interface SearchHint {
   startBlock: number;
   endBlock?: number;
   direction?: "forward" | "backward";
+  /** Override chunk size for this search (uses chain-appropriate default if not specified) */
+  chunkSize?: number;
 }

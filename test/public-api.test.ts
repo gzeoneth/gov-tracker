@@ -219,7 +219,7 @@ describe("Public API: Constants", () => {
     // #when - accessing RPC URL values
 
     // #then - all supported chains should have default RPC URLs defined
-    expect(DEFAULT_RPC_URLS.ETHEREUM).toBe("https://eth.llamarpc.com");
+    expect(DEFAULT_RPC_URLS.ETHEREUM).toBe("https://eth.drpc.org");
     expect(DEFAULT_RPC_URLS.ARB_ONE).toBe("https://arb1.arbitrum.io/rpc");
     expect(DEFAULT_RPC_URLS.NOVA).toBe("https://nova.arbitrum.io/rpc");
   });

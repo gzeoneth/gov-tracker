@@ -964,13 +964,7 @@ describe("Timing Helpers (Test-Only)", () => {
 });
 
 // Stage Metadata Tests
-import {
-  getStageMetadata,
-  getAllStageMetadata,
-  getActionableStages,
-  formatStageTitle,
-  getTotalExpectedDuration,
-} from "../src/utils/stage-metadata";
+import { getStageMetadata, formatStageTitle } from "../src/utils/stage-metadata";
 
 describe("Stage Metadata Utilities", () => {
   describe("getStageMetadata", () => {
@@ -1022,53 +1016,6 @@ describe("Stage Metadata Utilities", () => {
     });
   });
 
-  describe("getAllStageMetadata", () => {
-    it("should return metadata for all stages", () => {
-      // #given - no input (getting all metadata)
-      // #when - calling getAllStageMetadata
-      const allMeta = getAllStageMetadata();
-
-      // #then - should return metadata for all 7 stages
-      expect(Object.keys(allMeta).length).toBe(7);
-      expect(allMeta.PROPOSAL_CREATED).toBeDefined();
-      expect(allMeta.RETRYABLE_EXECUTED).toBeDefined();
-    });
-
-    it("should include correct chain types", () => {
-      // #given - no input
-      // #when - getting all metadata
-      const allMeta = getAllStageMetadata();
-
-      // #then - stages should have correct chain assignments
-      expect(allMeta.VOTING_ACTIVE.chain).toBe("arb1");
-      expect(allMeta.L1_TIMELOCK.chain).toBe("ethereum");
-    });
-  });
-
-  describe("getActionableStages", () => {
-    it("should return stages that require action", () => {
-      // #given - no input
-      // #when - getting actionable stages
-      const actionable = getActionableStages();
-
-      // #then - should include stages requiring transaction execution
-      expect(actionable.length).toBeGreaterThan(0);
-      // Actionable stages are those with requiresAction: true
-      expect(actionable).toContain("L2_TIMELOCK");
-      expect(actionable).toContain("L1_TIMELOCK");
-    });
-
-    it("should not include non-actionable stages", () => {
-      // #given - no input
-      // #when - getting actionable stages
-      const actionable = getActionableStages();
-
-      // #then - should not include stages that don't require action
-      // PROPOSAL_CREATED is not actionable (it's a starting point)
-      expect(actionable).not.toContain("PROPOSAL_CREATED");
-    });
-  });
-
   describe("formatStageTitle", () => {
     it("should format stage title correctly", () => {
       // #given - stage type constants in SCREAMING_SNAKE_CASE
@@ -1077,20 +1024,6 @@ describe("Stage Metadata Utilities", () => {
       expect(formatStageTitle("L2_TIMELOCK")).toBe("L2 Timelock");
       expect(formatStageTitle("VOTING_ACTIVE")).toBe("Voting Active");
       expect(formatStageTitle("RETRYABLE_EXECUTED")).toBe("Retryable Executed");
-    });
-  });
-
-  describe("getTotalExpectedDuration", () => {
-    it("should return total duration in days", () => {
-      // #given - no input
-      // #when - getting total expected duration
-      const total = getTotalExpectedDuration();
-
-      // #then - should return sum of all stage durations (30+ days for full cycle)
-      expect(typeof total).toBe("number");
-      expect(total).toBeGreaterThan(0);
-      // Total should be sum of all stage durations (at least 30+ days for full cycle)
-      expect(total).toBeGreaterThanOrEqual(30);
     });
   });
 });

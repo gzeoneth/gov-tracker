@@ -47,7 +47,8 @@
     "cli:run": "ts-node src/cli/cli.ts run",
     "cli:status": "ts-node src/cli/cli.ts status",
     "cli:track": "ts-node src/cli/cli.ts track",
-    "cli:election": "ts-node src/cli/cli.ts election"
+    "cli:election": "ts-node src/cli/cli.ts election",
+    "cache:generate": "ts-node src/cli/cli.ts --cache ./data/bundled-cache.json --concurrency 3 --force"
   },
   "lint-staged": {
     "*.ts": [

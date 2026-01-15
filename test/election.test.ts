@@ -242,6 +242,173 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
     });
   });
 
+  describe("Election TX Hash Discovery", () => {
+    // Known tx hashes from production data - regression tests
+    const KNOWN_ELECTION_TX_HASHES: Record<number, string> = {
+      0: "0xcb6787863f4001e1190f76ae29f14927ba8a7af0ba4f42f1f8b74730948f11db",
+      1: "0xedb92c48fd8b10c121d08620a1f3c5f8c8c270cd4f278cde86f940c0cf4ee0ce",
+      2: "0x8551b140f50104393d273942bc1b80637d6077791b8f68d3be825c2684af8dc3",
+      3: "0xb1d2df615f4abd98dcef744ce902d84ba3cd83238e99aa04816787f858d30d62",
+      4: "0x82a0baf3d7e6a6b3247d5848e88732c8ebad0c46b204ff2b7c81beb3158600a6",
+    };
+
+    // Known execute tx hashes
+    const KNOWN_ELECTION_EXECUTE_TX_HASHES: Record<
+      number,
+      { nomineeExecute: string; memberExecute: string }
+    > = {
+      4: {
+        nomineeExecute: "0xd6d394edbe03cb46ddf8356d7fe8a53dc0e6502b8bd8d0388774de91e639ea04",
+        memberExecute: "0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697",
+      },
+    };
+
+    // Known timelock operation IDs from member execute
+    const KNOWN_TIMELOCK_OPERATION_IDS: Record<number, string> = {
+      0: "0x2aa636db2693091e72991d6dcaa0d1d22d8bbad0d6dc0d7bd0509148c8a5842d",
+      1: "0x96252a7db617494beaf8c5d43bb906099e4032f82c7979e7335285dacc5c6162",
+      4: "0x59b7e93c50a31204ee62b7a881a78b49046ccb10a5a770b9cf4fbdbcefbba2fb",
+    };
+
+    it("should find creation tx hash for election #0", async () => {
+      // #given - election #0 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(0, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[0]);
+    });
+
+    it("should find creation tx hash for election #1", async () => {
+      // #given - election #1 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(1, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
+    });
+
+    it("should find creation tx hash for election #2", async () => {
+      // #given - election #2 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(2, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[2]);
+    });
+
+    it("should find creation tx hash for election #3", async () => {
+      // #given - election #3 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(3, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[3]);
+    });
+
+    it("should find creation tx hash for election #4", async () => {
+      // #given - election #4 has a known creation tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct creation tx hash
+      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[4]);
+    });
+
+    it("should have creation tx in stages for tracked elections", async () => {
+      // #given - election #1 with known creation tx
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(1, l2Provider, l1Provider);
+
+      // #then - CREATE_ELECTION stage should have the tx
+      const createStage = electionStatus.stages?.find((s) => s.type === "CREATE_ELECTION");
+      expect(createStage).toBeDefined();
+      expect(createStage?.transactions.length).toBeGreaterThan(0);
+      expect(createStage?.transactions[0].hash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
+    });
+
+    it("should find nominee execute tx hash for election #4", async () => {
+      // #given - election #4 has a known nominee execute tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct nominee execute tx hash
+      expect(electionStatus.nomineeExecuteTxHash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].nomineeExecute
+      );
+    });
+
+    it("should find member execute tx hash for election #4", async () => {
+      // #given - election #4 has a known member execute tx hash
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct member execute tx hash
+      expect(electionStatus.memberExecuteTxHash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].memberExecute
+      );
+    });
+
+    it("should have execute tx in stages for completed elections", async () => {
+      // #given - election #4 is completed with known execute txs
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - stages should have execute txs
+      const vettingStage = electionStatus.stages?.find((s) => s.type === "NOMINEE_VETTING");
+      expect(vettingStage).toBeDefined();
+      expect(vettingStage?.transactions.length).toBeGreaterThan(0);
+      expect(vettingStage?.transactions[0].hash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].nomineeExecute
+      );
+
+      const memberStage = electionStatus.stages?.find((s) => s.type === "MEMBER_ELECTION");
+      expect(memberStage).toBeDefined();
+      expect(memberStage?.transactions.length).toBeGreaterThan(0);
+      expect(memberStage?.transactions[0].hash).toBe(
+        KNOWN_ELECTION_EXECUTE_TX_HASHES[4].memberExecute
+      );
+    });
+
+    it("should find timelock operation ID for election #4", async () => {
+      // #given - election #4 is completed and has a known timelock operation
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should find the correct timelock operation ID
+      expect(electionStatus.timelockOperationId).toBe(KNOWN_TIMELOCK_OPERATION_IDS[4]);
+    });
+
+    it("should track post-member-execute stages for completed election #4", async () => {
+      // #given - election #4 is completed with known post-execute stages
+      // #when - tracking the election
+      const electionStatus = await trackElectionProposal(4, l2Provider, l1Provider);
+
+      // #then - should have 8 stages (4 election + 4 post-execute)
+      expect(electionStatus.stages?.length).toBe(8);
+
+      // #then - should have L2_TIMELOCK stage
+      const l2TimelockStage = electionStatus.stages?.find((s) => s.type === "L2_TIMELOCK");
+      expect(l2TimelockStage).toBeDefined();
+      expect(l2TimelockStage?.status).toBe("COMPLETED");
+      expect(l2TimelockStage?.transactions.length).toBeGreaterThan(0);
+
+      // #then - should have L2_TO_L1_MESSAGE stage
+      const l2ToL1Stage = electionStatus.stages?.find((s) => s.type === "L2_TO_L1_MESSAGE");
+      expect(l2ToL1Stage).toBeDefined();
+      expect(l2ToL1Stage?.status).toBe("COMPLETED");
+
+      // #then - should have L1_TIMELOCK stage
+      const l1TimelockStage = electionStatus.stages?.find((s) => s.type === "L1_TIMELOCK");
+      expect(l1TimelockStage).toBeDefined();
+      expect(l1TimelockStage?.status).toBe("COMPLETED");
+
+      // #then - should have RETRYABLE_EXECUTED stage
+      const retryableStage = electionStatus.stages?.find((s) => s.type === "RETRYABLE_EXECUTED");
+      expect(retryableStage).toBeDefined();
+    });
+  });
+
   describe("Election Phase Tracking", () => {
     it("should correctly identify completed election phases", async () => {
       const status = await checkElectionStatus(

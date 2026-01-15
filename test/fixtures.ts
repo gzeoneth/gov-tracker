@@ -278,7 +278,7 @@ export const ELECTION_COMPLETED_0 = {
 
   // Expected final state
   expectedPhase: "COMPLETED" as const,
-  expectedCohort: 1 as const, // March cohort
+  expectedCohort: 0 as const, // First cohort (September 2023)
   targetNomineeCount: 6,
 };
 
@@ -292,7 +292,7 @@ export const ELECTION_COMPLETED_1 = {
   memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
 
   expectedPhase: "COMPLETED" as const,
-  expectedCohort: 0 as const, // September cohort (alternates)
+  expectedCohort: 1 as const, // Second cohort (March 2024)
   targetNomineeCount: 6,
 };
 

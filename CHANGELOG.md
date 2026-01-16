@@ -29,10 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Cache: Remove L2_TIMELOCK callScheduledData duplication** - Reduces cache size ~100KB per proposal. Breaking: `callScheduledData` now optional in `TimelockStageData`
 - **Performance: Cache L2→L1 sendProps** - Skips ~3-4s redundant `getSendProps()` call during preparation
 - **Dependencies** - `dotenv` to devDeps, `commander` to optionalDeps, removed `p-limit`
-- **CLI** - Default command is `run`, default L1 RPC falls back to `https://eth.llamarpc.com`, warns on public RPCs
+- **CLI** - Default command is `run`, default L1 RPC falls back to `https://eth.drpc.org`, warns on public RPCs
+
+### Reverted
+
+- **Revert L2_TIMELOCK callScheduledData deduplication** - Restores simpler code path; `callScheduledData` is required in `TimelockStageData` again
 
 ### Fixed
 

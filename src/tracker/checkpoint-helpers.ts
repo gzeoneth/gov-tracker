@@ -88,7 +88,6 @@ export function getCheckpointErrorCount(checkpoint: TrackingCheckpoint): number 
 export const ELECTION_KEY_PREFIX = "election:";
 export const TX_KEY_PREFIX = "tx:";
 export const DISCOVERY_KEY_PREFIX = "discovery:";
-export const WATERMARKS_KEY = "discovery:watermarks";
 
 export function electionCacheKey(electionIndex: number): string {
   return `${ELECTION_KEY_PREFIX}${electionIndex}`;

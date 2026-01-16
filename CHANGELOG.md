@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Interactive TUI** (`ui` command) - Cache-only terminal interface for browsing proposals. Features filter tabs (All/Active/Complete/Timelocks/Elections), proposal details, voting stats, stage progress, decoded calldata, simulation data, and election status. Vim-style navigation (j/k/g/G), search (/), sorting, and clipboard support. Uses bundled cache by default - no RPC required.
+
 - **Unified Election Tracking** - Elections are now first-class entities:
   - `trackByTxHash` auto-detects election proposals and populates `TrackingResult.electionStatus`
   - `tracker.trackElection(electionIndex)` for direct election tracking

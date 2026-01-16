@@ -1068,4 +1068,39 @@ electionCmd
     });
   });
 
+// ============================================================================
+// UI Command - Interactive TUI
+// ============================================================================
+
+program
+  .command("ui")
+  .description("Interactive TUI for browsing proposals (cache-only)")
+  .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
+  .addOption(verboseOption)
+  .option("--log-file <path>", "Write debug logs to file (for debugging TUI)")
+  .option("--debug-namespaces <pattern>", "Debug namespaces to enable (default: gov-tracker:*)")
+  .action(async (opts) => {
+    try {
+      const { runTui } = await import("./tui");
+
+      const debugNamespaces = opts.debugNamespaces || "gov-tracker:*";
+      if (opts.logFile || opts.verbose) {
+        debug.enable(debugNamespaces);
+      }
+
+      await runTui({
+        cachePath: opts.cache,
+        verbose: opts.verbose,
+        logFile: opts.logFile,
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {
+        console.error("Error: TUI requires 'ink' and 'react' packages.");
+        console.error("Install them with: yarn add ink react");
+        process.exit(1);
+      }
+      throw error;
+    }
+  });
+
 program.parse();

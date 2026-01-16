@@ -416,5 +416,6 @@ export {
   DEFAULT_ERROR_THRESHOLD,
   ELECTION_KEY_PREFIX,
   TX_KEY_PREFIX,
-  WATERMARKS_KEY,
 } from "./tracker/checkpoint-helpers";
+
+export { WATERMARKS_KEY } from "./tracker/discovery";

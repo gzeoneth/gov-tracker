@@ -162,6 +162,7 @@ export type CohortType = 0 | 1;
  */
 export type ElectionPhase =
   | "NOT_STARTED"
+  | "CONTENDER_SUBMISSION"
   | "NOMINEE_SELECTION"
   | "VETTING_PERIOD"
   | "MEMBER_ELECTION"

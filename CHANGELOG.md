@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Election phase timing** - Aligned with governance specification:
+  - Added `CONTENDER_SUBMISSION` phase (T to T+7 days) - previously missing
+  - Fixed vetting period duration from 7 to 14 days (T+14 to T+28)
+  - Fixed total election duration from 35 to 49 days (7+7+14+21)
+  - `Pending` proposal state now correctly maps to `CONTENDER_SUBMISSION` (not `NOMINEE_SELECTION`)
+
 ### Added
 
 - **Unified Election Tracking** - Elections are now first-class entities:
@@ -19,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Election API Improvements** - Based on client feedback:
   - `getElectionCount(l2Provider)` - Lightweight function to get election count (single multicall, no L1 block fetch)
-  - `ELECTION_TIMING` constants - Phase durations in seconds and days (nominee selection: 7d, vetting: 7d, member election: 21d)
+  - `ELECTION_TIMING` constants - Phase durations in seconds and days (contender submission: 7d, nominee selection: 7d, vetting: 14d, member election: 21d)
   - Bundled cache now includes nominee/member details for COMPLETED elections (zero RPC for historical data)
 
 - **CLI Enhancements**:

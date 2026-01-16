@@ -272,35 +272,41 @@ export const GOVERNANCE_STAGE_DURATION_DAYS = {
 /**
  * Security Council election phase durations in seconds
  *
- * Elections proceed through three phases:
- * 1. Nominee Selection - ARB holders vote to select nominees
- * 2. Vetting Period - Foundation reviews/vets nominees
- * 3. Member Election - ARB holders vote to elect final members
+ * Elections proceed through four phases:
+ * 1. Contender Submission (T to T+7 days) - DAO members declare candidacy
+ * 2. Nominee Selection (T+7 to T+14 days) - ARB holders vote for contenders
+ * 3. Vetting Period (T+14 to T+28 days) - Foundation reviews/vets nominees
+ * 4. Member Election (T+28 to T+49 days) - ARB holders vote to elect final members
  *
  * @see https://docs.arbitrum.foundation/concepts/security-council
  */
 export const ELECTION_TIMING = {
+  /** Contender submission phase: 7 days (implemented as voting delay) */
+  CONTENDER_SUBMISSION_SECONDS: 7 * 24 * 60 * 60,
+  /** Contender submission phase in days */
+  CONTENDER_SUBMISSION_DAYS: 7,
+
   /** Nominee selection phase: 7 days */
   NOMINEE_SELECTION_SECONDS: 7 * 24 * 60 * 60,
   /** Nominee selection phase in days */
   NOMINEE_SELECTION_DAYS: 7,
 
-  /** Vetting period: 7 days */
-  VETTING_PERIOD_SECONDS: 7 * 24 * 60 * 60,
+  /** Vetting period: 14 days (compliance process) */
+  VETTING_PERIOD_SECONDS: 14 * 24 * 60 * 60,
   /** Vetting period in days */
-  VETTING_PERIOD_DAYS: 7,
+  VETTING_PERIOD_DAYS: 14,
 
   /** Member election phase: 21 days */
   MEMBER_ELECTION_SECONDS: 21 * 24 * 60 * 60,
   /** Member election phase in days */
   MEMBER_ELECTION_DAYS: 21,
 
-  /** Total election duration: 35 days (7 + 7 + 21) */
-  TOTAL_ELECTION_SECONDS: 35 * 24 * 60 * 60,
+  /** Total election duration: 49 days (7 + 7 + 14 + 21) */
+  TOTAL_ELECTION_SECONDS: 49 * 24 * 60 * 60,
   /** Total election duration in days */
-  TOTAL_ELECTION_DAYS: 35,
+  TOTAL_ELECTION_DAYS: 49,
 
-  /** Voting delay for elections: 7 days in L1 blocks */
+  /** Voting delay for elections: 7 days in L1 blocks (contender submission period) */
   VOTING_DELAY_L1_BLOCKS: 7 * 24 * 60 * 5, // 50400 blocks at 12s/block
 } as const;
 

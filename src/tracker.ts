@@ -48,7 +48,12 @@ import {
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
   getElectionIndexForProposalId,
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+  serializeNomineeDetails,
+  serializeMemberDetails,
 } from "./election";
+import type { SerializableNomineeDetails, SerializableMemberDetails } from "./types";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
 import { findStage } from "./stages/utils";
@@ -285,13 +290,56 @@ export class ProposalStageTracker {
    * Save an election checkpoint to cache.
    * Elections are stored with key format: `election:{electionIndex}`
    *
+   * For COMPLETED elections, automatically fetches and caches nominee/member
+   * election details to enable zero-RPC reads for historical elections.
+   *
    * @param electionStatus - Election status from trackElectionProposal
+   * @param options.nomineeDetails - Pre-fetched nominee details (skips RPC fetch)
+   * @param options.memberDetails - Pre-fetched member details (skips RPC fetch)
    */
-  async saveElectionCheckpoint(electionStatus: ElectionProposalStatus): Promise<void> {
+  async saveElectionCheckpoint(
+    electionStatus: ElectionProposalStatus,
+    options: {
+      nomineeDetails?: SerializableNomineeDetails;
+      memberDetails?: SerializableMemberDetails;
+    } = {}
+  ): Promise<void> {
     if (!this.cache) return;
 
     const key = `election:${electionStatus.electionIndex}`;
     const now = Date.now();
+
+    let nomineeDetails = options.nomineeDetails;
+    let memberDetails = options.memberDetails;
+
+    // For COMPLETED elections, fetch details if not provided
+    if (electionStatus.phase === "COMPLETED" && !nomineeDetails && !memberDetails) {
+      try {
+        const [rawNomineeDetails, rawMemberDetails] = await Promise.all([
+          getNomineeElectionDetails(electionStatus.electionIndex, this.l2Provider),
+          getMemberElectionDetails(electionStatus.electionIndex, this.l2Provider),
+        ]);
+
+        if (rawNomineeDetails) {
+          nomineeDetails = serializeNomineeDetails(rawNomineeDetails);
+        }
+        if (rawMemberDetails) {
+          memberDetails = serializeMemberDetails(rawMemberDetails);
+        }
+        logTracker(
+          "fetched election %d details: nominees=%d, members=%d",
+          electionStatus.electionIndex,
+          nomineeDetails?.nominees?.length ?? 0,
+          memberDetails?.nominees?.length ?? 0
+        );
+      } catch (err) {
+        logTracker(
+          "failed to fetch election %d details (non-fatal): %s",
+          electionStatus.electionIndex,
+          (err as Error).message
+        );
+      }
+    }
 
     await this.cache.set(key, {
       version: 1,
@@ -299,7 +347,7 @@ export class ProposalStageTracker {
       input: { type: "election", electionIndex: electionStatus.electionIndex },
       lastProcessedStage: null,
       lastProcessedBlock: { l1: 0, l2: 0 },
-      cachedData: { electionStatus },
+      cachedData: { electionStatus, nomineeDetails, memberDetails },
       metadata: { errorCount: 0, lastTrackedAt: now },
     } satisfies TrackingCheckpoint);
 

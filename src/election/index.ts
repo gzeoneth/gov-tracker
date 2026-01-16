@@ -20,7 +20,12 @@ export type { ElectionProposalParams } from "./params";
 export { getContenders, getNomineesWithVotes, getExcludedNominees } from "./participants";
 
 // Details
-export { getNomineeElectionDetails, getMemberElectionDetails } from "./details";
+export {
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+  serializeNomineeDetails,
+  serializeMemberDetails,
+} from "./details";
 
 // Prepare
 export {
@@ -31,7 +36,12 @@ export {
 export type { PreparedElectionCreation } from "./prepare";
 
 // Status
-export { checkElectionStatus, hasVettingPeriod, determineElectionPhase } from "./status";
+export {
+  getElectionCount,
+  checkElectionStatus,
+  hasVettingPeriod,
+  determineElectionPhase,
+} from "./status";
 
 // Tracking
 export {

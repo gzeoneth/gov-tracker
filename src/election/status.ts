@@ -58,7 +58,10 @@ export function determineElectionPhase(
   if (isInVettingPeriod) {
     return "VETTING_PERIOD";
   }
-  if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
+  if (nomineeProposalState === "Pending") {
+    return "CONTENDER_SUBMISSION";
+  }
+  if (nomineeProposalState === "Active") {
     return "NOMINEE_SELECTION";
   }
   if (nomineeProposalState === "Succeeded") {

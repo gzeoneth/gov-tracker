@@ -162,7 +162,7 @@ npx @gzeoneth/gov-tracker election --track 0 -w --private-key $PRIVATE_KEY
 npx @gzeoneth/gov-tracker election --loop --interval 300
 ```
 
-**Election Phases:** `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
+**Election Phases:** `NOT_STARTED` → `CONTENDER_SUBMISSION` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
 
 **Bundled Cache**: The CLI includes a pre-built cache of completed proposals. On first run, this eliminates initial discovery RPC calls. SDK users can access via `getBundledCachePath()` or direct JSON import - see [Examples](./docs/EXAMPLES.md#bundled-cache-bootstrap).
 

@@ -66,7 +66,7 @@ TrackingResult.electionStatus populated
 saveElectionCheckpoint() → cache with key `election:{index}`
 ```
 
-Election phases: `NOT_STARTED` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
+Election phases: `NOT_STARTED` → `CONTENDER_SUBMISSION` → `NOMINEE_SELECTION` → `VETTING_PERIOD` → `MEMBER_ELECTION` → `PENDING_EXECUTION` → `COMPLETED`
 
 ### Stage State Machine
 

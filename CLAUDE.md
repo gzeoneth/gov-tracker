@@ -87,12 +87,12 @@ src/
 ├── cli/
 │   ├── cli.ts              # CLI entry point
 │   ├── lib/                # CLI utilities
-│   └── tui/                # Interactive terminal UI (React/Ink)
-│       ├── App.tsx         # Main TUI component
-│       ├── views/          # View components (List, Detail, Election, etc.)
-│       ├── components/     # Reusable UI components
-│       ├── hooks/          # React hooks for data fetching
-│       └── utils/          # TUI utilities
+│   └── tui/                # Cache-only terminal UI (React/Ink)
+│       ├── App.tsx         # Main TUI component with view routing
+│       ├── views/          # View components (List, Detail, Election, Help, etc.)
+│       ├── components/     # Reusable UI (Header, KeyHelp, ScrollIndicator, etc.)
+│       ├── hooks/          # useCache, useProposals, useNavigation, useElectionData
+│       └── utils/          # Navigation, formatting, shortcuts, clipboard
 ├── utils/                  # Timing, log search, operation IDs, etc.
 ├── types/                  # TypeScript type definitions
 └── constants.ts            # Addresses, timing constants

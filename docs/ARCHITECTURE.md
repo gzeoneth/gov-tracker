@@ -159,42 +159,40 @@ L2 (Arb1/Nova): ArbRetryableTx.redeem()
 
 ## Interactive TUI
 
-The `ui` command provides a React/Ink-based terminal interface.
+The `ui` command provides a cache-only React/Ink terminal interface (~3,900 lines).
 
 ### Component Architecture
 
 ```
-App.tsx
+App.tsx (view routing, error boundary)
 ├── ProposalList (default view)
-│   ├── Header, SearchBar, FilterTabs
-│   ├── ProposalRow[] with StageProgress
+│   ├── Header (title, filter/sort badges, stats)
+│   ├── ProposalRow[] with StatusBadge, StageProgress
 │   └── ScrollIndicator, KeyHelp
-├── ProposalDetail
-│   ├── StageView (timeline)
-│   ├── CalldataView (decoded params)
-│   ├── SimulationView (Tenderly/Foundry data)
-│   └── DescriptionView
-├── ElectionView
-│   ├── Phase timeline
-│   ├── Nominee/Member details
-│   └── Action buttons
-├── SettingsView
-└── HelpView
+├── ProposalDetail → StageView, CalldataView, SimulationView, DescriptionView
+├── ElectionView (cached election status)
+└── HelpView (keyboard shortcuts reference)
 ```
 
 ### Data Flow
 
 ```
-useTracker() ─────► useProposals() ─────► ProposalList
-     │                   │
-     ▼                   ▼
-useCache() ◄──── useNavigation() ─────► Detail Views
-     │
-     ▼
-useElectionData() ─────► ElectionView
+useCache(path) ─────► useProposals(data, filter, search, sort) ─────► ProposalList
+                              │
+                              ▼
+                    useNavigation() ─────► Detail Views
+                              │
+                              ▼
+                    useElectionData() ─────► ElectionView
 ```
 
-Hooks manage data fetching, caching, and navigation state. Views are pure render functions.
+### Key Patterns
+
+- **Cache-only**: No RPC calls, reads from bundled or user-provided cache file
+- **useNavigation**: Centralized state (view, filter, sort, search, scroll) with reducer
+- **useScrollableInput**: Shared hook for Vim-style scroll navigation (j/k/g/G/Ctrl+d/u)
+- **ViewLayout**: Consistent header/footer wrapper for all detail views
+- **registry.ts**: View metadata (titles, proposal requirements) in one place
 
 ---
 

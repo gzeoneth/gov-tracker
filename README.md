@@ -103,42 +103,42 @@ npx @gzeoneth/gov-tracker track 0x82a0baf3...
 
 ### Interactive TUI
 
-The `ui` command launches an interactive terminal interface for browsing proposals:
+The `ui` command launches a cache-only terminal interface for browsing proposals:
 
 ```bash
-# Browse bundled cache (no RPC required)
+# Browse proposals (uses bundled cache, no RPC required)
 npx @gzeoneth/gov-tracker ui
 
-# Enable live tracking with RPC
-npx @gzeoneth/gov-tracker ui --l2-rpc $ARB1_RPC --l1-rpc $ETH_RPC
+# Use custom cache file
+npx @gzeoneth/gov-tracker ui --cache ./my-cache.json
 ```
 
 **Features:**
-- Browse bundled proposals with filter tabs (All, Active, Complete, Timelocks, Elections)
+- Browse proposals with filter tabs (All, Active, Complete, Timelocks, Elections)
 - View proposal details, voting statistics, and stage progress
 - Inspect decoded calldata with nested parameter display
 - View simulation data for Tenderly/Foundry fork testing
-- Monitor Security Council election status with detailed nominee/member info (requires RPC)
-- Live tracking and discovery when RPC providers are configured
+- View Security Council election status from cached data
+- Search proposals with `/`, sort by date/progress/status
 
 **Navigation:**
 | Key | Action |
 |-----|--------|
-| `↑↓` | Navigate |
-| `PgUp/Dn` | Page navigation |
-| `Enter` | View details |
+| `j/k` or `↑↓` | Navigate |
+| `Ctrl+d/u` | Page down/up |
+| `g/G` | Jump to top/bottom |
+| `Enter/l` | View details |
 | `Tab` | Cycle filter |
+| `o` | Cycle sort |
+| `/` | Search |
 | `c` | View calldata |
 | `s` | View simulation |
-| `d` | Discover proposals (with RPC) |
-| `e` | Election status (with RPC) |
-| `r` | Re-track (with RPC) |
-| `b`/`Esc` | Go back |
+| `e` | Election status |
+| `y` | Copy to clipboard |
+| `b/Esc` | Go back |
 | `q` | Quit |
 
-**Note:** The TUI requires `ink` and `react` packages (installed as optional dependencies).
-
-**Auto-Switch:** When tracking a `createElection` transaction, the CLI automatically displays election-specific status (phase, cohort, nominees) instead of proposal stages.
+**Note:** The TUI requires `ink` and `react` packages (installed as optional dependencies). Use `run` command with `--loop` for live tracking.
 
 ### Elections
 

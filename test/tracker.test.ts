@@ -726,10 +726,78 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
       // #when - getting election checkpoint
       const result = await tracker.getElectionCheckpoint(2);
 
-      // #then - should return election status
+      // #then - should return election status with details
       expect(result).toBeDefined();
-      expect(result?.electionIndex).toBe(2);
-      expect(result?.phase).toBe("VETTING_PERIOD");
+      expect(result?.status.electionIndex).toBe(2);
+      expect(result?.status.phase).toBe("VETTING_PERIOD");
+      expect(result?.nomineeDetails).toBeNull();
+      expect(result?.memberDetails).toBeNull();
+    });
+
+    it("should return nomineeDetails and memberDetails when cached", async () => {
+      // #given - tracker with cache containing completed election with details
+      const mockCache = createMockCache();
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      const electionStatus = {
+        electionIndex: 5,
+        phase: "COMPLETED" as const,
+        phaseDescription: "Election completed",
+        nomineeProposalId: "0x1234",
+        nomineeGovernor: "0x5678",
+        memberProposalId: "0xabcd",
+        memberGovernor: "0xefgh",
+        nomineeVotingComplete: true,
+        memberVotingComplete: true,
+        memberElectionTriggered: true,
+      };
+
+      const nomineeDetails = {
+        proposalId: "0x1234",
+        electionIndex: 5,
+        contenders: [
+          { address: "0xcontender1", registeredAtBlock: 100, registrationTxHash: "0xtx1" },
+        ],
+        nominees: [{ address: "0xnominee1", votesReceived: "1000", isExcluded: false }],
+        compliantNominees: [{ address: "0xnominee1", votesReceived: "1000", isExcluded: false }],
+        excludedNominees: [],
+        quorumThreshold: "500",
+        targetNomineeCount: 6,
+      };
+
+      const memberDetails = {
+        proposalId: "0xabcd",
+        electionIndex: 5,
+        nominees: [{ address: "0xnominee1", weightReceived: "2000", isWinner: true, rank: 1 }],
+        winners: ["0xnominee1"],
+        fullWeightDeadline: 1700000000,
+        proposalDeadline: 1700100000,
+      };
+
+      await mockCache.set("election:5", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 5 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus, nomineeDetails, memberDetails },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - getting election checkpoint
+      const result = await tracker.getElectionCheckpoint(5);
+
+      // #then - should return status with nominee and member details
+      expect(result).toBeDefined();
+      expect(result?.status.phase).toBe("COMPLETED");
+      expect(result?.nomineeDetails).toEqual(nomineeDetails);
+      expect(result?.memberDetails).toEqual(memberDetails);
+      expect(result?.nomineeDetails?.contenders).toHaveLength(1);
+      expect(result?.memberDetails?.winners).toContain("0xnominee1");
     });
 
     it("should return null when election checkpoint not found", async () => {

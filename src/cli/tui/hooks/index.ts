@@ -11,3 +11,5 @@ export type { UseStageCalldataResult, DecodedAction } from "./useStageCalldata.j
 
 export { useElectionData } from "./useElectionData.js";
 export type { ElectionData } from "./useElectionData.js";
+
+export { useScrollableInput } from "./useScrollableInput.js";

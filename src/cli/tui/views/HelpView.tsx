@@ -2,122 +2,51 @@
  * Help view showing all keyboard shortcuts (cache-only mode)
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, Box, Text } from "../ink-wrapper.js";
 import type { UseNavigationResult } from "../hooks/index.js";
-import {
-  ScrollIndicatorTop,
-  ScrollIndicatorBottom,
-  ScrollPosition,
-} from "../components/ScrollIndicator.js";
+import { useScrollableInput } from "../hooks/useScrollableInput.js";
+import { ScrollIndicatorTop, ScrollIndicatorBottom, ScrollPosition } from "../components/ScrollIndicator.js";
 import { getVisibleRows } from "../utils/index.js";
+import { HELP_SECTIONS } from "../utils/shortcuts.js";
 
 interface HelpViewProps {
   navigation: UseNavigationResult;
 }
 
 interface HelpLine {
-  text: React.ReactNode;
+  content: React.ReactNode;
   type: "header" | "shortcut" | "spacer";
 }
 
-const HELP_DATA: Array<{ title: string; icon: string; shortcuts: Array<{ key: string; desc: string; note?: string }> }> = [
-  {
-    title: "Navigation (Vim-style)",
-    icon: "⌨",
-    shortcuts: [
-      { key: "j/↓", desc: "Move down" },
-      { key: "k/↑", desc: "Move up" },
-      { key: "Ctrl+d/PgDn", desc: "Page down (10 items)" },
-      { key: "Ctrl+u/PgUp", desc: "Page up (10 items)" },
-      { key: "g", desc: "Jump to top" },
-      { key: "G", desc: "Jump to bottom" },
-      { key: "Enter", desc: "Select / Enter view" },
-      { key: "b/Esc", desc: "Go back" },
-    ],
-  },
-  {
-    title: "List View",
-    icon: "📋",
-    shortcuts: [
-      { key: "/", desc: "Start search", note: "Enter to finish, Esc to clear" },
-      { key: "Tab", desc: "Cycle filter", note: "all → active → complete → timelocks" },
-      { key: "o", desc: "Cycle sort", note: "newest → oldest → progress → status" },
-      { key: "R", desc: "Reload cache from disk" },
-      { key: "e", desc: "View elections" },
-      { key: "q", desc: "Quit" },
-    ],
-  },
-  {
-    title: "Detail View",
-    icon: "📄",
-    shortcuts: [
-      { key: "1-7", desc: "Jump to stage number" },
-      { key: "y", desc: "Copy proposal/operation ID" },
-      { key: "Y", desc: "Copy transaction hash" },
-      { key: "d", desc: "View description" },
-      { key: "c", desc: "View calldata" },
-      { key: "s", desc: "View simulation data" },
-    ],
-  },
-  {
-    title: "Calldata View",
-    icon: "🔍",
-    shortcuts: [
-      { key: "←/→", desc: "Navigate between actions" },
-      { key: "Enter", desc: "Toggle fold/unfold" },
-      { key: "e", desc: "Expand all" },
-      { key: "c", desc: "Collapse all" },
-    ],
-  },
-  {
-    title: "Election View",
-    icon: "🗳",
-    shortcuts: [
-      { key: "j/k", desc: "Navigate elections" },
-      { key: "Enter/l", desc: "View election details" },
-    ],
-  },
-  {
-    title: "Tips",
-    icon: "💡",
-    shortcuts: [
-      { key: "?", desc: "Show/hide this help (works in any view)" },
-      { key: "Search", desc: "Matches title and proposal ID" },
-      { key: "CLI", desc: "Use 'gov-tracker run' for live tracking" },
-    ],
-  },
-];
-
 function buildHelpLines(): HelpLine[] {
-  return HELP_DATA.flatMap((section) => [
-    { text: `${section.icon} ${section.title}`, type: "header" as const },
+  return HELP_SECTIONS.flatMap((section) => [
+    { content: `${section.icon} ${section.title}`, type: "header" as const },
     ...section.shortcuts.map((s) => ({
-      text: (
+      content: (
         <Box key={`${section.title}-${s.key}`}>
           <Text color="cyan">{s.key.padEnd(12)}</Text>
-          <Text>{s.desc}</Text>
+          <Text>{s.action}</Text>
           {s.note && <Text color="gray"> ({s.note})</Text>}
         </Box>
       ),
       type: "shortcut" as const,
     })),
-    { text: "", type: "spacer" as const },
+    { content: "", type: "spacer" as const },
   ]);
 }
 
-function renderHelpLine(line: HelpLine, index: number): React.ReactNode {
-  switch (line.type) {
-    case "header":
-      return (
-        <Box key={index} marginTop={index === 0 ? 0 : 1}>
-          <Text bold color="yellow">{line.text as string}</Text>
-        </Box>
-      );
-    case "shortcut":
-      return <Box key={index} marginLeft={2}>{line.text}</Box>;
-    case "spacer":
-      return null;
+function renderLine(line: HelpLine, index: number): React.ReactNode {
+  if (line.type === "header") {
+    return (
+      <Box key={index} marginTop={index === 0 ? 0 : 1}>
+        <Text bold color="yellow">{line.content as string}</Text>
+      </Box>
+    );
   }
+  if (line.type === "shortcut") {
+    return <Box key={index} marginLeft={2}>{line.content}</Box>;
+  }
+  return null;
 }
 
 const RESERVED_LINES = 6;
@@ -128,22 +57,16 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
   const allLines = buildHelpLines();
   const visibleLines = allLines.slice(state.scrollOffset, state.scrollOffset + visibleRows);
 
-  useInput((input: string, key: KeyInput) => {
-    if (input === "?" || input === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(allLines.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(allLines.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(allLines.length);
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(allLines.length);
-    }
+  useScrollableInput({
+    navigation,
+    itemCount: allLines.length,
+    extraHandlers: (input) => {
+      if (input === "?") {
+        navigation.back();
+        return true;
+      }
+      return false;
+    },
   });
 
   return (
@@ -156,11 +79,7 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
       <Box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
         {allLines.length > visibleRows && (
           <Box marginBottom={1}>
-            <ScrollPosition
-              scrollOffset={state.scrollOffset}
-              visibleRows={visibleRows}
-              totalItems={allLines.length}
-            />
+            <ScrollPosition scrollOffset={state.scrollOffset} visibleRows={visibleRows} totalItems={allLines.length} />
           </Box>
         )}
         {state.scrollOffset > 0 && (
@@ -169,15 +88,11 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
           </Box>
         )}
 
-        {visibleLines.map(renderHelpLine)}
+        {visibleLines.map(renderLine)}
 
         {state.scrollOffset + visibleRows < allLines.length && (
           <Box marginTop={1}>
-            <ScrollIndicatorBottom
-              scrollOffset={state.scrollOffset}
-              visibleRows={visibleRows}
-              totalItems={allLines.length}
-            />
+            <ScrollIndicatorBottom scrollOffset={state.scrollOffset} visibleRows={visibleRows} totalItems={allLines.length} />
           </Box>
         )}
       </Box>

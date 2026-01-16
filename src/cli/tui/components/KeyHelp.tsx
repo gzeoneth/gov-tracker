@@ -4,6 +4,7 @@
 
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { ViewType, FilterType, SortType } from "../types.js";
+import { getShortcutsForView } from "../utils/shortcuts.js";
 
 interface ContextInfo {
   filter?: FilterType;
@@ -19,85 +20,6 @@ interface KeyHelpProps {
   context?: ContextInfo;
 }
 
-interface KeyBinding {
-  key: string;
-  action: string;
-}
-
-const LIST_KEYS: KeyBinding[] = [
-  { key: "j/k", action: "Navigate" },
-  { key: "g/G", action: "Top/Bottom" },
-  { key: "/", action: "Search" },
-  { key: "Enter", action: "View" },
-  { key: "Tab", action: "Filter" },
-  { key: "o", action: "Sort" },
-  { key: "R", action: "Reload" },
-  { key: "e", action: "Elections" },
-  { key: "?", action: "Help" },
-  { key: "q", action: "Quit" },
-];
-
-const DETAIL_KEYS: KeyBinding[] = [
-  { key: "j/k", action: "Stage" },
-  { key: "1-7", action: "Jump" },
-  { key: "Enter", action: "Details" },
-  { key: "y/Y", action: "Copy ID/TX" },
-  { key: "d", action: "Description" },
-  { key: "c", action: "Calldata" },
-  { key: "s", action: "Simulate" },
-  { key: "?", action: "Help" },
-  { key: "b", action: "Back" },
-];
-
-const CALLDATA_KEYS: KeyBinding[] = [
-  { key: "←→", action: "Actions" },
-  { key: "↑↓/PgUp/Dn", action: "Scroll" },
-  { key: "g/G", action: "Top/Bottom" },
-  { key: "e/c", action: "Expand/Collapse" },
-  { key: "b", action: "Back" },
-];
-
-const STAGE_KEYS: KeyBinding[] = [
-  { key: "↑↓/PgUp/Dn", action: "Scroll" },
-  { key: "b", action: "Back" },
-];
-
-const SIMULATION_KEYS: KeyBinding[] = [
-  { key: "↑↓", action: "Navigate" },
-  { key: "b", action: "Back" },
-];
-
-const DESCRIPTION_KEYS: KeyBinding[] = [
-  { key: "↑↓/PgUp/Dn", action: "Scroll" },
-  { key: "b", action: "Back" },
-];
-
-const ELECTION_KEYS: KeyBinding[] = [
-  { key: "↑↓", action: "Navigate" },
-  { key: "b", action: "Back" },
-];
-
-function getKeysForView(view: ViewType): KeyBinding[] {
-  switch (view) {
-    case "list":
-      return LIST_KEYS;
-    case "detail":
-      return DETAIL_KEYS;
-    case "calldata":
-      return CALLDATA_KEYS;
-    case "stage":
-      return STAGE_KEYS;
-    case "simulation":
-      return SIMULATION_KEYS;
-    case "description":
-      return DESCRIPTION_KEYS;
-    case "election":
-      return ELECTION_KEYS;
-    default:
-      return [];
-  }
-}
-
 const SORT_DISPLAY: Record<SortType, string> = {
   newest: "Newest",
   oldest: "Oldest",
@@ -111,9 +33,7 @@ function ContextIndicators({ view, context }: { view: ViewType; context?: Contex
   const indicators: React.ReactElement[] = [];
 
   if (context.isSearching) {
-    indicators.push(
-      <Text key="search" color="yellow">[SEARCHING] </Text>
-    );
+    indicators.push(<Text key="search" color="yellow">[SEARCHING] </Text>);
   } else if (context.hasSearch) {
     indicators.push(
       <Box key="search-active" marginRight={1}>
@@ -161,16 +81,16 @@ function CalldataIndicator({ context }: { context?: ContextInfo }): React.ReactE
 }
 
 export function KeyHelp({ view, context }: KeyHelpProps): React.ReactElement {
-  const keys = getKeysForView(view);
+  const shortcuts = getShortcutsForView(view);
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1}>
       <ContextIndicators view={view} context={context} />
       {view === "calldata" && <CalldataIndicator context={context} />}
-      {keys.map((binding) => (
-        <Box key={binding.key} marginRight={2}>
-          <Text color="cyan">{binding.key}</Text>
-          <Text color="gray">: {binding.action}</Text>
+      {shortcuts.map((s) => (
+        <Box key={s.key} marginRight={2}>
+          <Text color="cyan">{s.key}</Text>
+          <Text color="gray">: {s.action}</Text>
         </Box>
       ))}
     </Box>

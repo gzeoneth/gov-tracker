@@ -57,7 +57,8 @@ export function isPermanentError(error: unknown): boolean {
     message.includes("method not found") ||
     message.includes("invalid address") ||
     message.includes("invalid block") ||
-    message.includes("ens name not configured")
+    message.includes("ens name not configured") ||
+    message.includes("blocks are not supported")
   ) {
     return true;
   }

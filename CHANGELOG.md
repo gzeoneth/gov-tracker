@@ -5,67 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-
-- **Election phase timing** - Aligned with governance specification:
-  - Added `CONTENDER_SUBMISSION` phase (T to T+7 days) - previously missing
-  - Fixed vetting period duration from 7 to 14 days (T+14 to T+28)
-  - Fixed total election duration from 35 to 49 days (7+7+14+21)
-  - `Pending` proposal state now correctly maps to `CONTENDER_SUBMISSION` (not `NOMINEE_SELECTION`)
+## [0.3.0] - 2026-01-16
 
 ### Added
 
-- **Interactive TUI** (`ui` command) - Cache-only terminal interface for browsing proposals. Features filter tabs (All/Active/Complete/Timelocks/Elections), proposal details, voting stats, stage progress, decoded calldata, simulation data, and election status. Vim-style navigation (j/k/g/G), search (/), sorting, and clipboard support. Uses bundled cache by default - no RPC required.
-
-- **Unified Election Tracking** - Elections are now first-class entities:
-  - `trackByTxHash` auto-detects election proposals and populates `TrackingResult.electionStatus`
-  - `tracker.trackElection(electionIndex)` for direct election tracking
-  - `trackAllElections()` / `trackIncompleteElections()` for bulk tracking
-  - Election checkpoints cached with key pattern `election:{index}`
-  - Full A→B→C transaction preparation: `prepareElectionCreation()`, `prepareMemberElectionTrigger()`, `prepareMemberElectionExecution()`
-  - Detailed participant tracking: contenders, nominees, votes, rankings
-
-- **Election API Improvements** - Based on client feedback:
-  - `getElectionCount(l2Provider)` - Lightweight function to get election count (single multicall, no L1 block fetch)
-  - `ELECTION_TIMING` constants - Phase durations in seconds and days (contender submission: 7d, nominee selection: 7d, vetting: 14d, member election: 21d)
-  - Bundled cache now includes nominee/member details for COMPLETED elections (zero RPC for historical data)
-
-- **CLI Enhancements**:
-  - Election auto-switch: displays election status instead of 7 NOT_STARTED stages when tracking `createElection` tx
-  - `--inspect` / `-i` flag: track AND decode calldata (vs `--inspect-only` which skips tracking)
-  - Shorthand flags: `-v` (verbose), `-p` (prepare), `-w` (write)
-  - Selective tracking: `--track-core`, `--track-treasury`, `--track-elections`, `--track-timelocks`
-
-- **Timelock Operation Tracking** - `trackByTxHash(txHash, operationId?)` now accepts optional operationId to track a specific operation from a multi-operation transaction
-
-- **Reorg Detection** - Discovery watermarks now include block hashes for chain reorganization detection
-
-- **Security Utilities** - `truncateDescription()`, `sanitizeForDisplay()`, `safeJsonParse()` for input sanitization
+- **Interactive TUI** (`ui` command) - Cache-only terminal interface with filter tabs, Vim navigation, search, sorting, clipboard support. No RPC required.
+- **Unified Election Tracking** - Elections as first-class entities with `trackElection()`, `trackAllElections()`, auto-detection in `trackByTxHash`, and full tx preparation (`prepareElectionCreation/MemberElectionTrigger/MemberElectionExecution`)
+- **Election API** - `getElectionCount()`, `ELECTION_TIMING` constants, bundled cache with nominee/member details
+- **CLI** - `--inspect`/`-i` flag, shorthand flags (`-v`, `-p`, `-w`), selective tracking (`--track-core/treasury/elections/timelocks`)
+- **Timelock Operation Tracking** - `trackByTxHash(txHash, operationId?)` for multi-operation transactions
+- **Reorg Detection** - Discovery watermarks include block hashes
+- **Security Utilities** - `truncateDescription()`, `sanitizeForDisplay()`, `safeJsonParse()`
 
 ### Changed
 
-- **Performance: Cache L2→L1 sendProps** - Skips ~3-4s redundant `getSendProps()` call during preparation
+- **Performance** - Cache L2→L1 sendProps (saves ~3-4s)
 - **Dependencies** - `dotenv` to devDeps, `commander` to optionalDeps, removed `p-limit`
-- **CLI** - Default command is `run`, default L1 RPC falls back to `https://eth.drpc.org`, warns on public RPCs
-
-### Reverted
-
-- **Revert L2_TIMELOCK callScheduledData deduplication** - Restores simpler code path; `callScheduledData` is required in `TimelockStageData` again
+- **CLI** - Default command `run`, fallback L1 RPC `https://eth.drpc.org`
 
 ### Fixed
 
-- **Multiple timelock operations per transaction** - Transactions with multiple `CallScheduled` events (different operationIds) now track correctly with operation-specific cache keys (`tx:{hash}:op:{opId}`)
-- **ChunkingConfig respected throughout pipeline** - User-provided config now flows through all discovery and tracking functions
-- **All RPC calls use queryWithRetry** - Consistent rate limit and transient failure handling
+- **Election phase timing** - Added `CONTENDER_SUBMISSION` phase, fixed vetting period (14d), corrected total duration (49d)
+- **Multiple timelock operations per tx** - Operation-specific cache keys (`tx:{hash}:op:{opId}`)
+- **ChunkingConfig** - Now respected throughout pipeline
+- **RPC reliability** - All calls use `queryWithRetry`, block range errors marked permanent
 
 ### Security
 
-- **Calldata decode failures** - `decodeParameters()` returns `null` instead of throwing
-- **4byte.directory opt-out** - `DISABLE_4BYTE_LOOKUP=1` env var or `{ disableApiLookup: true }`
-- **Prototype pollution protection** - Cache implementations use `safeJsonParse()`
-- **Description size limit** - Truncates to 100KB
+- **Calldata decoding** - `decodeParameters()` returns `null` on failure, 4byte.directory opt-out, prototype pollution protection, 100KB description limit
+
+### Reverted
+
+- **L2_TIMELOCK callScheduledData deduplication** - Restores simpler code path
 
 ## [0.2.1] - 2026-01-09
 
@@ -176,6 +147,7 @@ Initial release with 7-stage governance tracking across Ethereum L1, Arbitrum On
 
 ---
 
+[0.3.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.1...v0.1.2

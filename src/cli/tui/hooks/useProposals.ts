@@ -146,6 +146,14 @@ const SORT_FN: Record<SortType, (a: ProposalListItem, b: ProposalListItem) => nu
   status: (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
 };
 
+function isTimelockOpKey(key: string): boolean {
+  return key.startsWith("tx:") && key.includes(":op:");
+}
+
+function getBaseKey(opKey: string): string {
+  return opKey.split(":op:")[0];
+}
+
 export function useProposals(
   data: CacheData | null,
   filter: FilterType,
@@ -156,10 +164,12 @@ export function useProposals(
     if (!data) return { items: [], filteredCount: 0, totalCount: 0 };
 
     const items: ProposalListItem[] = [];
+    const allKeys = new Set(data.checkpoints.keys());
 
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery" || checkpoint.input.type === "election") continue;
       if (checkpoint.metadata?.sourceCheckpoint) continue;
+      if (isTimelockOpKey(key) && allKeys.has(getBaseKey(key))) continue;
 
       const info = getProposalInfo(checkpoint);
 

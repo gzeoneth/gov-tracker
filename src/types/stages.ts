@@ -110,16 +110,12 @@ export interface ProposalQueuedData extends BaseStageData {
 }
 
 /**
- * Base for all timelock stages.
- *
- * Note: callScheduledData is optional because L2_TIMELOCK doesn't store it
- * to avoid duplication (it's already in PROPOSAL_QUEUED). L1_TIMELOCK always
- * has callScheduledData since its data differs from PROPOSAL_QUEUED.
+ * Base for all timelock stages
  */
 export interface BaseTimelockData extends BaseStageData {
   operationId: string;
   timelockAddress: string;
-  callScheduledData?: SerializedCallScheduledData[];
+  callScheduledData: SerializedCallScheduledData[];
   eta?: number;
   state?: string;
   waitingForDelay?: boolean;

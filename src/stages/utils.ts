@@ -424,12 +424,8 @@ export interface TimelockExecutionPayload {
 
 /**
  * Extract timelock execution payload from a stage.
- * Falls back to provided callScheduledData if stage doesn't contain it (L2_TIMELOCK case).
  */
-export function createTimelockStageData(
-  stage: TrackedStage,
-  fallbackCallScheduledData?: CallScheduledData[]
-): TimelockExecutionPayload | null {
+export function createTimelockStageData(stage: TrackedStage): TimelockExecutionPayload | null {
   let stageData: TimelockStageData | null = null;
   for (const stageType of TIMELOCK_STAGE_TYPES) {
     stageData = getStageData(stage, stageType);
@@ -440,14 +436,11 @@ export function createTimelockStageData(
     return null;
   }
 
-  // Use stage's callScheduledData if available, otherwise use fallback
-  const callScheduledData = stageData.callScheduledData?.length
-    ? deserializeCallScheduledDataArray(stageData.callScheduledData)
-    : fallbackCallScheduledData;
-
-  if (!callScheduledData?.length) {
+  if (!stageData.callScheduledData?.length) {
     return null;
   }
+
+  const callScheduledData = deserializeCallScheduledDataArray(stageData.callScheduledData);
 
   const payload: TimelockExecutionPayload = {
     timelockAddress: stageData.timelockAddress,

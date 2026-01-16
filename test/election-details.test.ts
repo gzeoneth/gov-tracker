@@ -36,12 +36,22 @@ vi.mock("../src/election/contracts", () => ({
   getMemberGovernor: vi.fn(),
 }));
 
-import { getNomineeElectionDetails, getMemberElectionDetails } from "../src/election/details";
+import {
+  getNomineeElectionDetails,
+  getMemberElectionDetails,
+  serializeNomineeDetails,
+  serializeMemberDetails,
+} from "../src/election/details";
 import { getElectionProposalId, computeElectionProposalId } from "../src/election/proposal-ids";
 import { getContenders, getNomineesWithVotes } from "../src/election/participants";
 import { multicall } from "../src/utils/multicall";
 import { getNomineeGovernor, getMemberGovernor } from "../src/election/contracts";
-import type { ElectionContender, ElectionNominee } from "../src/types";
+import type {
+  ElectionContender,
+  ElectionNominee,
+  NomineeElectionDetails,
+  MemberElectionDetails,
+} from "../src/types";
 
 describe("getNomineeElectionDetails", () => {
   const mockProvider = {} as ethers.providers.Provider;
@@ -542,5 +552,188 @@ describe("getMemberElectionDetails", () => {
       expect(result!.nominees.map((n) => n.rank)).toContain(2);
       expect(result!.nominees.map((n) => n.rank)).toContain(3);
     });
+  });
+});
+
+describe("serializeNomineeDetails", () => {
+  it("should convert BigNumber fields to strings", () => {
+    // #given
+    const details: NomineeElectionDetails = {
+      proposalId: "123456",
+      electionIndex: 2,
+      contenders: [{ address: "0x1111", registeredAtBlock: 100, registrationTxHash: "0xabc" }],
+      nominees: [
+        {
+          address: "0x2222",
+          votesReceived: BigNumber.from("5000000000000000000000"),
+          isExcluded: false,
+        },
+      ],
+      compliantNominees: [
+        {
+          address: "0x2222",
+          votesReceived: BigNumber.from("5000000000000000000000"),
+          isExcluded: false,
+        },
+      ],
+      excludedNominees: [
+        {
+          address: "0x3333",
+          votesReceived: BigNumber.from("1000000000000000000000"),
+          isExcluded: true,
+        },
+      ],
+      quorumThreshold: BigNumber.from("2000000000000000000000"),
+      targetNomineeCount: 6,
+    };
+
+    // #when
+    const result = serializeNomineeDetails(details);
+
+    // #then
+    expect(result.proposalId).toBe("123456");
+    expect(result.electionIndex).toBe(2);
+    expect(result.nominees[0].votesReceived).toBe("5000000000000000000000");
+    expect(result.compliantNominees[0].votesReceived).toBe("5000000000000000000000");
+    expect(result.excludedNominees[0].votesReceived).toBe("1000000000000000000000");
+    expect(result.quorumThreshold).toBe("2000000000000000000000");
+    expect(typeof result.nominees[0].votesReceived).toBe("string");
+  });
+
+  it("should preserve optional nominee fields", () => {
+    // #given
+    const details: NomineeElectionDetails = {
+      proposalId: "123",
+      electionIndex: 1,
+      contenders: [],
+      nominees: [
+        {
+          address: "0x1111",
+          votesReceived: BigNumber.from(100),
+          isExcluded: true,
+          nominatedAtBlock: 500,
+          excludedAtBlock: 600,
+          exclusionTxHash: "0xexclude",
+        },
+      ],
+      compliantNominees: [],
+      excludedNominees: [],
+      quorumThreshold: BigNumber.from(1000),
+      targetNomineeCount: 6,
+    };
+
+    // #when
+    const result = serializeNomineeDetails(details);
+
+    // #then
+    expect(result.nominees[0].nominatedAtBlock).toBe(500);
+    expect(result.nominees[0].excludedAtBlock).toBe(600);
+    expect(result.nominees[0].exclusionTxHash).toBe("0xexclude");
+  });
+
+  it("should handle empty arrays", () => {
+    // #given
+    const details: NomineeElectionDetails = {
+      proposalId: "123",
+      electionIndex: 0,
+      contenders: [],
+      nominees: [],
+      compliantNominees: [],
+      excludedNominees: [],
+      quorumThreshold: BigNumber.from(0),
+      targetNomineeCount: 6,
+    };
+
+    // #when
+    const result = serializeNomineeDetails(details);
+
+    // #then
+    expect(result.contenders).toHaveLength(0);
+    expect(result.nominees).toHaveLength(0);
+    expect(result.compliantNominees).toHaveLength(0);
+    expect(result.excludedNominees).toHaveLength(0);
+  });
+});
+
+describe("serializeMemberDetails", () => {
+  it("should convert BigNumber fields to strings", () => {
+    // #given
+    const details: MemberElectionDetails = {
+      proposalId: "789",
+      electionIndex: 3,
+      nominees: [
+        {
+          address: "0x1111",
+          weightReceived: BigNumber.from("8000000000000000000000"),
+          isWinner: true,
+          rank: 1,
+        },
+        {
+          address: "0x2222",
+          weightReceived: BigNumber.from("5000000000000000000000"),
+          isWinner: false,
+          rank: 2,
+        },
+      ],
+      winners: ["0x1111"],
+      fullWeightDeadline: 1700000000,
+      proposalDeadline: 1700500000,
+    };
+
+    // #when
+    const result = serializeMemberDetails(details);
+
+    // #then
+    expect(result.proposalId).toBe("789");
+    expect(result.electionIndex).toBe(3);
+    expect(result.nominees[0].weightReceived).toBe("8000000000000000000000");
+    expect(result.nominees[1].weightReceived).toBe("5000000000000000000000");
+    expect(typeof result.nominees[0].weightReceived).toBe("string");
+    expect(result.winners).toEqual(["0x1111"]);
+    expect(result.fullWeightDeadline).toBe(1700000000);
+    expect(result.proposalDeadline).toBe(1700500000);
+  });
+
+  it("should preserve nominee rank and winner status", () => {
+    // #given
+    const details: MemberElectionDetails = {
+      proposalId: "456",
+      electionIndex: 2,
+      nominees: [
+        { address: "0x1111", weightReceived: BigNumber.from(100), isWinner: true, rank: 1 },
+        { address: "0x2222", weightReceived: BigNumber.from(50), isWinner: false, rank: 2 },
+      ],
+      winners: ["0x1111"],
+      fullWeightDeadline: 100,
+      proposalDeadline: 200,
+    };
+
+    // #when
+    const result = serializeMemberDetails(details);
+
+    // #then
+    expect(result.nominees[0].isWinner).toBe(true);
+    expect(result.nominees[0].rank).toBe(1);
+    expect(result.nominees[1].isWinner).toBe(false);
+    expect(result.nominees[1].rank).toBe(2);
+  });
+
+  it("should handle empty nominees array", () => {
+    // #given
+    const details: MemberElectionDetails = {
+      proposalId: "000",
+      electionIndex: 0,
+      nominees: [],
+      winners: [],
+      fullWeightDeadline: 0,
+      proposalDeadline: 0,
+    };
+
+    // #when
+    const result = serializeMemberDetails(details);
+
+    // #then
+    expect(result.nominees).toHaveLength(0);
+    expect(result.winners).toHaveLength(0);
   });
 });

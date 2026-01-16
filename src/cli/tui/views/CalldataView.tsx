@@ -102,14 +102,14 @@ export function CalldataView({
 
   if (actions.length === 0) {
     return (
-      <ViewLayout view="calldata" loading={loading} loadingText="Decoding calldata..." skeletonType="text" error={error} breadcrumb={breadcrumb}>
+      <ViewLayout view="calldata" loading={loading} loadingText="Decoding calldata..."  error={error} breadcrumb={breadcrumb}>
         <Text color="gray">No calldata to display</Text>
       </ViewLayout>
     );
   }
 
   return (
-    <ViewLayout view="calldata" loading={loading} loadingText="Decoding calldata..." skeletonType="text" error={error} breadcrumb={breadcrumb} keyHelpContext={keyHelpContext}>
+    <ViewLayout view="calldata" loading={loading} loadingText="Decoding calldata..."  error={error} breadcrumb={breadcrumb} keyHelpContext={keyHelpContext}>
       <Box marginBottom={1}>
         <Text color="cyan">Action {safeActionIndex + 1}/{actions.length}</Text>
         {actions.length > 1 && <Text color="gray"> (← → navigate)</Text>}

@@ -61,17 +61,8 @@ export function SettingsView({ navigation, onConfigChange }: SettingsViewProps):
   }
 
   function handleItemSelect(item: SettingItem): void {
-    if (item.type === "boolean") {
-      handleUpdateConfig(item, item.value === "yes" ? "no" : "yes");
-      return;
-    }
-    if (item.type === "select" && item.options) {
-      const currentIdx = item.options.indexOf(item.value);
-      handleUpdateConfig(item, item.options[(currentIdx + 1) % item.options.length]);
-      return;
-    }
     setIsEditing(true);
-    const isPlaceholder = item.value === "(default)" || item.value === "(auto)";
+    const isPlaceholder = item.value === "(default)" || item.value === "(auto)" || item.value === "(none)";
     setEditValue(isPlaceholder ? "" : item.value);
   }
 

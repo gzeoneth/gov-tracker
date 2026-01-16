@@ -11,7 +11,11 @@ import {
   ScrollIndicatorBottom,
   ScrollPosition,
 } from "../components/ScrollIndicator.js";
-import { getVisibleRows } from "../utils/index.js";
+import {
+  getVisibleRows,
+  getNavigationAction,
+  applyNavigation,
+} from "../utils/index.js";
 import type {
   ElectionStatus,
   ElectionProposalStatus,
@@ -264,35 +268,6 @@ function buildDetailLines(
 }
 
 const RESERVED_LINES = 8;
-const PAGE_SIZE = 10;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-type NavigationAction = "up" | "down" | "pageUp" | "pageDown" | "top" | "bottom" | null;
-
-function getNavigationAction(input: string, key: KeyInput): NavigationAction {
-  if (key.upArrow || input === "k") return "up";
-  if (key.downArrow || input === "j") return "down";
-  if (key.pageUp || (key.ctrl && input === "u")) return "pageUp";
-  if (key.pageDown || (key.ctrl && input === "d")) return "pageDown";
-  if (input === "g") return "top";
-  if (input === "G") return "bottom";
-  return null;
-}
-
-function applyNavigation(current: number, action: NavigationAction, max: number): number {
-  switch (action) {
-    case "up": return clamp(current - 1, 0, max);
-    case "down": return clamp(current + 1, 0, max);
-    case "pageUp": return clamp(current - PAGE_SIZE, 0, max);
-    case "pageDown": return clamp(current + PAGE_SIZE, 0, max);
-    case "top": return 0;
-    case "bottom": return max;
-    default: return current;
-  }
-}
 
 export function ElectionView({ navigation, providers, cachePath, discoverElections, isDiscovering }: ElectionViewProps): React.ReactElement {
   const electionData = useElectionData({ cachePath });
@@ -425,7 +400,6 @@ export function ElectionView({ navigation, providers, cachePath, discoverElectio
       isTracking={isLoading || details.loading}
       loading={isLoading}
       loadingText={isDiscovering ? "Discovering elections..." : "Loading election status..."}
-      skeletonType="detail"
       error={electionData.error}
     >
       {electionData.warning && (

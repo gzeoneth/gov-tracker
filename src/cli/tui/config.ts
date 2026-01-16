@@ -15,11 +15,6 @@ export interface TuiConfig {
   cache: {
     path: string;
   };
-  display: {
-    theme: "dark" | "light";
-    showProgressBar: boolean;
-    compactMode: boolean;
-  };
   discovery: {
     defaultDays: number;
     startBlock: number | null;
@@ -41,15 +36,10 @@ const DEFAULT_CONFIG: TuiConfig = {
   cache: {
     path: "",
   },
-  display: {
-    theme: "dark",
-    showProgressBar: true,
-    compactMode: false,
-  },
   discovery: {
     defaultDays: 60,
     startBlock: null,
-    chunkSize: 10_000_000, // Match gov-tracker default (10M blocks for L2)
+    chunkSize: 10_000_000,
     concurrency: 1,
   },
   debug: {
@@ -58,20 +48,13 @@ const DEFAULT_CONFIG: TuiConfig = {
   },
 };
 
-// Module-level cache path for config location
 let configBasePath: string | null = null;
 
-/**
- * Set the base path for config storage (same directory as cache)
- * Call this before using loadConfig/saveConfig in TUI context
- */
 export function setConfigBasePath(cachePath: string): void {
-  // If cachePath is a file, use its directory; if a directory, use it directly
   try {
     const stats = fs.existsSync(cachePath) && fs.statSync(cachePath);
     configBasePath = stats && stats.isDirectory() ? cachePath : path.dirname(cachePath);
   } catch {
-    // Fall back to parent directory if stat fails (permissions, race condition, etc.)
     configBasePath = path.dirname(cachePath);
   }
 }
@@ -104,7 +87,6 @@ export function loadConfigWithStatus(): ConfigLoadResult {
       config: {
         rpc: { ...DEFAULT_CONFIG.rpc, ...parsed.rpc },
         cache: { ...DEFAULT_CONFIG.cache, ...parsed.cache },
-        display: { ...DEFAULT_CONFIG.display, ...parsed.display },
         discovery: { ...DEFAULT_CONFIG.discovery, ...parsed.discovery },
         debug: { ...DEFAULT_CONFIG.debug, ...parsed.debug },
       },

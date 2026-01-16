@@ -10,6 +10,7 @@ import type {
   ViewType,
   SortType,
 } from "../types.js";
+import { clamp, cycleArray } from "../utils/navigation.js";
 
 export const MAX_STAGE_INDEX = 6;
 export const STAGE_COUNT = 7;
@@ -68,15 +69,6 @@ const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 
 function isScrollableView(view: ViewType): boolean {
   return SCROLLABLE_VIEWS.includes(view);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function cycleArray<T>(array: T[], current: T): T {
-  const nextIndex = (array.indexOf(current) + 1) % array.length;
-  return array[nextIndex];
 }
 
 type NavigableField = "selectedIndex" | "selectedStageIndex" | "scrollOffset";

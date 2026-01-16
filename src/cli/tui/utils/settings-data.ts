@@ -4,21 +4,19 @@
 
 import type { TuiConfig } from "../config.js";
 
-export type SettingSection = "rpc" | "cache" | "display" | "discovery" | "debug";
+export type SettingSection = "rpc" | "cache" | "discovery" | "debug";
 
 export interface SettingItem {
   section: SettingSection;
   key: string;
   label: string;
   value: string;
-  type: "text" | "number" | "boolean" | "select";
-  options?: string[];
+  type: "text" | "number";
 }
 
 export const SECTION_TITLES: Record<SettingSection, string> = {
   rpc: "RPC Configuration",
   cache: "Cache Settings",
-  display: "Display Options",
   discovery: "Discovery Parameters",
   debug: "Debug Settings",
 };
@@ -52,28 +50,6 @@ export function getSettingItems(config: TuiConfig): SettingItem[] {
       label: "Cache Path",
       value: config.cache.path || "(default)",
       type: "text",
-    },
-    {
-      section: "display",
-      key: "theme",
-      label: "Theme",
-      value: config.display.theme,
-      type: "select",
-      options: ["dark", "light"],
-    },
-    {
-      section: "display",
-      key: "showProgressBar",
-      label: "Show Progress Bar",
-      value: config.display.showProgressBar ? "yes" : "no",
-      type: "boolean",
-    },
-    {
-      section: "display",
-      key: "compactMode",
-      label: "Compact Mode",
-      value: config.display.compactMode ? "yes" : "no",
-      type: "boolean",
     },
     {
       section: "discovery",
@@ -124,18 +100,13 @@ type UpdateResult =
   | { success: true; config: TuiConfig }
   | { success: false; error: { message: string } };
 
-function normalizeValue(value: string, placeholder: string): string {
-  return value === placeholder ? "" : value;
-}
-
 export function updateConfigValue(
   config: TuiConfig,
   item: SettingItem,
   newValue: string
 ): UpdateResult {
-  const { section, key, type, label } = item;
+  const { section, key, label } = item;
 
-  // Handle discovery section with validation
   if (section === "discovery") {
     if (key === "startBlock") {
       const parsed = parseInt(newValue, 10);
@@ -170,24 +141,13 @@ export function updateConfigValue(
     };
   }
 
-  // Handle display section
-  if (section === "display") {
-    const displayValue = type === "boolean" ? newValue === "yes" : newValue;
-    return {
-      success: true,
-      config: { ...config, display: { ...config.display, [key]: displayValue } },
-    };
-  }
-
-  // Handle simple sections (rpc, cache, debug) - no validation needed
   const placeholders: Record<SettingSection, string> = {
     rpc: "(default)",
     cache: "(default)",
     debug: "(none)",
-    display: "",
     discovery: "",
   };
-  const normalized = normalizeValue(newValue, placeholders[section]);
+  const normalized = newValue === placeholders[section] ? "" : newValue;
   return {
     success: true,
     config: { ...config, [section]: { ...config[section], [key]: normalized } },

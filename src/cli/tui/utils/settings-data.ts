@@ -120,134 +120,78 @@ export function getSettingItems(config: TuiConfig): SettingItem[] {
   ];
 }
 
-interface ValidationError {
-  message: string;
-}
-
 type UpdateResult =
   | { success: true; config: TuiConfig }
-  | { success: false; error: ValidationError };
+  | { success: false; error: { message: string } };
 
-type SectionUpdater = (config: TuiConfig, key: string, value: string) => UpdateResult;
-
-function normalizeDefaultValue(value: string, placeholder: string): string {
+function normalizeValue(value: string, placeholder: string): string {
   return value === placeholder ? "" : value;
 }
-
-function updateRpcSection(config: TuiConfig, key: string, value: string): UpdateResult {
-  return {
-    success: true,
-    config: {
-      ...config,
-      rpc: { ...config.rpc, [key]: normalizeDefaultValue(value, "(default)") },
-    },
-  };
-}
-
-function updateCacheSection(config: TuiConfig, key: string, value: string): UpdateResult {
-  return {
-    success: true,
-    config: {
-      ...config,
-      cache: { ...config.cache, [key]: normalizeDefaultValue(value, "(default)") },
-    },
-  };
-}
-
-function updateDisplaySection(
-  config: TuiConfig,
-  key: string,
-  value: string,
-  type: SettingItem["type"]
-): UpdateResult {
-  const newValue = type === "boolean" ? value === "yes" : value;
-  return {
-    success: true,
-    config: {
-      ...config,
-      display: { ...config.display, [key]: newValue },
-    },
-  };
-}
-
-function updateDiscoverySection(
-  config: TuiConfig,
-  key: string,
-  value: string,
-  label: string
-): UpdateResult {
-  if (key === "startBlock") {
-    const parsed = parseInt(value, 10);
-    const startBlock = value === "(auto)" || isNaN(parsed) ? null : Math.max(0, parsed);
-    return {
-      success: true,
-      config: {
-        ...config,
-        discovery: { ...config.discovery, startBlock },
-      },
-    };
-  }
-
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed < 1) {
-    return {
-      success: false,
-      error: { message: `Invalid value for ${label}: must be a positive number` },
-    };
-  }
-
-  if (key === "defaultDays" && parsed > 365) {
-    return { success: false, error: { message: "Default days cannot exceed 365" } };
-  }
-  if (key === "chunkSize" && (parsed < 1000 || parsed > 10_000_000)) {
-    return {
-      success: false,
-      error: { message: "Chunk size must be between 1,000 and 10,000,000" },
-    };
-  }
-  if (key === "concurrency" && parsed > 20) {
-    return { success: false, error: { message: "Concurrency cannot exceed 20" } };
-  }
-
-  return {
-    success: true,
-    config: {
-      ...config,
-      discovery: { ...config.discovery, [key]: parsed },
-    },
-  };
-}
-
-function updateDebugSection(config: TuiConfig, key: string, value: string): UpdateResult {
-  return {
-    success: true,
-    config: {
-      ...config,
-      debug: { ...config.debug, [key]: normalizeDefaultValue(value, "(none)") },
-    },
-  };
-}
-
-const SECTION_UPDATERS: Record<SettingSection, SectionUpdater> = {
-  rpc: updateRpcSection,
-  cache: updateCacheSection,
-  display: (config, key, value) => updateDisplaySection(config, key, value, "text"),
-  discovery: (config, key, value) => updateDiscoverySection(config, key, value, key),
-  debug: updateDebugSection,
-};
 
 export function updateConfigValue(
   config: TuiConfig,
   item: SettingItem,
   newValue: string
 ): UpdateResult {
-  if (item.section === "display") {
-    return updateDisplaySection(config, item.key, newValue, item.type);
+  const { section, key, type, label } = item;
+
+  // Handle discovery section with validation
+  if (section === "discovery") {
+    if (key === "startBlock") {
+      const parsed = parseInt(newValue, 10);
+      const startBlock = newValue === "(auto)" || isNaN(parsed) ? null : Math.max(0, parsed);
+      return {
+        success: true,
+        config: { ...config, discovery: { ...config.discovery, startBlock } },
+      };
+    }
+    const parsed = parseInt(newValue, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      return {
+        success: false,
+        error: { message: `Invalid value for ${label}: must be a positive number` },
+      };
+    }
+    if (key === "defaultDays" && parsed > 365) {
+      return { success: false, error: { message: "Default days cannot exceed 365" } };
+    }
+    if (key === "chunkSize" && (parsed < 1000 || parsed > 10_000_000)) {
+      return {
+        success: false,
+        error: { message: "Chunk size must be between 1,000 and 10,000,000" },
+      };
+    }
+    if (key === "concurrency" && parsed > 20) {
+      return { success: false, error: { message: "Concurrency cannot exceed 20" } };
+    }
+    return {
+      success: true,
+      config: { ...config, discovery: { ...config.discovery, [key]: parsed } },
+    };
   }
-  if (item.section === "discovery") {
-    return updateDiscoverySection(config, item.key, newValue, item.label);
+
+  // Handle display section
+  if (section === "display") {
+    const displayValue = type === "boolean" ? newValue === "yes" : newValue;
+    return {
+      success: true,
+      config: { ...config, display: { ...config.display, [key]: displayValue } },
+    };
   }
-  return SECTION_UPDATERS[item.section](config, item.key, newValue);
+
+  // Handle simple sections (rpc, cache, debug) - no validation needed
+  const placeholders: Record<SettingSection, string> = {
+    rpc: "(default)",
+    cache: "(default)",
+    debug: "(none)",
+    display: "",
+    discovery: "",
+  };
+  const normalized = normalizeValue(newValue, placeholders[section]);
+  return {
+    success: true,
+    config: { ...config, [section]: { ...config[section], [key]: normalized } },
+  };
 }
 
 export interface GroupedSettingItems {

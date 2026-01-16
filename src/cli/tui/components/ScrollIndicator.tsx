@@ -44,39 +44,6 @@ export function ScrollIndicatorBottom({
   );
 }
 
-interface ScrollBarProps {
-  scrollOffset: number;
-  visibleRows: number;
-  totalItems: number;
-  height?: number;
-}
-
-export function ScrollBar({
-  scrollOffset,
-  visibleRows,
-  totalItems,
-  height = 5,
-}: ScrollBarProps): React.ReactElement | null {
-  if (totalItems <= visibleRows) return null;
-
-  const scrollRatio = scrollOffset / Math.max(1, totalItems - visibleRows);
-  const thumbPosition = Math.min(height - 1, Math.round(scrollRatio * (height - 1)));
-
-  const chars = Array.from({ length: height }, (_, i) =>
-    i === thumbPosition ? "█" : "░"
-  );
-
-  return (
-    <Box flexDirection="column">
-      {chars.map((char, i) => (
-        <Text key={i} color={i === thumbPosition ? "cyan" : "gray"}>
-          {char}
-        </Text>
-      ))}
-    </Box>
-  );
-}
-
 interface ScrollPositionProps {
   scrollOffset: number;
   visibleRows: number;

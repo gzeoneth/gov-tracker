@@ -1,5 +1,5 @@
 /**
- * Keyboard shortcuts help footer
+ * Keyboard shortcuts help footer (cache-only mode)
  */
 
 import { React, Box, Text } from "../ink-wrapper.js";
@@ -16,7 +16,6 @@ interface ContextInfo {
 
 interface KeyHelpProps {
   view: ViewType;
-  hasProviders: boolean;
   context?: ContextInfo;
 }
 
@@ -34,13 +33,11 @@ const LIST_KEYS: KeyBinding[] = [
   { key: "o", action: "Sort" },
   { key: "R", action: "Reload" },
   { key: "e", action: "Elections" },
-  { key: "d", action: "Discover" },
-  { key: "S", action: "Settings" },
   { key: "?", action: "Help" },
   { key: "q", action: "Quit" },
 ];
 
-const DETAIL_KEYS_BASE: KeyBinding[] = [
+const DETAIL_KEYS: KeyBinding[] = [
   { key: "j/k", action: "Stage" },
   { key: "1-7", action: "Jump" },
   { key: "Enter", action: "Details" },
@@ -49,10 +46,8 @@ const DETAIL_KEYS_BASE: KeyBinding[] = [
   { key: "c", action: "Calldata" },
   { key: "s", action: "Simulate" },
   { key: "?", action: "Help" },
+  { key: "b", action: "Back" },
 ];
-
-const DETAIL_RETRACK: KeyBinding = { key: "r", action: "Re-track" };
-const DETAIL_BACK: KeyBinding = { key: "b", action: "Back" };
 
 const CALLDATA_KEYS: KeyBinding[] = [
   { key: "←→", action: "Actions" },
@@ -82,15 +77,12 @@ const ELECTION_KEYS: KeyBinding[] = [
   { key: "b", action: "Back" },
 ];
 
-function getKeysForView(view: ViewType, hasProviders: boolean): KeyBinding[] {
+function getKeysForView(view: ViewType): KeyBinding[] {
   switch (view) {
     case "list":
-      // Always show all keys - discover/election use default public RPCs if none configured
       return LIST_KEYS;
     case "detail":
-      return hasProviders
-        ? [...DETAIL_KEYS_BASE, DETAIL_RETRACK, DETAIL_BACK]
-        : [...DETAIL_KEYS_BASE, DETAIL_BACK];
+      return DETAIL_KEYS;
     case "calldata":
       return CALLDATA_KEYS;
     case "stage":
@@ -168,8 +160,8 @@ function CalldataIndicator({ context }: { context?: ContextInfo }): React.ReactE
   );
 }
 
-export function KeyHelp({ view, hasProviders, context }: KeyHelpProps): React.ReactElement {
-  const keys = getKeysForView(view, hasProviders);
+export function KeyHelp({ view, context }: KeyHelpProps): React.ReactElement {
+  const keys = getKeysForView(view);
 
   return (
     <Box borderStyle="single" borderColor="gray" paddingX={1}>

@@ -1,23 +1,20 @@
 /**
- * Main proposal list view
+ * Main proposal list view (cache-only)
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem, CacheData } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
-import type { UseTrackerResult } from "../hooks/useTracker.js";
 import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { ProposalRow } from "../components/ProposalRow.js";
 import { getVisibleRows } from "../utils/index.js";
 import { SearchBar } from "../components/SearchBar.js";
-import { ErrorBanner } from "../components/ErrorDisplay.js";
 
 interface ProposalListProps {
   items: ProposalListItem[];
   data: CacheData | null;
   navigation: UseNavigationResult;
-  tracker: UseTrackerResult;
   onQuit: () => void;
   onReload: () => void;
 }
@@ -34,12 +31,12 @@ function getEmptyStateMessage(searchQuery: string, filter: string, totalCount: n
   return `No proposals match filter [${filter}]`;
 }
 
-function getEmptyStateHint(searchQuery: string, totalCount: number, canTrack: boolean): string {
+function getEmptyStateHint(searchQuery: string, totalCount: number): string {
   if (searchQuery) {
     return "Press / to modify search";
   }
   if (totalCount === 0) {
-    return canTrack ? "Press d to discover proposals" : "Use --l2-rpc to enable discovery";
+    return "Run 'gov-tracker run' to populate";
   }
   return "Press Tab to change filter";
 }
@@ -48,7 +45,6 @@ export function ProposalList({
   items,
   data,
   navigation,
-  tracker,
   onQuit,
   onReload,
 }: ProposalListProps): React.ReactElement {
@@ -105,10 +101,7 @@ export function ProposalList({
       case key.tab:
         navigation.cycleFilter();
         break;
-      case input === "d" && !tracker.isTracking:
-        void tracker.discover();
-        break;
-      case input === "e" && tracker.canTrack:
+      case input === "e":
         navigation.goToElection();
         break;
       case input === "g":
@@ -125,9 +118,6 @@ export function ProposalList({
         break;
       case input === "?":
         navigation.goToHelp();
-        break;
-      case input === "S":
-        navigation.goToSettings();
         break;
     }
   };
@@ -147,8 +137,6 @@ export function ProposalList({
         filter={state.filter}
         sort={state.sort}
         stats={data?.stats ?? null}
-        hasProviders={tracker.canTrack}
-        isTracking={tracker.isTracking}
         position={
           items.length > 0 ? { current: selectedIndex + 1, total: items.length } : undefined
         }
@@ -160,18 +148,6 @@ export function ProposalList({
           isActive={state.isSearching}
           resultCount={items.length}
         />
-
-        {tracker.isTracking && tracker.progress && (
-          <Box marginBottom={1}>
-            <Text color="yellow">{tracker.progress}</Text>
-          </Box>
-        )}
-
-        {tracker.error && (
-          <Box marginBottom={1}>
-            <ErrorBanner error={tracker.error} />
-          </Box>
-        )}
 
         {items.length === 0 ? (
           <Box flexDirection="column" alignItems="center" marginY={2}>
@@ -186,7 +162,7 @@ export function ProposalList({
             <Text bold color="yellow">No proposals found</Text>
             <Text color="gray">{getEmptyStateMessage(state.searchQuery, state.filter, data?.stats?.total ?? 0)}</Text>
             <Box marginTop={1}>
-              <Text color="cyan">{getEmptyStateHint(state.searchQuery, data?.stats?.total ?? 0, tracker.canTrack)}</Text>
+              <Text color="cyan">{getEmptyStateHint(state.searchQuery, data?.stats?.total ?? 0)}</Text>
             </Box>
           </Box>
         ) : (
@@ -208,7 +184,6 @@ export function ProposalList({
 
       <KeyHelp
         view="list"
-        hasProviders={tracker.canTrack}
         context={{
           filter: state.filter,
           sort: state.sort,

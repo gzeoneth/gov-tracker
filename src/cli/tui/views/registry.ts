@@ -22,7 +22,6 @@ const VIEW_REGISTRY: readonly ViewConfig[] = [
   { id: "description", title: "Description", requiresProposal: true },
   { id: "election", title: "Elections", requiresProposal: false },
   { id: "help", title: "Help", requiresProposal: false },
-  { id: "settings", title: "Settings", requiresProposal: false },
 ] as const;
 
 const VIEW_MAP = new Map<ViewType, ViewConfig>(VIEW_REGISTRY.map((config) => [config.id, config]));

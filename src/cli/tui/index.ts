@@ -1,18 +1,15 @@
 /**
  * TUI Module Entry Point
  *
- * Interactive terminal UI for browsing and tracking governance proposals.
+ * Interactive terminal UI for browsing governance proposals from cache.
  * Requires: ink@3.x, react@17.x (CommonJS compatible versions)
  */
 
 import * as fs from "fs";
-import type { ProviderBundle } from "../lib/cli.js";
 import { React, render, checkTuiDependencies } from "./ink-wrapper.js";
-import { setConfigBasePath } from "./config.js";
 
 export interface TuiOptions {
   cachePath: string;
-  providers?: ProviderBundle;
   verbose?: boolean;
   logFile?: string;
 }
@@ -34,9 +31,6 @@ function checkTtySupport(): void {
 export async function runTui(options: TuiOptions): Promise<void> {
   checkTtySupport();
   checkTuiDependencies();
-
-  // Set config storage path to same directory as cache
-  setConfigBasePath(options.cachePath);
 
   // Set up file logging if logFile is specified
   let logStream: fs.WriteStream | null = null;
@@ -63,7 +57,6 @@ export async function runTui(options: TuiOptions): Promise<void> {
     const { waitUntilExit } = render(
       React.createElement(App, {
         cachePath: options.cachePath,
-        providers: options.providers,
         verbose: options.verbose,
       }),
       { fullScreen: true }

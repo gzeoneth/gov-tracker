@@ -1073,11 +1073,9 @@ electionCmd
 // UI Command - Interactive TUI
 // ============================================================================
 
-const uiCmd = program
+program
   .command("ui")
-  .description("Interactive TUI for browsing and tracking proposals");
-addOptions(uiCmd, rpcOptions);
-uiCmd
+  .description("Interactive TUI for browsing proposals (cache-only)")
   .addOption(cacheOptions.cache(DEFAULT_CACHE_PATH))
   .addOption(verboseOption)
   .option("--log-file <path>", "Write debug logs to file (for debugging TUI)")
@@ -1085,37 +1083,16 @@ uiCmd
   .action(async (opts) => {
     try {
       const { runTui } = await import("./tui");
-      const { loadConfig } = await import("./tui/config.js");
 
-      // Load TUI config for RPC URLs (used as fallback before env vars)
-      const tuiConfig = loadConfig();
-
-      // Merge: CLI args > env vars > saved config > public defaults
-      const mergedOpts = {
-        l2Rpc: opts.l2Rpc || process.env.ARB1_RPC || tuiConfig.rpc.l2Url || undefined,
-        l1Rpc: opts.l1Rpc || process.env.ETH_RPC || tuiConfig.rpc.l1Url || undefined,
-        novaRpc: opts.novaRpc || process.env.NOVA_RPC || tuiConfig.rpc.novaUrl || undefined,
-      };
-      const providers = createProvidersFromOptions(mergedOpts);
-
-      // Use config cache path if set and no CLI arg provided
-      const cachePath =
-        opts.cache !== DEFAULT_CACHE_PATH ? opts.cache : tuiConfig.cache.path || opts.cache;
-
-      // Debug settings: CLI args > saved config > defaults
-      const logFile = opts.logFile || tuiConfig.debug.logFile || undefined;
-      const debugNamespaces = opts.debugNamespaces || tuiConfig.debug.namespaces || "gov-tracker:*";
-
-      // Enable debug with namespaces if log file is specified or verbose mode
-      if (logFile || opts.verbose) {
+      const debugNamespaces = opts.debugNamespaces || "gov-tracker:*";
+      if (opts.logFile || opts.verbose) {
         debug.enable(debugNamespaces);
       }
 
       await runTui({
-        cachePath,
-        providers,
+        cachePath: opts.cache,
         verbose: opts.verbose,
-        logFile,
+        logFile: opts.logFile,
       });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "MODULE_NOT_FOUND") {

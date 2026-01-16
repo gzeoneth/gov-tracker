@@ -12,8 +12,7 @@ export type ViewType =
   | "simulation"
   | "description"
   | "election"
-  | "help"
-  | "settings";
+  | "help";
 
 export type FilterType = "all" | "active" | "complete" | "timelocks";
 

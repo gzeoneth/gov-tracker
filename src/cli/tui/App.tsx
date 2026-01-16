@@ -1,15 +1,13 @@
 /**
- * Main TUI Application Component
+ * Main TUI Application Component (cache-only)
  *
  * Routes between views and manages global state.
  */
 
 import { React, Box, Text, useApp } from "./ink-wrapper.js";
 import { useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
-import type { ProviderBundle } from "../lib/cli.js";
-import { useCache, useProposals, useNavigation, useTracker } from "./hooks/index.js";
+import { useCache, useProposals, useNavigation } from "./hooks/index.js";
 import type { ProposalListItem } from "./types.js";
-import { loadConfigWithStatus } from "./config.js";
 import { ProposalList } from "./views/ProposalList.js";
 import { ProposalDetail } from "./views/ProposalDetail.js";
 import { CalldataView } from "./views/CalldataView.js";
@@ -18,7 +16,6 @@ import { SimulationView } from "./views/SimulationView.js";
 import { DescriptionView } from "./views/DescriptionView.js";
 import { ElectionView } from "./views/ElectionView.js";
 import { HelpView } from "./views/HelpView.js";
-import { SettingsView } from "./views/SettingsView.js";
 import { isProposalView } from "./views/registry.js";
 import { Spinner } from "./components/Spinner.js";
 
@@ -57,7 +54,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 
 export interface AppProps {
   cachePath: string;
-  providers?: ProviderBundle;
   verbose?: boolean;
 }
 
@@ -75,39 +71,18 @@ function useTerminalHeight(): number {
   return height;
 }
 
-export function App({ cachePath, providers: providerBundle, verbose }: AppProps): React.ReactElement {
+export function App({ cachePath, verbose }: AppProps): React.ReactElement {
   const { exit } = useApp();
   const cache = useCache(cachePath);
   const navigation = useNavigation();
   const { items } = useProposals(cache.data, navigation.state.filter, navigation.state.searchQuery, navigation.state.sort);
-  const tracker = useTracker({
-    providers: providerBundle,
-    cachePath,
-    onDiscoveryComplete: cache.reload,
-  });
   const terminalHeight = useTerminalHeight();
-  const [configWarning, setConfigWarning] = useState<string | null>(null);
-
-  useEffect(() => {
-    const { warning } = loadConfigWithStatus();
-    if (warning) {
-      setConfigWarning(warning);
-    }
-  }, []);
 
   useEffect(() => {
     if (verbose && cache.error) {
       console.error("Cache error:", cache.error);
     }
   }, [verbose, cache.error]);
-
-  useEffect(() => {
-    if (tracker.lastResult && navigation.state.view === "detail") {
-      void cache.reload();
-    }
-    // Only trigger on lastResult change; view check is a guard condition
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracker.lastResult]);
 
   const handleQuit = () => {
     exit();
@@ -150,15 +125,12 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
     switch (view) {
       case "help":
         return <HelpView navigation={navigation} />;
-      case "settings":
-        return <SettingsView navigation={navigation} />;
       case "list":
         return (
           <ProposalList
             items={items}
             data={cache.data}
             navigation={navigation}
-            tracker={tracker}
             onQuit={handleQuit}
             onReload={cache.reload}
           />
@@ -167,10 +139,7 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
         return (
           <ElectionView
             navigation={navigation}
-            providers={providerBundle}
             cachePath={cachePath}
-            discoverElections={tracker.discoverElections}
-            isDiscovering={tracker.isTracking}
           />
         );
       default:
@@ -184,7 +153,7 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   ): React.ReactElement {
     switch (proposalView) {
       case "detail":
-        return <ProposalDetail proposal={proposal} navigation={navigation} tracker={tracker} />;
+        return <ProposalDetail proposal={proposal} navigation={navigation} />;
       case "calldata":
         return <CalldataView proposal={proposal} navigation={navigation} />;
       case "stage":
@@ -201,11 +170,6 @@ export function App({ cachePath, providers: providerBundle, verbose }: AppProps)
   return (
     <ErrorBoundary>
       <Box flexDirection="column" height={terminalHeight}>
-        {configWarning && (
-          <Box paddingX={1}>
-            <Text color="yellow">[Warning] {configWarning}</Text>
-          </Box>
-        )}
         {renderView()}
       </Box>
     </ErrorBoundary>

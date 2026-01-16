@@ -59,7 +59,6 @@ export interface UseNavigationResult {
   appendSearchChar: (char: string) => void;
   deleteSearchChar: () => void;
   goToHelp: () => void;
-  goToSettings: () => void;
 }
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
@@ -162,7 +161,7 @@ export function useNavigation(): UseNavigationResult {
 
   const back = useCallback(() => {
     setState((prev) => {
-      if ((prev.view === "help" || prev.view === "settings") && prev.previousView) {
+      if (prev.view === "help" && prev.previousView) {
         return { ...prev, view: prev.previousView, previousView: null };
       }
       if (prev.view === "detail" || prev.view === "election") {
@@ -250,12 +249,9 @@ export function useNavigation(): UseNavigationResult {
     }));
   }, []);
 
-  const goToOverlay = useCallback((targetView: "help" | "settings") => {
-    setState((prev) => ({ ...prev, view: targetView, previousView: prev.view }));
+  const goToHelp = useCallback(() => {
+    setState((prev) => ({ ...prev, view: "help", previousView: prev.view }));
   }, []);
-
-  const goToHelp = useCallback(() => goToOverlay("help"), [goToOverlay]);
-  const goToSettings = useCallback(() => goToOverlay("settings"), [goToOverlay]);
 
   return {
     state,
@@ -287,6 +283,5 @@ export function useNavigation(): UseNavigationResult {
     appendSearchChar,
     deleteSearchChar,
     goToHelp,
-    goToSettings,
   };
 }

@@ -1,11 +1,10 @@
 /**
- * Proposal detail view showing all stages
+ * Proposal detail view showing all stages (cache-only)
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import { type UseNavigationResult, STAGE_COUNT } from "../hooks/index.js";
-import type { UseTrackerResult } from "../hooks/useTracker.js";
 import { Header } from "../components/Header.js";
 import { KeyHelp } from "../components/KeyHelp.js";
 import { StageRow } from "../components/StageRow.js";
@@ -15,20 +14,17 @@ import { StageProgress } from "../components/StageProgress.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import { isStageType } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
-import { ErrorBanner } from "../components/ErrorDisplay.js";
 import { formatDate, getTxHash, getProposalIdDisplay } from "../utils/proposal-detail-helpers.js";
 import { truncate } from "../utils/index.js";
 
 interface ProposalDetailProps {
   proposal: ProposalListItem;
   navigation: UseNavigationResult;
-  tracker: UseTrackerResult;
 }
 
 export function ProposalDetail({
   proposal,
   navigation,
-  tracker,
 }: ProposalDetailProps): React.ReactElement {
   const { state } = navigation;
   const stages = proposal.checkpoint.cachedData.completedStages ?? [];
@@ -46,7 +42,6 @@ export function ProposalDetail({
     if (inputKey === "c") return navigation.goToCalldata();
     if (inputKey === "s") return navigation.goToSimulation();
     if (inputKey === "d") return navigation.goToDescription();
-    if (inputKey === "r" && tracker.canTrack && !tracker.isTracking) return void tracker.track(proposal);
     if (inputKey === "g") return navigation.goToTop();
     if (inputKey === "G") return navigation.goToBottom(STAGE_COUNT);
     if (inputKey === "?") return navigation.goToHelp();
@@ -71,8 +66,6 @@ export function ProposalDetail({
         view="detail"
         filter={state.filter}
         stats={null}
-        hasProviders={tracker.canTrack}
-        isTracking={tracker.isTracking}
         title={proposal.title}
         position={{ current: state.selectedStageIndex + 1, total: STAGE_COUNT }}
         breadcrumb={["Proposals", shortTitle]}
@@ -110,20 +103,6 @@ export function ProposalDetail({
           )}
         </Box>
 
-        {/* Tracking status */}
-        {tracker.isTracking && tracker.progress && (
-          <Box marginBottom={1}>
-            <Text color="yellow">{tracker.progress}</Text>
-          </Box>
-        )}
-
-        {tracker.error && (
-          <Box marginBottom={1}>
-            <ErrorBanner error={tracker.error} />
-            {tracker.canTrack && <Text color="gray">Press r to retry</Text>}
-          </Box>
-        )}
-
         {feedback && (
           <Box marginBottom={1}>
             <CopyFeedback message={feedback} type={feedbackType} />
@@ -132,22 +111,6 @@ export function ProposalDetail({
 
         {/* Voting statistics */}
         {votingData && <VotingStats data={votingData} />}
-
-        {/* Prepared transactions */}
-        {tracker.preparedTxs.length > 0 && (
-          <Box flexDirection="column" marginBottom={1}>
-            <Text color="green" bold>
-              Prepared Transactions ({tracker.preparedTxs.length}):
-            </Text>
-            {tracker.preparedTxs.map((tx, i) => (
-              <Box key={i} marginLeft={1}>
-                <Text color="gray">
-                  [{i + 1}] {tx.description} on {tx.chain}
-                </Text>
-              </Box>
-            ))}
-          </Box>
-        )}
 
         {/* Stages */}
         <Box flexDirection="column" marginTop={1}>
@@ -176,9 +139,14 @@ export function ProposalDetail({
               </Box>
             ))}
         </Box>
+
+        {/* Hint for live tracking */}
+        <Box marginTop={1}>
+          <Text color="gray">(Run 'gov-tracker run' for live tracking)</Text>
+        </Box>
       </Box>
 
-      <KeyHelp view="detail" hasProviders={tracker.canTrack} />
+      <KeyHelp view="detail" />
     </Box>
   );
 }

@@ -17,8 +17,6 @@ interface ViewLayoutProps {
   view: ViewType;
   filter?: FilterType;
   title?: string;
-  hasProviders?: boolean;
-  isTracking?: boolean;
   loading?: boolean;
   loadingText?: string;
   error?: string | null;
@@ -31,8 +29,6 @@ export function ViewLayout({
   view,
   filter = "all",
   title,
-  hasProviders = false,
-  isTracking = false,
   loading = false,
   loadingText = "Loading...",
   error = null,
@@ -46,8 +42,6 @@ export function ViewLayout({
         view={view}
         filter={filter}
         stats={null}
-        hasProviders={hasProviders}
-        isTracking={isTracking}
         title={title}
         breadcrumb={breadcrumb}
       />
@@ -63,7 +57,7 @@ export function ViewLayout({
         {!loading && !error && children}
       </Box>
 
-      <KeyHelp view={view} hasProviders={hasProviders} context={keyHelpContext} />
+      <KeyHelp view={view} context={keyHelpContext} />
     </Box>
   );
 }

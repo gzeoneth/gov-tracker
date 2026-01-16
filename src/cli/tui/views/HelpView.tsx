@@ -1,5 +1,5 @@
 /**
- * Help view showing all keyboard shortcuts
+ * Help view showing all keyboard shortcuts (cache-only mode)
  */
 
 import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
@@ -43,9 +43,7 @@ const HELP_DATA: Array<{ title: string; icon: string; shortcuts: Array<{ key: st
       { key: "Tab", desc: "Cycle filter", note: "all → active → complete → timelocks" },
       { key: "o", desc: "Cycle sort", note: "newest → oldest → progress → status" },
       { key: "R", desc: "Reload cache from disk" },
-      { key: "d", desc: "Discover proposals", note: "requires RPC" },
-      { key: "e", desc: "Election status", note: "requires RPC" },
-      { key: "S", desc: "Settings" },
+      { key: "e", desc: "View elections" },
       { key: "q", desc: "Quit" },
     ],
   },
@@ -59,7 +57,6 @@ const HELP_DATA: Array<{ title: string; icon: string; shortcuts: Array<{ key: st
       { key: "d", desc: "View description" },
       { key: "c", desc: "View calldata" },
       { key: "s", desc: "View simulation data" },
-      { key: "r", desc: "Re-track proposal", note: "requires RPC" },
     ],
   },
   {
@@ -77,17 +74,7 @@ const HELP_DATA: Array<{ title: string; icon: string; shortcuts: Array<{ key: st
     icon: "🗳",
     shortcuts: [
       { key: "j/k", desc: "Navigate elections" },
-      { key: "Enter/l", desc: "View detailed info", note: "contenders, nominees, members" },
-      { key: "r", desc: "Refresh election data" },
-    ],
-  },
-  {
-    title: "Settings View",
-    icon: "⚙",
-    shortcuts: [
-      { key: "j/k", desc: "Navigate settings" },
-      { key: "Enter/Space", desc: "Edit or toggle setting" },
-      { key: "r", desc: "Reset all to defaults" },
+      { key: "Enter/l", desc: "View election details" },
     ],
   },
   {
@@ -96,7 +83,7 @@ const HELP_DATA: Array<{ title: string; icon: string; shortcuts: Array<{ key: st
     shortcuts: [
       { key: "?", desc: "Show/hide this help (works in any view)" },
       { key: "Search", desc: "Matches title and proposal ID" },
-      { key: "RPC", desc: "Use --l2-rpc for tracking features" },
+      { key: "CLI", desc: "Use 'gov-tracker run' for live tracking" },
     ],
   },
 ];

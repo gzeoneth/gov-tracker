@@ -11,8 +11,6 @@ interface HeaderProps {
   filter: FilterType;
   sort?: SortType;
   stats: TrackerStats | null;
-  hasProviders: boolean;
-  isTracking: boolean;
   title?: string;
   position?: { current: number; total: number };
   breadcrumb?: string[];
@@ -30,8 +28,6 @@ export function Header({
   filter,
   sort,
   stats,
-  hasProviders,
-  isTracking,
   title,
   position,
   breadcrumb,
@@ -62,20 +58,6 @@ export function Header({
       return (
         <Text color="gray">
           {stats.total} items | {totalActive} active
-          {hasProviders && <Text color="green"> [RPC]</Text>}
-          {isTracking && <Text color="yellow"> [Tracking...]</Text>}
-        </Text>
-      );
-    }
-
-    if (view === "detail" && hasProviders) {
-      return (
-        <Text color="gray">
-          {isTracking ? (
-            <Text color="yellow">Tracking...</Text>
-          ) : (
-            <Text color="green">[r] to re-track</Text>
-          )}
         </Text>
       );
     }

@@ -138,34 +138,72 @@ export async function getCurrentBlockInfo(
   return { blockNumber: result.blockNumber, timestamp: result.timestamp };
 }
 
+// Cache for L1 block number from L2 - only caches specific block numbers (immutable)
+const l1BlockFromL2Cache = new WeakMap<ethers.providers.Provider, Map<number, BigNumber>>();
+
 /**
- * Get current L1 block number as seen from L2
+ * Get L1 block number as seen from an L2 block.
  *
  * Arbitrum L2 blocks include the L1 block number in their metadata.
- * This returns the L1 block number from the latest L2 block.
+ * This returns the L1 block number from the specified L2 block.
+ *
+ * Results are cached only when a specific block number is provided, since
+ * the L1 block for a given L2 block is immutable. Block tags like "latest"
+ * are not cached. Cache is cleared when provider is garbage collected.
  *
  * IMPORTANT: This returns the actual L1 block number, not the L2 block number.
  * Use this for comparing against vetting deadlines which are in L1 blocks.
+ *
+ * @param l2Provider - L2 provider (must be JsonRpcProvider with send method)
+ * @param blockTag - Block tag ("latest", "pending") or block number (default: "latest")
  */
 export async function getL1BlockNumberFromL2(
-  l2Provider: ethers.providers.Provider
+  l2Provider: ethers.providers.Provider,
+  blockTag: "latest" | "pending" | "earliest" | number = "latest"
 ): Promise<BigNumber> {
+  // Only cache specific block numbers (immutable mapping)
+  if (typeof blockTag === "number") {
+    const providerCache = l1BlockFromL2Cache.get(l2Provider);
+    const cached = providerCache?.get(blockTag);
+    if (cached) {
+      log("getL1BlockNumberFromL2: l1Block=%s (cached, block=%d)", cached.toString(), blockTag);
+      return cached;
+    }
+  }
+
   const jsonRpcProvider = l2Provider as ethers.providers.JsonRpcProvider;
   if (typeof jsonRpcProvider.send !== "function") {
     throw new Error("Provider does not support direct RPC calls (send method required)");
   }
 
+  const blockParam = typeof blockTag === "number" ? "0x" + blockTag.toString(16) : blockTag;
   const start = Date.now();
   const rawBlock = await queryWithRetry(() =>
-    jsonRpcProvider.send("eth_getBlockByNumber", ["latest", false])
+    jsonRpcProvider.send("eth_getBlockByNumber", [blockParam, false])
   );
 
   if (!rawBlock || !rawBlock.l1BlockNumber) {
-    throw new Error("Could not get L1 block number from latest L2 block");
+    throw new Error(`Could not get L1 block number from L2 block ${blockTag}`);
   }
 
   const l1Block = BigNumber.from(rawBlock.l1BlockNumber);
-  log("getL1BlockNumberFromL2: l1Block=%s (%dms)", l1Block.toString(), Date.now() - start);
+
+  // Cache only specific block numbers
+  if (typeof blockTag === "number") {
+    let providerCache = l1BlockFromL2Cache.get(l2Provider);
+    if (!providerCache) {
+      providerCache = new Map();
+      l1BlockFromL2Cache.set(l2Provider, providerCache);
+    }
+    providerCache.set(blockTag, l1Block);
+  }
+
+  log(
+    "getL1BlockNumberFromL2: l1Block=%s (block=%s, %dms)",
+    l1Block.toString(),
+    blockTag,
+    Date.now() - start
+  );
   return l1Block;
 }
 

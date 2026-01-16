@@ -296,7 +296,7 @@ describe("Timing Utilities", () => {
 
       // #when / #then - should throw
       await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
-        "Could not get L1 block number from latest L2 block"
+        "Could not get L1 block number from L2 block latest"
       );
     });
 
@@ -308,8 +308,100 @@ describe("Timing Utilities", () => {
 
       // #when / #then - should throw
       await expect(getL1BlockNumberFromL2(mockProvider)).rejects.toThrow(
-        "Could not get L1 block number from latest L2 block"
+        "Could not get L1 block number from L2 block latest"
       );
+    });
+
+    it("should return L1 block number as BigNumber on success", async () => {
+      // #given - a provider that returns valid L2 block with l1BlockNumber
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({
+          number: "0x100",
+          l1BlockNumber: "0x1234567",
+        }),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when
+      const result = await getL1BlockNumberFromL2(mockProvider);
+
+      // #then
+      expect(result).toBeInstanceOf(BigNumber);
+      expect(result.toNumber()).toBe(0x1234567);
+    });
+
+    it("should accept specific block number and convert to hex for RPC", async () => {
+      // #given - a provider that returns valid L2 block
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({
+          number: "0x100",
+          l1BlockNumber: "0xabc",
+        }),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when - call with specific block number
+      const result = await getL1BlockNumberFromL2(mockProvider, 12345);
+
+      // #then - should convert block number to hex
+      expect(result.toNumber()).toBe(0xabc);
+      expect(mockProvider.send).toHaveBeenCalledWith("eth_getBlockByNumber", ["0x3039", false]);
+    });
+
+    it("should cache result only for specific block numbers", async () => {
+      // #given - a provider that returns valid L2 block
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({
+          number: "0x100",
+          l1BlockNumber: "0xabc",
+        }),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when - call twice with same specific block number
+      const result1 = await getL1BlockNumberFromL2(mockProvider, 12345);
+      const result2 = await getL1BlockNumberFromL2(mockProvider, 12345);
+
+      // #then - should return same value but only call RPC once (cached)
+      expect(result1.toNumber()).toBe(0xabc);
+      expect(result2.toNumber()).toBe(0xabc);
+      expect(mockProvider.send).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not cache result for 'latest' block tag", async () => {
+      // #given - a provider that returns valid L2 block
+      const mockProvider = {
+        send: vi.fn().mockResolvedValue({
+          number: "0x100",
+          l1BlockNumber: "0xabc",
+        }),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when - call twice with "latest" (default)
+      await getL1BlockNumberFromL2(mockProvider);
+      await getL1BlockNumberFromL2(mockProvider, "latest");
+
+      // #then - should call RPC twice (not cached)
+      expect(mockProvider.send).toHaveBeenCalledTimes(2);
+    });
+
+    it("should maintain separate caches for different block numbers", async () => {
+      // #given - a provider that returns different L1 blocks for different L2 blocks
+      const mockProvider = {
+        send: vi
+          .fn()
+          .mockResolvedValueOnce({ number: "0x100", l1BlockNumber: "0x111" })
+          .mockResolvedValueOnce({ number: "0x200", l1BlockNumber: "0x222" }),
+      } as unknown as ethers.providers.JsonRpcProvider;
+
+      // #when - call with different block numbers
+      const result1 = await getL1BlockNumberFromL2(mockProvider, 100);
+      const result2 = await getL1BlockNumberFromL2(mockProvider, 200);
+      // Call again to verify caching
+      const result1Again = await getL1BlockNumberFromL2(mockProvider, 100);
+
+      // #then - should cache separately per block number
+      expect(result1.toNumber()).toBe(0x111);
+      expect(result2.toNumber()).toBe(0x222);
+      expect(result1Again.toNumber()).toBe(0x111);
+      expect(mockProvider.send).toHaveBeenCalledTimes(2); // Only 2 calls, not 3
     });
   });
 

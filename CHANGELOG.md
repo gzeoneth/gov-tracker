@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shorthand flags: `-v` (verbose), `-p` (prepare), `-w` (write)
   - Selective tracking: `--track-core`, `--track-treasury`, `--track-elections`, `--track-timelocks`
 
+- **Timelock Operation Tracking** - `trackByTxHash(txHash, operationId?)` now accepts optional operationId to track a specific operation from a multi-operation transaction
+
 - **Reorg Detection** - Discovery watermarks now include block hashes for chain reorganization detection
 
 - **Security Utilities** - `truncateDescription()`, `sanitizeForDisplay()`, `safeJsonParse()` for input sanitization
@@ -44,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Multiple timelock operations per transaction** - Transactions with multiple `CallScheduled` events (different operationIds) now track correctly with operation-specific cache keys (`tx:{hash}:op:{opId}`)
 - **ChunkingConfig respected throughout pipeline** - User-provided config now flows through all discovery and tracking functions
 - **All RPC calls use queryWithRetry** - Consistent rate limit and transient failure handling
 

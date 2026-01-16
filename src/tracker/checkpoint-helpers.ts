@@ -120,6 +120,31 @@ export function parseElectionKey(key: string): number | null {
 }
 
 /**
+ * Cache key for timelock operations with specific operationId.
+ * Format: tx:{txHash}:op:{operationId}
+ *
+ * This allows multiple operations from the same transaction to have separate checkpoints.
+ */
+export function timelockOpCacheKey(txHash: string, operationId: string): string {
+  return `${TX_KEY_PREFIX}${txHash.toLowerCase()}:op:${operationId.toLowerCase()}`;
+}
+
+/**
+ * Check if a cache key is a timelock operation key (contains :op:)
+ */
+export function isTimelockOpKey(key: string): boolean {
+  return key.startsWith(TX_KEY_PREFIX) && key.includes(":op:");
+}
+
+/**
+ * Parse txHash and operationId from a timelock operation cache key
+ */
+export function parseTimelockOpKey(key: string): { txHash: string; operationId: string } | null {
+  const match = key.match(/^tx:([^:]+):op:(.+)$/);
+  return match ? { txHash: match[1], operationId: match[2] } : null;
+}
+
+/**
  * Compute aggregated stats from loaded checkpoints.
  *
  * This is the single source of truth for stats computation. Used by:

@@ -1,7 +1,7 @@
 {
   "tx:0x91226f5bfad5d1c0911ed590287734241f6b3101d8b60970911987dfa74fe37e": {
     "version": 1,
-    "createdAt": 1768543768822,
+    "createdAt": 1768551621833,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -86,12 +86,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768822
+      "lastTrackedAt": 1768551621833
     }
   },
   "tx:0xea591d2cba10b1e386791334ba528bd3dde79bdc38c4b3ba69c4eb639b08eb0e": {
     "version": 1,
-    "createdAt": 1768543767778,
+    "createdAt": 1768551620788,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -459,12 +459,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767778
+      "lastTrackedAt": 1768551620789
     }
   },
   "tx:0x10c56b000c640126ee760be7c93c86298fef4a0781bc92c44f40b9c546ca0161": {
     "version": 1,
-    "createdAt": 1768543767778,
+    "createdAt": 1768551620789,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -638,12 +638,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767778
+      "lastTrackedAt": 1768551620789
     }
   },
   "tx:0xca2e0c2bd04375492c602e1b8d034a17a5b7f506aeca19f23b2f400998004925": {
     "version": 1,
-    "createdAt": 1768543767780,
+    "createdAt": 1768551620790,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -1011,12 +1011,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767780
+      "lastTrackedAt": 1768551620791
     }
   },
   "tx:0x670725142842b3221e9650aefaa95709ee2f787c08b01061fb44a35549cc3f32": {
     "version": 1,
-    "createdAt": 1768543767780,
+    "createdAt": 1768551620791,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -1448,12 +1448,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767780
+      "lastTrackedAt": 1768551620791
     }
   },
   "tx:0x3698cce4490e11391dc9e1071fa7904fc38f2d04a6e10a3cee2c55b7d9d149a7": {
     "version": 1,
-    "createdAt": 1768543767781,
+    "createdAt": 1768551620792,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -1883,12 +1883,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767781
+      "lastTrackedAt": 1768551620792
     }
   },
   "tx:0x9314b7fe649633dace3294c0d90a208010c954f593a42dedc10939c681437420": {
     "version": 1,
-    "createdAt": 1768543767781,
+    "createdAt": 1768551620792,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -2333,12 +2333,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767781
+      "lastTrackedAt": 1768551620792
     }
   },
   "tx:0x2e267411550d7b284f81ee77f4b210adbe21f73b34a04ff3c7cebe61225abd64": {
     "version": 1,
-    "createdAt": 1768543768777,
+    "createdAt": 1768551621825,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -2423,12 +2423,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768777
+      "lastTrackedAt": 1768551621825
     }
   },
   "tx:0xef3708dd0a5896b0cff67239dc5d1bcd57202d3bf967afb478aa8585fe1993a4": {
     "version": 1,
-    "createdAt": 1768543768958,
+    "createdAt": 1768551621836,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -2513,12 +2513,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768958
+      "lastTrackedAt": 1768551621836
     }
   },
   "tx:0x46d47040c51b1a88b1276d50c502b750590f6cec4a4a8fcbfde38fc1714b08d2": {
     "version": 1,
-    "createdAt": 1768543769512,
+    "createdAt": 1768551622595,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -2603,12 +2603,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769512
+      "lastTrackedAt": 1768551622595
     }
   },
   "tx:0xb6bc77a2d66d6bd55eb2a3ce14b25d1ccf3921581ca7d59fa754f05ed6c272c3": {
     "version": 1,
-    "createdAt": 1768543769655,
+    "createdAt": 1768551622616,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -2693,12 +2693,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769655
+      "lastTrackedAt": 1768551622616
     }
   },
   "tx:0x0dab7bcd8d896a1f7ffbed69164d7ac8b0dc6ceeb80c8d3d33c3219c7cee33a3": {
     "version": 1,
-    "createdAt": 1768543768959,
+    "createdAt": 1768551621837,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -3066,12 +3066,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768959
+      "lastTrackedAt": 1768551621837
     }
   },
   "tx:0x9e89c2c0f4c7a59db2c44ea4df7b8068ebeb8ce0fcbada67be245662674028d0": {
     "version": 1,
-    "createdAt": 1768543768960,
+    "createdAt": 1768551621838,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -3568,12 +3568,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768960
+      "lastTrackedAt": 1768551621838
     }
   },
   "tx:0x14e95b41165dca8abbcfe9b1ffdbc2e1df849b29ccfc279cf6b42b52d7f026d1": {
     "version": 1,
-    "createdAt": 1768543768960,
+    "createdAt": 1768551621838,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -3941,12 +3941,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768960
+      "lastTrackedAt": 1768551621838
     }
   },
   "tx:0x645155e4ded2888f43c3d8d170bf4bdecbc46260010e365c02bcf7090f7159d1": {
     "version": 1,
-    "createdAt": 1768543768961,
+    "createdAt": 1768551621839,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -4538,12 +4538,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543768961
+      "lastTrackedAt": 1768551621839
     }
   },
   "tx:0x4d0e1f606cdc13c0a15a92340051490be866d28feca270b18afe6cb1e55e9418": {
     "version": 1,
-    "createdAt": 1768543769749,
+    "createdAt": 1768551622645,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -4628,12 +4628,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769749
+      "lastTrackedAt": 1768551622645
     }
   },
   "tx:0x6962dd50b6e56e56c3a75633567e5b3a6b5fe93c978beb1eb038df20860f62dc": {
     "version": 1,
-    "createdAt": 1768543769513,
+    "createdAt": 1768551622596,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -5001,12 +5001,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769513
+      "lastTrackedAt": 1768551622596
     }
   },
   "tx:0xcbc4341de113e79bad240a43332978ea8ba5754e8023610bb434cc43f5d65949": {
     "version": 1,
-    "createdAt": 1768543769513,
+    "createdAt": 1768551622596,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -5410,12 +5410,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769513
+      "lastTrackedAt": 1768551622596
     }
   },
   "tx:0xbe08bc8067dab9534ad1f4761f1e3e1e47860786206001890282fbdf3c119385": {
     "version": 1,
-    "createdAt": 1768543769514,
+    "createdAt": 1768551622597,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -5785,12 +5785,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769514
+      "lastTrackedAt": 1768551622597
     }
   },
   "tx:0xb94f54ab41bb3c14f02680672057ec5cc270b213ff9fa2514ec51a51b023f59f": {
     "version": 1,
-    "createdAt": 1768543769514,
+    "createdAt": 1768551622597,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -6158,12 +6158,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769514
+      "lastTrackedAt": 1768551622597
     }
   },
   "tx:0x6765e677e0d6fa5ba17daf508d88718d9340a00f7930a52b051eb92c53aa82b2": {
     "version": 1,
-    "createdAt": 1768543769514,
+    "createdAt": 1768551622597,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -6608,12 +6608,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769514
+      "lastTrackedAt": 1768551622597
     }
   },
   "tx:0xe5e6787a4726c6d820017e4e0c9acb3b592fb1b9ebfce565f62f735096dc55d3": {
     "version": 1,
-    "createdAt": 1768543770353,
+    "createdAt": 1768551623366,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -6698,12 +6698,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770353
+      "lastTrackedAt": 1768551623366
     }
   },
   "tx:0xa4c863541382ce3dec08db5c84d2147c226c670159a0336108606371cf0c20b9": {
     "version": 1,
-    "createdAt": 1768543769656,
+    "createdAt": 1768551622616,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -7071,12 +7071,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769656
+      "lastTrackedAt": 1768551622616
     }
   },
   "tx:0x85e274592435583268b2b7b4f7f13003463adf34431aa00ed164bba8edab8265": {
     "version": 1,
-    "createdAt": 1768543769656,
+    "createdAt": 1768551622616,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -7493,12 +7493,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769656
+      "lastTrackedAt": 1768551622616
     }
   },
   "tx:0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec689d24c8cda068": {
     "version": 1,
-    "createdAt": 1768543769656,
+    "createdAt": 1768551622617,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -7902,12 +7902,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769656
+      "lastTrackedAt": 1768551622617
     }
   },
   "tx:0x4bf0485d75ff6032dde76dfe98a0e5ff1ca9539cf82a62ff2b9ffb63339a0e8c": {
     "version": 1,
-    "createdAt": 1768543769657,
+    "createdAt": 1768551622617,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -8437,12 +8437,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769657
+      "lastTrackedAt": 1768551622617
     }
   },
   "tx:0x385043172e9314cdc34facf04efb540de5ff6ec99a41ec2ff373d79d0415736d": {
     "version": 1,
-    "createdAt": 1768543769657,
+    "createdAt": 1768551622618,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -8985,12 +8985,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543769657
+      "lastTrackedAt": 1768551622618
     }
   },
   "tx:0x73d981550bc38454ec89d6437d607b2166ecdce1b187a4288f20367cad21a730": {
     "version": 1,
-    "createdAt": 1768543770456,
+    "createdAt": 1768551623401,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9075,12 +9075,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770456
+      "lastTrackedAt": 1768551623401
     }
   },
   "tx:0x21c3f3db7304d3278f6e0c8d2d6e2fb65ceb876c5bced84eb276c817e8d934fe": {
     "version": 1,
-    "createdAt": 1768543770559,
+    "createdAt": 1768551623436,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9165,12 +9165,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770559
+      "lastTrackedAt": 1768551623436
     }
   },
   "tx:0x125686eec537b905ad38756ab447a54019d47d76648735abfdc403e167e0deac": {
     "version": 1,
-    "createdAt": 1768543770354,
+    "createdAt": 1768551623367,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9363,12 +9363,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770354
+      "lastTrackedAt": 1768551623367
     }
   },
   "tx:0x847d72d472a2c90f3e24f4338bc285ed08afc79eadd497b55e7e707652d73f3a": {
     "version": 1,
-    "createdAt": 1768543770354,
+    "createdAt": 1768551623367,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9561,12 +9561,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770354
+      "lastTrackedAt": 1768551623367
     }
   },
   "tx:0x561d83755891c3cf504150d3889c2a6d98014708e394939e55f59285b96c2bd1": {
     "version": 1,
-    "createdAt": 1768543770355,
+    "createdAt": 1768551623368,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9759,12 +9759,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770355
+      "lastTrackedAt": 1768551623368
     }
   },
   "tx:0xfe1ff9bf5103ede641672516e5c4596aaaa7a71e7de148ff7f81811a63eaf4c6": {
     "version": 1,
-    "createdAt": 1768543770355,
+    "createdAt": 1768551623368,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -9957,12 +9957,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770355
+      "lastTrackedAt": 1768551623368
     }
   },
   "tx:0x1561b496e4fe09cae28652d3363876b8642ebbc9da9e644cafab03a7ba98c995": {
     "version": 1,
-    "createdAt": 1768543770355,
+    "createdAt": 1768551623368,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -10155,12 +10155,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770355
+      "lastTrackedAt": 1768551623368
     }
   },
   "tx:0x2e42f0f86273a94f78de24c72a0d02c510765646c5702b0c009bdcde7fcbc919": {
     "version": 1,
-    "createdAt": 1768543770356,
+    "createdAt": 1768551623368,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -10353,12 +10353,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770356
+      "lastTrackedAt": 1768551623368
     }
   },
   "tx:0xf9b50f74a860be6111dccf4ae3f6fcfab3018994bd58d3bb1aac715e92082c6d": {
     "version": 1,
-    "createdAt": 1768543771103,
+    "createdAt": 1768551624154,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -10535,12 +10535,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771103
+      "lastTrackedAt": 1768551624154
     }
   },
   "tx:0x5da64f32c8e6afa015f47f9fb5be9785206dc70cf5b0cf366dd3320db7b53ce6": {
     "version": 1,
-    "createdAt": 1768543771248,
+    "createdAt": 1768551624180,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -10625,12 +10625,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771248
+      "lastTrackedAt": 1768551624180
     }
   },
   "tx:0x3661442fc3b6fd32ce1acca080aa5a1f5eb8014cf8c3e8075759244dec845bde": {
     "version": 1,
-    "createdAt": 1768543770559,
+    "createdAt": 1768551623437,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -10823,12 +10823,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770559
+      "lastTrackedAt": 1768551623437
     }
   },
   "tx:0x9730870c614de16177590c2a1e3c41e67c96187bae808493d38a3b385d66acc5": {
     "version": 1,
-    "createdAt": 1768543770560,
+    "createdAt": 1768551623437,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -11021,12 +11021,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770560
+      "lastTrackedAt": 1768551623437
     }
   },
   "tx:0xd043c4936e0b89c870038f708d89999ee8f07cdf20a37f6dcfd2248f6b134693": {
     "version": 1,
-    "createdAt": 1768543770560,
+    "createdAt": 1768551623437,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -11219,12 +11219,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770560
+      "lastTrackedAt": 1768551623437
     }
   },
   "tx:0xbafa2c8d5985e25d02a034bf447c4e6f4de43bbf3627b0df91f65696617c6613": {
     "version": 1,
-    "createdAt": 1768543770561,
+    "createdAt": 1768551623438,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -11417,12 +11417,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770561
+      "lastTrackedAt": 1768551623438
     }
   },
   "tx:0x44dd69debf775a83e7a4317ce9aa6344c9085c821f1a3b19a4f56cd13cc853c2": {
     "version": 1,
-    "createdAt": 1768543770561,
+    "createdAt": 1768551623438,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -11615,12 +11615,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770561
+      "lastTrackedAt": 1768551623438
     }
   },
   "tx:0x8086f869ce5cc30ccffc03c044e18f17f6a8acffd697dfa18aba62d32cbfae15": {
     "version": 1,
-    "createdAt": 1768543770563,
+    "createdAt": 1768551623439,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -11813,12 +11813,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770563
+      "lastTrackedAt": 1768551623439
     }
   },
   "tx:0xd91469a4a59dea0240c164c68ca1b68b45d686a374f23f9969d12f9c8b8b74d2": {
     "version": 1,
-    "createdAt": 1768543770563,
+    "createdAt": 1768551623439,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -12401,12 +12401,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770563
+      "lastTrackedAt": 1768551623439
     }
   },
   "tx:0xe160bb861699a6b942845972dc11fdbb15766ec0cbef04585b0b6df495d6d346": {
     "version": 1,
-    "createdAt": 1768543770564,
+    "createdAt": 1768551623440,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -12632,12 +12632,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770564
+      "lastTrackedAt": 1768551623440
     }
   },
   "tx:0x36c75289ed9e4b81fe4a35dd4ba713b6c3e7ee11cb8260a86e06f46d641db74f": {
     "version": 1,
-    "createdAt": 1768543770564,
+    "createdAt": 1768551623440,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -12830,12 +12830,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770564
+      "lastTrackedAt": 1768551623440
     }
   },
   "tx:0x3eb11e4867eda679829b70d2cfa27f262ae5a8fc42ad53556feee2871f35a069": {
     "version": 1,
-    "createdAt": 1768543770566,
+    "createdAt": 1768551623441,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -13028,12 +13028,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770566
+      "lastTrackedAt": 1768551623441
     }
   },
   "tx:0xe2161c984cec6cffb13875423ed8426bfc9287c0ca346bc09e7e74c8940b7cde": {
     "version": 1,
-    "createdAt": 1768543770566,
+    "createdAt": 1768551623441,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -13226,12 +13226,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770566
+      "lastTrackedAt": 1768551623441
     }
   },
   "tx:0x4a2ceb737642e0097953847e5841e06a7faf77e458e6e942b7704fef41e973ba": {
     "version": 1,
-    "createdAt": 1768543770567,
+    "createdAt": 1768551623441,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -13424,12 +13424,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770567
+      "lastTrackedAt": 1768551623441
     }
   },
   "tx:0x6bec05bda76ced083e9ac0ed0ed8c43ec2b452c4667f4dd2c780df02511fd98e": {
     "version": 1,
-    "createdAt": 1768543770567,
+    "createdAt": 1768551623442,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -13622,12 +13622,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770567
+      "lastTrackedAt": 1768551623442
     }
   },
   "tx:0x1149f00ccc422e9e36d3275593c463ac8c23f74cc730a434b8088aab913a56f9": {
     "version": 1,
-    "createdAt": 1768543770567,
+    "createdAt": 1768551623442,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -13853,12 +13853,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770567
+      "lastTrackedAt": 1768551623442
     }
   },
   "tx:0xe58991663211346f5a57900a1236fd9e1c893bb6c97b32c9330fde640a0aa83d": {
     "version": 1,
-    "createdAt": 1768543770568,
+    "createdAt": 1768551623443,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -14051,12 +14051,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770568
+      "lastTrackedAt": 1768551623443
     }
   },
   "tx:0x168d149dd634af25737877c55be06224f516f1dabbd76046883d9ede0f705f88": {
     "version": 1,
-    "createdAt": 1768543770568,
+    "createdAt": 1768551623443,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -14249,12 +14249,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770568
+      "lastTrackedAt": 1768551623443
     }
   },
   "tx:0x7ecadf902e520383a48b3a305a4dcd947652569f0650e71f5d9e4b15735c6d9b": {
     "version": 1,
-    "createdAt": 1768543770568,
+    "createdAt": 1768551623443,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -14447,12 +14447,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770568
+      "lastTrackedAt": 1768551623443
     }
   },
   "tx:0x7d73a55a4e976d99786845b8a22cf1005946f05612fedd023b85847315dee9dc": {
     "version": 1,
-    "createdAt": 1768543770568,
+    "createdAt": 1768551623444,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -14645,12 +14645,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770568
+      "lastTrackedAt": 1768551623444
     }
   },
   "tx:0xc63559a3a07945d4ac6f51df0d7594e2a69b0bf0cd49cf99900b4a76e8f2ed03": {
     "version": 1,
-    "createdAt": 1768543770569,
+    "createdAt": 1768551623444,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -14843,12 +14843,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770569
+      "lastTrackedAt": 1768551623444
     }
   },
   "tx:0xeef3235a518467479d421446cc8c9bec32d359356c31c953ac9b7f8ea84f54fd": {
     "version": 1,
-    "createdAt": 1768543770569,
+    "createdAt": 1768551623444,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15041,12 +15041,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770569
+      "lastTrackedAt": 1768551623444
     }
   },
   "tx:0x7abc0d3651cbda3f5113bced2377ec711bcd508ea9f69a6a063ac43d7c95c9f6": {
     "version": 1,
-    "createdAt": 1768543770570,
+    "createdAt": 1768551623445,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15239,12 +15239,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770570
+      "lastTrackedAt": 1768551623445
     }
   },
   "tx:0x58079beac5e5c119610b77ca1d2b7f3be32f368cc20c49f32f34bac060e67cb8": {
     "version": 1,
-    "createdAt": 1768543770570,
+    "createdAt": 1768551623445,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15453,12 +15453,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770570
+      "lastTrackedAt": 1768551623445
     }
   },
   "tx:0xc4457851f8aebcfd447e6f4f3012b59be4d260c3b6a91144d85892748aec96e1": {
     "version": 1,
-    "createdAt": 1768543770570,
+    "createdAt": 1768551623446,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15667,12 +15667,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543770570
+      "lastTrackedAt": 1768551623446
     }
   },
   "tx:0x297ab8951a7e983f04e07d7144f483147fa261a73146df9603066afc57cea1b2": {
     "version": 1,
-    "createdAt": 1768543771407,
+    "createdAt": 1768551624235,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15761,12 +15761,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771407
+      "lastTrackedAt": 1768551624235
     }
   },
   "tx:0x16634663fc828fe281b96f6e197299e39d74e5c08fe70bc8f899056e0996ffd8": {
     "version": 1,
-    "createdAt": 1768543771103,
+    "createdAt": 1768551624154,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -15959,12 +15959,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771103
+      "lastTrackedAt": 1768551624154
     }
   },
   "tx:0xec98f7c5a1c9bc2a5b70b1f3185599fa5d883eb30b08f9e3732cc9ae76f9c5f6": {
     "version": 1,
-    "createdAt": 1768543771857,
+    "createdAt": 1768551624936,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16049,12 +16049,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771857
+      "lastTrackedAt": 1768551624936
     }
   },
   "tx:0xdaf2c7097417ebc1f426fc2842ee2fc179a2c54bf331e760c42b5b38b275abe0": {
     "version": 1,
-    "createdAt": 1768543771249,
+    "createdAt": 1768551624181,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16247,12 +16247,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771249
+      "lastTrackedAt": 1768551624181
     }
   },
   "tx:0x1e008123bc6c9d52817258da3f571194abcb944eb1aae8cd06ee5ed32aa68489": {
     "version": 1,
-    "createdAt": 1768543771249,
+    "createdAt": 1768551624181,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16445,12 +16445,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771249
+      "lastTrackedAt": 1768551624181
     }
   },
   "tx:0xbfdf16d27328669729128dbde42160ca43119ccdfe6c67078e8c8865551abecf": {
     "version": 1,
-    "createdAt": 1768543771249,
+    "createdAt": 1768551624181,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16643,12 +16643,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771249
+      "lastTrackedAt": 1768551624182
     }
   },
   "tx:0x67e1b8133fd6dc0391f964101de069fd9150410667f549dbbb7878c222f4215a": {
     "version": 1,
-    "createdAt": 1768543772053,
+    "createdAt": 1768551624963,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16733,12 +16733,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543772053
+      "lastTrackedAt": 1768551624963
     }
   },
   "tx:0x520ebe21395f18a89be9866271aa4f2a03e827b7192e3bc7b926d9190a2cc206": {
     "version": 1,
-    "createdAt": 1768543771407,
+    "createdAt": 1768551624235,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -16931,12 +16931,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771407
+      "lastTrackedAt": 1768551624235
     }
   },
   "tx:0xc6644f0bea97488426d186946c1d2886888b6e7b821e2cb090f544c3ee5a4b45": {
     "version": 1,
-    "createdAt": 1768543771408,
+    "createdAt": 1768551624236,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -17129,12 +17129,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771408
+      "lastTrackedAt": 1768551624236
     }
   },
   "tx:0xb86d379f7d89b8c9fffe229dc6a3e8225367c8d077d75bcaeda6de51c8af7175": {
     "version": 1,
-    "createdAt": 1768543771408,
+    "createdAt": 1768551624236,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -17327,12 +17327,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771408
+      "lastTrackedAt": 1768551624236
     }
   },
   "tx:0x55e7f9535c69aa2be4736b376a3466155a7e6f3d6d2dd9f401ff01e781644d22": {
     "version": 1,
-    "createdAt": 1768543771408,
+    "createdAt": 1768551624236,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -17525,12 +17525,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771408
+      "lastTrackedAt": 1768551624236
     }
   },
   "tx:0x14f813a4da1a2676fa509283a7403d44ebabe67bee00a31fcb702bd146ee9690": {
     "version": 1,
-    "createdAt": 1768543771409,
+    "createdAt": 1768551624237,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -17723,12 +17723,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771409
+      "lastTrackedAt": 1768551624237
     }
   },
   "tx:0xc2fdeff9c094cb101aa65fe7ff8faedc1e8282d34cb7b3324a06ba8fecd98183": {
     "version": 1,
-    "createdAt": 1768543771409,
+    "createdAt": 1768551624237,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -17937,12 +17937,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771409
+      "lastTrackedAt": 1768551624237
     }
   },
   "tx:0x513d5c2ebefebe24cb537eb64bf1c96ffe2fedc752ce3811408cbaaad5d98a94": {
     "version": 1,
-    "createdAt": 1768543771409,
+    "createdAt": 1768551624237,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -18135,12 +18135,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771409
+      "lastTrackedAt": 1768551624237
     }
   },
   "tx:0x28db1ed07b5de6b7cac8edb5b447673826d92cc9d0cfabcc9d8e247725b9fdec": {
     "version": 1,
-    "createdAt": 1768543771410,
+    "createdAt": 1768551624238,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -18333,12 +18333,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771410
+      "lastTrackedAt": 1768551624238
     }
   },
   "tx:0x691a0f824a2da11712041db19b21d73b14fbffbb9b22f406d896b548cf3b6dac": {
     "version": 1,
-    "createdAt": 1768543771410,
+    "createdAt": 1768551624238,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -18531,12 +18531,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771410
+      "lastTrackedAt": 1768551624238
     }
   },
   "tx:0xc3b2f2a48b438cdb5e4362392cd79c4969351a773aee68e0bd47e6f80c740428": {
     "version": 1,
-    "createdAt": 1768543771410,
+    "createdAt": 1768551624238,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -18729,12 +18729,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771410
+      "lastTrackedAt": 1768551624238
     }
   },
   "tx:0xcd188ac8e1a0553aec23d13f273b48881054cdb75def415096784247ebeedf76": {
     "version": 1,
-    "createdAt": 1768543772215,
+    "createdAt": 1768551625039,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -18819,12 +18819,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543772215
+      "lastTrackedAt": 1768551625039
     }
   },
   "tx:0xaa551de1f43dc5d2e0bd03a43859fa47142e1982ec2d5945a531b3e35501281c": {
     "version": 1,
-    "createdAt": 1768543771858,
+    "createdAt": 1768551624937,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -19017,12 +19017,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771858
+      "lastTrackedAt": 1768551624937
     }
   },
   "tx:0x5e97c629555de0553b541c4b35be2950c77190362259b59f63b0c21ca11c412b": {
     "version": 1,
-    "createdAt": 1768543771858,
+    "createdAt": 1768551624937,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -19215,12 +19215,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771858
+      "lastTrackedAt": 1768551624937
     }
   },
   "tx:0xa1d6f99641585919de3f7bf97518d4553b7ddabc1759dfa4cdd99f64d5f91eac": {
     "version": 1,
-    "createdAt": 1768543771859,
+    "createdAt": 1768551624937,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -19413,12 +19413,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771859
+      "lastTrackedAt": 1768551624937
     }
   },
   "tx:0x575d76451ec2a5746ecad6441541e1199094d8c4624d7866186671fd7a6d2a56": {
     "version": 1,
-    "createdAt": 1768543771859,
+    "createdAt": 1768551624937,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -19611,12 +19611,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771859
+      "lastTrackedAt": 1768551624937
     }
   },
   "tx:0xd426ee539f4bfc7ddda642a3db143f6054db97168c2e473a54720a2e363f4262": {
     "version": 1,
-    "createdAt": 1768543771859,
+    "createdAt": 1768551624938,
     "input": {
       "type": "governor",
       "governorAddress": "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4",
@@ -19809,12 +19809,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543771859
+      "lastTrackedAt": 1768551624938
     }
   },
   "discovery:watermarks": {
     "version": 1,
-    "createdAt": 1768543767773,
+    "createdAt": 1768551620783,
     "input": {
       "type": "discovery",
       "id": "watermarks"
@@ -19822,34 +19822,34 @@
     "lastProcessedStage": null,
     "lastProcessedBlock": {
       "l1": 0,
-      "l2": 421868885
+      "l2": 421900288
     },
     "cachedData": {
       "discoveryWatermarks": {
-        "constitutionalGovernor": 421868885,
-        "nonConstitutionalGovernor": 421868885,
-        "electionNomineeGovernor": 421868885,
-        "electionMemberGovernor": 421868885,
-        "l2ConstitutionalTimelock": 421868885,
-        "l2NonConstitutionalTimelock": 421868885
+        "constitutionalGovernor": 421900288,
+        "nonConstitutionalGovernor": 421900288,
+        "electionNomineeGovernor": 421900288,
+        "electionMemberGovernor": 421900288,
+        "l2ConstitutionalTimelock": 421900288,
+        "l2NonConstitutionalTimelock": 421900288
       },
       "watermarkHashes": {
-        "nonConstitutionalGovernor": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7",
-        "l2NonConstitutionalTimelock": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7",
-        "constitutionalGovernor": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7",
-        "l2ConstitutionalTimelock": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7",
-        "electionNomineeGovernor": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7",
-        "electionMemberGovernor": "0x63944e26ba015ec5ad5db820c0b044114cf93f79be7d163cdd1ceb603d3e2cd7"
+        "l2NonConstitutionalTimelock": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb",
+        "electionMemberGovernor": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb",
+        "constitutionalGovernor": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb",
+        "l2ConstitutionalTimelock": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb",
+        "electionNomineeGovernor": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb",
+        "nonConstitutionalGovernor": "0x07f1cc10a1330206ed9a6a0995fe9a2970dc878c964b0394da30ac2e79b53dcb"
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543767773
+      "lastTrackedAt": 1768551620783
     }
   },
   "election:2": {
     "version": 1,
-    "createdAt": 1768543886680,
+    "createdAt": 1768551748974,
     "input": {
       "type": "election",
       "electionIndex": 2
@@ -19927,7 +19927,7 @@
             "data": {
               "nomineeProposalId": "101972409345429635102932864858336950935562280417363255037538007721008874034556",
               "vettingDeadline": 20957477,
-              "currentL1Block": 24245407,
+              "currentL1Block": 24246060,
               "compliantNomineeCount": 13,
               "memberProposalId": "101972409345429635102932864858336950935562280417363255037538007721008874034556"
             },
@@ -20089,10 +20089,10 @@
                 }
               ],
               "firstExecutableBlock": 21211832,
-              "currentL1Block": 24245406,
+              "currentL1Block": 24246059,
               "cachedSendProps": {
-                "sendRootSize": "156631",
-                "sendRootHash": "0x4b4a6461862112d0a238a8e37efc0e35890df49705c11ff09c58f255eb8102f2"
+                "sendRootSize": "156635",
+                "sendRootHash": "0x76bf01d0cb68f49396db9be0cd617a5fcb5b2ddb4eefc5cb6f157a0741a19e19"
               }
             },
             "executable": false,
@@ -20344,16 +20344,468 @@
         "creationTxHash": "0x8551b140f50104393d273942bc1b80637d6077791b8f68d3be825c2684af8dc3",
         "nomineeExecuteTxHash": "0xbdb61fd2b5ab2b6de057762b5b109939ecf74ca42cca2ce01783ce3478c50beb",
         "memberExecuteTxHash": "0xc6c11213cb01dc1f5b68bebe93e9442cbc545416a2e7d954afb56e29971cbc0a"
+      },
+      "nomineeDetails": {
+        "proposalId": "101972409345429635102932864858336950935562280417363255037538007721008874034556",
+        "electionIndex": 2,
+        "contenders": [
+          {
+            "address": "0xE93c78C91F3F12f7c9Ef86b711b369D70607600C",
+            "registeredAtBlock": 253822617,
+            "registrationTxHash": "0xf7291764d1e5b61129ef3be02d6063632e8bfa83767bc9199bb97e833eeaaeeb"
+          },
+          {
+            "address": "0x0b17eBF1d97983a925f3Acc2dC6E4Be13a24A259",
+            "registeredAtBlock": 253828477,
+            "registrationTxHash": "0x8d2d6689c9c2773ce5a31c8817527483580750b59e8852951aaee902020fb42b"
+          },
+          {
+            "address": "0x2b1b769E885599Ca81A663f789C464f8eCEe12e2",
+            "registeredAtBlock": 253858139,
+            "registrationTxHash": "0xa20b87b2460b61eec1f1734ad2f8cbcea6d9423d39b286562bcace670e8196f9"
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "registeredAtBlock": 254158145,
+            "registrationTxHash": "0x58a575d7d5e174adf46600840fc534947f813cb3de5752948bdac21788ae06fc"
+          },
+          {
+            "address": "0x34D254ac20731Ae30731677801986C74Be543c03",
+            "registeredAtBlock": 254534315,
+            "registrationTxHash": "0x6ddbcf183a259c3e08e4928224cfa50a6243ef7e30793b851b05bc66ab64be5d"
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "registeredAtBlock": 254767827,
+            "registrationTxHash": "0xb6e3d64e5bb971fdbe7bb94538b1eac4cf66a37ee9c3263fc904e71b36c394cc"
+          },
+          {
+            "address": "0x1046a7b8d2320C024f0209e95bfb1344F0bA8ac4",
+            "registeredAtBlock": 254809499,
+            "registrationTxHash": "0x6da5536e69a8d734627e756a07bd538c6448b9a0a9f90c476bc02d3c034fbe02"
+          },
+          {
+            "address": "0x7f1aE4Cc24D79161B3a5DB05a3Dbc39d00EB2709",
+            "registeredAtBlock": 255064783,
+            "registrationTxHash": "0x46c7635f9a9a938a424fc5a27108e69037fff2da92473b4340c7e466c6b93d32"
+          },
+          {
+            "address": "0x1B1e924A0A9c86a9023BE9791bb81ECFb8CC4011",
+            "registeredAtBlock": 255207145,
+            "registrationTxHash": "0xeb47a7e2959743a8b4637b739e2b163e1f39557210be564a9c93caaf494a40c1"
+          },
+          {
+            "address": "0x695279F65338C687cbe5D54833f0CF9b1DF6D993",
+            "registeredAtBlock": 255230789,
+            "registrationTxHash": "0xf4cd8e9431aa89a465597ebafee42bf9be3c9d2a9f628f857d9f96015f1b4fe0"
+          },
+          {
+            "address": "0x22AB891922f566F17B9827d016C2003Da69abAb9",
+            "registeredAtBlock": 255270942,
+            "registrationTxHash": "0x24cb0ee551068f64ee69bb7b1acea31492c588ede717cb6f511edf8c664de219"
+          },
+          {
+            "address": "0x6Ca0aAD68D2375f0B5cE01040CF265F8E1ecdb2b",
+            "registeredAtBlock": 255277229,
+            "registrationTxHash": "0x4243476325febe688600d14cdd40261d6832d7d3877b0e711d46df9fabb8cee9"
+          },
+          {
+            "address": "0x1Cd921f2e9c993a92F7C1B7Bf400EdC919a43808",
+            "registeredAtBlock": 255279312,
+            "registrationTxHash": "0xb4bc87c6b306c32ebc5a24ae0e9ee5b230957c9eb50505beb2da5db9e0de49a6"
+          },
+          {
+            "address": "0x010DC5440ad49f9Ec0Dd325b622d9FD225944ee4",
+            "registeredAtBlock": 255294555,
+            "registrationTxHash": "0xc5911e2925e6144bc493ebf0d104bb0f41291cd212de2ffa7ad77d59f8feec88"
+          },
+          {
+            "address": "0xa3706296cbe8a8B35391B155B531f785735e3D62",
+            "registeredAtBlock": 255318630,
+            "registrationTxHash": "0xe61104615961b52610479fdfcec7cfcea58ab28f2a18311e258e5339b9d53926"
+          },
+          {
+            "address": "0x093F1f3Af6f573b854144e8842a5b20276b4512B",
+            "registeredAtBlock": 255323245,
+            "registrationTxHash": "0xcecdbf7579a73e7299094592ec60f37aa6517ae6ca9a5651431a58f850f034b4"
+          },
+          {
+            "address": "0x86A5E695b589bf10fBEceE946F00362b6Be9BD39",
+            "registeredAtBlock": 255349402,
+            "registrationTxHash": "0xb223cbf7a84905e8560c424a4d9943cd7fd4be194c7e933453546f635494dfd0"
+          },
+          {
+            "address": "0xDC7737e0CE0b91AF0094d9C6245c31C8dC61DaAa",
+            "registeredAtBlock": 255378836,
+            "registrationTxHash": "0x58f02cff1b37104f54132bbcab0c73c9e83938337f4c4871bfb8eac683587dec"
+          },
+          {
+            "address": "0xeFaa1C2dCbf8B9c30511ee37f9660f4b59982798",
+            "registeredAtBlock": 255485345,
+            "registrationTxHash": "0x3b49c58c71fc522a009204565907c7f0ca9f46b5741e4c94724b10cf0e645de6"
+          },
+          {
+            "address": "0xafc7805c640C4A9E5D28f6A5Eae23b50e59B831c",
+            "registeredAtBlock": 255500009,
+            "registrationTxHash": "0x083fe2af73fda52e4efa6147a1734aa71af6d2b5ed10773135225bb53f7bb53d"
+          },
+          {
+            "address": "0xC463C313Df9907E9D47Ed33E63a48C4b20cF7b88",
+            "registeredAtBlock": 255509729,
+            "registrationTxHash": "0x53835eca8d3eb1b59a4f090015d470e1bd39665adf6bbe48b6544b6ea022d84e"
+          },
+          {
+            "address": "0x47272924B5F10fCbA91C76B8Fa28d913b6DF65E2",
+            "registeredAtBlock": 255524752,
+            "registrationTxHash": "0x0bbb06a1a30c30da4fd76f5ab0ca9a6fd14d39e256f22bf11c41368d70fe8354"
+          },
+          {
+            "address": "0xb1040D3ce131b3204E5229C80a8d5Ae271B2ef09",
+            "registeredAtBlock": 255536887,
+            "registrationTxHash": "0xf802f54c7ce626ced6da0e66a24162dc7e64df4be8161f241bfaeb1b3c965a6e"
+          },
+          {
+            "address": "0xb5B069370Ef24BC67F114e185D185063CE3479f8",
+            "registeredAtBlock": 255543749,
+            "registrationTxHash": "0xd48b064d27dee167ba067d1a2af79d8236fb08ba88f4e0d6257a04bb551bfb09"
+          },
+          {
+            "address": "0x09dD35BbF83e64E90F998e54C9D0ecB9B0E614B5",
+            "registeredAtBlock": 255549200,
+            "registrationTxHash": "0x5dc6cbc05632ae1fd0362b6cfcf21a0ced9755bde8e828247e84eedf111ca5f1"
+          },
+          {
+            "address": "0x58A5f520FF7A6F59863e8a73b066A975799d5d48",
+            "registeredAtBlock": 255551742,
+            "registrationTxHash": "0xf698c04b6a12248e050ccba704ea9ef9bfc6e7ab675fd242291f9af8e925fa3a"
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "registeredAtBlock": 255560491,
+            "registrationTxHash": "0x154a32c78ad0a666250f4bee110ee75294c7047d6b5507bf1888c7d6d9ab784e"
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "registeredAtBlock": 255561010,
+            "registrationTxHash": "0x5f82aea00530812c2758a3d3b3b8ef607a57f402e3af710fcee05297a2052f04"
+          },
+          {
+            "address": "0xfbdf369ae6eA1EBc893bF096469Ea065E8dFa00a",
+            "registeredAtBlock": 255569938,
+            "registrationTxHash": "0xe7a96dac7c2791fe001f980c3327c736b441147ffedfce9800f926ad50a68dfb"
+          },
+          {
+            "address": "0x3239af1CB6d4CE3bca0F785763390ab78395D71A",
+            "registeredAtBlock": 255640024,
+            "registrationTxHash": "0x8ba1d71cde89fb7100566e2e0ad22674610abc35b0d4d6802fb3ec99d0236553"
+          },
+          {
+            "address": "0x00e3F728a3a2949cd9E0b7524b3068Ef363AF059",
+            "registeredAtBlock": 255822625,
+            "registrationTxHash": "0x75b18781e15a1682f9e5599cdde62521137e1abd295dac65582cdc4689f02750"
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "registeredAtBlock": 255878283,
+            "registrationTxHash": "0x97e5539d1b6641cafbbea24b593a9f881f7b6f1f8d93db55f5f8571504b5e232"
+          },
+          {
+            "address": "0x3F6E511507A082B3DBFC955480EA97D33F3488ED",
+            "registeredAtBlock": 255985913,
+            "registrationTxHash": "0xed6cf4e8d373d972b2a32f352a95682ea7018988fd6ca6d87f452ec6984c03b7"
+          },
+          {
+            "address": "0x382ba0C647e8e2CEdF3846603ec459Ff72321A6E",
+            "registeredAtBlock": 256010381,
+            "registrationTxHash": "0xd878178920524a79a91253d9f3b47f10f65e8e9bd0ea4bb57b712b455681e320"
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "registeredAtBlock": 256021199,
+            "registrationTxHash": "0x0a046d39a7c56727b92874f69d789fad9c5b9f2dd91cb104b45063cf0cf36de7"
+          },
+          {
+            "address": "0xeA4A4A886aCA47DD0167B4aEE5B1345e18D20Ee5",
+            "registeredAtBlock": 256025063,
+            "registrationTxHash": "0x60db86d0f4472d78825d6050b4b2f8e81ecbee08386c63562a01261655ec072c"
+          },
+          {
+            "address": "0x1716C1C037e4968D5A06d4d080904F9B7a6508f2",
+            "registeredAtBlock": 256033496,
+            "registrationTxHash": "0x20c5513bb519f76951f5985a3216a4649e96c69e2f6c25eff15ef456c145975a"
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "registeredAtBlock": 256035539,
+            "registrationTxHash": "0x5d741a3b8f6dbaa386bbc2c0a4d18bcb7e257780ab64b78abbc1d9140c04a4fc"
+          },
+          {
+            "address": "0x8688515028955734350067695939423222009623",
+            "registeredAtBlock": 256118564,
+            "registrationTxHash": "0xf644db492836d8dd655818ea152cb1f5c8387a2c15df181b32e9b4d5751eba76"
+          },
+          {
+            "address": "0x8583d6B8E5EE6d5876955Dd745C551E851215679",
+            "registeredAtBlock": 256163581,
+            "registrationTxHash": "0xe3dd8615aa643d3baa7e9c651c4f04aee6eac4216e825fdad2fc189001ae178b"
+          },
+          {
+            "address": "0xB962bfF38392146bd80d477C2F11FBec59FCb11B",
+            "registeredAtBlock": 256171100,
+            "registrationTxHash": "0x2e381302f22b2c315e81b313fe7d85663e780032b9d10adb878d4a139149e6d8"
+          },
+          {
+            "address": "0x00aC614D118F972A50973EE5B9D70C3594eb4c2D",
+            "registeredAtBlock": 256171959,
+            "registrationTxHash": "0x2db7cd83fb6dc5510075af4ccd6f796f1cb4a71da9f8aeb848271e91d3146678"
+          },
+          {
+            "address": "0x8F4d1Da5ff9Eb2fE282D66a9536F371b6A54F76F",
+            "registeredAtBlock": 256178597,
+            "registrationTxHash": "0x07bccc6d3dc36a7d535201d4d81fafe1648ff1d691d7032255c512d492fe4b76"
+          }
+        ],
+        "nominees": [
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xfbdf369ae6eA1EBc893bF096469Ea065E8dFa00a",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xeA4A4A886aCA47DD0167B4aEE5B1345e18D20Ee5",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xE93c78C91F3F12f7c9Ef86b711b369D70607600C",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x6Ca0aAD68D2375f0B5cE01040CF265F8E1ecdb2b",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x00e3F728a3a2949cd9E0b7524b3068Ef363AF059",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x1716C1C037e4968D5A06d4d080904F9B7a6508f2",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xafc7805c640C4A9E5D28f6A5Eae23b50e59B831c",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8688515028955734350067695939423222009623",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          }
+        ],
+        "compliantNominees": [
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xfbdf369ae6eA1EBc893bF096469Ea065E8dFa00a",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xeA4A4A886aCA47DD0167B4aEE5B1345e18D20Ee5",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xE93c78C91F3F12f7c9Ef86b711b369D70607600C",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x6Ca0aAD68D2375f0B5cE01040CF265F8E1ecdb2b",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x00e3F728a3a2949cd9E0b7524b3068Ef363AF059",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x1716C1C037e4968D5A06d4d080904F9B7a6508f2",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0xafc7805c640C4A9E5D28f6A5Eae23b50e59B831c",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8688515028955734350067695939423222009623",
+            "votesReceived": "8588214973437820650764282",
+            "isExcluded": false
+          }
+        ],
+        "excludedNominees": [],
+        "quorumThreshold": "8588214973437820650764282",
+        "targetNomineeCount": 6
+      },
+      "memberDetails": {
+        "proposalId": "101972409345429635102932864858336950935562280417363255037538007721008874034556",
+        "electionIndex": 2,
+        "nominees": [
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "weightReceived": "21621760922201493030210223",
+            "isWinner": true,
+            "rank": 1
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "weightReceived": "17222131266435317874737684",
+            "isWinner": true,
+            "rank": 2
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "weightReceived": "16340944947277006262634660",
+            "isWinner": true,
+            "rank": 3
+          },
+          {
+            "address": "0x1716C1C037e4968D5A06d4d080904F9B7a6508f2",
+            "weightReceived": "13261217721303350410855241",
+            "isWinner": true,
+            "rank": 4
+          },
+          {
+            "address": "0xeA4A4A886aCA47DD0167B4aEE5B1345e18D20Ee5",
+            "weightReceived": "13146542671272424899399432",
+            "isWinner": true,
+            "rank": 5
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "weightReceived": "13132807947288696597633097",
+            "isWinner": true,
+            "rank": 6
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "weightReceived": "12982171316786946311437211",
+            "isWinner": false,
+            "rank": 7
+          },
+          {
+            "address": "0xE93c78C91F3F12f7c9Ef86b711b369D70607600C",
+            "weightReceived": "12944364540162108789604801",
+            "isWinner": false,
+            "rank": 8
+          },
+          {
+            "address": "0xafc7805c640C4A9E5D28f6A5Eae23b50e59B831c",
+            "weightReceived": "8844845681373816689007847",
+            "isWinner": false,
+            "rank": 9
+          },
+          {
+            "address": "0x8688515028955734350067695939423222009623",
+            "weightReceived": "8780127245712850302283574",
+            "isWinner": false,
+            "rank": 10
+          },
+          {
+            "address": "0xfbdf369ae6eA1EBc893bF096469Ea065E8dFa00a",
+            "weightReceived": "4253374069606591116884001",
+            "isWinner": false,
+            "rank": 11
+          },
+          {
+            "address": "0x6Ca0aAD68D2375f0B5cE01040CF265F8E1ecdb2b",
+            "weightReceived": "3698381681816968561186272",
+            "isWinner": false,
+            "rank": 12
+          },
+          {
+            "address": "0x00e3F728a3a2949cd9E0b7524b3068Ef363AF059",
+            "weightReceived": "552566047297893173304472",
+            "isWinner": false,
+            "rank": 13
+          }
+        ],
+        "winners": [
+          "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+          "0xeA4A4A886aCA47DD0167B4aEE5B1345e18D20Ee5",
+          "0x1716C1C037e4968D5A06d4d080904F9B7a6508f2",
+          "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+          "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+          "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33"
+        ],
+        "fullWeightDeadline": 21007880,
+        "proposalDeadline": 21108680
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543886680
+      "lastTrackedAt": 1768551748974
     }
   },
   "election:1": {
     "version": 1,
-    "createdAt": 1768543873117,
+    "createdAt": 1768551733914,
     "input": {
       "type": "election",
       "electionIndex": 1
@@ -20431,7 +20883,7 @@
             "data": {
               "nomineeProposalId": "42524710257895482033293584464762477376427316183960646909542733545381165923770",
               "vettingDeadline": 19641808,
-              "currentL1Block": 24245405,
+              "currentL1Block": 24246058,
               "compliantNomineeCount": 20,
               "memberProposalId": "42524710257895482033293584464762477376427316183960646909542733545381165923770"
             },
@@ -20593,10 +21045,10 @@
                 }
               ],
               "firstExecutableBlock": 19880444,
-              "currentL1Block": 24245406,
+              "currentL1Block": 24246059,
               "cachedSendProps": {
-                "sendRootSize": "156631",
-                "sendRootHash": "0x4b4a6461862112d0a238a8e37efc0e35890df49705c11ff09c58f255eb8102f2"
+                "sendRootSize": "156635",
+                "sendRootHash": "0x76bf01d0cb68f49396db9be0cd617a5fcb5b2ddb4eefc5cb6f157a0741a19e19"
               }
             },
             "executable": false,
@@ -20848,16 +21300,606 @@
         "creationTxHash": "0xedb92c48fd8b10c121d08620a1f3c5f8c8c270cd4f278cde86f940c0cf4ee0ce",
         "nomineeExecuteTxHash": "0xe5ebada599201e007eb32f9b412bd264c1e2ca04089d5d7922e69fce983e24a0",
         "memberExecuteTxHash": "0xe23235a59e89935128ff73f642e9857e1d2845a12cb2d8fe1a2e68129e234d1d"
+      },
+      "nomineeDetails": {
+        "proposalId": "42524710257895482033293584464762477376427316183960646909542733545381165923770",
+        "electionIndex": 1,
+        "contenders": [
+          {
+            "address": "0xC463C313Df9907E9D47Ed33E63a48C4b20cF7b88",
+            "registeredAtBlock": 190695528,
+            "registrationTxHash": "0x496dff8cd92157b84e24d1870d5be19f9848442e9f820c156530642983718a45"
+          },
+          {
+            "address": "0xb5B069370Ef24BC67F114e185D185063CE3479f8",
+            "registeredAtBlock": 190697948,
+            "registrationTxHash": "0x61f176142e07ca39e94561026dea44a4886faf2eaed132ae46ec5feb6437039e"
+          },
+          {
+            "address": "0xb1040D3ce131b3204E5229C80a8d5Ae271B2ef09",
+            "registeredAtBlock": 190700061,
+            "registrationTxHash": "0x35419c1afa5b249f9e24ca6a4e6df3c93273ea6f77f256f5a4144530a1399a82"
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "registeredAtBlock": 190703203,
+            "registrationTxHash": "0x591834ce40edc4977c80436bc62e2f842cc1377c8cb4f5736606f5471d62ac6f"
+          },
+          {
+            "address": "0xb3c961FDE445F1A1e42F0f0ba434A8215bCE374F",
+            "registeredAtBlock": 190753326,
+            "registrationTxHash": "0x8bba0f3d96b3ef9e47f7d6854190ddd40ef5296e4483aeee9a5d2386d31cc8aa"
+          },
+          {
+            "address": "0xd1b3Dd4C3442d24105550886Fd6EB38dD9592356",
+            "registeredAtBlock": 190875821,
+            "registrationTxHash": "0x2889c576c9ffc63b9b1cfa259e817ae74c60583a2c173753501b0bfb3f0bebc7"
+          },
+          {
+            "address": "0x0Be37874612CbD0f18E2b38FBd11fbc443ad2a0c",
+            "registeredAtBlock": 190946007,
+            "registrationTxHash": "0xbed915a24b1f0d8b0a616c6e19a60cbe041c085d30e4d2854520c63587d345c8"
+          },
+          {
+            "address": "0x585a003aA0b446C0F9baD7b3b0BAc5A809988588",
+            "registeredAtBlock": 190974824,
+            "registrationTxHash": "0xfff68b2759d2133d21241a3b4c774c6c612431b35735fa29b0f1a1e811f04823"
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "registeredAtBlock": 191043590,
+            "registrationTxHash": "0x9d93e6ea274e59e288235c6b870e25ab647e567a0aa08fc8ce06d779dc3d77a1"
+          },
+          {
+            "address": "0x8142Cf418d00a12874C3864f9B185051D0865Df9",
+            "registeredAtBlock": 191183910,
+            "registrationTxHash": "0xe2cf7ac21a44a029a4598579b7f07f466f87c9e58b04e06606e8cfd93f75cf03"
+          },
+          {
+            "address": "0xa36e191e9c08ecAA86408000aDd327201e186aCe",
+            "registeredAtBlock": 191228844,
+            "registrationTxHash": "0x833217c2176e7132e4b84f6d2080e2d65badb1f2ab4551a359603dded5002c96"
+          },
+          {
+            "address": "0xF57672e1E6ED61951ccf359986ac5C0D10a1F15C",
+            "registeredAtBlock": 191344971,
+            "registrationTxHash": "0x1c731819456602105bcb60eaef07c0ce4a6b723bc7ef20734d5d9422dfbeacd8"
+          },
+          {
+            "address": "0xdf2e7A58ac62c29f8A1D15B2c51Ca90b2197d169",
+            "registeredAtBlock": 191503305,
+            "registrationTxHash": "0x4f7ab6c4be21e03a7d9dc137ac6c1cc8ca0f29a7e75d28ed5882e4e782cfd9bc"
+          },
+          {
+            "address": "0x093B56E26a6795fc60c8c84285aEBe451D4fbe75",
+            "registeredAtBlock": 191530790,
+            "registrationTxHash": "0xf214b701b37f043923ca92bffb564926bd5f16d34680fdf711702d7b9270d2be"
+          },
+          {
+            "address": "0xdf6711f7fEc85aF82A3626B443A5a32AE13cC3E3",
+            "registeredAtBlock": 191541622,
+            "registrationTxHash": "0x2fa462b6945a2196db98fa9380b7c40633fc0d0ec8e2a7235f0085c497b73e92"
+          },
+          {
+            "address": "0xe656179eFff775A795173081552B34bFA27BFE5e",
+            "registeredAtBlock": 191958637,
+            "registrationTxHash": "0x4a97140193a4db0f00876d586ab1593de8cd5e0dcfbd23aed7fc0f92e7b2c652"
+          },
+          {
+            "address": "0xAC9ba72fb61aA7c31A95df0A8b6ebA6f41EF875e",
+            "registeredAtBlock": 192036799,
+            "registrationTxHash": "0x69560f74a16ebdae72be6413ef7d9f126bfb8995776661c3a0fc453f049d9ba9"
+          },
+          {
+            "address": "0x2aCdF1317915A1C6aCE88B9EcCae99FC9CfEBa81",
+            "registeredAtBlock": 192099250,
+            "registrationTxHash": "0x2f6f8158c56de2c978185ffaceccc970b5f1ad9acd9d662758fafedab6424085"
+          },
+          {
+            "address": "0x5E841f1Eb0AEC2FE26D6824c83bCA2607Fba6FeC",
+            "registeredAtBlock": 192102548,
+            "registrationTxHash": "0xca96ddd76c8e1e52dc1a7e83ea85073702a9b933742b87706a64e30983be8a25"
+          },
+          {
+            "address": "0x3e9fB14733F0a8D001AE4b52E93c2707ca875AE6",
+            "registeredAtBlock": 192223940,
+            "registrationTxHash": "0x8be63c559c892632e1e46447c0c1d80645d26b78cfbf63b799687e24240f5c7c"
+          },
+          {
+            "address": "0xCD2E7E057D81f32919De0fc04952B3b13eC57419",
+            "registeredAtBlock": 192342571,
+            "registrationTxHash": "0xeb26684550156ae6e3961cf30fd5acdfbb47838735702c5d31cbc3a18e7bd6b6"
+          },
+          {
+            "address": "0xC6820fFD46a3D8045fD28c9f340a9011307f0216",
+            "registeredAtBlock": 192409255,
+            "registrationTxHash": "0xfdfa30501896cbe49f62bc9006212810e5c856fbb0cf0c1b4807f7951514f828"
+          },
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "registeredAtBlock": 192413735,
+            "registrationTxHash": "0x0863e76571ebc9828b4485ab8d9a60914ef4e844e270211240073780d3e5ec3c"
+          },
+          {
+            "address": "0x99b94fde4bD76B8ec98a67C6e5e3ab2587032213",
+            "registeredAtBlock": 192414143,
+            "registrationTxHash": "0xb014b26a68e243b245e4682ab38c21cf9b076947c636e2b80647d96cebbd7940"
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "registeredAtBlock": 192441471,
+            "registrationTxHash": "0xd5d7a7506ae3188f9b225ef2597dd387e3e3bb0cf8ca6af519c61a946473d011"
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "registeredAtBlock": 192475183,
+            "registrationTxHash": "0x5637141c4084cc39971935e113005f3befe9c3a6066c2304d29fb4c3f7247da3"
+          },
+          {
+            "address": "0x97cab8EE5547A6e4AFFaD689a25d11B6dD920EF8",
+            "registeredAtBlock": 192586885,
+            "registrationTxHash": "0x3e4f625305c378145e402457eec2995ff399bf1645690395d150cc3a47caafae"
+          },
+          {
+            "address": "0x9B3aEdDdfC03014eef28322ffCB815Ab555Aa94B",
+            "registeredAtBlock": 192726117,
+            "registrationTxHash": "0x87c1c4fe58dfbc9356c495a99216a6c6560169ad7af1066dd2377b377e7132c1"
+          },
+          {
+            "address": "0xB3b60932E598fe946169EC209A197184Bad760B7",
+            "registeredAtBlock": 192734757,
+            "registrationTxHash": "0x9c811e7251a1c285ad5381b56e539364a317d8f77fa26cbee03a28abf8bba0ef"
+          },
+          {
+            "address": "0xd174ad0D1E36c7a60CD922E966354095233f8F23",
+            "registeredAtBlock": 192736023,
+            "registrationTxHash": "0xdb1617a34c8d50af4c74478318c1f13e903cfffc3b9621b17a63178739f4ea13"
+          },
+          {
+            "address": "0x396d0b1F18425dD8B68deaD6B1CE9b80931Bc3DD",
+            "registeredAtBlock": 192741112,
+            "registrationTxHash": "0x523239d204d99424b7171c76adaa199a282cf70499a1d85ed49e8a95e0027d08"
+          },
+          {
+            "address": "0xd1B132e0eD154e23BA5DE867ea06FB788b1d533d",
+            "registeredAtBlock": 192743508,
+            "registrationTxHash": "0x28bfcc879a0433a13d600bfef05bc15bcac3df7df2995a2f57764df3c4988021"
+          },
+          {
+            "address": "0x47526FDDBA0A5a7ef001FaaD4836b771B3e92522",
+            "registeredAtBlock": 192747814,
+            "registrationTxHash": "0x83c6f859a3786f869bacd87aef481e53665e595dd4f9da73ca6af779af212c13"
+          },
+          {
+            "address": "0xe40D80Bd58CEE55DCC2598724d7F1e03E206581D",
+            "registeredAtBlock": 192790411,
+            "registrationTxHash": "0x53b3606a45c401fdd14462bfa324a39d1e4a65975c25f9358d1489708c6f410b"
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "registeredAtBlock": 192825701,
+            "registrationTxHash": "0x64da0216567440db6b4d3e15bdfeffa9e66538b7bab4e75808fec313ab838013"
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "registeredAtBlock": 192829334,
+            "registrationTxHash": "0xbe30c0e6c210a89e09f21139d5eb57ac33d3c3425535c79b9444e0ce8ca784f8"
+          },
+          {
+            "address": "0xee7Fb91D5b776C326a728dc70e917F82d6809E3C",
+            "registeredAtBlock": 192854219,
+            "registrationTxHash": "0x5e1f04b3a503b9b78a7efab3f024a9e52d7a5836ed9137736adc83ef1446cb14"
+          },
+          {
+            "address": "0x61CCd62854Cd4211324737caC64f8cE3126bA777",
+            "registeredAtBlock": 192877733,
+            "registrationTxHash": "0xb79908ecdc1ac18f610fbafcfa263aa625c7b3c1a7b564867b78dad305017207"
+          },
+          {
+            "address": "0xaa0beF27c7Ca1A998460C7041De486921710A7fC",
+            "registeredAtBlock": 192882666,
+            "registrationTxHash": "0xc7315e6c5fc7bad49aded3800e809b5cad93a4743cea081c9a0e7323fc425c25"
+          },
+          {
+            "address": "0xa0683d725420e2F75415806352Cd9c3fE10Fa960",
+            "registeredAtBlock": 192954008,
+            "registrationTxHash": "0x843c14e89ae24c0fdfc4ae9a34e2ce0e94696f33550af9754c527effcfdb0d7e"
+          },
+          {
+            "address": "0x2E24829CaBc96d3b6Fe6c1c57f3aaa5D80832fc9",
+            "registeredAtBlock": 192982996,
+            "registrationTxHash": "0xc6b794fadb22c36c9219d98ee846162815169266331545ed974dee994a466983"
+          },
+          {
+            "address": "0xf29722a899Aa9FD0836076CA1dA64212c451453C",
+            "registeredAtBlock": 193006022,
+            "registrationTxHash": "0x9c87c521606d3ab50efd48f1e16d1e26866b21b56af79a800e2b99b73d6b7b38"
+          },
+          {
+            "address": "0x559cdf1346dd71315913278181A59AF17E1721bA",
+            "registeredAtBlock": 193014083,
+            "registrationTxHash": "0x86f09a1222e005065fe0bbabf979d4578c18bae7c35342b2b4feeb9f554ad525"
+          },
+          {
+            "address": "0x170fA93844c298Ff496475AE643F80c0E7f25117",
+            "registeredAtBlock": 193026719,
+            "registrationTxHash": "0xde0c971f0976a4da090af0cb3c6657bba8e0b451be23c9800fcf2dd4230fa35d"
+          }
+        ],
+        "nominees": [
+          {
+            "address": "0xe40D80Bd58CEE55DCC2598724d7F1e03E206581D",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xa0683d725420e2F75415806352Cd9c3fE10Fa960",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xee7Fb91D5b776C326a728dc70e917F82d6809E3C",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x61CCd62854Cd4211324737caC64f8cE3126bA777",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xB3b60932E598fe946169EC209A197184Bad760B7",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x97cab8EE5547A6e4AFFaD689a25d11B6dD920EF8",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xd1B132e0eD154e23BA5DE867ea06FB788b1d533d",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAC9ba72fb61aA7c31A95df0A8b6ebA6f41EF875e",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xb5B069370Ef24BC67F114e185D185063CE3479f8",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": true
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x2aCdF1317915A1C6aCE88B9EcCae99FC9CfEBa81",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xf29722a899Aa9FD0836076CA1dA64212c451453C",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": true
+          },
+          {
+            "address": "0xaa0beF27c7Ca1A998460C7041De486921710A7fC",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x093B56E26a6795fc60c8c84285aEBe451D4fbe75",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x5E841f1Eb0AEC2FE26D6824c83bCA2607Fba6FeC",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x559cdf1346dd71315913278181A59AF17E1721bA",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          }
+        ],
+        "compliantNominees": [
+          {
+            "address": "0xe40D80Bd58CEE55DCC2598724d7F1e03E206581D",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xa0683d725420e2F75415806352Cd9c3fE10Fa960",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xee7Fb91D5b776C326a728dc70e917F82d6809E3C",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x61CCd62854Cd4211324737caC64f8cE3126bA777",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xB3b60932E598fe946169EC209A197184Bad760B7",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x97cab8EE5547A6e4AFFaD689a25d11B6dD920EF8",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xd1B132e0eD154e23BA5DE867ea06FB788b1d533d",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAC9ba72fb61aA7c31A95df0A8b6ebA6f41EF875e",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x2aCdF1317915A1C6aCE88B9EcCae99FC9CfEBa81",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0xaa0beF27c7Ca1A998460C7041De486921710A7fC",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x093B56E26a6795fc60c8c84285aEBe451D4fbe75",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x5E841f1Eb0AEC2FE26D6824c83bCA2607Fba6FeC",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          },
+          {
+            "address": "0x559cdf1346dd71315913278181A59AF17E1721bA",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": false
+          }
+        ],
+        "excludedNominees": [
+          {
+            "address": "0xb5B069370Ef24BC67F114e185D185063CE3479f8",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": true
+          },
+          {
+            "address": "0xf29722a899Aa9FD0836076CA1dA64212c451453C",
+            "votesReceived": "5431189182135375673903885",
+            "isExcluded": true
+          }
+        ],
+        "quorumThreshold": "5431189182135375673903885",
+        "targetNomineeCount": 6
+      },
+      "memberDetails": {
+        "proposalId": "42524710257895482033293584464762477376427316183960646909542733545381165923770",
+        "electionIndex": 1,
+        "nominees": [
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "weightReceived": "22305321589711730663546989",
+            "isWinner": true,
+            "rank": 1
+          },
+          {
+            "address": "0xa0683d725420e2F75415806352Cd9c3fE10Fa960",
+            "weightReceived": "21777606240272120096919895",
+            "isWinner": true,
+            "rank": 2
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "weightReceived": "19695650879902160470135675",
+            "isWinner": true,
+            "rank": 3
+          },
+          {
+            "address": "0xee7Fb91D5b776C326a728dc70e917F82d6809E3C",
+            "weightReceived": "19616653342413624626795647",
+            "isWinner": true,
+            "rank": 4
+          },
+          {
+            "address": "0xB3b60932E598fe946169EC209A197184Bad760B7",
+            "weightReceived": "17155069282923405090598105",
+            "isWinner": true,
+            "rank": 5
+          },
+          {
+            "address": "0xe40D80Bd58CEE55DCC2598724d7F1e03E206581D",
+            "weightReceived": "17094327057251199091400573",
+            "isWinner": true,
+            "rank": 6
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "weightReceived": "16827164198021897848138834",
+            "isWinner": false,
+            "rank": 7
+          },
+          {
+            "address": "0x61CCd62854Cd4211324737caC64f8cE3126bA777",
+            "weightReceived": "7756280331953195392096036",
+            "isWinner": false,
+            "rank": 8
+          },
+          {
+            "address": "0xd1B132e0eD154e23BA5DE867ea06FB788b1d533d",
+            "weightReceived": "5555738150142852124924028",
+            "isWinner": false,
+            "rank": 9
+          },
+          {
+            "address": "0x093B56E26a6795fc60c8c84285aEBe451D4fbe75",
+            "weightReceived": "5106734850717025474417128",
+            "isWinner": false,
+            "rank": 10
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "weightReceived": "5063143674180556903057018",
+            "isWinner": false,
+            "rank": 11
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "weightReceived": "4407535041128404351268184",
+            "isWinner": false,
+            "rank": 12
+          },
+          {
+            "address": "0x2aCdF1317915A1C6aCE88B9EcCae99FC9CfEBa81",
+            "weightReceived": "3933535343467742063898180",
+            "isWinner": false,
+            "rank": 13
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "weightReceived": "2641264851626367819964068",
+            "isWinner": false,
+            "rank": 14
+          },
+          {
+            "address": "0x97cab8EE5547A6e4AFFaD689a25d11B6dD920EF8",
+            "weightReceived": "2500000000000000000000000",
+            "isWinner": false,
+            "rank": 15
+          },
+          {
+            "address": "0x5E841f1Eb0AEC2FE26D6824c83bCA2607Fba6FeC",
+            "weightReceived": "1336208453915221629532273",
+            "isWinner": false,
+            "rank": 16
+          },
+          {
+            "address": "0x559cdf1346dd71315913278181A59AF17E1721bA",
+            "weightReceived": "280000000000000000000000",
+            "isWinner": false,
+            "rank": 17
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "weightReceived": "239969844328900563651095",
+            "isWinner": false,
+            "rank": 18
+          },
+          {
+            "address": "0xaa0beF27c7Ca1A998460C7041De486921710A7fC",
+            "weightReceived": "0",
+            "isWinner": false,
+            "rank": 19
+          },
+          {
+            "address": "0xAC9ba72fb61aA7c31A95df0A8b6ebA6f41EF875e",
+            "weightReceived": "0",
+            "isWinner": false,
+            "rank": 20
+          }
+        ],
+        "winners": [
+          "0xe40D80Bd58CEE55DCC2598724d7F1e03E206581D",
+          "0xB3b60932E598fe946169EC209A197184Bad760B7",
+          "0xee7Fb91D5b776C326a728dc70e917F82d6809E3C",
+          "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+          "0xa0683d725420e2F75415806352Cd9c3fE10Fa960",
+          "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae"
+        ],
+        "fullWeightDeadline": 19692211,
+        "proposalDeadline": 19793011
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543873117
+      "lastTrackedAt": 1768551733914
     }
   },
   "election:3": {
     "version": 1,
-    "createdAt": 1768543900990,
+    "createdAt": 1768551765476,
     "input": {
       "type": "election",
       "electionIndex": 3
@@ -20935,7 +21977,7 @@
             "data": {
               "nomineeProposalId": "105950663509958437523992793185319101898618751949859789080237826040354365699363",
               "vettingDeadline": 22253740,
-              "currentL1Block": 24245408,
+              "currentL1Block": 24246061,
               "compliantNomineeCount": 13,
               "memberProposalId": "105950663509958437523992793185319101898618751949859789080237826040354365699363"
             },
@@ -21097,10 +22139,10 @@
                 }
               ],
               "firstExecutableBlock": 22507584,
-              "currentL1Block": 24245406,
+              "currentL1Block": 24246059,
               "cachedSendProps": {
-                "sendRootSize": "156631",
-                "sendRootHash": "0x4b4a6461862112d0a238a8e37efc0e35890df49705c11ff09c58f255eb8102f2"
+                "sendRootSize": "156635",
+                "sendRootHash": "0x76bf01d0cb68f49396db9be0cd617a5fcb5b2ddb4eefc5cb6f157a0741a19e19"
               }
             },
             "executable": false,
@@ -21352,16 +22394,363 @@
         "creationTxHash": "0xb1d2df615f4abd98dcef744ce902d84ba3cd83238e99aa04816787f858d30d62",
         "nomineeExecuteTxHash": "0x074747b212abf73c0e97b47b351cd9c5c0f15ea650ccde4ebbf93eec3b272f38",
         "memberExecuteTxHash": "0x1cd9036db95862387036d71bf8ec77f17a494dcd7f75fbebf2eb61885f433f1f"
+      },
+      "nomineeDetails": {
+        "proposalId": "105950663509958437523992793185319101898618751949859789080237826040354365699363",
+        "electionIndex": 3,
+        "contenders": [
+          {
+            "address": "0x2c581DBcd7BBe22e366724654BDdcaA734158226",
+            "registeredAtBlock": 316086858,
+            "registrationTxHash": "0x2abb90f77c961286af34e37d8124ef212dcc7ac780b1471dae56843eacf84a73"
+          },
+          {
+            "address": "0x4D4AC65513fEe380c596ac9EdfaC588782831bdf",
+            "registeredAtBlock": 316347310,
+            "registrationTxHash": "0x4fcb8dd773d5f0483edb2c8230dbbaf1f8435360dfc35ddf8edfa6090b766790"
+          },
+          {
+            "address": "0xBBD2E01eFB88ce00F8f5b6B9a696966070089392",
+            "registeredAtBlock": 316415020,
+            "registrationTxHash": "0xd22e2fe5a93fda0d961f8dd2332a422464f9d8c3b2d58a0e3c6e34a02b2304bc"
+          },
+          {
+            "address": "0xBE21796184d2Ca3F61F091ED47fDd128775db6BE",
+            "registeredAtBlock": 316608538,
+            "registrationTxHash": "0x7c727bc2b6feec062190f8c2ab8f39de4077fba0d6992e52a4082a85b2f70a66"
+          },
+          {
+            "address": "0x1af85D2f437F338c2AF668c1BC7cb81d13A36B5d",
+            "registeredAtBlock": 316814760,
+            "registrationTxHash": "0x6b66f8d3eaabc8de9ed2a6419feb5e55049561bd2d0287fd49562c00b2aa6a6b"
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "registeredAtBlock": 316822561,
+            "registrationTxHash": "0x42388c54ef9d57470af341a06ebe65d1aa3444a74b3a91425629f985b0e208fe"
+          },
+          {
+            "address": "0x5DaB09a6C2dd232c7F15881C14E1616AE1751c97",
+            "registeredAtBlock": 316933055,
+            "registrationTxHash": "0x3c372529dfda196937edcbcf54fc687a1662fc71b8f9342249cb74c1672db137"
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "registeredAtBlock": 316991100,
+            "registrationTxHash": "0x4dccf4077ba99f6413cd0d41e8b39f33d4d7249ae0a540b92165c14e212c0d5b"
+          },
+          {
+            "address": "0xeEe3Fb3B792C7DDbB6aEF0C440FBC621f4d6fe2D",
+            "registeredAtBlock": 317047152,
+            "registrationTxHash": "0xf7d2b18492501a784ae791f7e32843d507fed176bd06c574dc5046a1f99eb0fa"
+          },
+          {
+            "address": "0x95892b6aCe907c37453E3995CF426B6068084f26",
+            "registeredAtBlock": 317306721,
+            "registrationTxHash": "0xdd5babde63726a7288e5919d6a910256a47beb2a41881cbfd5525fbf4cf2bc6c"
+          },
+          {
+            "address": "0xF948e06C29dB647ffE21b9FAB9d162c457CD6828",
+            "registeredAtBlock": 317348881,
+            "registrationTxHash": "0xc61a6b5776b20584a08903b9bef490a0605f9f84fd1b5c87f1dd166daa850b1f"
+          },
+          {
+            "address": "0x1B1e924A0A9c86a9023BE9791bb81ECFb8CC4011",
+            "registeredAtBlock": 317397797,
+            "registrationTxHash": "0xe9ded43b4445789530d48da2b1718374142d68bfd16a018299ffce0314324f27"
+          },
+          {
+            "address": "0x1e14a2aF06235C1De63eDFC0c1523F0a31508a56",
+            "registeredAtBlock": 317486447,
+            "registrationTxHash": "0x1dacf055136dd5fb3dbc051a6c855ef9047cef9130de0ef8086377b250f5ca35"
+          },
+          {
+            "address": "0x6446aD9821021Eeb9f85B8a18B0153d58166d161",
+            "registeredAtBlock": 317783637,
+            "registrationTxHash": "0x7fbbdfeb2aebfb681975a20f256c57805f72bb642838dab6deee526fb1e92988"
+          },
+          {
+            "address": "0x9316ca66f5f936E3239e4fD2AAAEA5C7b6f3C4cC",
+            "registeredAtBlock": 317815190,
+            "registrationTxHash": "0x9ff72677630d9aaef3754c8c993371223eaad6beb86d8a334de3f62cd898f595"
+          },
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "registeredAtBlock": 317985046,
+            "registrationTxHash": "0x79d335f320839e5ef247fed6a146fb33d68122506f2632bd436e06c238b5e889"
+          },
+          {
+            "address": "0x342EBaca3ACC54d6f5Ee78073FeC4af07f42B94e",
+            "registeredAtBlock": 318098349,
+            "registrationTxHash": "0x6218c9c97231527d2afda8856368d9e43c76575a8239e81e737fc3e3ce56a577"
+          },
+          {
+            "address": "0x222D4A324731C0ADD5962e3259b6D7226c6c67Cb",
+            "registeredAtBlock": 318241299,
+            "registrationTxHash": "0x29050139ebd529b313250ad55828d967d26b2337f72bdcc6205fe37a73c9a5bf"
+          },
+          {
+            "address": "0x98E24e308c4B7cdADcf4d116B2B8939a21420bA1",
+            "registeredAtBlock": 318243699,
+            "registrationTxHash": "0xc4e88bdadba3429e7c93c8027b1dec9a292c9981f47c5dee7858dc9c8a785d1e"
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "registeredAtBlock": 318304049,
+            "registrationTxHash": "0xcbe365832396a1f21ca7adf7e1506eaa62b069f13abc7fac27492d70e3cf0baf"
+          },
+          {
+            "address": "0x662767455889320B33862a9eC64feDdf127282f7",
+            "registeredAtBlock": 318343662,
+            "registrationTxHash": "0x2181f7fbe26fce5be535cf5bd142ef86fbf97a8c880b61ef8cbc8f825a78c293"
+          },
+          {
+            "address": "0xD8D4cEC103c0B6d7166405F0EbD7087C75a1528E",
+            "registeredAtBlock": 318346199,
+            "registrationTxHash": "0x11a4899c5e21e9de8dbcc671b2fbe474af77701b8c684ed465ee7b8f9c70b31c"
+          }
+        ],
+        "nominees": [
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBBD2E01eFB88ce00F8f5b6B9a696966070089392",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9316ca66f5f936E3239e4fD2AAAEA5C7b6f3C4cC",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xeEe3Fb3B792C7DDbB6aEF0C440FBC621f4d6fe2D",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xD8D4cEC103c0B6d7166405F0EbD7087C75a1528E",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBE21796184d2Ca3F61F091ED47fDd128775db6BE",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x342EBaca3ACC54d6f5Ee78073FeC4af07f42B94e",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x98E24e308c4B7cdADcf4d116B2B8939a21420bA1",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x1e14a2aF06235C1De63eDFC0c1523F0a31508a56",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x95892b6aCe907c37453E3995CF426B6068084f26",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x2c581DBcd7BBe22e366724654BDdcaA734158226",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          }
+        ],
+        "compliantNominees": [
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBBD2E01eFB88ce00F8f5b6B9a696966070089392",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9316ca66f5f936E3239e4fD2AAAEA5C7b6f3C4cC",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xeEe3Fb3B792C7DDbB6aEF0C440FBC621f4d6fe2D",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xD8D4cEC103c0B6d7166405F0EbD7087C75a1528E",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBE21796184d2Ca3F61F091ED47fDd128775db6BE",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x342EBaca3ACC54d6f5Ee78073FeC4af07f42B94e",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x98E24e308c4B7cdADcf4d116B2B8939a21420bA1",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x1e14a2aF06235C1De63eDFC0c1523F0a31508a56",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x95892b6aCe907c37453E3995CF426B6068084f26",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0x2c581DBcd7BBe22e366724654BDdcaA734158226",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "votesReceived": "8489538152614812520853576",
+            "isExcluded": false
+          }
+        ],
+        "excludedNominees": [],
+        "quorumThreshold": "8489538152614812520853576",
+        "targetNomineeCount": 6
+      },
+      "memberDetails": {
+        "proposalId": "105950663509958437523992793185319101898618751949859789080237826040354365699363",
+        "electionIndex": 3,
+        "nominees": [
+          {
+            "address": "0xD8D4cEC103c0B6d7166405F0EbD7087C75a1528E",
+            "weightReceived": "30573486794995854117146808",
+            "isWinner": true,
+            "rank": 1
+          },
+          {
+            "address": "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+            "weightReceived": "29983284857303465692559763",
+            "isWinner": true,
+            "rank": 2
+          },
+          {
+            "address": "0xBBD2E01eFB88ce00F8f5b6B9a696966070089392",
+            "weightReceived": "28527402602389608473667568",
+            "isWinner": true,
+            "rank": 3
+          },
+          {
+            "address": "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+            "weightReceived": "27464033519802402798836088",
+            "isWinner": true,
+            "rank": 4
+          },
+          {
+            "address": "0xeEe3Fb3B792C7DDbB6aEF0C440FBC621f4d6fe2D",
+            "weightReceived": "20539542421667579527106801",
+            "isWinner": true,
+            "rank": 5
+          },
+          {
+            "address": "0x9316ca66f5f936E3239e4fD2AAAEA5C7b6f3C4cC",
+            "weightReceived": "20489400994732784736371691",
+            "isWinner": true,
+            "rank": 6
+          },
+          {
+            "address": "0x98E24e308c4B7cdADcf4d116B2B8939a21420bA1",
+            "weightReceived": "19480965450642003845726370",
+            "isWinner": false,
+            "rank": 7
+          },
+          {
+            "address": "0x2c581DBcd7BBe22e366724654BDdcaA734158226",
+            "weightReceived": "15255866317673839759332264",
+            "isWinner": false,
+            "rank": 8
+          },
+          {
+            "address": "0x1e14a2aF06235C1De63eDFC0c1523F0a31508a56",
+            "weightReceived": "9406573169620402154944963",
+            "isWinner": false,
+            "rank": 9
+          },
+          {
+            "address": "0xBE21796184d2Ca3F61F091ED47fDd128775db6BE",
+            "weightReceived": "8301132933146697394959701",
+            "isWinner": false,
+            "rank": 10
+          },
+          {
+            "address": "0x95892b6aCe907c37453E3995CF426B6068084f26",
+            "weightReceived": "7059846750666140258440134",
+            "isWinner": false,
+            "rank": 11
+          },
+          {
+            "address": "0xEFA6e02047eDc1B55C93bB6B320B9728baA97Bb6",
+            "weightReceived": "4581214456175762495432911",
+            "isWinner": false,
+            "rank": 12
+          },
+          {
+            "address": "0x342EBaca3ACC54d6f5Ee78073FeC4af07f42B94e",
+            "weightReceived": "2485425450000464546186530",
+            "isWinner": false,
+            "rank": 13
+          }
+        ],
+        "winners": [
+          "0x9316ca66f5f936E3239e4fD2AAAEA5C7b6f3C4cC",
+          "0xeEe3Fb3B792C7DDbB6aEF0C440FBC621f4d6fe2D",
+          "0x475816ca2a31D601B4e336f5c2418A67978aBf09",
+          "0xBBD2E01eFB88ce00F8f5b6B9a696966070089392",
+          "0x0275b3D54a5dDbf8205A75984796eFE8b7357Bae",
+          "0xD8D4cEC103c0B6d7166405F0EbD7087C75a1528E"
+        ],
+        "fullWeightDeadline": 22304141,
+        "proposalDeadline": 22404941
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543900990
+      "lastTrackedAt": 1768551765476
     }
   },
   "election:0": {
     "version": 1,
-    "createdAt": 1768543859048,
+    "createdAt": 1768551717937,
     "input": {
       "type": "election",
       "electionIndex": 0
@@ -21439,7 +22828,7 @@
             "data": {
               "nomineeProposalId": "60162688034199076810399696553527335539392294406806148400571326246927623831080",
               "vettingDeadline": 18293105,
-              "currentL1Block": 24245404,
+              "currentL1Block": 24246057,
               "compliantNomineeCount": 24,
               "memberProposalId": "60162688034199076810399696553527335539392294406806148400571326246927623831080"
             },
@@ -21601,10 +22990,10 @@
                 }
               ],
               "firstExecutableBlock": 18523040,
-              "currentL1Block": 24245406,
+              "currentL1Block": 24246059,
               "cachedSendProps": {
-                "sendRootSize": "156631",
-                "sendRootHash": "0x4b4a6461862112d0a238a8e37efc0e35890df49705c11ff09c58f255eb8102f2"
+                "sendRootSize": "156635",
+                "sendRootHash": "0x76bf01d0cb68f49396db9be0cd617a5fcb5b2ddb4eefc5cb6f157a0741a19e19"
               }
             },
             "executable": false,
@@ -21856,16 +23245,634 @@
         "creationTxHash": "0xcb6787863f4001e1190f76ae29f14927ba8a7af0ba4f42f1f8b74730948f11db",
         "nomineeExecuteTxHash": "0x8f45dc385d3e8382dce7afc18d577664f7ef0f3ab6e17bd9288b53329ba68b38",
         "memberExecuteTxHash": "0x0c4cb0c4f24523d2cc97eec267ccc523da5ee6748b9e7865b1718621eb3d8d5e"
+      },
+      "nomineeDetails": {
+        "proposalId": "60162688034199076810399696553527335539392294406806148400571326246927623831080",
+        "electionIndex": 0,
+        "contenders": [
+          {
+            "address": "0x22AB891922f566F17B9827d016C2003Da69abAb9",
+            "registeredAtBlock": 131356185,
+            "registrationTxHash": "0x32f435e87e92c4ae27f4a38907d9de4125779224a6b606c2a6f9fe9b67d13cd7"
+          },
+          {
+            "address": "0x3191e06b0EA9512D43c9fD9Fa7219e69C4806E5d",
+            "registeredAtBlock": 131377027,
+            "registrationTxHash": "0x662e636975efc1b74623386527a46d8a0ecf7e0a278b55dcb1dba6933bfc087b"
+          },
+          {
+            "address": "0xe2cf100Dd65E798e0cB71E79ddF5314d00028910",
+            "registeredAtBlock": 131382856,
+            "registrationTxHash": "0x81ca33cac12b80f1b835dc8b8e1f88f484d8eb70528493b3223abdf19f0efd50"
+          },
+          {
+            "address": "0xf8e1492255d9428c2Fc20A98A1DeB1215C8ffEfd",
+            "registeredAtBlock": 131390345,
+            "registrationTxHash": "0x0abe0a3fdd54cf6fb4c51703ebebe1aa9b1c28967446f6371f3257161c39d634"
+          },
+          {
+            "address": "0xfD7631b7a5716FCA8D95207Da2A7BcD471ee0372",
+            "registeredAtBlock": 131417245,
+            "registrationTxHash": "0x79945a8ef62bfc31757ac476606df2751c75fff875f3ab5af0ce3b72a885eda3"
+          },
+          {
+            "address": "0x20712Ff85833D99E7B15af8d0BE885d90cf1A354",
+            "registeredAtBlock": 131440105,
+            "registrationTxHash": "0xa4dd106179300dfe36f8716fb49faefd5dadd257c165f127a7881fba9810bc01"
+          },
+          {
+            "address": "0x1Be84dd9D34cBc654755Ad6a5e7eAECac88AaCA3",
+            "registeredAtBlock": 131531708,
+            "registrationTxHash": "0x1317f1f4682c58cae0387852f001a3aee4d3f5e2fe54a746edc2c99f4e40bf53"
+          },
+          {
+            "address": "0x897c208c928a085BF3a610E633DCeB70eb7e6eAb",
+            "registeredAtBlock": 131537894,
+            "registrationTxHash": "0xb9ade7879b03a7576a816285cb1172af992c989cc8d07e97a5fcc56fec1854fc"
+          },
+          {
+            "address": "0x8338a37Fc474d2bB0F29997458bAEA8b51765Df4",
+            "registeredAtBlock": 131654259,
+            "registrationTxHash": "0x9682762eae82c26ef6e05e26146678f23e8668b6abae1c0bb80ce64406d8e47f"
+          },
+          {
+            "address": "0x8288eb4305dF040Df3c3923eCD1146A367609eEd",
+            "registeredAtBlock": 131677970,
+            "registrationTxHash": "0x4ab931441a7092a58c9ce7617b8f02bda6e91013deeb945b11fe2be7e3467f4d"
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "registeredAtBlock": 131751319,
+            "registrationTxHash": "0x21c42952c6d5039e1a8ecceba75485da5296933fd13350ae3dd9ba290dbb8124"
+          },
+          {
+            "address": "0xb07dc9103328A51128bC6Cc1049d1137035f5E28",
+            "registeredAtBlock": 131771953,
+            "registrationTxHash": "0x9901c3cfc8b6f3a9dbc10a267e0db075a6b9b2957afa6e9ea741c448934b6a76"
+          },
+          {
+            "address": "0xAD36C07834b1730F82014F397D470C30D2DDbf75",
+            "registeredAtBlock": 131961631,
+            "registrationTxHash": "0x4dbcddd9372df67fc461abed41a6560303d2406bd61018b69d7f707e5a823611"
+          },
+          {
+            "address": "0x3e9d74c8173C9279826a18e9C688246431F3d112",
+            "registeredAtBlock": 131991216,
+            "registrationTxHash": "0x4cd5146bd62162c046ce5e1e3b8e32d88f633e56f2ba0bdbc095479b9174b23a"
+          },
+          {
+            "address": "0xF040b1beA9953A3631ff8B5Fc336E7b627369732",
+            "registeredAtBlock": 132140557,
+            "registrationTxHash": "0xbde0424f63e86932c73b905fe2b87cb2863625f6a60d79bf986341e15b8ac1aa"
+          },
+          {
+            "address": "0x093F1f3Af6f573b854144e8842a5b20276b4512B",
+            "registeredAtBlock": 132176755,
+            "registrationTxHash": "0x635716bdbadee80ae7e763a70a0f94958a3006fae1be0a6e4ecf8485fccdfe87"
+          },
+          {
+            "address": "0x7cf7e5D1217a06d50899932733673690F40C7Eb0",
+            "registeredAtBlock": 132251274,
+            "registrationTxHash": "0xde65bf8194952ce01d20bc769abc7b4d49c721ef807ca70a2797dcb26c1ef96a"
+          },
+          {
+            "address": "0xAC6bED014C65CBF9E796116757C0162084461883",
+            "registeredAtBlock": 132324440,
+            "registrationTxHash": "0x10d4c29eec954c93708fc5492efef2624f204cd0a27d860574d687d9f4a22812"
+          },
+          {
+            "address": "0xc0F0c45940a36888CD40A2fB51aD32562D81aB06",
+            "registeredAtBlock": 132350320,
+            "registrationTxHash": "0x03d51c21395bae3c4cc49c9fec28451e4a1a35e848ddc0e9884c573a9bd29b7e"
+          },
+          {
+            "address": "0x747F21913AFF7450B42c8460FC494D1E3c4C1773",
+            "registeredAtBlock": 132370941,
+            "registrationTxHash": "0x4e648ec2c9fccd87bc952fabd8c069b1d50618a65ba801c548fa889b395be41c"
+          },
+          {
+            "address": "0x0f8a5076a56b7ECD761562551FAd11DF631447B2",
+            "registeredAtBlock": 132452250,
+            "registrationTxHash": "0x94e339aec7212be4653ecf940579f0b40dae588a0f0d96958490a7f02d27787a"
+          },
+          {
+            "address": "0x80b810f9b8FD63Ef78ec860071d8D7Fdd4D5E9fe",
+            "registeredAtBlock": 132532285,
+            "registrationTxHash": "0xb296c596cbfd87302fc1516e0cac0d26e32e9849b731c3d565e703d748270d1f"
+          },
+          {
+            "address": "0xCBD8133c5e72aFa85FEBdF2784d5B81Dcf896dad",
+            "registeredAtBlock": 132533790,
+            "registrationTxHash": "0x95cb00dc1d542282c2e3d5a0ac31ab3189a1e128171d42e62bd4edab80977e3e"
+          },
+          {
+            "address": "0xe876a94EBAa0d8D2dA4142766d8C803a7C1D8ED8",
+            "registeredAtBlock": 132589375,
+            "registrationTxHash": "0xa65f56ad4cdeb6f3065dc25a77ce691467958a2927ac21384d8ae20deb2d2b12"
+          },
+          {
+            "address": "0x5EAcB79cB4Df8ab090001C41677CB81B9563cf82",
+            "registeredAtBlock": 132664819,
+            "registrationTxHash": "0x155802f49d97767f492998dbeabbe705e4fdcc1fbdf8f3c7671f6fed2f609ce7"
+          },
+          {
+            "address": "0x87D555a8BC0A75d4726448B51FFD87291E40899d",
+            "registeredAtBlock": 132669022,
+            "registrationTxHash": "0x6d4fe476bcb1122f5cbc2cebe1c78d0644d05b7fe30e0debb5baab4b6d9c9f87"
+          },
+          {
+            "address": "0x8F10e3413586c4a8DCfcE19D009872b19e9cd8E3",
+            "registeredAtBlock": 132695991,
+            "registrationTxHash": "0xf6649f82c9272a369d30e219cf6be9ad6761fee68a2250efdf18c414ebf8a118"
+          },
+          {
+            "address": "0xb71ca4FFbB7b58d75Ba29891ab45e9Dc12B444Ed",
+            "registeredAtBlock": 132698971,
+            "registrationTxHash": "0xcf397208251d5b161ceb614cd9a8bb4db82663c2325d3eb5e88eff9d8af9d41f"
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "registeredAtBlock": 132700374,
+            "registrationTxHash": "0x3a84dd3ed781cdba4f3b683358d1a70a81e7a8e6ce48ebb4a67aaafd4d0253e0"
+          },
+          {
+            "address": "0x4C5D8c0D03d00C1aDf5ae2235a461F72ba548042",
+            "registeredAtBlock": 132810570,
+            "registrationTxHash": "0x8a5787f5a70f9bfe0f452b5b4e7952b1fa1d50d08a0de6359b7fb1e265e78014"
+          },
+          {
+            "address": "0x8746B03bc7297359818C30e378AF507379E79a07",
+            "registeredAtBlock": 132952306,
+            "registrationTxHash": "0x99eb91659dad610837ff65aebd6cf785d8a1ab073ebb34da9805a336849a5f60"
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "registeredAtBlock": 132963533,
+            "registrationTxHash": "0xd591e1ccc47bc024e1d7fc975951eb24a4db1cb95da6f0b2dae5550bc4208f8b"
+          },
+          {
+            "address": "0x9f2b47f969c7669D532dC8FE0F1B1907a99429fC",
+            "registeredAtBlock": 132971777,
+            "registrationTxHash": "0x2dd7d0897c403e8d3edd04f58bbbc51e7203a4c31838409bf749576ecd9b3dca"
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "registeredAtBlock": 132997743,
+            "registrationTxHash": "0x360fa91d84bdaa956de99bfdad67350cbff118f022fae8617eea697564c27765"
+          },
+          {
+            "address": "0xB8bb9335d06De010a4208DfE8398DC5780617a01",
+            "registeredAtBlock": 133088430,
+            "registrationTxHash": "0x72cb69b497eb30432055e5ac43f1ca319708f18916adbe1696670d134ca987df"
+          },
+          {
+            "address": "0x7d069614A32a64F0cEc6CAAF6CD8C2230C2BbDA9",
+            "registeredAtBlock": 133185075,
+            "registrationTxHash": "0x8671ebfc4820d951132d206a864739d87d246d0429d7e6b5f8aec967330b19b3"
+          },
+          {
+            "address": "0x3Bd8e2AC65ad6f0F094BA6766cBd9484AB49eF23",
+            "registeredAtBlock": 133186328,
+            "registrationTxHash": "0xa6c0a994021c64dfeb0f39e572f39e79aaedbfebba9dd797f1451cac2c86dc53"
+          },
+          {
+            "address": "0xeCC9ac160c4225dfb90F82E188763C20Dd05cA6f",
+            "registeredAtBlock": 133199095,
+            "registrationTxHash": "0x1c40d18dc264e41c8804d99275be1c52ff9cdfff9a4ce675b00b9f5332efc304"
+          },
+          {
+            "address": "0x632dFBcf4480600456474AD42E4B1325566B496E",
+            "registeredAtBlock": 133213674,
+            "registrationTxHash": "0xc30c758e2141c3ced3e52cd6d9c167f2c6fd3033f75e95d8b7cf4c886d969ebe"
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "registeredAtBlock": 133249565,
+            "registrationTxHash": "0xe07480e4bbbcafabb6b8a0253d2990cbc1853b1010a99baedb31122e7ff249ce"
+          },
+          {
+            "address": "0x9b903Ae440CB1f01c342466D6DB6b57A5BF98C3f",
+            "registeredAtBlock": 133306313,
+            "registrationTxHash": "0xe9513bc24dccf0bbcef064ecd0db73551441b015329207552a61d8987596c6c4"
+          }
+        ],
+        "nominees": [
+          {
+            "address": "0xf8e1492255d9428c2Fc20A98A1DeB1215C8ffEfd",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3191e06b0EA9512D43c9fD9Fa7219e69C4806E5d",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xfD7631b7a5716FCA8D95207Da2A7BcD471ee0372",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe876a94EBAa0d8D2dA4142766d8C803a7C1D8ED8",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xb07dc9103328A51128bC6Cc1049d1137035f5E28",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x093F1f3Af6f573b854144e8842a5b20276b4512B",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8F10e3413586c4a8DCfcE19D009872b19e9cd8E3",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xc0F0c45940a36888CD40A2fB51aD32562D81aB06",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x22AB891922f566F17B9827d016C2003Da69abAb9",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAD36C07834b1730F82014F397D470C30D2DDbf75",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x897c208c928a085BF3a610E633DCeB70eb7e6eAb",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9f2b47f969c7669D532dC8FE0F1B1907a99429fC",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3e9d74c8173C9279826a18e9C688246431F3d112",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3Bd8e2AC65ad6f0F094BA6766cBd9484AB49eF23",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xB8bb9335d06De010a4208DfE8398DC5780617a01",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8338a37Fc474d2bB0F29997458bAEA8b51765Df4",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x20712Ff85833D99E7B15af8d0BE885d90cf1A354",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xb71ca4FFbB7b58d75Ba29891ab45e9Dc12B444Ed",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8288eb4305dF040Df3c3923eCD1146A367609eEd",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          }
+        ],
+        "compliantNominees": [
+          {
+            "address": "0xf8e1492255d9428c2Fc20A98A1DeB1215C8ffEfd",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3191e06b0EA9512D43c9fD9Fa7219e69C4806E5d",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xfD7631b7a5716FCA8D95207Da2A7BcD471ee0372",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe876a94EBAa0d8D2dA4142766d8C803a7C1D8ED8",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xb07dc9103328A51128bC6Cc1049d1137035f5E28",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x093F1f3Af6f573b854144e8842a5b20276b4512B",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8F10e3413586c4a8DCfcE19D009872b19e9cd8E3",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xc0F0c45940a36888CD40A2fB51aD32562D81aB06",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x22AB891922f566F17B9827d016C2003Da69abAb9",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAD36C07834b1730F82014F397D470C30D2DDbf75",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x897c208c928a085BF3a610E633DCeB70eb7e6eAb",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9f2b47f969c7669D532dC8FE0F1B1907a99429fC",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3e9d74c8173C9279826a18e9C688246431F3d112",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3Bd8e2AC65ad6f0F094BA6766cBd9484AB49eF23",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xB8bb9335d06De010a4208DfE8398DC5780617a01",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8338a37Fc474d2bB0F29997458bAEA8b51765Df4",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x20712Ff85833D99E7B15af8d0BE885d90cf1A354",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0xb71ca4FFbB7b58d75Ba29891ab45e9Dc12B444Ed",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          },
+          {
+            "address": "0x8288eb4305dF040Df3c3923eCD1146A367609eEd",
+            "votesReceived": "4717209293083987870543970",
+            "isExcluded": false
+          }
+        ],
+        "excludedNominees": [],
+        "quorumThreshold": "4717209293083987870543970",
+        "targetNomineeCount": 6
+      },
+      "memberDetails": {
+        "proposalId": "60162688034199076810399696553527335539392294406806148400571326246927623831080",
+        "electionIndex": 0,
+        "nominees": [
+          {
+            "address": "0x8F10e3413586c4a8DCfcE19D009872b19e9cd8E3",
+            "weightReceived": "46811019072959274302097280",
+            "isWinner": true,
+            "rank": 1
+          },
+          {
+            "address": "0xb71ca4FFbB7b58d75Ba29891ab45e9Dc12B444Ed",
+            "weightReceived": "24054268759938014196479518",
+            "isWinner": true,
+            "rank": 2
+          },
+          {
+            "address": "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+            "weightReceived": "22740576533103423917206580",
+            "isWinner": true,
+            "rank": 3
+          },
+          {
+            "address": "0xb07dc9103328A51128bC6Cc1049d1137035f5E28",
+            "weightReceived": "20002960246075798149134157",
+            "isWinner": true,
+            "rank": 4
+          },
+          {
+            "address": "0xf8e1492255d9428c2Fc20A98A1DeB1215C8ffEfd",
+            "weightReceived": "19657956416531781371175110",
+            "isWinner": true,
+            "rank": 5
+          },
+          {
+            "address": "0x3Bd8e2AC65ad6f0F094BA6766cBd9484AB49eF23",
+            "weightReceived": "17791429019824225341241491",
+            "isWinner": true,
+            "rank": 6
+          },
+          {
+            "address": "0x3191e06b0EA9512D43c9fD9Fa7219e69C4806E5d",
+            "weightReceived": "17138112168322511810535138",
+            "isWinner": false,
+            "rank": 7
+          },
+          {
+            "address": "0xe876a94EBAa0d8D2dA4142766d8C803a7C1D8ED8",
+            "weightReceived": "14998694523567389851386117",
+            "isWinner": false,
+            "rank": 8
+          },
+          {
+            "address": "0x093F1f3Af6f573b854144e8842a5b20276b4512B",
+            "weightReceived": "12373155159228255044401000",
+            "isWinner": false,
+            "rank": 9
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "weightReceived": "8852811974582283925488570",
+            "isWinner": false,
+            "rank": 10
+          },
+          {
+            "address": "0xfD7631b7a5716FCA8D95207Da2A7BcD471ee0372",
+            "weightReceived": "8012773102298975774171470",
+            "isWinner": false,
+            "rank": 11
+          },
+          {
+            "address": "0x9f2b47f969c7669D532dC8FE0F1B1907a99429fC",
+            "weightReceived": "4817917034386644681379869",
+            "isWinner": false,
+            "rank": 12
+          },
+          {
+            "address": "0x748a1D2EDd08245d0A139d3DFFfEe92312A25C26",
+            "weightReceived": "3740684671148684498775966",
+            "isWinner": false,
+            "rank": 13
+          },
+          {
+            "address": "0x59c8535419BbCb8AdFFDB3C835435E907e3B183B",
+            "weightReceived": "3355611643008942233068151",
+            "isWinner": false,
+            "rank": 14
+          },
+          {
+            "address": "0x22AB891922f566F17B9827d016C2003Da69abAb9",
+            "weightReceived": "3118686338253955762755814",
+            "isWinner": false,
+            "rank": 15
+          },
+          {
+            "address": "0xAD36C07834b1730F82014F397D470C30D2DDbf75",
+            "weightReceived": "3117394143033256308475469",
+            "isWinner": false,
+            "rank": 16
+          },
+          {
+            "address": "0x8288eb4305dF040Df3c3923eCD1146A367609eEd",
+            "weightReceived": "3115905272148257688413128",
+            "isWinner": false,
+            "rank": 17
+          },
+          {
+            "address": "0xc0F0c45940a36888CD40A2fB51aD32562D81aB06",
+            "weightReceived": "3005440109428693285572051",
+            "isWinner": false,
+            "rank": 18
+          },
+          {
+            "address": "0x914B7c77037951EBAC9e4046093e9D1C6daE1332",
+            "weightReceived": "2842644168688947977616758",
+            "isWinner": false,
+            "rank": 19
+          },
+          {
+            "address": "0x3e9d74c8173C9279826a18e9C688246431F3d112",
+            "weightReceived": "2530196418776597440615031",
+            "isWinner": false,
+            "rank": 20
+          },
+          {
+            "address": "0xB8bb9335d06De010a4208DfE8398DC5780617a01",
+            "weightReceived": "1266095581480984096306469",
+            "isWinner": false,
+            "rank": 21
+          },
+          {
+            "address": "0x8338a37Fc474d2bB0F29997458bAEA8b51765Df4",
+            "weightReceived": "500460000000000000000000",
+            "isWinner": false,
+            "rank": 22
+          },
+          {
+            "address": "0x20712Ff85833D99E7B15af8d0BE885d90cf1A354",
+            "weightReceived": "170952523957866857436955",
+            "isWinner": false,
+            "rank": 23
+          },
+          {
+            "address": "0x897c208c928a085BF3a610E633DCeB70eb7e6eAb",
+            "weightReceived": "182000000000000000000",
+            "isWinner": false,
+            "rank": 24
+          }
+        ],
+        "winners": [
+          "0x3Bd8e2AC65ad6f0F094BA6766cBd9484AB49eF23",
+          "0xf8e1492255d9428c2Fc20A98A1DeB1215C8ffEfd",
+          "0xb07dc9103328A51128bC6Cc1049d1137035f5E28",
+          "0x3E286452b1C66abB08Eb5494c3894F40aB5a59AF",
+          "0xb71ca4FFbB7b58d75Ba29891ab45e9Dc12B444Ed",
+          "0x8F10e3413586c4a8DCfcE19D009872b19e9cd8E3"
+        ],
+        "fullWeightDeadline": 18343574,
+        "proposalDeadline": 18444374
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543859048
+      "lastTrackedAt": 1768551717937
     }
   },
   "election:4": {
     "version": 1,
-    "createdAt": 1768543916308,
+    "createdAt": 1768551781908,
     "input": {
       "type": "election",
       "electionIndex": 4
@@ -21943,7 +23950,7 @@
             "data": {
               "nomineeProposalId": "9884312882007072108698168190939029598205394324410212982018382023912253424451",
               "vettingDeadline": 23569940,
-              "currentL1Block": 24245409,
+              "currentL1Block": 24246062,
               "compliantNomineeCount": 13,
               "memberProposalId": "9884312882007072108698168190939029598205394324410212982018382023912253424451"
             },
@@ -22105,10 +24112,10 @@
                 }
               ],
               "firstExecutableBlock": 23824205,
-              "currentL1Block": 24245406,
+              "currentL1Block": 24246064,
               "cachedSendProps": {
-                "sendRootSize": "156631",
-                "sendRootHash": "0x4b4a6461862112d0a238a8e37efc0e35890df49705c11ff09c58f255eb8102f2"
+                "sendRootSize": "156635",
+                "sendRootHash": "0x76bf01d0cb68f49396db9be0cd617a5fcb5b2ddb4eefc5cb6f157a0741a19e19"
               }
             },
             "executable": false,
@@ -22360,16 +24367,353 @@
         "creationTxHash": "0x82a0baf3d7e6a6b3247d5848e88732c8ebad0c46b204ff2b7c81beb3158600a6",
         "nomineeExecuteTxHash": "0xd6d394edbe03cb46ddf8356d7fe8a53dc0e6502b8bd8d0388774de91e639ea04",
         "memberExecuteTxHash": "0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697"
+      },
+      "nomineeDetails": {
+        "proposalId": "9884312882007072108698168190939029598205394324410212982018382023912253424451",
+        "electionIndex": 4,
+        "contenders": [
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "registeredAtBlock": 379426815,
+            "registrationTxHash": "0x52581b14587e9b949cb2243667d58b2bd2645d96ae7a9d19116fd8718b5700aa"
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "registeredAtBlock": 379476444,
+            "registrationTxHash": "0x7a66bdabefd2a868d58bc7a3453e154fb5dd29b7f4631a7284935c6c51874381"
+          },
+          {
+            "address": "0xf8d47784EE7F3eBD40Bd83CB822e3161742B1988",
+            "registeredAtBlock": 379530887,
+            "registrationTxHash": "0x9e2e7e99592d011558d4f8e2c1ed91a3a3480cd08a67cb631674ce8d772f9b44"
+          },
+          {
+            "address": "0x0cd9e52891A0a48d45b0C61A31086be8361Ef157",
+            "registeredAtBlock": 379547995,
+            "registrationTxHash": "0x338d7007d232d4c03856b498ff0361994090f462dbb77f30caccbfdbc27ab63d"
+          },
+          {
+            "address": "0x875573B973F7E9Ca54eb34a59180C70eE1128208",
+            "registeredAtBlock": 379690893,
+            "registrationTxHash": "0xae31eb1614cfa165a6bef618d939e3770806040e3208b489f14e0c11b6442640"
+          },
+          {
+            "address": "0xBB6F6a8AF43ea7Fe787dfF8E79d70f411e217783",
+            "registeredAtBlock": 380183799,
+            "registrationTxHash": "0x3c4dfc6142ef06bf0332be548480fe83828eb227536746a5732ebbc750d60587"
+          },
+          {
+            "address": "0x3A8b161E60Bf8f0b1fa4d14A4cDA3C5F444e9cd6",
+            "registeredAtBlock": 380200828,
+            "registrationTxHash": "0x8f555dab114f2da4808cd01b55cd21cf39520ff2f6667239bd838ca71b9e3254"
+          },
+          {
+            "address": "0x913Af9a61d1a59aA5D21CE9Bbf7Fd44Ed61dB4ce",
+            "registeredAtBlock": 380205918,
+            "registrationTxHash": "0x6b5d589a6390a290b76face3ad799b7e1aa7fbcc83f882fe76ebb4bfbc5f1e0a"
+          },
+          {
+            "address": "0x839395e20bbB182fa440d08F850E6c7A8f6F0780",
+            "registeredAtBlock": 380209217,
+            "registrationTxHash": "0x80ab4c3c9bab61b5cae45e1326ec5e24038c47a12d6a4d1b2a0f12182186e366"
+          },
+          {
+            "address": "0x391cF05fb66DF7dD46E34da0Ebf9c74e3b663c45",
+            "registeredAtBlock": 380337916,
+            "registrationTxHash": "0xc37c6837b7001ff945817caf7f339e1d9057550bbd5f0e68ce9311886ad151dd"
+          },
+          {
+            "address": "0xF948e06C29dB647ffE21b9FAB9d162c457CD6828",
+            "registeredAtBlock": 380447242,
+            "registrationTxHash": "0x08d6cc392727467e62d341689a8d29ce38c61fcdfcd8ba143922fb9ec42bda47"
+          },
+          {
+            "address": "0x9A925D87958925C4A7c7ab0Ac2F915451c0496dE",
+            "registeredAtBlock": 380457481,
+            "registrationTxHash": "0xeceb346d57e31c7b3574c1d75d691df5465b561da689c99bb59a9c694bffed32"
+          },
+          {
+            "address": "0xAF38Ef9B49A1Eda56B707dc3c0302a1f69425fA5",
+            "registeredAtBlock": 380498297,
+            "registrationTxHash": "0x2c7e7efa8fc55db691688ce90ee37ae0ca6a3d93c869781fcc2421b50844f657"
+          },
+          {
+            "address": "0x1049f9908005B303D2c93A3B9Cbe10f3b49d7943",
+            "registeredAtBlock": 380562390,
+            "registrationTxHash": "0x8d358e543f370605a2950e27d59c92ac528a4eb84147721244e6fdb8a553f93c"
+          },
+          {
+            "address": "0x4D4AC65513fEe380c596ac9EdfaC588782831bdf",
+            "registeredAtBlock": 380696005,
+            "registrationTxHash": "0x829c666e5abdcf471a95fac121b9b6be00fdd56d429581691fdeed200a7d8de1"
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "registeredAtBlock": 380825155,
+            "registrationTxHash": "0x040c69ee9aed476b5155c7074ec2cf69351ca03f3eb9a36be24bc2aca8712c5f"
+          },
+          {
+            "address": "0xA88BB92eB30113d3f4175Eb02BE45Fa232E22472",
+            "registeredAtBlock": 380892539,
+            "registrationTxHash": "0xdf56bc0c055e9e67dc2c92294f987e39c11993ce7c0f51aa804bf6fbc9ca7ddc"
+          },
+          {
+            "address": "0x3F6E511507A082B3DBFC955480EA97D33F3488ED",
+            "registeredAtBlock": 381543890,
+            "registrationTxHash": "0x61f413510c42550c70db2704d02cbc5d7aba9ad58ec106829fa1b134e178b6bb"
+          },
+          {
+            "address": "0x8243b3385372b95be03268A4De191009e9E7fe7f",
+            "registeredAtBlock": 381747552,
+            "registrationTxHash": "0xa1f5dc197768a428373a441a3128b156a4f829e1ad8369f9941ba5aa2753c4e2"
+          },
+          {
+            "address": "0x5E719C0d877095ba11df710b1F367dC38BB06c8d",
+            "registeredAtBlock": 381830115,
+            "registrationTxHash": "0xa181cbc1cbc0b5a5fdcf34be09bf955b1f1a31aca9cd8c9eb1d16c1b1371e7a1"
+          }
+        ],
+        "nominees": [
+          {
+            "address": "0x875573B973F7E9Ca54eb34a59180C70eE1128208",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x913Af9a61d1a59aA5D21CE9Bbf7Fd44Ed61dB4ce",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xf8d47784EE7F3eBD40Bd83CB822e3161742B1988",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xA88BB92eB30113d3f4175Eb02BE45Fa232E22472",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x0cd9e52891A0a48d45b0C61A31086be8361Ef157",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBB6F6a8AF43ea7Fe787dfF8E79d70f411e217783",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3F6E511507A082B3DBFC955480EA97D33F3488ED",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3A8b161E60Bf8f0b1fa4d14A4cDA3C5F444e9cd6",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9A925D87958925C4A7c7ab0Ac2F915451c0496dE",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAF38Ef9B49A1Eda56B707dc3c0302a1f69425fA5",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          }
+        ],
+        "compliantNominees": [
+          {
+            "address": "0x875573B973F7E9Ca54eb34a59180C70eE1128208",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x913Af9a61d1a59aA5D21CE9Bbf7Fd44Ed61dB4ce",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xf8d47784EE7F3eBD40Bd83CB822e3161742B1988",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xA88BB92eB30113d3f4175Eb02BE45Fa232E22472",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x0cd9e52891A0a48d45b0C61A31086be8361Ef157",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xBB6F6a8AF43ea7Fe787dfF8E79d70f411e217783",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3F6E511507A082B3DBFC955480EA97D33F3488ED",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x3A8b161E60Bf8f0b1fa4d14A4cDA3C5F444e9cd6",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0x9A925D87958925C4A7c7ab0Ac2F915451c0496dE",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          },
+          {
+            "address": "0xAF38Ef9B49A1Eda56B707dc3c0302a1f69425fA5",
+            "votesReceived": "9369469716051680329372153",
+            "isExcluded": false
+          }
+        ],
+        "excludedNominees": [],
+        "quorumThreshold": "9369469716051680329372153",
+        "targetNomineeCount": 6
+      },
+      "memberDetails": {
+        "proposalId": "9884312882007072108698168190939029598205394324410212982018382023912253424451",
+        "electionIndex": 4,
+        "nominees": [
+          {
+            "address": "0x875573B973F7E9Ca54eb34a59180C70eE1128208",
+            "weightReceived": "27533039693722577072450537",
+            "isWinner": true,
+            "rank": 1
+          },
+          {
+            "address": "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+            "weightReceived": "25161898769131030610039183",
+            "isWinner": true,
+            "rank": 2
+          },
+          {
+            "address": "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+            "weightReceived": "24395885691444958132377667",
+            "isWinner": true,
+            "rank": 3
+          },
+          {
+            "address": "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+            "weightReceived": "23238207170627885946152522",
+            "isWinner": true,
+            "rank": 4
+          },
+          {
+            "address": "0xf8d47784EE7F3eBD40Bd83CB822e3161742B1988",
+            "weightReceived": "23192651217430927019971235",
+            "isWinner": true,
+            "rank": 5
+          },
+          {
+            "address": "0x0cd9e52891A0a48d45b0C61A31086be8361Ef157",
+            "weightReceived": "22464408449517596306423882",
+            "isWinner": true,
+            "rank": 6
+          },
+          {
+            "address": "0xAF38Ef9B49A1Eda56B707dc3c0302a1f69425fA5",
+            "weightReceived": "19259892098224296777295178",
+            "isWinner": false,
+            "rank": 7
+          },
+          {
+            "address": "0xA88BB92eB30113d3f4175Eb02BE45Fa232E22472",
+            "weightReceived": "14522438133586502127602515",
+            "isWinner": false,
+            "rank": 8
+          },
+          {
+            "address": "0x3A8b161E60Bf8f0b1fa4d14A4cDA3C5F444e9cd6",
+            "weightReceived": "13006127152957194617987268",
+            "isWinner": false,
+            "rank": 9
+          },
+          {
+            "address": "0x913Af9a61d1a59aA5D21CE9Bbf7Fd44Ed61dB4ce",
+            "weightReceived": "12297334979689719157700119",
+            "isWinner": false,
+            "rank": 10
+          },
+          {
+            "address": "0x9A925D87958925C4A7c7ab0Ac2F915451c0496dE",
+            "weightReceived": "6912867593833384983392776",
+            "isWinner": false,
+            "rank": 11
+          },
+          {
+            "address": "0x3F6E511507A082B3DBFC955480EA97D33F3488ED",
+            "weightReceived": "2786334885940754025223751",
+            "isWinner": false,
+            "rank": 12
+          },
+          {
+            "address": "0xBB6F6a8AF43ea7Fe787dfF8E79d70f411e217783",
+            "weightReceived": "128019348546604765856152",
+            "isWinner": false,
+            "rank": 13
+          }
+        ],
+        "winners": [
+          "0x0cd9e52891A0a48d45b0C61A31086be8361Ef157",
+          "0xf8d47784EE7F3eBD40Bd83CB822e3161742B1988",
+          "0xe2e9d5B97d8C0457B1cf80BC93802bce4DF03e33",
+          "0x33ddb82e68940f0e4C1050885BcE8faF5Ddd1b93",
+          "0x882c6FCb3D358b9d70B97c6999159cea64168B6F",
+          "0x875573B973F7E9Ca54eb34a59180C70eE1128208"
+        ],
+        "fullWeightDeadline": 23620361,
+        "proposalDeadline": 23721161
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543916308
+      "lastTrackedAt": 1768551781908
     }
   },
   "tx:0x1801028d55ed3b8aeb9cb6f98d084ef1d3dd988c18cf71eed693b8dde7023203": {
     "version": 1,
-    "createdAt": 1768543838268,
+    "createdAt": 1768551702913,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -22582,12 +24926,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838268
+      "lastTrackedAt": 1768551702913
     }
   },
   "tx:0xc61639a47f41bfc649739f7ce7c2c37f24647e578bb8cf1d95696e872db149cf": {
     "version": 1,
-    "createdAt": 1768543838268,
+    "createdAt": 1768551702913,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -22912,12 +25256,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838268
+      "lastTrackedAt": 1768551702913
     }
   },
   "tx:0x0c4cb0c4f24523d2cc97eec267ccc523da5ee6748b9e7865b1718621eb3d8d5e": {
     "version": 1,
-    "createdAt": 1768543838268,
+    "createdAt": 1768551702913,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -23322,12 +25666,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838268
+      "lastTrackedAt": 1768551702913
     }
   },
   "tx:0xa0d5366b53fc16ad524446a74f19cad23de4c96a939dfcd64555b3b12036c700": {
     "version": 1,
-    "createdAt": 1768543838269,
+    "createdAt": 1768551702915,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -23732,12 +26076,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838269
+      "lastTrackedAt": 1768551702915
     }
   },
   "tx:0xe23235a59e89935128ff73f642e9857e1d2845a12cb2d8fe1a2e68129e234d1d": {
     "version": 1,
-    "createdAt": 1768543838268,
+    "createdAt": 1768551702915,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -24142,12 +26486,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838268
+      "lastTrackedAt": 1768551702915
     }
   },
   "tx:0xe1588fffcbe75975a2e7ebf1da7cdb401c395881ed389426b1e55c2a0c508cb2": {
     "version": 1,
-    "createdAt": 1768543838269,
+    "createdAt": 1768551702915,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -24423,12 +26767,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838269
+      "lastTrackedAt": 1768551702915
     }
   },
   "tx:0xc6c11213cb01dc1f5b68bebe93e9442cbc545416a2e7d954afb56e29971cbc0a": {
     "version": 1,
-    "createdAt": 1768543838269,
+    "createdAt": 1768551702916,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -24833,12 +27177,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838269
+      "lastTrackedAt": 1768551702916
     }
   },
   "tx:0x071a06323c0c926b817589bc82207d20792b8bcff580330f7c7aef5d91e7b11e": {
     "version": 1,
-    "createdAt": 1768543838269,
+    "createdAt": 1768551702916,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -25243,12 +27587,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838269
+      "lastTrackedAt": 1768551702916
     }
   },
   "tx:0xd4ab5fad62c72927281dd08494e5ec5e9c9fb7e9f1e335a4b88231aca403be58": {
     "version": 1,
-    "createdAt": 1768543838269,
+    "createdAt": 1768551702916,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -25653,12 +27997,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838269
+      "lastTrackedAt": 1768551702916
     }
   },
   "tx:0xf41a266144273f65c384536c0932f589a42e9c669d8603d94423a885627ca697": {
     "version": 1,
-    "createdAt": 1768543838271,
+    "createdAt": 1768551702917,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -26063,12 +28407,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838271
+      "lastTrackedAt": 1768551702917
     }
   },
   "tx:0x1cd9036db95862387036d71bf8ec77f17a494dcd7f75fbebf2eb61885f433f1f": {
     "version": 1,
-    "createdAt": 1768543838271,
+    "createdAt": 1768551702917,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -26473,12 +28817,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543838271
+      "lastTrackedAt": 1768551702917
     }
   },
   "tx:0xeb0d3cbfb6e2f7adc1c02eb67cdb36d7b7349c237ab67c2795d36fcc667586cb": {
     "version": 1,
-    "createdAt": 1768543843367,
+    "createdAt": 1768551702917,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
@@ -26883,7 +29227,7 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768543843367
+      "lastTrackedAt": 1768551702917
     }
   }
 }

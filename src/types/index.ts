@@ -121,6 +121,12 @@ export {
   // Election detail aggregates
   NomineeElectionDetails,
   MemberElectionDetails,
+  // Serializable types for caching
+  SerializableContender,
+  SerializableNominee,
+  SerializableMemberNominee,
+  SerializableNomineeDetails,
+  SerializableMemberDetails,
 } from "./election";
 
 // Calldata decoding types

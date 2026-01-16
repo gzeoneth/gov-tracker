@@ -269,6 +269,41 @@ export const GOVERNANCE_STAGE_DURATION_DAYS = {
   TOTAL_ONCHAIN_NON_CONSTITUTIONAL: 21,
 } as const;
 
+/**
+ * Security Council election phase durations in seconds
+ *
+ * Elections proceed through three phases:
+ * 1. Nominee Selection - ARB holders vote to select nominees
+ * 2. Vetting Period - Foundation reviews/vets nominees
+ * 3. Member Election - ARB holders vote to elect final members
+ *
+ * @see https://docs.arbitrum.foundation/concepts/security-council
+ */
+export const ELECTION_TIMING = {
+  /** Nominee selection phase: 7 days */
+  NOMINEE_SELECTION_SECONDS: 7 * 24 * 60 * 60,
+  /** Nominee selection phase in days */
+  NOMINEE_SELECTION_DAYS: 7,
+
+  /** Vetting period: 7 days */
+  VETTING_PERIOD_SECONDS: 7 * 24 * 60 * 60,
+  /** Vetting period in days */
+  VETTING_PERIOD_DAYS: 7,
+
+  /** Member election phase: 21 days */
+  MEMBER_ELECTION_SECONDS: 21 * 24 * 60 * 60,
+  /** Member election phase in days */
+  MEMBER_ELECTION_DAYS: 21,
+
+  /** Total election duration: 35 days (7 + 7 + 21) */
+  TOTAL_ELECTION_SECONDS: 35 * 24 * 60 * 60,
+  /** Total election duration in days */
+  TOTAL_ELECTION_DAYS: 35,
+
+  /** Voting delay for elections: 7 days in L1 blocks */
+  VOTING_DELAY_L1_BLOCKS: 7 * 24 * 60 * 5, // 50400 blocks at 12s/block
+} as const;
+
 // Chunking Configuration
 
 /**

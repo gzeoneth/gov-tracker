@@ -91,6 +91,67 @@ export interface MemberElectionDetails {
   proposalDeadline: number;
 }
 
+// ============================================================================
+// Serializable Election Detail Types (for caching)
+// ============================================================================
+
+/**
+ * Serializable contender (for JSON caching)
+ */
+export interface SerializableContender {
+  address: string;
+  registeredAtBlock: number;
+  registrationTxHash: string;
+}
+
+/**
+ * Serializable nominee (BigNumber converted to string for JSON caching)
+ */
+export interface SerializableNominee {
+  address: string;
+  votesReceived: string;
+  isExcluded: boolean;
+  nominatedAtBlock?: number;
+  excludedAtBlock?: number;
+  exclusionTxHash?: string;
+}
+
+/**
+ * Serializable member election nominee (BigNumber converted to string for JSON caching)
+ */
+export interface SerializableMemberNominee {
+  address: string;
+  weightReceived: string;
+  isWinner: boolean;
+  rank: number;
+}
+
+/**
+ * Serializable nominee election details (for JSON caching in bundled cache)
+ */
+export interface SerializableNomineeDetails {
+  proposalId: string;
+  electionIndex: number;
+  contenders: SerializableContender[];
+  nominees: SerializableNominee[];
+  compliantNominees: SerializableNominee[];
+  excludedNominees: SerializableNominee[];
+  quorumThreshold: string;
+  targetNomineeCount: number;
+}
+
+/**
+ * Serializable member election details (for JSON caching in bundled cache)
+ */
+export interface SerializableMemberDetails {
+  proposalId: string;
+  electionIndex: number;
+  nominees: SerializableMemberNominee[];
+  winners: string[];
+  fullWeightDeadline: number;
+  proposalDeadline: number;
+}
+
 /**
  * Cohort identifier for Security Council elections
  */
@@ -126,7 +187,7 @@ export interface ElectionProposalStatus {
   /** True when member election succeeded and can be executed to install new council */
   canExecuteMember: boolean;
 
-  /** Stage tracking fields (v0.3.0+) */
+  /** Stage tracking fields */
   stages?: import("./stages").TrackedStage[];
   isFailed?: boolean;
   failureReason?: string;

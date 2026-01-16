@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Full A→B→C transaction preparation: `prepareElectionCreation()`, `prepareMemberElectionTrigger()`, `prepareMemberElectionExecution()`
   - Detailed participant tracking: contenders, nominees, votes, rankings
 
+- **Election API Improvements** - Based on client feedback:
+  - `getElectionCount(l2Provider)` - Lightweight function to get election count (single multicall, no L1 block fetch)
+  - `ELECTION_TIMING` constants - Phase durations in seconds and days (nominee selection: 7d, vetting: 7d, member election: 21d)
+  - Bundled cache now includes nominee/member details for COMPLETED elections (zero RPC for historical data)
+
 - **CLI Enhancements**:
   - Election auto-switch: displays election status instead of 7 NOT_STARTED stages when tracking `createElection` tx
   - `--inspect` / `-i` flag: track AND decode calldata (vs `--inspect-only` which skips tracking)

@@ -34,6 +34,7 @@ vi.mock("../src/election/contracts", () => ({
 
 // Import the module under test after mocking
 import {
+  getElectionCount,
   determineElectionPhase,
   checkElectionStatus,
   hasVettingPeriod,
@@ -50,6 +51,64 @@ describe("election/status", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe("getElectionCount", () => {
+    it("should return election count from multicall", async () => {
+      // #given
+      const mockL2Provider = {} as any;
+      const electionCount = BigNumber.from(5);
+      vi.mocked(multicall).mockResolvedValueOnce([electionCount]);
+
+      // #when
+      const result = await getElectionCount(mockL2Provider);
+
+      // #then
+      expect(result).toBe(5);
+      expect(multicall).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return zero for no elections", async () => {
+      // #given
+      const mockL2Provider = {} as any;
+      const electionCount = BigNumber.from(0);
+      vi.mocked(multicall).mockResolvedValueOnce([electionCount]);
+
+      // #when
+      const result = await getElectionCount(mockL2Provider);
+
+      // #then
+      expect(result).toBe(0);
+    });
+
+    it("should use custom governor address when provided", async () => {
+      // #given
+      const mockL2Provider = {} as any;
+      const customGovernor = "0xCustomGovernor";
+      const electionCount = BigNumber.from(3);
+      vi.mocked(multicall).mockResolvedValueOnce([electionCount]);
+
+      // #when
+      const result = await getElectionCount(mockL2Provider, customGovernor);
+
+      // #then
+      expect(result).toBe(3);
+    });
+
+    it("should make only one multicall (lightweight)", async () => {
+      // #given
+      const mockL2Provider = {} as any;
+      const electionCount = BigNumber.from(10);
+      vi.mocked(multicall).mockResolvedValueOnce([electionCount]);
+
+      // #when
+      await getElectionCount(mockL2Provider);
+
+      // #then - verify it's lightweight (single multicall, no L1 block fetch)
+      expect(multicall).toHaveBeenCalledTimes(1);
+      expect(getL1BlockNumberFromL2).not.toHaveBeenCalled();
+      expect(queryWithRetry).not.toHaveBeenCalled();
+    });
   });
 
   describe("determineElectionPhase", () => {

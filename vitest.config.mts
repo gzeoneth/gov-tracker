@@ -15,6 +15,7 @@ export default defineConfig({
         "dist/**",
         "*.config.*",
         "src/cli/cli.ts", // CLI entrypoint - not library code
+        "src/cli/tui/**", // TUI code - interactive only
       ],
     },
     // 2 minute timeout covers 99% of tests

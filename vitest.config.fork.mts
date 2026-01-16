@@ -21,6 +21,7 @@ export default defineConfig({
         "dist/**",
         "*.config.*",
         "src/cli/cli.ts",
+        "src/cli/tui/**",
       ],
       // Output to separate directory for merging
       reportsDirectory: "coverage-fork",

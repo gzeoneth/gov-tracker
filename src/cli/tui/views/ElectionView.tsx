@@ -18,6 +18,7 @@ import {
 import type { ElectionStatus, ElectionProposalStatus } from "../../../types/index.js";
 import { useElectionData } from "../hooks/useElectionData.js";
 import { getTxUrl } from "../../../constants.js";
+import { formatDate, ELECTION_PHASE_COLORS, ELECTION_PHASE_ICONS } from "../utils/index.js";
 
 interface ElectionViewProps {
   navigation: UseNavigationResult;
@@ -31,27 +32,7 @@ interface DisplayLine {
   dimColor?: boolean;
 }
 
-const PHASE_COLORS: Record<string, string> = {
-  COMPLETED: "green",
-  MEMBER_ELECTION: "yellow",
-  NOMINEE_SELECTION: "yellow",
-  VETTING_PERIOD: "cyan",
-  PENDING_EXECUTION: "magenta",
-  NOT_STARTED: "gray",
-};
 
-const PHASE_ICONS: Record<string, string> = {
-  COMPLETED: "✓",
-  MEMBER_ELECTION: "●",
-  NOMINEE_SELECTION: "●",
-  VETTING_PERIOD: "◐",
-  PENDING_EXECUTION: "→",
-  NOT_STARTED: "○",
-};
-
-function formatTimestamp(ts: number): string {
-  return new Date(ts * 1000).toLocaleString();
-}
 
 function buildStatusLines(status: ElectionStatus): DisplayLine[] {
   const lines: DisplayLine[] = [];
@@ -63,7 +44,7 @@ function buildStatusLines(status: ElectionStatus): DisplayLine[] {
   lines.push({ text: `  Can Create: ${status.canCreateElection ? "Yes" : "No"}`, color: status.canCreateElection ? "green" : "gray" });
 
   if (!status.canCreateElection && status.nextElectionTimestamp > 0) {
-    lines.push({ text: `  Next Election: ${formatTimestamp(status.nextElectionTimestamp)} (${status.timeUntilElection})` });
+    lines.push({ text: `  Next Election: ${formatDate(status.nextElectionTimestamp * 1000)} (${status.timeUntilElection})` });
   }
 
   lines.push({ text: "" });
@@ -76,8 +57,8 @@ function buildListLines(proposals: ElectionProposalStatus[], selectedIndex: numb
   for (let i = 0; i < proposals.length; i++) {
     const election = proposals[i];
     const isSelected = i === selectedIndex;
-    const icon = PHASE_ICONS[election.phase] ?? "○";
-    const phaseColor = PHASE_COLORS[election.phase] ?? "gray";
+    const icon = ELECTION_PHASE_ICONS[election.phase] ?? "○";
+    const phaseColor = ELECTION_PHASE_COLORS[election.phase] ?? "gray";
     const prefix = isSelected ? "> " : "  ";
     const phaseName = election.phase.replace(/_/g, " ");
     const cohortName = election.cohort === 0 ? "First" : "Second";
@@ -116,8 +97,8 @@ function buildListLines(proposals: ElectionProposalStatus[], selectedIndex: numb
 
 function buildDetailLines(election: ElectionProposalStatus): DisplayLine[] {
   const lines: DisplayLine[] = [];
-  const icon = PHASE_ICONS[election.phase] ?? "○";
-  const phaseColor = PHASE_COLORS[election.phase] ?? "gray";
+  const icon = ELECTION_PHASE_ICONS[election.phase] ?? "○";
+  const phaseColor = ELECTION_PHASE_COLORS[election.phase] ?? "gray";
   const phaseName = election.phase.replace(/_/g, " ");
   const cohortName = election.cohort === 0 ? "FIRST" : "SECOND";
 

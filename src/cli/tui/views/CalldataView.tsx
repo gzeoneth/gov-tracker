@@ -2,10 +2,10 @@
  * Decoded calldata view with foldable long values (no truncation)
  */
 
-import { React, useState, useMemo, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, useState, useMemo, Box, Text } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
-import { useStageCalldata } from "../hooks/index.js";
+import { useStageCalldata, useScrollableInput } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import {
   ScrollIndicatorTop,
@@ -18,6 +18,7 @@ import {
   filterVisibleLines,
   getAllFoldableKeys,
   toggleFoldKey,
+  truncate,
 } from "../utils/index.js";
 
 interface CalldataViewProps {
@@ -46,38 +47,6 @@ export function CalldataView({
   const visibleCount = getVisibleRows(RESERVED_LINES);
   const allFoldableKeys = getAllFoldableKeys(allLines);
 
-  useInput((input: string, key: KeyInput) => {
-    if (input === "b" || key.escape) {
-      navigation.back();
-    } else if (input === "?") {
-      navigation.goToHelp();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(displayLines.length);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(displayLines.length);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(displayLines.length);
-    } else if (key.leftArrow) {
-      navigation.prevAction();
-    } else if (key.rightArrow) {
-      navigation.nextAction(actions.length);
-    } else if (input === "e") {
-      setExpandedKeys(new Set(allFoldableKeys));
-      navigation.goToTop();
-    } else if (input === "c") {
-      setExpandedKeys(new Set());
-      navigation.goToTop();
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(displayLines.length);
-    } else if (key.return) {
-      handleToggleFold();
-    }
-  });
-
   function handleToggleFold(): void {
     const safeIdx = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
     const currentLine = displayLines[safeIdx];
@@ -86,12 +55,44 @@ export function CalldataView({
     }
   }
 
+  useScrollableInput({
+    navigation,
+    itemCount: displayLines.length,
+    extraHandlers: (input, key) => {
+      if (input === "?") {
+        navigation.goToHelp();
+        return true;
+      }
+      if (key.leftArrow) {
+        navigation.prevAction();
+        return true;
+      }
+      if (key.rightArrow) {
+        navigation.nextAction(actions.length);
+        return true;
+      }
+      if (input === "e") {
+        setExpandedKeys(new Set(allFoldableKeys));
+        navigation.goToTop();
+        return true;
+      }
+      if (input === "c") {
+        setExpandedKeys(new Set());
+        navigation.goToTop();
+        return true;
+      }
+      if (key.return) {
+        handleToggleFold();
+        return true;
+      }
+      return false;
+    },
+  });
+
   const safeOffset = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
   const visibleLines = displayLines.slice(safeOffset, safeOffset + visibleCount);
 
-  const shortTitle = proposal.title.length > 30
-    ? proposal.title.substring(0, 30) + "..."
-    : proposal.title;
+  const shortTitle = truncate(proposal.title, 30);
 
   const breadcrumb = ["Proposals", shortTitle, "Calldata"];
 

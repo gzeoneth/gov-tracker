@@ -4,44 +4,12 @@
 
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { TrackedStage } from "../../../types/index.js";
+import { STAGE_TYPES, getStatusIcon, getStatusColor } from "../utils/index.js";
 
 interface StageProgressProps {
   stages: TrackedStage[];
   currentIndex: number;
   totalStages?: number;
-}
-
-const STAGE_TYPES = [
-  "PROPOSAL_CREATED",
-  "VOTING_ACTIVE",
-  "PROPOSAL_QUEUED",
-  "L2_TIMELOCK",
-  "L2_TO_L1_MESSAGE",
-  "L1_TIMELOCK",
-  "RETRYABLE_EXECUTED",
-];
-
-function getStatusIcon(stage: TrackedStage | undefined): string {
-  if (!stage) return "○";
-  switch (stage.status) {
-    case "COMPLETED": return "●";
-    case "READY": return "◉";
-    case "PENDING": return "◐";
-    case "FAILED": return "✗";
-    case "SKIPPED": return "○";
-    default: return "○";
-  }
-}
-
-function getStatusColor(stage: TrackedStage | undefined): string {
-  if (!stage) return "gray";
-  switch (stage.status) {
-    case "COMPLETED": return "green";
-    case "READY": return "cyan";
-    case "PENDING": return "yellow";
-    case "FAILED": return "red";
-    default: return "gray";
-  }
 }
 
 export function StageProgress({

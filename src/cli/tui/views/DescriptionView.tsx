@@ -8,7 +8,7 @@ import type { UseNavigationResult } from "../hooks/index.js";
 import { useScrollableInput } from "../hooks/useScrollableInput.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { ScrollIndicatorTop, ScrollIndicatorBottom, ScrollPosition } from "../components/ScrollIndicator.js";
-import { getVisibleRows, parseMarkdown } from "../utils/index.js";
+import { getVisibleRows, parseMarkdown, truncate } from "../utils/index.js";
 import type { MarkdownLine } from "../utils/index.js";
 
 interface DescriptionViewProps {
@@ -63,7 +63,7 @@ export function DescriptionView({ proposal, navigation }: DescriptionViewProps):
     },
   });
 
-  const shortTitle = proposal.title.length > 30 ? proposal.title.substring(0, 30) + "..." : proposal.title;
+  const shortTitle = truncate(proposal.title, 30);
 
   return (
     <ViewLayout view="description" title="Proposal Description" breadcrumb={["Proposals", shortTitle, "Description"]}>

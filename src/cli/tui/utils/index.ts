@@ -21,3 +21,10 @@ export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";
 export { formatDate, getTxHash, getProposalIdDisplay } from "./proposal-detail-helpers.js";
 export { clamp, cycleArray, getNavigationAction, applyNavigation } from "./navigation.js";
 export type { NavigationAction } from "./navigation.js";
+export {
+  STAGE_TYPES,
+  getStatusIcon,
+  getStatusColor,
+  ELECTION_PHASE_COLORS,
+  ELECTION_PHASE_ICONS,
+} from "./stage-status.js";

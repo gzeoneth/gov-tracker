@@ -2,9 +2,10 @@
  * Stage detail view showing full stage information
  */
 
-import { React, Box, Text, useInput, KeyInput } from "../ink-wrapper.js";
+import { React, Box, Text } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
+import { useScrollableInput } from "../hooks/useScrollableInput.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import {
@@ -16,6 +17,7 @@ import {
   getVisibleRows,
   CHAIN_TO_CHAIN_ID,
   formatStageData,
+  truncate,
 } from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { getTxUrl } from "../../../constants.js";
@@ -40,31 +42,19 @@ export function StageView({
   const dataItems = stage ? formatStageData(stage) : [];
   const visibleRows = getVisibleRows(RESERVED_LINES);
 
-  useInput((input: string, key: KeyInput) => {
-    const itemCount = dataItems.length;
-
-    if (input === "b" || key.escape) {
-      navigation.back();
-    } else if (key.upArrow || input === "k") {
-      navigation.moveUp();
-    } else if (key.downArrow || input === "j") {
-      navigation.moveDown(itemCount);
-    } else if (key.pageUp || (key.ctrl && input === "u")) {
-      navigation.pageUp(itemCount);
-    } else if (key.pageDown || (key.ctrl && input === "d")) {
-      navigation.pageDown(itemCount);
-    } else if (input === "g") {
-      navigation.goToTop();
-    } else if (input === "G") {
-      navigation.goToBottom(itemCount);
-    } else if (input === "?") {
-      navigation.goToHelp();
-    }
+  useScrollableInput({
+    navigation,
+    itemCount: dataItems.length,
+    extraHandlers: (input) => {
+      if (input === "?") {
+        navigation.goToHelp();
+        return true;
+      }
+      return false;
+    },
   });
 
-  const shortTitle = proposal.title.length > 30
-    ? proposal.title.substring(0, 30) + "..."
-    : proposal.title;
+  const shortTitle = truncate(proposal.title, 30);
 
   const breadcrumb = ["Proposals", shortTitle, stageTitle || "Stage"];
 

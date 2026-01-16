@@ -60,3 +60,12 @@ export function cycleArray<T>(array: readonly T[], current: T): T {
   const nextIndex = (array.indexOf(current) + 1) % array.length;
   return array[nextIndex];
 }
+
+export function parseProgress(stageProgress: string): { current: number; total: number } | null {
+  const match = stageProgress.match(/(\d+)\/(\d+)/);
+  if (!match) return null;
+  const current = parseInt(match[1], 10);
+  const total = parseInt(match[2], 10);
+  if (total <= 0 || current < 0) return null;
+  return { current, total };
+}

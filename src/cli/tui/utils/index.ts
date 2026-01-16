@@ -30,6 +30,7 @@ export {
   cycleArray,
   getNavigationAction,
   applyNavigation,
+  parseProgress,
   SORT_LABELS,
   SORT_LABELS_SHORT,
 } from "./navigation.js";

@@ -5,7 +5,7 @@
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { ProposalListItem } from "../types.js";
 import { StatusBadge } from "./StatusBadge.js";
-import { getTerminalSize, truncate } from "../utils/index.js";
+import { getTerminalSize, truncate, parseProgress, MS_PER_DAY } from "../utils/index.js";
 
 interface ProposalRowProps {
   item: ProposalListItem;
@@ -30,29 +30,15 @@ function getTypeColor(item: ProposalListItem): string {
 function formatAge(timestamp: number | null): string {
   if (timestamp === null) return "--";
 
-  const now = Date.now();
-  const diffMs = now - timestamp;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffMs = Date.now() - timestamp;
+  const diffDays = Math.floor(diffMs / MS_PER_DAY);
 
   if (diffDays < 0) return "future";
   if (diffDays === 0) return "today";
   if (diffDays === 1) return "1d ago";
   if (diffDays < 30) return `${diffDays}d ago`;
-  if (diffDays < 365) {
-    const months = Math.floor(diffDays / 30);
-    return `${months}mo ago`;
-  }
-  const years = Math.floor(diffDays / 365);
-  return `${years}y ago`;
-}
-
-function parseProgress(stageProgress: string): { current: number; total: number } | null {
-  const match = stageProgress.match(/(\d+)\/(\d+)/);
-  if (!match) return null;
-  const current = parseInt(match[1], 10);
-  const total = parseInt(match[2], 10);
-  if (total <= 0 || current < 0) return null;
-  return { current, total };
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
 }
 
 function renderProgressBar(progress: { current: number; total: number }): string {

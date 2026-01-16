@@ -82,19 +82,11 @@ export function HelpView({ navigation }: HelpViewProps): React.ReactElement {
             <ScrollPosition scrollOffset={state.scrollOffset} visibleRows={visibleRows} totalItems={allLines.length} />
           </Box>
         )}
-        {state.scrollOffset > 0 && (
-          <Box marginBottom={1}>
-            <ScrollIndicatorTop scrollOffset={state.scrollOffset} />
-          </Box>
-        )}
+        <ScrollIndicatorTop scrollOffset={state.scrollOffset} />
 
         {visibleLines.map(renderLine)}
 
-        {state.scrollOffset + visibleRows < allLines.length && (
-          <Box marginTop={1}>
-            <ScrollIndicatorBottom scrollOffset={state.scrollOffset} visibleRows={visibleRows} totalItems={allLines.length} />
-          </Box>
-        )}
+        <ScrollIndicatorBottom scrollOffset={state.scrollOffset} visibleRows={visibleRows} totalItems={allLines.length} />
       </Box>
 
       <Box borderStyle="single" borderColor="gray" paddingX={1}>

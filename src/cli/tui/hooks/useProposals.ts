@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { TrackingCheckpoint, StageType } from "../../../types/index.js";
 import type { ProposalListItem, FilterType, SortType, CacheData } from "../types.js";
 import { isElectionGovernor } from "../../../constants.js";
+import { parseProgress } from "../utils/index.js";
 
 type ProposalCreatedData = { description?: string; proposalType?: string };
 type VotingData = { proposalState?: string };
@@ -102,12 +103,12 @@ const FILTER_FN: Record<FilterType, (item: ProposalListItem) => boolean> = {
 };
 
 const STATUS_ORDER: Record<string, number> = { active: 0, complete: 1, failed: 2 };
-const parseProgress = (p: string) => parseInt(p.match(/^(\d+)/)?.[1] ?? "0", 10);
 
 const SORT_FN: Record<SortType, (a: ProposalListItem, b: ProposalListItem) => number> = {
   newest: (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0),
   oldest: (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0),
-  progress: (a, b) => parseProgress(b.stageProgress) - parseProgress(a.stageProgress),
+  progress: (a, b) =>
+    (parseProgress(b.stageProgress)?.current ?? 0) - (parseProgress(a.stageProgress)?.current ?? 0),
   status: (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
 };
 

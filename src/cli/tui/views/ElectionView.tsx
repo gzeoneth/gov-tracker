@@ -156,16 +156,16 @@ function buildDetailLines(election: ElectionProposalStatus): DisplayLine[] {
 const RESERVED_LINES = 8;
 
 export function ElectionView({ navigation, cachePath }: ElectionViewProps): React.ReactElement {
+  const { state } = navigation;
   const electionData = useElectionData({ cachePath });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
-  const [scrollOffset, setScrollOffset] = useState(0);
 
   useEffect(() => {
     setSelectedIndex(0);
     setShowDetails(false);
-    setScrollOffset(0);
-  }, [electionData.proposals.length]);
+    navigation.goToTop();
+  }, [electionData.proposals.length, navigation]);
 
   const selectedElection = electionData.proposals[selectedIndex];
 
@@ -193,13 +193,13 @@ export function ElectionView({ navigation, cachePath }: ElectionViewProps): Reac
   }, [electionData.status, electionData.proposals, selectedIndex, showDetails, selectedElection]);
 
   const visibleCount = getVisibleRows(RESERVED_LINES);
-  const visibleLines = lines.slice(scrollOffset, scrollOffset + visibleCount);
+  const visibleLines = lines.slice(state.scrollOffset, state.scrollOffset + visibleCount);
 
   useInput((input: string, key: KeyInput) => {
     if (input === "b" || key.escape) {
       if (showDetails) {
         setShowDetails(false);
-        setScrollOffset(0);
+        navigation.goToTop();
       } else {
         navigation.back();
       }
@@ -215,7 +215,7 @@ export function ElectionView({ navigation, cachePath }: ElectionViewProps): Reac
 
     if (showDetails) {
       const maxOffset = Math.max(0, lines.length - visibleCount);
-      if (action) setScrollOffset((prev) => applyNavigation(prev, action, maxOffset));
+      if (action) navigation.setScrollOffset(applyNavigation(state.scrollOffset, action, maxOffset));
       return;
     }
 
@@ -229,7 +229,7 @@ export function ElectionView({ navigation, cachePath }: ElectionViewProps): Reac
 
     if ((key.return || input === "l") && selectedElection) {
       setShowDetails(true);
-      setScrollOffset(0);
+      navigation.goToTop();
     }
   });
 
@@ -243,11 +243,11 @@ export function ElectionView({ navigation, cachePath }: ElectionViewProps): Reac
 
       {lines.length > visibleCount && (
         <Box marginBottom={1}>
-          <ScrollPosition scrollOffset={scrollOffset} visibleRows={visibleCount} totalItems={lines.length} />
+          <ScrollPosition scrollOffset={state.scrollOffset} visibleRows={visibleCount} totalItems={lines.length} />
         </Box>
       )}
 
-      {scrollOffset > 0 && <ScrollIndicatorTop scrollOffset={scrollOffset} unit="lines" />}
+      <ScrollIndicatorTop scrollOffset={state.scrollOffset} unit="lines" />
 
       {visibleLines.map((line, i) => (
         <Text key={i} color={line.color} bold={line.bold} dimColor={line.dimColor}>
@@ -255,9 +255,7 @@ export function ElectionView({ navigation, cachePath }: ElectionViewProps): Reac
         </Text>
       ))}
 
-      {scrollOffset + visibleCount < lines.length && (
-        <ScrollIndicatorBottom scrollOffset={scrollOffset} visibleRows={visibleCount} totalItems={lines.length} unit="lines" />
-      )}
+      <ScrollIndicatorBottom scrollOffset={state.scrollOffset} visibleRows={visibleCount} totalItems={lines.length} unit="lines" />
     </ViewLayout>
   );
 }

@@ -110,6 +110,19 @@ export type {
   ElectionProposalStatus,
   ElectionStatus,
   ElectionCheckResult,
+  // Election participant types
+  ElectionContender,
+  ElectionNominee,
+  MemberElectionNominee,
+  // Election detail aggregates
+  NomineeElectionDetails,
+  MemberElectionDetails,
+  // Serializable types for caching
+  SerializableContender,
+  SerializableNominee,
+  SerializableMemberNominee,
+  SerializableNomineeDetails,
+  SerializableMemberDetails,
   // Calldata decoding types
   DecodingSource,
   DecodedCalldata,
@@ -332,6 +345,9 @@ export {
   getExcludedNominees,
   getNomineeElectionDetails,
   getMemberElectionDetails,
+  // Election details serialization
+  serializeNomineeDetails,
+  serializeMemberDetails,
 } from "./election";
 export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
 

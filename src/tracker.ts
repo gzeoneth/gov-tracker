@@ -357,15 +357,32 @@ export class ProposalStageTracker {
   /**
    * Get an election checkpoint from cache.
    *
+   * For COMPLETED elections, includes cached nominee/member details:
+   * - nomineeDetails: Contenders, nominees, excluded nominees, quorum threshold
+   * - memberDetails: Final nominee rankings, winners, voting deadlines
+   *
    * @param electionIndex - Election index
-   * @returns Election status or null if not cached
+   * @returns Election data or null if not cached
    */
-  async getElectionCheckpoint(electionIndex: number): Promise<ElectionProposalStatus | null> {
+  async getElectionCheckpoint(electionIndex: number): Promise<{
+    status: ElectionProposalStatus;
+    nomineeDetails: SerializableNomineeDetails | null;
+    memberDetails: SerializableMemberDetails | null;
+  } | null> {
     if (!this.cache) return null;
 
     const key = `election:${electionIndex}`;
     const checkpoint = await this.cache.get<TrackingCheckpoint>(key);
-    return checkpoint?.cachedData?.electionStatus ?? null;
+
+    if (!checkpoint?.cachedData?.electionStatus) {
+      return null;
+    }
+
+    return {
+      status: checkpoint.cachedData.electionStatus,
+      nomineeDetails: checkpoint.cachedData.nomineeDetails ?? null,
+      memberDetails: checkpoint.cachedData.memberDetails ?? null,
+    };
   }
 
   // Discovery API
@@ -974,9 +991,9 @@ export class ProposalStageTracker {
     // Check cache first for completed elections (skip RPC calls)
     if (this.cache && !options.force) {
       const cached = await this.getElectionCheckpoint(electionIndex);
-      if (cached && cached.phase === "COMPLETED") {
+      if (cached && cached.status.phase === "COMPLETED") {
         logTracker("returning cached COMPLETED election %d (0 RPC calls)", electionIndex);
-        return cached;
+        return cached.status;
       }
     }
 
@@ -1041,9 +1058,9 @@ export class ProposalStageTracker {
         // Check cache first for completed elections (skip RPC calls)
         if (this.cache && !options.force) {
           const cached = await this.getElectionCheckpoint(i);
-          if (cached && cached.phase === "COMPLETED") {
+          if (cached && cached.status.phase === "COMPLETED") {
             logTracker("returning cached COMPLETED election %d (0 RPC calls)", i);
-            results.push(cached);
+            results.push(cached.status);
             continue;
           }
         }

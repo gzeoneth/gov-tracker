@@ -109,7 +109,7 @@ The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 p
 
 ### Elections
 
-Security Council elections use a separate 6-phase state machine.
+Security Council elections use a separate 7-phase state machine.
 
 #### Check Election Status
 
@@ -194,14 +194,15 @@ const cached = await tracker.getElectionCheckpoint(0);
 
 #### Election Phases
 
-| Phase | Description | Action Available |
-|-------|-------------|------------------|
-| `NOT_STARTED` | Election hasn't begun | `prepareElectionCreation()` if `canCreateElection` |
-| `NOMINEE_SELECTION` | Nominee voting active | Wait for voting |
-| `VETTING_PERIOD` | 7-day vetting period | `prepareMemberElectionTrigger()` after vetting ends |
-| `MEMBER_ELECTION` | Member voting active | Wait for voting |
-| `PENDING_EXECUTION` | Awaiting execution | `prepareMemberElectionExecution()` if `canExecuteMember` |
-| `COMPLETED` | Fully executed | None |
+| Phase | Duration | Description | Action Available |
+|-------|----------|-------------|------------------|
+| `NOT_STARTED` | - | Election hasn't begun | `prepareElectionCreation()` if `canCreateElection` |
+| `CONTENDER_SUBMISSION` | 7 days | DAO members declare candidacy | Wait for submission period |
+| `NOMINEE_SELECTION` | 7 days | Voting for contenders | Wait for voting |
+| `VETTING_PERIOD` | 14 days | Foundation compliance review | `prepareMemberElectionTrigger()` after vetting ends |
+| `MEMBER_ELECTION` | 21 days | Voting for council members | Wait for voting |
+| `PENDING_EXECUTION` | - | Awaiting execution | `prepareMemberElectionExecution()` if `canExecuteMember` |
+| `COMPLETED` | - | Fully executed | None |
 
 #### Detailed Election Tracking
 

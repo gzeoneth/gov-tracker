@@ -264,7 +264,7 @@ describe("election/status", () => {
       expect(result).toBe("NOMINEE_SELECTION");
     });
 
-    it("should return NOMINEE_SELECTION when nominee proposal is Pending", () => {
+    it("should return CONTENDER_SUBMISSION when nominee proposal is Pending", () => {
       // #given
       const nomineeProposalState: ProposalState = "Pending";
       const memberProposalId: string | null = null;
@@ -280,7 +280,7 @@ describe("election/status", () => {
       );
 
       // #then
-      expect(result).toBe("NOMINEE_SELECTION");
+      expect(result).toBe("CONTENDER_SUBMISSION");
     });
 
     it("should return PENDING_EXECUTION when nominee proposal is Succeeded", () => {

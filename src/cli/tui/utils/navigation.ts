@@ -3,8 +3,23 @@
  */
 
 import type { KeyInput } from "../ink-wrapper.js";
+import type { SortType } from "../types.js";
 
 export type NavigationAction = "up" | "down" | "pageUp" | "pageDown" | "top" | "bottom" | null;
+
+export const SORT_LABELS: Record<SortType, string> = {
+  newest: "Newest",
+  oldest: "Oldest",
+  progress: "Progress",
+  status: "Status",
+};
+
+export const SORT_LABELS_SHORT: Record<SortType, string> = {
+  newest: "↓New",
+  oldest: "↑Old",
+  progress: "↓Prog",
+  status: "Status",
+};
 
 const PAGE_SIZE = 10;
 

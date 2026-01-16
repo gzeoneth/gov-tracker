@@ -5,6 +5,7 @@
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { ViewType, FilterType, SortType } from "../types.js";
 import { getShortcutsForView } from "../utils/shortcuts.js";
+import { SORT_LABELS } from "../utils/index.js";
 
 interface ContextInfo {
   filter?: FilterType;
@@ -19,13 +20,6 @@ interface KeyHelpProps {
   view: ViewType;
   context?: ContextInfo;
 }
-
-const SORT_DISPLAY: Record<SortType, string> = {
-  newest: "Newest",
-  oldest: "Oldest",
-  progress: "Progress",
-  status: "Status",
-};
 
 function ContextIndicators({ view, context }: { view: ViewType; context?: ContextInfo }): React.ReactElement | null {
   if (view !== "list" || !context) return null;
@@ -54,7 +48,7 @@ function ContextIndicators({ view, context }: { view: ViewType; context?: Contex
   if (context.sort && context.sort !== "newest") {
     indicators.push(
       <Box key="sort" marginRight={1}>
-        <Text color="blue">↕{SORT_DISPLAY[context.sort]}</Text>
+        <Text color="blue">↕{SORT_LABELS[context.sort]}</Text>
       </Box>
     );
   }

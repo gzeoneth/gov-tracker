@@ -5,6 +5,8 @@
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { TrackerStats } from "../../../types/index.js";
 import type { ViewType, FilterType, SortType } from "../types.js";
+import { SORT_LABELS_SHORT } from "../utils/index.js";
+import { getViewTitle } from "../views/registry.js";
 
 interface HeaderProps {
   view: ViewType;
@@ -16,13 +18,6 @@ interface HeaderProps {
   breadcrumb?: string[];
 }
 
-const SORT_LABELS: Record<SortType, string> = {
-  newest: "↓New",
-  oldest: "↑Old",
-  progress: "↓Prog",
-  status: "Status",
-};
-
 export function Header({
   view,
   filter,
@@ -32,24 +27,7 @@ export function Header({
   position,
   breadcrumb,
 }: HeaderProps): React.ReactElement {
-  const getViewTitle = (): string => {
-    switch (view) {
-      case "list":
-        return "Gov-Tracker TUI [PREVIEW]";
-      case "detail":
-        return title ?? "Proposal Detail";
-      case "calldata":
-        return "Decoded Calldata";
-      case "stage":
-        return "Stage Details";
-      case "simulation":
-        return title ?? "Simulation Data";
-      case "description":
-        return title ?? "Proposal Description";
-      default:
-        return "Gov-Tracker";
-    }
-  };
+  const viewTitle = title ?? getViewTitle(view);
 
   const getRightSide = (): React.ReactElement | null => {
     if (view === "list" && stats) {
@@ -86,13 +64,13 @@ export function Header({
           renderBreadcrumb()
         ) : (
           <Text bold color="cyan">
-            {getViewTitle()}
+            {viewTitle}
           </Text>
         )}
         {view === "list" && (
           <Text color="gray">
             {" "}
-            [{filter.toUpperCase()}] [{sort ? SORT_LABELS[sort] : "↓New"}]
+            [{filter.toUpperCase()}] [{sort ? SORT_LABELS_SHORT[sort] : "↓New"}]
           </Text>
         )}
         {position && position.total > 0 && (

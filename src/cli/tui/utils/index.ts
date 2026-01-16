@@ -18,8 +18,21 @@ export {
 export type { StageDataItem } from "./stage-formatter.js";
 export { parseMarkdown } from "./markdown-parser.js";
 export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";
-export { formatDate, getTxHash, getProposalIdDisplay } from "./proposal-detail-helpers.js";
-export { clamp, cycleArray, getNavigationAction, applyNavigation } from "./navigation.js";
+export {
+  formatDate,
+  getTxHash,
+  getProposalIdDisplay,
+  getStages,
+  buildBreadcrumb,
+} from "./proposal-detail-helpers.js";
+export {
+  clamp,
+  cycleArray,
+  getNavigationAction,
+  applyNavigation,
+  SORT_LABELS,
+  SORT_LABELS_SHORT,
+} from "./navigation.js";
 export type { NavigationAction } from "./navigation.js";
 export {
   STAGE_TYPES,

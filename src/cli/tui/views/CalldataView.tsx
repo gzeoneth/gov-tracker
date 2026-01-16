@@ -18,7 +18,8 @@ import {
   filterVisibleLines,
   getAllFoldableKeys,
   toggleFoldKey,
-  truncate,
+  getStages,
+  buildBreadcrumb,
 } from "../utils/index.js";
 
 interface CalldataViewProps {
@@ -33,10 +34,7 @@ export function CalldataView({
   navigation,
 }: CalldataViewProps): React.ReactElement {
   const { state } = navigation;
-  const stages = useMemo(
-    () => proposal.checkpoint.cachedData.completedStages ?? [],
-    [proposal.checkpoint.cachedData.completedStages]
-  );
+  const stages = useMemo(() => getStages(proposal), [proposal]);
   const { actions, loading, error } = useStageCalldata(stages[0], stages);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
@@ -92,9 +90,7 @@ export function CalldataView({
   const safeOffset = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
   const visibleLines = displayLines.slice(safeOffset, safeOffset + visibleCount);
 
-  const shortTitle = truncate(proposal.title, 30);
-
-  const breadcrumb = ["Proposals", shortTitle, "Calldata"];
+  const breadcrumb = buildBreadcrumb(proposal, "Calldata");
 
   const keyHelpContext = {
     calldataActionCount: actions.length,

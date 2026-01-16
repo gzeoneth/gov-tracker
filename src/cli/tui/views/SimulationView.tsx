@@ -7,7 +7,7 @@ import type { ProposalListItem } from "../types.js";
 import type { UseNavigationResult } from "../hooks/index.js";
 import { useStageCalldata } from "../hooks/index.js";
 import { ViewLayout } from "../components/ViewLayout.js";
-import { wrapText, truncate } from "../utils/index.js";
+import { wrapText, getStages, buildBreadcrumb } from "../utils/index.js";
 import { extractAllSimulationsFromDecoded } from "../../../simulation/index.js";
 import type { ExtractedSimulation } from "../../../types/simulation.js";
 import type { Chain } from "../../../types/index.js";
@@ -24,10 +24,7 @@ export function SimulationView({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [inputExpanded, setInputExpanded] = useState(false);
 
-  const stages = useMemo(
-    () => proposal.checkpoint.cachedData.completedStages ?? [],
-    [proposal.checkpoint.cachedData.completedStages]
-  );
+  const stages = useMemo(() => getStages(proposal), [proposal]);
   const { actions, loading, error } = useStageCalldata(stages[0]);
 
   const simulations = useMemo((): ExtractedSimulation[] => {
@@ -70,9 +67,7 @@ export function SimulationView({
   const safeIndex = Math.min(selectedIndex, Math.max(0, simulations.length - 1));
   const currentSim = simulations.length > 0 ? simulations[safeIndex] : undefined;
 
-  const shortTitle = truncate(proposal.title, 30);
-
-  const breadcrumb = ["Proposals", shortTitle, "Simulation"];
+  const breadcrumb = buildBreadcrumb(proposal, "Simulation");
 
   if (simulations.length === 0) {
     return (

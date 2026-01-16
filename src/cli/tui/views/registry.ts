@@ -14,12 +14,12 @@ export interface ViewConfig {
 }
 
 const VIEW_REGISTRY: readonly ViewConfig[] = [
-  { id: "list", title: "Proposals", requiresProposal: false },
+  { id: "list", title: "Gov-Tracker TUI [PREVIEW]", requiresProposal: false },
   { id: "detail", title: "Proposal Detail", requiresProposal: true },
-  { id: "calldata", title: "Calldata", requiresProposal: true },
-  { id: "stage", title: "Stage Detail", requiresProposal: true },
-  { id: "simulation", title: "Simulation", requiresProposal: true },
-  { id: "description", title: "Description", requiresProposal: true },
+  { id: "calldata", title: "Decoded Calldata", requiresProposal: true },
+  { id: "stage", title: "Stage Details", requiresProposal: true },
+  { id: "simulation", title: "Simulation Data", requiresProposal: true },
+  { id: "description", title: "Proposal Description", requiresProposal: true },
   { id: "election", title: "Elections", requiresProposal: false },
   { id: "help", title: "Help", requiresProposal: false },
 ] as const;

@@ -8,7 +8,7 @@ import type { UseNavigationResult } from "../hooks/index.js";
 import { useScrollableInput } from "../hooks/useScrollableInput.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { ScrollIndicatorTop, ScrollIndicatorBottom, ScrollPosition } from "../components/ScrollIndicator.js";
-import { getVisibleRows, parseMarkdown, truncate } from "../utils/index.js";
+import { getVisibleRows, parseMarkdown, getStages, buildBreadcrumb } from "../utils/index.js";
 import type { MarkdownLine } from "../utils/index.js";
 
 interface DescriptionViewProps {
@@ -17,7 +17,7 @@ interface DescriptionViewProps {
 }
 
 function getDescription(proposal: ProposalListItem): string {
-  const stages = proposal.checkpoint.cachedData.completedStages ?? [];
+  const stages = getStages(proposal);
   const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
   const data = createdStage?.data as { description?: string } | undefined;
   return data?.description ?? "No description available";
@@ -63,10 +63,8 @@ export function DescriptionView({ proposal, navigation }: DescriptionViewProps):
     },
   });
 
-  const shortTitle = truncate(proposal.title, 30);
-
   return (
-    <ViewLayout view="description" title="Proposal Description" breadcrumb={["Proposals", shortTitle, "Description"]}>
+    <ViewLayout view="description" title="Proposal Description" breadcrumb={buildBreadcrumb(proposal, "Description")}>
       {lines.length > visibleCount && (
         <Box marginBottom={1}>
           <ScrollPosition scrollOffset={state.scrollOffset} visibleRows={visibleCount} totalItems={lines.length} />

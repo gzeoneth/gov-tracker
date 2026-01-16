@@ -17,7 +17,8 @@ import {
   getVisibleRows,
   CHAIN_TO_CHAIN_ID,
   formatStageData,
-  truncate,
+  getStages,
+  buildBreadcrumb,
 } from "../utils/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { getTxUrl } from "../../../constants.js";
@@ -34,7 +35,7 @@ export function StageView({
   navigation,
 }: StageViewProps): React.ReactElement {
   const { state } = navigation;
-  const stages = proposal.checkpoint.cachedData.completedStages ?? [];
+  const stages = getStages(proposal);
   const safeIndex = stages.length > 0 ? Math.min(state.selectedStageIndex, stages.length - 1) : 0;
   const stage = stages[safeIndex];
 
@@ -54,9 +55,7 @@ export function StageView({
     },
   });
 
-  const shortTitle = truncate(proposal.title, 30);
-
-  const breadcrumb = ["Proposals", shortTitle, stageTitle || "Stage"];
+  const breadcrumb = buildBreadcrumb(proposal, stageTitle || "Stage");
 
   if (!stage) {
     return (

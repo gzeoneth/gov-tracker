@@ -14,7 +14,7 @@ import { StageProgress } from "../components/StageProgress.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import { isStageType } from "../../../types/stages.js";
 import { useCopyState, CopyFeedback } from "../components/CopyableText.js";
-import { formatDate, getTxHash, getProposalIdDisplay } from "../utils/proposal-detail-helpers.js";
+import { formatDate, getTxHash, getProposalIdDisplay, getStages } from "../utils/proposal-detail-helpers.js";
 import { truncate } from "../utils/index.js";
 
 interface ProposalDetailProps {
@@ -27,7 +27,7 @@ export function ProposalDetail({
   navigation,
 }: ProposalDetailProps): React.ReactElement {
   const { state } = navigation;
-  const stages = proposal.checkpoint.cachedData.completedStages ?? [];
+  const stages = getStages(proposal);
   const input = proposal.checkpoint.input;
   const { feedback, feedbackType, copy } = useCopyState();
 

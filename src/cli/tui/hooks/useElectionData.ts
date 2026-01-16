@@ -12,6 +12,7 @@ import type {
   TrackingCheckpoint,
 } from "../../../types/index.js";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
+import { formatDurationSec } from "../utils/index.js";
 
 export interface ElectionData {
   status: ElectionStatus | null;
@@ -120,10 +121,7 @@ export function useElectionData(options?: UseElectionDataOptions): UseElectionDa
           canCreateElection = true;
           timeUntilElection = "ready";
         } else {
-          const days = Math.floor(remainingSec / 86400);
-          const hours = Math.floor((remainingSec % 86400) / 3600);
-          const mins = Math.floor((remainingSec % 3600) / 60);
-          timeUntilElection = `${days}d ${hours}h ${mins}m`;
+          timeUntilElection = formatDurationSec(remainingSec);
         }
       }
 

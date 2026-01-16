@@ -6,6 +6,7 @@ import { React, Box, Text } from "../ink-wrapper.js";
 import type { TrackedStage } from "../../../types/index.js";
 import { formatStageTitle } from "../../../utils/stage-metadata.js";
 import { StatusBadge } from "./StatusBadge.js";
+import { formatDurationMs, formatElapsedMs } from "../utils/index.js";
 
 interface StageRowProps {
   stage: TrackedStage;
@@ -19,41 +20,14 @@ interface TimingInfo {
   isCountdown: boolean;
 }
 
-const MS_PER_MINUTE = 60 * 1000;
-const MS_PER_HOUR = 60 * MS_PER_MINUTE;
-const MS_PER_DAY = 24 * MS_PER_HOUR;
-
-function formatCountdown(diffMs: number): TimingInfo {
-  const hours = Math.floor(diffMs / MS_PER_HOUR);
-  const mins = Math.floor((diffMs % MS_PER_HOUR) / MS_PER_MINUTE);
-
-  if (hours > 48) {
-    const days = Math.floor(hours / 24);
-    return { text: `${days}d ${hours % 24}h`, color: "gray", isCountdown: true };
-  }
-  if (hours >= 1) {
-    return { text: `${hours}h ${mins}m`, color: "yellow", isCountdown: true };
-  }
-  return { text: `${mins}m`, color: "green", isCountdown: true };
-}
-
-function formatElapsed(elapsedMs: number, date: Date): TimingInfo {
-  if (elapsedMs < MS_PER_HOUR) {
-    return { text: `${Math.floor(elapsedMs / MS_PER_MINUTE)}m ago`, color: "gray", isCountdown: false };
-  }
-  if (elapsedMs < MS_PER_DAY) {
-    return { text: `${Math.floor(elapsedMs / MS_PER_HOUR)}h ago`, color: "gray", isCountdown: false };
-  }
-  return { text: date.toLocaleDateString(), color: "gray", isCountdown: false };
-}
-
 function formatTiming(stage: TrackedStage): TimingInfo | null {
   if (stage.timing?.eta) {
     const etaMs = stage.timing.eta * 1000;
     const diff = etaMs - Date.now();
 
     if (diff > 0) {
-      return formatCountdown(diff);
+      const result = formatDurationMs(diff);
+      return { ...result, isCountdown: true };
     }
     return { text: new Date(etaMs).toLocaleDateString(), color: "gray", isCountdown: false };
   }
@@ -61,7 +35,8 @@ function formatTiming(stage: TrackedStage): TimingInfo | null {
   const tx = stage.transactions[0];
   if (tx?.timestamp) {
     const date = new Date(tx.timestamp * 1000);
-    return formatElapsed(Date.now() - tx.timestamp * 1000, date);
+    const result = formatElapsedMs(Date.now() - tx.timestamp * 1000, date);
+    return { ...result, isCountdown: false };
   }
 
   return null;

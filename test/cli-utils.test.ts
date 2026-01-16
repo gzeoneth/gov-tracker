@@ -855,7 +855,7 @@ describe("CLI Utilities", () => {
     });
 
     it("should use default L1 RPC when not provided", () => {
-      // L1 RPC now defaults to https://eth.llamarpc.com when not provided
+      // L1 RPC now defaults to https://eth.drpc.org when not provided
       const providers = createProvidersFromOptions({});
       expect(providers.l1Provider).toBeDefined();
       expect(providers.l2Provider).toBeDefined();

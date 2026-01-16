@@ -5,7 +5,7 @@
  */
 
 import { React, Box, Text, useApp } from "./ink-wrapper.js";
-import { useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
+import { useCallback, useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import { useCache, useProposals, useNavigation } from "./hooks/index.js";
 import type { ProposalListItem } from "./types.js";
 import { ProposalList } from "./views/ProposalList.js";
@@ -42,9 +42,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
     if (this.state.hasError) {
       return (
         <Box flexDirection="column" padding={1}>
-          <Text color="red" bold>Something went wrong</Text>
+          <Text color="red" bold>
+            Something went wrong
+          </Text>
           <Text color="gray">{this.state.error?.message ?? "Unknown error"}</Text>
-          <Text color="gray" marginTop={1}>Press q to quit</Text>
+          <Text color="gray" marginTop={1}>
+            Press q to quit
+          </Text>
         </Box>
       );
     }
@@ -75,7 +79,12 @@ export function App({ cachePath, verbose }: AppProps): React.ReactElement {
   const { exit } = useApp();
   const cache = useCache(cachePath);
   const navigation = useNavigation();
-  const { items } = useProposals(cache.data, navigation.state.filter, navigation.state.searchQuery, navigation.state.sort);
+  const { items } = useProposals(
+    cache.data,
+    navigation.state.filter,
+    navigation.state.searchQuery,
+    navigation.state.sort
+  );
   const terminalHeight = useTerminalHeight();
 
   useEffect(() => {
@@ -84,9 +93,9 @@ export function App({ cachePath, verbose }: AppProps): React.ReactElement {
     }
   }, [verbose, cache.error]);
 
-  const handleQuit = () => {
+  const handleQuit = useCallback(() => {
     exit();
-  };
+  }, [exit]);
 
   if (cache.loading) {
     return (
@@ -136,12 +145,7 @@ export function App({ cachePath, verbose }: AppProps): React.ReactElement {
           />
         );
       case "election":
-        return (
-          <ElectionView
-            navigation={navigation}
-            cachePath={cachePath}
-          />
-        );
+        return <ElectionView navigation={navigation} cachePath={cachePath} />;
       default:
         return <Text>Unknown view: {view}</Text>;
     }

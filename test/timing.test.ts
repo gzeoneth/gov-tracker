@@ -395,7 +395,8 @@ describe("Timing Utilities", () => {
           callCount++;
           if (callCount === 1) {
             // First call (offset=0, exact block) - reverts (no L2 blocks)
-            return Promise.reject(new Error("No L2 blocks for this L1 block"));
+            // Use "execution reverted" to match permanent error pattern (no retry)
+            return Promise.reject(new Error("execution reverted: no L2 block"));
           }
           // Second call (offset=1, nearby block) - returns range
           return Promise.resolve({
@@ -431,7 +432,8 @@ describe("Timing Utilities", () => {
           callCount++;
           if (callCount <= 3) {
             // First 3 calls (offset=0,1,2) - revert
-            return Promise.reject(new Error("No L2 blocks"));
+            // Use "execution reverted" to match permanent error pattern (no retry)
+            return Promise.reject(new Error("execution reverted: no L2 block"));
           }
           // 4th call (offset=3) - returns range
           return Promise.resolve({
@@ -466,7 +468,8 @@ describe("Timing Utilities", () => {
         l2BlockRangeForL1: vi.fn().mockImplementation(() => {
           callCount++;
           // All calls revert
-          return Promise.reject(new Error("No L2 blocks"));
+          // Use "execution reverted" to match permanent error pattern (no retry)
+          return Promise.reject(new Error("execution reverted: no L2 block"));
         }),
       } as unknown as ReturnType<typeof NodeInterface__factory.connect>);
 

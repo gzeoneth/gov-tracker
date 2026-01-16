@@ -80,8 +80,10 @@ jobs:
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
+          files: ./junit.xml
+          report_type: test_results
           fail_ci_if_error: false
           flags: all-tests
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -132,8 +134,10 @@ jobs:
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
+          files: ./junit.xml
+          report_type: test_results
           fail_ci_if_error: false
           flags: fork-tests
           token: ${{ secrets.CODECOV_TOKEN }}

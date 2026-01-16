@@ -11,6 +11,32 @@ import { multicall, buildCallInput } from "../utils/multicall";
 
 const log = loggers.election;
 
+/**
+ * Get the current election count without fetching full status.
+ * This is a lightweight call that only fetches the count (single multicall).
+ *
+ * @param l2Provider - Arbitrum One provider
+ * @param nomineeGovernorAddress - Optional custom nominee governor address
+ * @returns The number of elections that have been created
+ */
+export async function getElectionCount(
+  l2Provider: ethers.providers.Provider,
+  nomineeGovernorAddress: string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): Promise<number> {
+  log("getElectionCount for %s", nomineeGovernorAddress);
+
+  const [electionCount] = await multicall(l2Provider, [
+    buildCallInput<BigNumber>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "electionCount",
+      []
+    ),
+  ]);
+
+  return (electionCount as BigNumber).toNumber();
+}
+
 export function determineElectionPhase(
   nomineeProposalState: ProposalState | null,
   memberProposalId: string | null,

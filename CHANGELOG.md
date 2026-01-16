@@ -19,11 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Full A→B→C transaction preparation: `prepareElectionCreation()`, `prepareMemberElectionTrigger()`, `prepareMemberElectionExecution()`
   - Detailed participant tracking: contenders, nominees, votes, rankings
 
+- **Election API Improvements** - Based on client feedback:
+  - `getElectionCount(l2Provider)` - Lightweight function to get election count (single multicall, no L1 block fetch)
+  - `ELECTION_TIMING` constants - Phase durations in seconds and days (nominee selection: 7d, vetting: 7d, member election: 21d)
+  - Bundled cache now includes nominee/member details for COMPLETED elections (zero RPC for historical data)
+
 - **CLI Enhancements**:
   - Election auto-switch: displays election status instead of 7 NOT_STARTED stages when tracking `createElection` tx
   - `--inspect` / `-i` flag: track AND decode calldata (vs `--inspect-only` which skips tracking)
   - Shorthand flags: `-v` (verbose), `-p` (prepare), `-w` (write)
   - Selective tracking: `--track-core`, `--track-treasury`, `--track-elections`, `--track-timelocks`
+
+- **Timelock Operation Tracking** - `trackByTxHash(txHash, operationId?)` now accepts optional operationId to track a specific operation from a multi-operation transaction
 
 - **Reorg Detection** - Discovery watermarks now include block hashes for chain reorganization detection
 
@@ -41,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Multiple timelock operations per transaction** - Transactions with multiple `CallScheduled` events (different operationIds) now track correctly with operation-specific cache keys (`tx:{hash}:op:{opId}`)
 - **ChunkingConfig respected throughout pipeline** - User-provided config now flows through all discovery and tracking functions
 - **All RPC calls use queryWithRetry** - Consistent rate limit and transient failure handling
 

@@ -6,7 +6,11 @@ import { Chain, ChainId, StageType } from "./core";
 import { TrackedStage } from "./stages";
 import { CallScheduledData, TimelockLink } from "./timelock";
 import { ProposalType, ProposalData, ProposalState } from "./governor";
-import { ElectionProposalStatus } from "./election";
+import {
+  ElectionProposalStatus,
+  SerializableNomineeDetails,
+  SerializableMemberDetails,
+} from "./election";
 
 // Execution Types (merged from execution.ts)
 
@@ -140,10 +144,14 @@ export interface TrackingCheckpoint {
   cachedData: {
     completedStages?: TrackedStage[];
     discoveryWatermarks?: DiscoveryWatermarks;
-    /** Block hashes for reorg detection (v0.2.2+) */
+    /** Block hashes for reorg detection */
     watermarkHashes?: WatermarkHashes;
-    /** Election status for election checkpoints (v0.2.2+) */
+    /** Election status for election checkpoints */
     electionStatus?: ElectionProposalStatus;
+    /** Nominee election details for completed elections */
+    nomineeDetails?: SerializableNomineeDetails;
+    /** Member election details for completed elections */
+    memberDetails?: SerializableMemberDetails;
   };
   metadata?: {
     errorCount: number;

@@ -259,7 +259,12 @@ export type { GovernorProposalParams } from "./stages/proposal-queued";
 // ============================================================================
 
 // URL generation and constants
-export { getTxUrl, getStageTransactionUrl, GOVERNANCE_START_BLOCKS } from "./constants";
+export {
+  getTxUrl,
+  getStageTransactionUrl,
+  GOVERNANCE_START_BLOCKS,
+  ELECTION_TIMING,
+} from "./constants";
 
 // Stage metadata
 export { getStageMetadata, formatStageTitle } from "./utils/stage-metadata";
@@ -304,18 +309,23 @@ export {
 // ============================================================================
 
 export {
+  // Election status
+  getElectionCount,
   checkElectionStatus,
-  prepareElectionCreation,
   hasVettingPeriod,
+  // Election tracking
   trackElectionProposal,
+  trackAllElections,
+  trackIncompleteElections,
+  getElectionIndexForProposalId,
+  // Election proposal IDs
   getElectionProposalId,
   getElectionProposalParams,
   getMemberElectionProposalParams,
+  // Election preparation
+  prepareElectionCreation,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
-  getElectionIndexForProposalId,
-  trackAllElections,
-  trackIncompleteElections,
   // Detailed election tracking
   getContenders,
   getNomineesWithVotes,
@@ -396,10 +406,13 @@ export {
   computeCacheStats,
   electionCacheKey,
   txHashCacheKey,
+  timelockOpCacheKey,
   isElectionKey,
   isTxKey,
+  isTimelockOpKey,
   isDiscoveryKey,
   parseElectionKey,
+  parseTimelockOpKey,
   DEFAULT_ERROR_THRESHOLD,
   ELECTION_KEY_PREFIX,
   TX_KEY_PREFIX,

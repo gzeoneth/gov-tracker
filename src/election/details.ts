@@ -3,7 +3,13 @@ import { ADDRESSES, TIMING } from "../constants";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { memberElectionGovernorInterface } from "../abis";
 import { loggers } from "../utils/logger";
-import { NomineeElectionDetails, MemberElectionDetails, MemberElectionNominee } from "../types";
+import {
+  NomineeElectionDetails,
+  MemberElectionDetails,
+  MemberElectionNominee,
+  SerializableNomineeDetails,
+  SerializableMemberDetails,
+} from "../types";
 import { multicall, buildCallInput } from "../utils/multicall";
 import { getNomineeGovernor, getMemberGovernor } from "./contracts";
 import { computeElectionProposalId, getElectionProposalId } from "./proposal-ids";
@@ -138,5 +144,69 @@ export async function getMemberElectionDetails(
     winners,
     fullWeightDeadline: fullWeightDeadline.toNumber(),
     proposalDeadline: deadline.toNumber(),
+  };
+}
+
+/**
+ * Convert NomineeElectionDetails to serializable format for caching.
+ * Converts BigNumber fields to strings.
+ */
+export function serializeNomineeDetails(
+  details: NomineeElectionDetails
+): SerializableNomineeDetails {
+  return {
+    proposalId: details.proposalId,
+    electionIndex: details.electionIndex,
+    contenders: details.contenders.map((c) => ({
+      address: c.address,
+      registeredAtBlock: c.registeredAtBlock,
+      registrationTxHash: c.registrationTxHash,
+    })),
+    nominees: details.nominees.map((n) => ({
+      address: n.address,
+      votesReceived: n.votesReceived.toString(),
+      isExcluded: n.isExcluded,
+      nominatedAtBlock: n.nominatedAtBlock,
+      excludedAtBlock: n.excludedAtBlock,
+      exclusionTxHash: n.exclusionTxHash,
+    })),
+    compliantNominees: details.compliantNominees.map((n) => ({
+      address: n.address,
+      votesReceived: n.votesReceived.toString(),
+      isExcluded: n.isExcluded,
+      nominatedAtBlock: n.nominatedAtBlock,
+      excludedAtBlock: n.excludedAtBlock,
+      exclusionTxHash: n.exclusionTxHash,
+    })),
+    excludedNominees: details.excludedNominees.map((n) => ({
+      address: n.address,
+      votesReceived: n.votesReceived.toString(),
+      isExcluded: n.isExcluded,
+      nominatedAtBlock: n.nominatedAtBlock,
+      excludedAtBlock: n.excludedAtBlock,
+      exclusionTxHash: n.exclusionTxHash,
+    })),
+    quorumThreshold: details.quorumThreshold.toString(),
+    targetNomineeCount: details.targetNomineeCount,
+  };
+}
+
+/**
+ * Convert MemberElectionDetails to serializable format for caching.
+ * Converts BigNumber fields to strings.
+ */
+export function serializeMemberDetails(details: MemberElectionDetails): SerializableMemberDetails {
+  return {
+    proposalId: details.proposalId,
+    electionIndex: details.electionIndex,
+    nominees: details.nominees.map((n) => ({
+      address: n.address,
+      weightReceived: n.weightReceived.toString(),
+      isWinner: n.isWinner,
+      rank: n.rank,
+    })),
+    winners: details.winners,
+    fullWeightDeadline: details.fullWeightDeadline,
+    proposalDeadline: details.proposalDeadline,
   };
 }

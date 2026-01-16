@@ -109,6 +109,12 @@ interface TrackingCheckpoint {
 }
 ```
 
+**Cache Key Patterns:**
+- Governor proposals: `tx:{txHash}`
+- Timelock operations: `tx:{txHash}:op:{operationId}`
+- Elections: `election:{index}`
+- Discovery watermarks: `discovery:watermarks`
+
 **Watermarks** track last scanned block per target for incremental discovery.
 
 ---

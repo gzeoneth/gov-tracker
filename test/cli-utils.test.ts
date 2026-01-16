@@ -2512,5 +2512,98 @@ describe("CLI Utilities", () => {
         expect.any(Object)
       );
     });
+
+    it("should skip discovery when electionsOnly option is true", async () => {
+      // #given
+      const mockElectionStatus = {
+        electionIndex: 0,
+        phase: "NOMINEE_SELECTION" as const,
+        cohort: 0,
+        nomineeProposalId: "123",
+        memberProposalId: null,
+        nomineeProposalState: "Active" as const,
+        memberProposalState: null,
+        compliantNomineeCount: 3,
+        targetNomineeCount: 6,
+        vettingDeadline: null,
+        isInVettingPeriod: false,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+      };
+
+      const mockTracker = {
+        discoverAll: vi.fn(),
+        queryIncompleteCheckpoints: vi.fn(),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        trackAllElections: vi.fn().mockResolvedValue([mockElectionStatus]),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers,
+        { electionsOnly: true }
+      );
+
+      // #then - discoverAll should NOT be called in elections-only mode
+      expect(mockTracker.discoverAll).not.toHaveBeenCalled();
+      expect(mockTracker.trackAllElections).toHaveBeenCalledWith({ force: undefined });
+      expect(result.elections).toHaveLength(1);
+      expect(result.proposals).toEqual([]);
+      expect(result.timelockOps).toEqual([]);
+    });
+
+    it("should pass forceElections option to trackAllElections", async () => {
+      // #given
+      const mockTracker = {
+        discoverAll: vi.fn(),
+        queryIncompleteCheckpoints: vi.fn(),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        trackAllElections: vi.fn().mockResolvedValue([]),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
+        electionsOnly: true,
+        forceElections: true,
+      });
+
+      // #then
+      expect(mockTracker.trackAllElections).toHaveBeenCalledWith({ force: true });
+    });
+
+    it("should handle errors in electionsOnly mode gracefully", async () => {
+      // #given
+      const mockTracker = {
+        discoverAll: vi.fn(),
+        queryIncompleteCheckpoints: vi.fn(),
+        trackByTxHash: vi.fn(),
+        trackFromCheckpoint: vi.fn(),
+        prepareTransaction: vi.fn(),
+        trackAllElections: vi.fn().mockRejectedValue(new Error("Election tracking failed")),
+        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+      };
+      const providers = createMockProviders();
+
+      // #when
+      const result = await runMonitorCycle(
+        mockTracker as unknown as ProposalStageTracker,
+        providers,
+        { electionsOnly: true }
+      );
+
+      // #then - should catch error gracefully (error is logged but not counted in result)
+      expect(result.elections).toEqual([]);
+      expect(result.proposals).toEqual([]);
+      expect(result.timelockOps).toEqual([]);
+    });
   });
 });

@@ -46,6 +46,9 @@ export function safeJsonParse<T>(json: string): T {
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return undefined;
     }
+    if (key.startsWith("__") && key.endsWith("__")) {
+      return undefined;
+    }
     return value;
   });
 }

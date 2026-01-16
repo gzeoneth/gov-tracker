@@ -30,49 +30,65 @@ class RpcError extends Error {
 }
 
 /**
- * Check if an error is retryable
+ * Check if an error is a permanent failure that should NOT be retried.
+ * These are errors where retrying will never succeed.
  */
-export function isRetryableError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
+export function isPermanentError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
 
-    // Rate limiting errors
-    if (
-      message.includes("rate limit") ||
-      message.includes("too many requests") ||
-      message.includes("429")
-    ) {
-      return true;
-    }
+  const message = error.message.toLowerCase();
 
-    // Server errors
-    if (
-      message.includes("server error") ||
-      message.includes("502") ||
-      message.includes("503") ||
-      message.includes("504")
-    ) {
-      return true;
-    }
+  // Contract execution failures - will always fail
+  if (
+    message.includes("execution reverted") ||
+    message.includes("call revert exception") ||
+    message.includes("transaction reverted")
+  ) {
+    return true;
+  }
 
-    // Connection errors
-    if (
-      message.includes("econnreset") ||
-      message.includes("econnrefused") ||
-      message.includes("etimedout") ||
-      message.includes("network error") ||
-      message.includes("timeout")
-    ) {
-      return true;
-    }
+  // Invalid request parameters - retrying won't help
+  if (
+    message.includes("invalid argument") ||
+    message.includes("invalid params") ||
+    message.includes("invalid method") ||
+    message.includes("method not found") ||
+    message.includes("invalid address") ||
+    message.includes("invalid block") ||
+    message.includes("ens name not configured")
+  ) {
+    return true;
+  }
 
-    // Provider-specific errors
-    if (message.includes("missing response") || message.includes("request failed")) {
-      return true;
-    }
+  // Data decoding errors - the response won't change
+  if (
+    message.includes("could not decode") ||
+    message.includes("data out-of-bounds") ||
+    message.includes("invalid data for function")
+  ) {
+    return true;
+  }
+
+  // Resource doesn't exist
+  if (
+    message.includes("no contract code") ||
+    message.includes("contract not deployed") ||
+    message.includes("function selector was not recognized")
+  ) {
+    return true;
   }
 
   return false;
+}
+
+/**
+ * Check if an error is retryable (transient failure).
+ * Uses inverted logic: retry everything except known permanent failures.
+ */
+export function isRetryableError(error: unknown): boolean {
+  return !isPermanentError(error);
 }
 
 /**

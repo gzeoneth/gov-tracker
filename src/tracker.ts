@@ -20,6 +20,7 @@ import {
   incrementErrorCount,
   createCheckpointMetadata,
   txHashCacheKey,
+  timelockOpCacheKey,
 } from "./tracker/checkpoint-helpers";
 import {
   TrackerOptions,
@@ -258,6 +259,39 @@ export class ProposalStageTracker {
       await this.cache.delete(key);
       logTracker("cleared cache entry: %s", key);
     }
+  }
+
+  /**
+   * Clear all cache entries for a transaction.
+   * This clears both the base tx key and any operation-specific keys (tx:{hash}:op:{opId}).
+   * Used by CLI --force to ensure fresh tracking of all operations in a tx.
+   */
+  async clearTxCacheEntries(txHash: string): Promise<number> {
+    if (!this.cache) return 0;
+
+    const baseCacheKey = txHashCacheKey(txHash);
+    const prefix = `${baseCacheKey}:op:`;
+    let cleared = 0;
+
+    // Clear the base tx key
+    if (await this.cache.has(baseCacheKey)) {
+      await this.cache.delete(baseCacheKey);
+      logTracker("cleared cache entry: %s", baseCacheKey);
+      cleared++;
+    }
+
+    // Clear all operation-specific keys for this tx
+    const allKeys = await this.cache.keys(prefix);
+    const keys = Array.isArray(allKeys) ? allKeys : Array.from(allKeys as Iterable<string>);
+    for (const key of keys) {
+      if (key.startsWith(prefix)) {
+        await this.cache.delete(key);
+        logTracker("cleared cache entry: %s", key);
+        cleared++;
+      }
+    }
+
+    return cleared;
   }
 
   // Watermark Management
@@ -525,44 +559,61 @@ export class ProposalStageTracker {
    * - Automatically loads existing checkpoint from cache (zero-RPC resume)
    * - Automatically saves checkpoint to cache after tracking
    *
+   * @param txHash - Transaction hash to track
+   * @param operationId - Optional: track only this specific timelock operation
+   *
    * @example
    * ```typescript
+   * // Track all operations in a transaction
    * const results = await tracker.trackByTxHash("0x...");
-   * for (const result of results) {
-   *   console.log(`Found ${result.stages.length} stages`);
-   * }
+   *
+   * // Track a specific operation
+   * const results = await tracker.trackByTxHash("0x...", "0xoperationId...");
    * ```
    */
-  async trackByTxHash(txHash: string): Promise<TrackingResult[]> {
-    logTracker("trackByTxHash %s", txHash);
+  async trackByTxHash(txHash: string, operationId?: string): Promise<TrackingResult[]> {
+    logTracker("trackByTxHash %s%s", txHash, operationId ? ` operationId=${operationId}` : "");
 
-    // Cache key for this transaction
-    const cacheKey = txHashCacheKey(txHash);
+    // Determine cache key based on whether operationId is provided
+    // - Governor proposals and timelock discovery: tx:{txHash}
+    // - Specific timelock operation: tx:{txHash}:op:{operationId}
+    const baseCacheKey = txHashCacheKey(txHash);
 
     // Load checkpoint from cache for resume
     let checkpoint: TrackingCheckpoint | undefined;
     if (this.cache) {
-      checkpoint = (await this.cache.get<TrackingCheckpoint>(cacheKey)) ?? undefined;
-      if (checkpoint) {
-        logTracker("loaded checkpoint from cache: %s", cacheKey);
+      // If operationId provided, try operation-specific key first
+      if (operationId) {
+        const opCacheKey = timelockOpCacheKey(txHash, operationId);
+        checkpoint = (await this.cache.get<TrackingCheckpoint>(opCacheKey)) ?? undefined;
+        if (checkpoint) {
+          logTracker("loaded checkpoint from cache: %s", opCacheKey);
+        }
+      }
+      // Fall back to base cache key (for governor proposals or legacy checkpoints)
+      if (!checkpoint) {
+        checkpoint = (await this.cache.get<TrackingCheckpoint>(baseCacheKey)) ?? undefined;
+        if (checkpoint) {
+          logTracker("loaded checkpoint from cache: %s", baseCacheKey);
+        }
       }
     }
 
     try {
-      return await this.trackByTxHashInternal(txHash, cacheKey, checkpoint);
+      return await this.trackByTxHashInternal(txHash, baseCacheKey, checkpoint, operationId);
     } catch (error) {
       // Save checkpoint on error with incremented error count
       // Gas estimation errors don't count against consecutive errors
       if (this.cache) {
-        const input: GovernorTrackingInput = {
-          type: "governor",
-          governorAddress: "",
-          proposalId: "",
-          creationTxHash: txHash,
-        };
         const prevErrorCount = checkpoint?.metadata?.errorCount ?? 0;
         const newErrorCount = incrementErrorCount(prevErrorCount, error as Error);
         const isGasError = isGasEstimationError(error);
+
+        // Use operation-specific key for timelock errors if operationId is known
+        const errorCacheKey = operationId ? timelockOpCacheKey(txHash, operationId) : baseCacheKey;
+        const input: GovernorTrackingInput | TimelockTrackingInput = operationId
+          ? { type: "timelock", timelockAddress: "", operationId, scheduledTxHash: txHash }
+          : { type: "governor", governorAddress: "", proposalId: "", creationTxHash: txHash };
 
         const errorCheckpoint: TrackingCheckpoint = checkpoint ?? {
           version: 1,
@@ -573,10 +624,10 @@ export class ProposalStageTracker {
           cachedData: {},
         };
         errorCheckpoint.metadata = createCheckpointMetadata(newErrorCount);
-        await this.cache.set(cacheKey, errorCheckpoint);
+        await this.cache.set(errorCacheKey, errorCheckpoint);
         logTracker(
           "saved checkpoint on error: %s (errorCount=%d%s)",
-          cacheKey,
+          errorCacheKey,
           newErrorCount,
           isGasError ? " - gas error, not incrementing" : ""
         );
@@ -592,8 +643,9 @@ export class ProposalStageTracker {
    */
   private async trackByTxHashInternal(
     txHash: string,
-    cacheKey: string,
-    checkpoint: TrackingCheckpoint | undefined
+    baseCacheKey: string,
+    checkpoint: TrackingCheckpoint | undefined,
+    operationId?: string
   ): Promise<TrackingResult[]> {
     // RESUME PATH: If we have a checkpoint, check what type it is
     if (checkpoint && checkpoint.input.type !== "discovery") {
@@ -606,37 +658,40 @@ export class ProposalStageTracker {
           input.proposalId,
           input.creationTxHash,
           checkpoint,
-          cacheKey
+          baseCacheKey
         );
         return [result];
       } else if (checkpoint.input.type === "timelock") {
         const input = checkpoint.input;
+        const opCacheKey = timelockOpCacheKey(txHash, input.operationId);
         const result = await this.trackTimelockWithPipeline(
           input.timelockAddress,
           input.operationId,
           input.scheduledTxHash,
           checkpoint,
-          cacheKey
+          opCacheKey
         );
         return [result];
       }
     }
 
-    // Try as proposal first
-    const proposal = await discoverProposalByTxHash(txHash, this.l2Provider);
-    if (proposal) {
-      logDiscovery("found proposal in tx, proposalId=%s", proposal.proposalId);
-      const result = await this.trackGovernorWithPipeline(
-        proposal.governorAddress,
-        proposal.proposalId,
-        proposal.creationTxHash,
-        checkpoint,
-        cacheKey
-      );
-      return [result];
+    // Try as proposal first (only if no operationId specified)
+    if (!operationId) {
+      const proposal = await discoverProposalByTxHash(txHash, this.l2Provider);
+      if (proposal) {
+        logDiscovery("found proposal in tx, proposalId=%s", proposal.proposalId);
+        const result = await this.trackGovernorWithPipeline(
+          proposal.governorAddress,
+          proposal.proposalId,
+          proposal.creationTxHash,
+          checkpoint,
+          baseCacheKey
+        );
+        return [result];
+      }
     }
 
-    // Try as timelock operations (may be batch with multiple ops)
+    // Try as timelock operations
     const callScheduledEvents = await findCallScheduledByTxHash(txHash, this.l2Provider);
     if (callScheduledEvents && callScheduledEvents.length > 0) {
       logDiscovery("found %d timelock operation(s) in tx", callScheduledEvents.length);
@@ -646,18 +701,37 @@ export class ProposalStageTracker {
       const results: TrackingResult[] = [];
 
       for (const event of callScheduledEvents) {
+        // Skip if we've already seen this operationId (batch deduplication)
         if (seenOperationIds.has(event.operationId)) continue;
         seenOperationIds.add(event.operationId);
+
+        // If specific operationId requested, skip non-matching operations
+        if (operationId && event.operationId.toLowerCase() !== operationId.toLowerCase()) continue;
+
+        // Use operation-specific cache key for each timelock operation
+        const opCacheKey = timelockOpCacheKey(txHash, event.operationId);
+
+        // Load operation-specific checkpoint if not already loaded
+        let opCheckpoint = checkpoint;
+        if (this.cache && !opCheckpoint) {
+          opCheckpoint = (await this.cache.get<TrackingCheckpoint>(opCacheKey)) ?? undefined;
+          if (opCheckpoint) {
+            logTracker("loaded operation checkpoint from cache: %s", opCacheKey);
+          }
+        }
 
         const result = await this.trackTimelockWithPipeline(
           event.timelockAddress,
           event.operationId,
           txHash,
-          checkpoint,
-          cacheKey,
+          opCheckpoint,
+          opCacheKey,
           event
         );
         results.push(result);
+
+        // If specific operationId requested and found, we're done
+        if (operationId) break;
       }
 
       return results;

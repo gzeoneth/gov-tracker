@@ -279,6 +279,18 @@ describe("Sanitization Utilities", () => {
       expect(Object.prototype.hasOwnProperty.call(result.outer, "constructor")).toBe(false);
     });
 
+    it("should drop __*__ keys", () => {
+      // #given - JSON with a __defineGetter__ payload
+      const json = '{"__defineGetter__": {"polluted": true}, "safe": 1}';
+
+      // #when - parsing with safeJsonParse
+      const result = safeJsonParse<{ safe: number }>(json);
+
+      // #then - should remove the dangerous key
+      expect(result.safe).toBe(1);
+      expect(Object.prototype.hasOwnProperty.call(result, "__defineGetter__")).toBe(false);
+    });
+
     it("should throw on invalid JSON", () => {
       // #given - invalid JSON string
       const json = "not valid json";

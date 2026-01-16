@@ -37,7 +37,7 @@ export async function getContenders(
       const parsed = iface.parseLog(eventLog);
       return [
         {
-          address: parsed.args.contender as string,
+          address: (parsed.args.contender as string).toLowerCase(),
           registeredAtBlock: eventLog.blockNumber,
           registrationTxHash: eventLog.transactionHash,
         },
@@ -83,7 +83,7 @@ export async function getNomineesWithVotes(
   const results = await multicall(provider, calls);
 
   const nominees: ElectionNominee[] = nomineeAddresses.map((addr, i) => ({
-    address: addr,
+    address: addr.toLowerCase(),
     votesReceived: (results[i * 2] as BigNumber) ?? BigNumber.from(0),
     isExcluded: (results[i * 2 + 1] as boolean) ?? false,
   }));
@@ -124,20 +124,28 @@ export async function getExcludedNominees(
     }
   });
 
-  const excluded = await Promise.all(
-    parsedLogs.map(async ({ eventLog, nominee }) => {
-      const votesReceived = await queryWithRetry<BigNumber>(() =>
-        governor.votesReceived(proposalId, nominee)
-      );
-      return {
-        address: nominee,
-        votesReceived,
-        isExcluded: true,
-        excludedAtBlock: eventLog.blockNumber,
-        exclusionTxHash: eventLog.transactionHash,
-      };
-    })
+  if (parsedLogs.length === 0) {
+    return [];
+  }
+
+  const calls = parsedLogs.map(({ nominee }) =>
+    buildCallInput<BigNumber>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "votesReceived",
+      [proposalId, nominee]
+    )
   );
+
+  const results = await multicall(provider, calls);
+
+  const excluded = parsedLogs.map(({ eventLog, nominee }, i) => ({
+    address: nominee.toLowerCase(),
+    votesReceived: (results[i] as BigNumber) ?? BigNumber.from(0),
+    isExcluded: true,
+    excludedAtBlock: eventLog.blockNumber,
+    exclusionTxHash: eventLog.transactionHash,
+  }));
 
   log("Found %d excluded nominees for proposal %s", excluded.length, proposalId);
   return excluded;

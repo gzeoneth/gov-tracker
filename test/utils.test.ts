@@ -37,6 +37,7 @@ import {
   queryWithRetry,
   delay,
   isRetryableError,
+  isPermanentError,
   isGasEstimationError,
 } from "../src/utils/rpc-utils";
 
@@ -552,67 +553,114 @@ describe("RPC Utilities", () => {
     });
   });
 
-  describe("isRetryableError", () => {
-    it("should identify rate limit errors", () => {
-      // #given - various rate limit error messages
-      // #when - checking if retryable
-      // #then - all should be identified as retryable
-      expect(isRetryableError(new Error("rate limit exceeded"))).toBe(true);
-      expect(isRetryableError(new Error("Too Many Requests"))).toBe(true);
-      expect(isRetryableError(new Error("429 too many requests"))).toBe(true);
+  describe("isPermanentError", () => {
+    it("should identify contract execution failures", () => {
+      // #given - contract execution failure messages
+      // #when - checking if permanent error
+      // #then - all should be identified as permanent
+      expect(isPermanentError(new Error("execution reverted"))).toBe(true);
+      expect(isPermanentError(new Error("call revert exception"))).toBe(true);
+      expect(isPermanentError(new Error("transaction reverted"))).toBe(true);
     });
 
-    it("should identify server errors", () => {
-      // #given - various server error messages
-      // #when - checking if retryable
-      // #then - all should be identified as retryable
-      expect(isRetryableError(new Error("server error"))).toBe(true);
-      expect(isRetryableError(new Error("502 bad gateway"))).toBe(true);
-      expect(isRetryableError(new Error("503 service unavailable"))).toBe(true);
-      expect(isRetryableError(new Error("504 gateway timeout"))).toBe(true);
+    it("should identify invalid request parameters", () => {
+      // #given - invalid parameter error messages
+      // #when - checking if permanent error
+      // #then - all should be identified as permanent
+      expect(isPermanentError(new Error("invalid argument"))).toBe(true);
+      expect(isPermanentError(new Error("invalid params"))).toBe(true);
+      expect(isPermanentError(new Error("method not found"))).toBe(true);
+      expect(isPermanentError(new Error("invalid address"))).toBe(true);
+      expect(isPermanentError(new Error("ENS name not configured"))).toBe(true);
     });
 
-    it("should identify timeout errors", () => {
-      // #given - various timeout error messages
-      // #when - checking if retryable
-      // #then - all should be identified as retryable
-      expect(isRetryableError(new Error("timeout"))).toBe(true);
-      expect(isRetryableError(new Error("ETIMEDOUT"))).toBe(true);
+    it("should identify data decoding errors", () => {
+      // #given - data decoding error messages
+      // #when - checking if permanent error
+      // #then - all should be identified as permanent
+      expect(isPermanentError(new Error("could not decode result"))).toBe(true);
+      expect(isPermanentError(new Error("data out-of-bounds"))).toBe(true);
+      expect(isPermanentError(new Error("invalid data for function"))).toBe(true);
     });
 
-    it("should identify connection errors", () => {
-      // #given - various connection error messages
-      // #when - checking if retryable
-      // #then - all should be identified as retryable
-      expect(isRetryableError(new Error("ECONNRESET"))).toBe(true);
-      expect(isRetryableError(new Error("ECONNREFUSED"))).toBe(true);
-      expect(isRetryableError(new Error("network error"))).toBe(true);
+    it("should identify missing resource errors", () => {
+      // #given - missing resource error messages
+      // #when - checking if permanent error
+      // #then - all should be identified as permanent
+      expect(isPermanentError(new Error("no contract code at address"))).toBe(true);
+      expect(isPermanentError(new Error("contract not deployed"))).toBe(true);
+      expect(isPermanentError(new Error("function selector was not recognized"))).toBe(true);
     });
 
-    it("should identify provider-specific errors", () => {
-      // #given - provider-specific error messages
-      // #when - checking if retryable
-      // #then - all should be identified as retryable
-      expect(isRetryableError(new Error("missing response"))).toBe(true);
-      expect(isRetryableError(new Error("request failed"))).toBe(true);
-    });
-
-    it("should not retry non-retryable errors", () => {
-      // #given - non-retryable error messages
-      // #when - checking if retryable
-      // #then - all should be identified as non-retryable
-      expect(isRetryableError(new Error("invalid address"))).toBe(false);
-      expect(isRetryableError(new Error("execution reverted"))).toBe(false);
+    it("should not identify transient errors as permanent", () => {
+      // #given - transient error messages
+      // #when - checking if permanent error
+      // #then - all should NOT be identified as permanent
+      expect(isPermanentError(new Error("rate limit exceeded"))).toBe(false);
+      expect(isPermanentError(new Error("timeout"))).toBe(false);
+      expect(isPermanentError(new Error("server error"))).toBe(false);
+      expect(isPermanentError(new Error("500 internal server error"))).toBe(false);
     });
 
     it("should return false for non-Error objects", () => {
       // #given - various non-Error objects
+      // #when - checking if permanent error
+      // #then - all should return false (not identifiable as permanent)
+      expect(isPermanentError("string error")).toBe(false);
+      expect(isPermanentError(null)).toBe(false);
+      expect(isPermanentError(undefined)).toBe(false);
+      expect(isPermanentError({ message: "execution reverted" })).toBe(false);
+    });
+  });
+
+  describe("isRetryableError", () => {
+    it("should retry transient network errors", () => {
+      // #given - various transient error messages
       // #when - checking if retryable
-      // #then - all should return false
-      expect(isRetryableError("string error")).toBe(false);
-      expect(isRetryableError(null)).toBe(false);
-      expect(isRetryableError(undefined)).toBe(false);
-      expect(isRetryableError({ message: "rate limit" })).toBe(false);
+      // #then - all should be identified as retryable
+      expect(isRetryableError(new Error("rate limit exceeded"))).toBe(true);
+      expect(isRetryableError(new Error("timeout"))).toBe(true);
+      expect(isRetryableError(new Error("ECONNRESET"))).toBe(true);
+      expect(isRetryableError(new Error("network error"))).toBe(true);
+    });
+
+    it("should retry server errors including 500", () => {
+      // #given - various server error messages including 500
+      // #when - checking if retryable
+      // #then - all should be identified as retryable
+      expect(isRetryableError(new Error("server error"))).toBe(true);
+      expect(isRetryableError(new Error("500 internal server error"))).toBe(true);
+      expect(isRetryableError(new Error("502 bad gateway"))).toBe(true);
+      expect(isRetryableError(new Error("503 service unavailable"))).toBe(true);
+      expect(isRetryableError(new Error("504 gateway timeout"))).toBe(true);
+      // The exact error format from the user's report
+      expect(
+        isRetryableError(
+          new Error(
+            'bad response (status=500, headers={"content-type":"application/json"}, body="{"error":{"message":"Temporary internal error"}}")'
+          )
+        )
+      ).toBe(true);
+    });
+
+    it("should not retry permanent errors", () => {
+      // #given - permanent error messages
+      // #when - checking if retryable
+      // #then - all should be identified as non-retryable
+      expect(isRetryableError(new Error("execution reverted"))).toBe(false);
+      expect(isRetryableError(new Error("invalid address"))).toBe(false);
+      expect(isRetryableError(new Error("call revert exception"))).toBe(false);
+      expect(isRetryableError(new Error("no contract code at address"))).toBe(false);
+    });
+
+    it("should retry non-Error objects (unknown errors)", () => {
+      // #given - various non-Error objects
+      // #when - checking if retryable
+      // #then - all should be retryable (unknown errors default to retry)
+      expect(isRetryableError("string error")).toBe(true);
+      expect(isRetryableError(null)).toBe(true);
+      expect(isRetryableError(undefined)).toBe(true);
+      expect(isRetryableError({ message: "execution reverted" })).toBe(true);
     });
   });
 

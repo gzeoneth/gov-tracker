@@ -87,7 +87,7 @@ describe("election/participants", () => {
 
     it("should parse ContenderAdded logs and return contender details", async () => {
       // #given
-      const contenderAddress = "0x1111111111111111111111111111111111111111";
+      const contenderAddress = "0xAbc1111111111111111111111111111111111111";
       const mockLog = {
         blockNumber: 150000,
         transactionHash: "0xabc123def456789",
@@ -110,7 +110,7 @@ describe("election/participants", () => {
       // #then
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
-        address: contenderAddress,
+        address: contenderAddress.toLowerCase(),
         registeredAtBlock: 150000,
         registrationTxHash: "0xabc123def456789",
       });
@@ -153,8 +153,8 @@ describe("election/participants", () => {
 
       // #then
       expect(result).toHaveLength(2);
-      expect(result[0].address).toBe(contender1);
-      expect(result[1].address).toBe(contender2);
+      expect(result[0].address).toBe(contender1.toLowerCase());
+      expect(result[1].address).toBe(contender2.toLowerCase());
     });
 
     it("should skip malformed logs that fail to parse", async () => {
@@ -189,7 +189,7 @@ describe("election/participants", () => {
 
       // #then
       expect(result).toHaveLength(1);
-      expect(result[0].address).toBe(validContender);
+      expect(result[0].address).toBe(validContender.toLowerCase());
     });
 
     it("should use correct log filter parameters", async () => {
@@ -251,8 +251,8 @@ describe("election/participants", () => {
 
     it("should return nominees with votes and exclusion status via multicall", async () => {
       // #given
-      const nominee1 = "0x1111111111111111111111111111111111111111";
-      const nominee2 = "0x2222222222222222222222222222222222222222";
+      const nominee1 = "0xABc1111111111111111111111111111111111111";
+      const nominee2 = "0xdef2222222222222222222222222222222222222";
       mockGovernorContract.nominees.mockResolvedValue([nominee1, nominee2]);
 
       const multicallResults = [BigNumber.from(1000), false, BigNumber.from(2000), true];
@@ -268,12 +268,12 @@ describe("election/participants", () => {
       // #then
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
-        address: nominee1,
+        address: nominee1.toLowerCase(),
         votesReceived: BigNumber.from(1000),
         isExcluded: false,
       });
       expect(result[1]).toEqual({
-        address: nominee2,
+        address: nominee2.toLowerCase(),
         votesReceived: BigNumber.from(2000),
         isExcluded: true,
       });
@@ -368,7 +368,7 @@ describe("election/participants", () => {
 
     it("should parse NomineeExcluded logs and fetch votes for each", async () => {
       // #given
-      const excludedNominee = "0x3333333333333333333333333333333333333333";
+      const excludedNominee = "0xAbC3333333333333333333333333333333333333";
       const mockLog = {
         blockNumber: 160000,
         transactionHash: "0xexcludetx123",
@@ -380,7 +380,7 @@ describe("election/participants", () => {
         data: "0x",
       };
       mockProvider.getLogs.mockResolvedValue([mockLog]);
-      mockGovernorContract.votesReceived.mockResolvedValue(BigNumber.from(750));
+      (multicall as Mock).mockResolvedValue([BigNumber.from(750)]);
 
       // #when
       const result = await getExcludedNominees(
@@ -392,7 +392,7 @@ describe("election/participants", () => {
       // #then
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
-        address: excludedNominee,
+        address: excludedNominee.toLowerCase(),
         votesReceived: BigNumber.from(750),
         isExcluded: true,
         excludedAtBlock: 160000,
@@ -427,9 +427,7 @@ describe("election/participants", () => {
         },
       ];
       mockProvider.getLogs.mockResolvedValue(mockLogs);
-      mockGovernorContract.votesReceived
-        .mockResolvedValueOnce(BigNumber.from(500))
-        .mockResolvedValueOnce(BigNumber.from(600));
+      (multicall as Mock).mockResolvedValue([BigNumber.from(500), BigNumber.from(600)]);
 
       // #when
       const result = await getExcludedNominees(
@@ -468,7 +466,7 @@ describe("election/participants", () => {
         },
       ];
       mockProvider.getLogs.mockResolvedValue(mockLogs);
-      mockGovernorContract.votesReceived.mockResolvedValue(BigNumber.from(300));
+      (multicall as Mock).mockResolvedValue([BigNumber.from(300)]);
 
       // #when
       const result = await getExcludedNominees(
@@ -479,7 +477,7 @@ describe("election/participants", () => {
 
       // #then
       expect(result).toHaveLength(1);
-      expect(result[0].address).toBe(validExcluded);
+      expect(result[0].address).toBe(validExcluded.toLowerCase());
     });
 
     it("should call getLogQueryBlockRange with offsetFromSnapshot=0", async () => {
@@ -541,7 +539,7 @@ describe("election/participants", () => {
         data: "0x",
       };
       mockProvider.getLogs.mockResolvedValue([mockLog]);
-      mockGovernorContract.votesReceived.mockResolvedValue(BigNumber.from(100));
+      (multicall as Mock).mockResolvedValue([BigNumber.from(100)]);
 
       // #when
       const result = await getExcludedNominees(

@@ -589,10 +589,9 @@ trackCmd
         onProgress: opts.verbose ? createProgressCallback() : undefined,
       });
 
-      // Clear cache entry if --force to ensure fresh tracking
+      // Clear all cache entries for this tx if --force to ensure fresh tracking
       if (opts.force && cachePath) {
-        const cacheKey = `tx:${txHash.toLowerCase()}`;
-        await tracker.clearCacheEntry(cacheKey);
+        await tracker.clearTxCacheEntries(txHash);
       }
 
       let calldatas: string[] = [];

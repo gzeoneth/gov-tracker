@@ -10,6 +10,11 @@ import { parseProgress } from "../utils/index.js";
 
 type ProposalCreatedData = { description?: string; proposalType?: string };
 type VotingData = { proposalState?: string };
+type TimelockData = {
+  isSecurityCouncilOperation?: boolean;
+  securityCouncilNonce?: string;
+  description?: string;
+};
 
 function extractMarkdownTitle(description: string | undefined): string | null {
   if (!description) return null;
@@ -19,6 +24,32 @@ function extractMarkdownTitle(description: string | undefined): string | null {
       return trimmed.replace(/^#+\s*/, "").trim() || null;
     }
   }
+  return null;
+}
+
+function getTimelockTitle(checkpoint: TrackingCheckpoint): string | null {
+  if (checkpoint.input.type !== "timelock") return null;
+
+  const stages = checkpoint.cachedData.completedStages ?? [];
+  const timelockStage = stages.find((s) => s.type === "L2_TIMELOCK" || s.type === "L1_TIMELOCK");
+  const data = timelockStage?.data as TimelockData | undefined;
+
+  if (data?.isSecurityCouncilOperation) {
+    const nonce = data.securityCouncilNonce;
+    return nonce ? `SC Rotation #${nonce}` : "SC Rotation";
+  }
+
+  if (data?.description) {
+    const mdTitle = extractMarkdownTitle(data.description);
+    if (mdTitle) return mdTitle;
+    const firstLine = data.description
+      .split("\n")
+      .find((l) => l.trim())
+      ?.trim();
+    if (firstLine && firstLine.length <= 80) return firstLine;
+    if (firstLine) return firstLine.slice(0, 77) + "...";
+  }
+
   return null;
 }
 
@@ -46,7 +77,10 @@ function getProposalInfo(checkpoint: TrackingCheckpoint) {
   } else if (checkpoint.input.type === "governor") {
     title = `Proposal ${checkpoint.input.proposalId}`;
   } else if (checkpoint.input.type === "timelock") {
-    title = `Timelock Op ${checkpoint.input.operationId}`;
+    const richTitle = getTimelockTitle(checkpoint);
+    const opId = checkpoint.input.operationId;
+    const shortId = opId.slice(0, 10) + "..." + opId.slice(-6);
+    title = richTitle ?? `Timelock Op ${shortId}`;
   }
 
   const proposalType = createdData?.proposalType;
@@ -125,6 +159,7 @@ export function useProposals(
 
     for (const [key, checkpoint] of data.checkpoints) {
       if (checkpoint.input.type === "discovery" || checkpoint.input.type === "election") continue;
+      if (checkpoint.metadata?.sourceCheckpoint) continue;
 
       const info = getProposalInfo(checkpoint);
 

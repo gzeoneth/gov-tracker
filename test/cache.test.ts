@@ -15,7 +15,21 @@ import {
   readCacheStatus,
   getBundledCachePath,
 } from "../src/tracker/cache";
-import { txHashCacheKey } from "../src/tracker/checkpoint-helpers";
+import {
+  txHashCacheKey,
+  isTimelockOpKey,
+  parseTimelockOpKey,
+  timelockOpCacheKey,
+  isElectionKey,
+  isTxKey,
+  isDiscoveryKey,
+  parseElectionKey,
+  electionCacheKey,
+  incrementErrorCount,
+  isCheckpointComplete,
+  getCheckpointErrorCount,
+  createCheckpointMetadata,
+} from "../src/tracker/checkpoint-helpers";
 import { WATERMARKS_KEY } from "../src/tracker/discovery";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
 
@@ -297,12 +311,12 @@ describe("Cache State Module", () => {
         key: (index: number) => Array.from(mockStorage.keys())[index] ?? null,
       };
 
-      (globalThis as any).localStorage = mockLocalStorage;
+      (globalThis as Record<string, unknown>).localStorage = mockLocalStorage;
       cache = new LocalStorageCache("test:");
     });
 
     afterEach(() => {
-      delete (globalThis as any).localStorage;
+      delete (globalThis as Record<string, unknown>).localStorage;
     });
 
     it("should get null for non-existent key", async () => {
@@ -404,7 +418,7 @@ describe("Cache State Module", () => {
 
     it("should return empty for missing localStorage", async () => {
       // #given - localStorage is not available
-      delete (globalThis as any).localStorage;
+      delete (globalThis as Record<string, unknown>).localStorage;
       const noStorageCache = new LocalStorageCache("test:");
 
       // #when - attempting to use cache operations
@@ -437,6 +451,429 @@ describe("Cache State Module", () => {
 
       // #then - should return the same hash with tx: prefix
       expect(key).toBe("tx:0xabcdef");
+    });
+  });
+
+  describe("timelockOpCacheKey", () => {
+    it("should create key with tx: prefix and :op: infix", () => {
+      // #given - a tx hash and operation ID
+      const txHash = "0xABCDEF123456";
+      const operationId = "0x987654ABCDEF";
+
+      // #when - generating the cache key
+      const key = timelockOpCacheKey(txHash, operationId);
+
+      // #then - should return lowercase key with proper format
+      expect(key).toBe("tx:0xabcdef123456:op:0x987654abcdef");
+    });
+  });
+
+  describe("isTimelockOpKey", () => {
+    it("should return true for timelock operation keys", () => {
+      // #given - a properly formatted timelock op key
+      const key = "tx:0xabc123:op:0xdef456";
+
+      // #when / #then
+      expect(isTimelockOpKey(key)).toBe(true);
+    });
+
+    it("should return false for regular tx keys without :op:", () => {
+      // #given - a regular tx key without operation ID
+      const key = "tx:0xabc123";
+
+      // #when / #then
+      expect(isTimelockOpKey(key)).toBe(false);
+    });
+
+    it("should return false for non-tx keys", () => {
+      // #given - various non-tx keys
+      expect(isTimelockOpKey("election:0")).toBe(false);
+      expect(isTimelockOpKey("discovery:watermarks")).toBe(false);
+      expect(isTimelockOpKey("random:key:op:something")).toBe(false);
+    });
+  });
+
+  describe("parseTimelockOpKey", () => {
+    it("should parse valid timelock op key", () => {
+      // #given - a properly formatted timelock op key
+      const key = "tx:0xabc123:op:0xdef456";
+
+      // #when
+      const result = parseTimelockOpKey(key);
+
+      // #then
+      expect(result).toEqual({ txHash: "0xabc123", operationId: "0xdef456" });
+    });
+
+    it("should return null for invalid key format", () => {
+      // #given - various invalid formats
+      expect(parseTimelockOpKey("tx:0xabc123")).toBeNull();
+      expect(parseTimelockOpKey("election:0")).toBeNull();
+      expect(parseTimelockOpKey("notvalid")).toBeNull();
+    });
+  });
+
+  describe("Cache Key Type Checks", () => {
+    describe("isElectionKey", () => {
+      it("should return true for election keys", () => {
+        expect(isElectionKey("election:0")).toBe(true);
+        expect(isElectionKey("election:5")).toBe(true);
+      });
+
+      it("should return false for non-election keys", () => {
+        expect(isElectionKey("tx:0xabc")).toBe(false);
+        expect(isElectionKey("discovery:watermarks")).toBe(false);
+      });
+    });
+
+    describe("isTxKey", () => {
+      it("should return true for tx keys", () => {
+        expect(isTxKey("tx:0xabc")).toBe(true);
+        expect(isTxKey("tx:0xabc:op:0xdef")).toBe(true);
+      });
+
+      it("should return false for non-tx keys", () => {
+        expect(isTxKey("election:0")).toBe(false);
+        expect(isTxKey("discovery:watermarks")).toBe(false);
+      });
+    });
+
+    describe("isDiscoveryKey", () => {
+      it("should return true for discovery keys", () => {
+        expect(isDiscoveryKey("discovery:watermarks")).toBe(true);
+        expect(isDiscoveryKey("discovery:something")).toBe(true);
+      });
+
+      it("should return false for non-discovery keys", () => {
+        expect(isDiscoveryKey("tx:0xabc")).toBe(false);
+        expect(isDiscoveryKey("election:0")).toBe(false);
+      });
+    });
+  });
+
+  describe("parseElectionKey", () => {
+    it("should parse valid election key", () => {
+      expect(parseElectionKey("election:0")).toBe(0);
+      expect(parseElectionKey("election:5")).toBe(5);
+      expect(parseElectionKey("election:100")).toBe(100);
+    });
+
+    it("should return null for invalid election key", () => {
+      expect(parseElectionKey("tx:0xabc")).toBeNull();
+      expect(parseElectionKey("election:")).toBeNull();
+      expect(parseElectionKey("election:abc")).toBeNull();
+    });
+  });
+
+  describe("electionCacheKey", () => {
+    it("should create election cache key from index", () => {
+      expect(electionCacheKey(0)).toBe("election:0");
+      expect(electionCacheKey(5)).toBe("election:5");
+    });
+  });
+
+  describe("incrementErrorCount", () => {
+    it("should increment error count for regular errors", () => {
+      // #given - a current error count
+      const currentCount = 3;
+
+      // #when - incrementing with a regular error
+      const result = incrementErrorCount(currentCount, new Error("Network error"));
+
+      // #then - should increment by 1
+      expect(result).toBe(4);
+    });
+
+    it("should not increment for gas-related errors (transient)", () => {
+      // #given - a current error count
+      const currentCount = 3;
+
+      // #when - incrementing with gas-related errors
+      const insufficientFunds = incrementErrorCount(
+        currentCount,
+        new Error("insufficient funds for gas")
+      );
+      const gasExceeds = incrementErrorCount(
+        currentCount,
+        new Error("gas required exceeds allowance")
+      );
+
+      // #then - should not increment
+      expect(insufficientFunds).toBe(3);
+      expect(gasExceeds).toBe(3);
+    });
+
+    it("should handle string errors", () => {
+      // #given - a current error count
+      const currentCount = 2;
+
+      // #when - incrementing with string errors
+      const regularError = incrementErrorCount(currentCount, "Some error");
+      const gasError = incrementErrorCount(currentCount, "insufficient funds");
+
+      // #then
+      expect(regularError).toBe(3);
+      expect(gasError).toBe(2);
+    });
+  });
+
+  describe("isCheckpointComplete", () => {
+    it("should return true for completed election checkpoint", () => {
+      // #given - an election checkpoint with COMPLETED phase
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 0 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: { phase: "COMPLETED" } },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as TrackingCheckpoint;
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(true);
+    });
+
+    it("should return false for incomplete election checkpoint", () => {
+      // #given - an election checkpoint with non-COMPLETED phase
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 0 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: { phase: "NOMINEE_SELECTION" } },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as TrackingCheckpoint;
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(false);
+    });
+
+    it("should return false for discovery checkpoints", () => {
+      // #given - a discovery checkpoint
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "discovery", id: "watermarks" },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(false);
+    });
+
+    it("should return true for governor checkpoint with all completed stages", () => {
+      // #given - a governor checkpoint with completed stages ending in COMPLETED status
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "123",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "2".repeat(64),
+        },
+        lastProcessedStage: "RETRYABLE_EXECUTED",
+        lastProcessedBlock: { l1: 100, l2: 200 },
+        cachedData: {
+          completedStages: [
+            {
+              type: "PROPOSAL_CREATED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "VOTING_ACTIVE",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "PROPOSAL_QUEUED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "L2_TIMELOCK",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "L2_TO_L1_MESSAGE",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "L1_TIMELOCK",
+              status: "COMPLETED",
+              chain: "ethereum",
+              chainId: 1,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "RETRYABLE_EXECUTED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(true);
+    });
+
+    it("should return false for governor checkpoint with incomplete stages", () => {
+      // #given - a governor checkpoint with pending stage
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "123",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "2".repeat(64),
+        },
+        lastProcessedStage: "L2_TIMELOCK",
+        lastProcessedBlock: { l1: 100, l2: 200 },
+        cachedData: {
+          completedStages: [
+            {
+              type: "PROPOSAL_CREATED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "VOTING_ACTIVE",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "PROPOSAL_QUEUED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "L2_TIMELOCK",
+              status: "PENDING",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(false);
+    });
+
+    it("should return false for governor checkpoint with no stages", () => {
+      // #given - a governor checkpoint with empty stages
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "123",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "2".repeat(64),
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100, l2: 200 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then
+      expect(isCheckpointComplete(checkpoint)).toBe(false);
+    });
+  });
+
+  describe("getCheckpointErrorCount", () => {
+    it("should return error count from metadata", () => {
+      // #given - a checkpoint with error count
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "discovery", id: "watermarks" },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+        metadata: { errorCount: 5, lastTrackedAt: Date.now() },
+      };
+
+      // #when / #then
+      expect(getCheckpointErrorCount(checkpoint)).toBe(5);
+    });
+
+    it("should return 0 when metadata is missing", () => {
+      // #given - a checkpoint without metadata
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "discovery", id: "watermarks" },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: {},
+      };
+
+      // #when / #then
+      expect(getCheckpointErrorCount(checkpoint)).toBe(0);
+    });
+  });
+
+  describe("createCheckpointMetadata", () => {
+    it("should create metadata with default error count of 0", () => {
+      // #given / #when
+      const metadata = createCheckpointMetadata();
+
+      // #then
+      expect(metadata.errorCount).toBe(0);
+      expect(metadata.lastTrackedAt).toBeDefined();
+      expect(metadata.lastTrackedAt).toBeGreaterThan(0);
+    });
+
+    it("should create metadata with specified error count", () => {
+      // #given / #when
+      const metadata = createCheckpointMetadata(3);
+
+      // #then
+      expect(metadata.errorCount).toBe(3);
     });
   });
 
@@ -586,10 +1023,12 @@ describe("Cache State Module", () => {
 
       // #when - reading the bundled cache file
       const cachePath = getBundledCachePath();
-      expect(cachePath).toBeDefined();
+      if (!cachePath) {
+        throw new Error("Bundled cache path should be defined");
+      }
 
       // #then - should contain valid JSON with expected structure
-      const content = fs.readFileSync(cachePath!, "utf8");
+      const content = fs.readFileSync(cachePath, "utf8");
       const data = JSON.parse(content);
 
       // Should have discovery watermarks key

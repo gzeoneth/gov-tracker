@@ -205,17 +205,8 @@ export function splitStages(stages: TrackedStage[]): {
   parentStages: TrackedStage[];
   timelockStages: TrackedStage[];
 } {
-  const parentStages: TrackedStage[] = [];
-  const timelockStages: TrackedStage[] = [];
-
-  for (const stage of stages) {
-    if (isTimelockPathStage(stage.type)) {
-      timelockStages.push(stage);
-    } else {
-      parentStages.push(stage);
-    }
-  }
-
+  const parentStages = stages.filter((s) => !isTimelockPathStage(s.type));
+  const timelockStages = stages.filter((s) => isTimelockPathStage(s.type));
   return { parentStages, timelockStages };
 }
 

@@ -335,9 +335,7 @@ export const getProposalState = (ctx: TrackingState) =>
 export function getVotingEndBlock(ctx: TrackingState): number | undefined {
   const data = stageData<VotingActiveData>(ctx, "VOTING_ACTIVE");
   if (!data?.deadline) return undefined;
-  const deadline = parseInt(data.deadline, 10);
-  const extended = data.extendedDeadline ? parseInt(data.extendedDeadline, 10) : 0;
-  return extended > deadline ? extended : deadline;
+  return Math.max(parseInt(data.deadline, 10), parseInt(data.extendedDeadline ?? "0", 10));
 }
 
 export function getL2ExecutionTxHash(ctx: TrackingState): string | undefined {

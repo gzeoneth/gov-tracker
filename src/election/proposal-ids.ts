@@ -108,19 +108,16 @@ export async function getElectionProposalIds(
     computeElectionProposalId(electionIndex, memberGovernor),
   ]);
 
-  const stateResults = await multicall(provider, [
+  const [nomineeState, memberState] = await multicall(provider, [
     buildCallInput<number>(nomineeGovernorAddress, governorInterface, "state", [nomineeProposalId]),
     buildCallInput<number>(memberGovernorAddress, governorInterface, "state", [
       computedMemberProposalId,
     ]),
   ]);
 
-  const nomineeStateResult = stateResults[0];
-  const memberStateResult = stateResults[1];
-
   const result: ElectionProposalIds = {
-    nomineeProposalId: nomineeStateResult !== null ? nomineeProposalId : null,
-    memberProposalId: memberStateResult !== null ? computedMemberProposalId : null,
+    nomineeProposalId: nomineeState !== null ? nomineeProposalId : null,
+    memberProposalId: memberState !== null ? computedMemberProposalId : null,
   };
 
   electionProposalIdsCache.set(electionIndex, result, blockNumber);

@@ -58,6 +58,7 @@ import { nomineeElectionGovernorInterface, proposalExecutedInterface } from "../
 import { getNomineeGovernor, getMemberGovernor } from "../election/contracts";
 import { computeElectionProposalId, getElectionProposalId } from "../election/proposal-ids";
 import { findCallScheduledByTxHash } from "../discovery/timelock-discovery";
+import { findProposalCreatedEvent } from "../discovery/governor-discovery";
 import { findLog } from "../utils/log-search";
 
 const { pipeline: log, tracker: logTracker } = loggers;
@@ -348,12 +349,25 @@ async function trackCreateElectionStage(state: TrackingState): Promise<StageResu
     return { state: await addStage(state, notStartedStage), continue: false };
   }
 
-  const createStage = new StageBuilder("CREATE_ELECTION", "arb1")
+  const stageBuilder = new StageBuilder("CREATE_ELECTION", "arb1")
     .status("COMPLETED")
-    .data({ electionIndex, cohort, startTimestamp: 0, nomineeProposalId })
-    .build();
+    .data({ electionIndex, cohort, startTimestamp: 0, nomineeProposalId });
 
-  return { state: await addStage(state, createStage), continue: true };
+  // Find creation tx hash for the election proposal
+  try {
+    const creationEvent = await findProposalCreatedEvent(
+      nomineeGovernorAddress,
+      nomineeProposalId,
+      state.providers.l2
+    );
+    if (creationEvent) {
+      stageBuilder.tx(creationEvent.creationTxHash, creationEvent.creationBlock, "arb1", 42161);
+    }
+  } catch {
+    // Creation tx discovery failed silently - stage still valid
+  }
+
+  return { state: await addStage(state, stageBuilder.build()), continue: true };
 }
 
 async function trackNomineeElectionStage(state: TrackingState): Promise<StageResult> {

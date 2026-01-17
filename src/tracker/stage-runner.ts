@@ -84,20 +84,6 @@ export async function runPipeline(
 }
 
 /**
- * Compose multiple pipelines.
- * Runs each pipeline in sequence if previous completed.
- */
-export async function runPipelines(
-  state: TrackingState,
-  ...pipelines: StageConfig[][]
-): Promise<TrackingState> {
-  for (const pipeline of pipelines) {
-    state = await runPipeline(state, pipeline);
-  }
-  return state;
-}
-
-/**
  * Helper: create placeholder stage for skipped/not-started stages.
  */
 export function placeholder(

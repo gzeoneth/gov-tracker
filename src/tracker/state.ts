@@ -21,6 +21,7 @@ import {
   TrackingCheckpoint,
   TrackingInput,
   StageType,
+  StageDataMap,
   Chain,
   CallScheduledData,
   ProposalData,
@@ -28,11 +29,6 @@ import {
   ProposalState,
   OnProgressCallback,
   ChunkingConfig,
-  ProposalCreatedData,
-  VotingActiveData,
-  ProposalQueuedData,
-  TimelockStageData,
-  L2ToL1MessageStageData,
 } from "../types";
 import {
   initializeStagesForTrackingPath,
@@ -45,13 +41,7 @@ import {
 } from "../stages/utils";
 import { isElectionProposal, detectProposalType } from "../discovery/governor-discovery";
 import { DEFAULT_CHUNKING_CONFIG } from "../constants";
-import {
-  CreateElectionData,
-  NomineeElectionData,
-  NomineeVettingData,
-  MemberElectionData,
-  CohortType,
-} from "../types";
+import { CohortType } from "../types";
 
 const { tracker: logTracker } = loggers;
 
@@ -239,9 +229,9 @@ export function isComplete(ctx: TrackingState): boolean {
   return areAllStagesComplete(ctx.stages);
 }
 
-// Stage data helpers
-const stageData = <T>(ctx: TrackingState, type: StageType) =>
-  findStage(ctx, type)?.data as T | undefined;
+// Stage data helpers - properly typed using StageDataMap
+const stageData = <T extends StageType>(ctx: TrackingState, type: T): StageDataMap[T] | undefined =>
+  findStage(ctx, type)?.data as StageDataMap[T] | undefined;
 const execTx = (s: TrackedStage | undefined) =>
   s?.transactions?.find((tx) => tx.description === "executed");
 const chainTx = (s: TrackedStage | undefined, chain: Chain) =>
@@ -257,26 +247,26 @@ export const getProposalId = (ctx: TrackingState) =>
 export function getTimelockAddress(ctx: TrackingState): string | undefined {
   if (ctx.input.type === "timelock") return ctx.input.timelockAddress;
   return (
-    stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.timelockAddress ??
-    stageData<MemberElectionData>(ctx, "MEMBER_ELECTION")?.timelockAddress ??
-    stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.timelockAddress
+    stageData(ctx, "PROPOSAL_QUEUED")?.timelockAddress ??
+    stageData(ctx, "MEMBER_ELECTION")?.timelockAddress ??
+    stageData(ctx, "L2_TIMELOCK")?.timelockAddress
   );
 }
 
 export function getOperationId(ctx: TrackingState): string | undefined {
   if (ctx.input.type === "timelock") return ctx.input.operationId;
   return (
-    stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.operationId ??
-    stageData<MemberElectionData>(ctx, "MEMBER_ELECTION")?.operationId ??
-    stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.operationId
+    stageData(ctx, "PROPOSAL_QUEUED")?.operationId ??
+    stageData(ctx, "MEMBER_ELECTION")?.operationId ??
+    stageData(ctx, "L2_TIMELOCK")?.operationId
   );
 }
 
 export function getCallScheduledData(ctx: TrackingState): CallScheduledData[] | undefined {
   if (ctx.callScheduledData) return ctx.callScheduledData;
-  const qData = stageData<ProposalQueuedData>(ctx, "PROPOSAL_QUEUED")?.callScheduledData;
+  const qData = stageData(ctx, "PROPOSAL_QUEUED")?.callScheduledData;
   if (qData?.length) return deserializeCallScheduledDataArray(qData);
-  const l2Data = stageData<TimelockStageData>(ctx, "L2_TIMELOCK")?.callScheduledData;
+  const l2Data = stageData(ctx, "L2_TIMELOCK")?.callScheduledData;
   return l2Data?.length ? deserializeCallScheduledDataArray(l2Data) : undefined;
 }
 
@@ -288,7 +278,7 @@ export const getQueueBlockNumber = (ctx: TrackingState) =>
 export function getProposalData(ctx: TrackingState): ProposalData | undefined {
   const s = findStage(ctx, "PROPOSAL_CREATED");
   if (!s || s.status === "NOT_STARTED") return undefined;
-  const data = s.data as ProposalCreatedData;
+  const data = s.data as StageDataMap["PROPOSAL_CREATED"];
   const tx = s.transactions?.[0];
   if (
     !data.proposalId ||
@@ -318,7 +308,7 @@ export function getProposalData(ctx: TrackingState): ProposalData | undefined {
 }
 
 export function getProposalType(ctx: TrackingState): ProposalType | undefined {
-  const data = stageData<ProposalCreatedData>(ctx, "PROPOSAL_CREATED");
+  const data = stageData(ctx, "PROPOSAL_CREATED");
   if (data?.proposalType) return data.proposalType as ProposalType;
   const addr = getGovernorAddress(ctx);
   return addr ? detectProposalType(addr) : undefined;
@@ -330,10 +320,10 @@ export const getIsElection = (ctx: TrackingState) => {
 };
 
 export const getProposalState = (ctx: TrackingState) =>
-  stageData<VotingActiveData>(ctx, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined;
+  stageData(ctx, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined;
 
 export function getVotingEndBlock(ctx: TrackingState): number | undefined {
-  const data = stageData<VotingActiveData>(ctx, "VOTING_ACTIVE");
+  const data = stageData(ctx, "VOTING_ACTIVE");
   if (!data?.deadline) return undefined;
   return Math.max(parseInt(data.deadline, 10), parseInt(data.extendedDeadline ?? "0", 10));
 }
@@ -344,7 +334,7 @@ export function getL2ExecutionTxHash(ctx: TrackingState): string | undefined {
 }
 
 export const getFirstExecutableBlock = (ctx: TrackingState) =>
-  stageData<L2ToL1MessageStageData>(ctx, "L2_TO_L1_MESSAGE")?.firstExecutableBlock;
+  stageData(ctx, "L2_TO_L1_MESSAGE")?.firstExecutableBlock;
 
 export function getOutboxExecutionTx(
   ctx: TrackingState
@@ -528,50 +518,50 @@ export const getElectionIndex = (ctx: TrackingState): number | undefined =>
 
 /** Get nominee proposal ID from CREATE_ELECTION or NOMINEE_ELECTION stage */
 export function getNomineeProposalId(ctx: TrackingState): string | undefined {
-  const createData = stageData<CreateElectionData>(ctx, "CREATE_ELECTION");
+  const createData = stageData(ctx, "CREATE_ELECTION");
   if (createData?.nomineeProposalId) return createData.nomineeProposalId;
-  const nomineeData = stageData<NomineeElectionData>(ctx, "NOMINEE_ELECTION");
+  const nomineeData = stageData(ctx, "NOMINEE_ELECTION");
   return nomineeData?.nomineeProposalId;
 }
 
 /** Get member proposal ID from NOMINEE_VETTING or MEMBER_ELECTION stage */
 export function getMemberProposalId(ctx: TrackingState): string | undefined {
-  const vettingData = stageData<NomineeVettingData>(ctx, "NOMINEE_VETTING");
+  const vettingData = stageData(ctx, "NOMINEE_VETTING");
   if (vettingData?.memberProposalId) return vettingData.memberProposalId;
-  const memberData = stageData<MemberElectionData>(ctx, "MEMBER_ELECTION");
+  const memberData = stageData(ctx, "MEMBER_ELECTION");
   return memberData?.memberProposalId;
 }
 
 /** Get election cohort from CREATE_ELECTION stage */
 export function getElectionCohort(ctx: TrackingState): CohortType | undefined {
-  const createData = stageData<CreateElectionData>(ctx, "CREATE_ELECTION");
+  const createData = stageData(ctx, "CREATE_ELECTION");
   return createData?.cohort;
 }
 
 /** Get compliant nominee count from NOMINEE_ELECTION or NOMINEE_VETTING stage */
 export function getCompliantNomineeCount(ctx: TrackingState): number | undefined {
-  const nomineeData = stageData<NomineeElectionData>(ctx, "NOMINEE_ELECTION");
+  const nomineeData = stageData(ctx, "NOMINEE_ELECTION");
   if (nomineeData?.compliantNomineeCount !== undefined) return nomineeData.compliantNomineeCount;
-  const vettingData = stageData<NomineeVettingData>(ctx, "NOMINEE_VETTING");
+  const vettingData = stageData(ctx, "NOMINEE_VETTING");
   return vettingData?.compliantNomineeCount;
 }
 
 /** Get target nominee count from NOMINEE_ELECTION stage */
 export function getTargetNomineeCount(ctx: TrackingState): number | undefined {
-  const nomineeData = stageData<NomineeElectionData>(ctx, "NOMINEE_ELECTION");
+  const nomineeData = stageData(ctx, "NOMINEE_ELECTION");
   return nomineeData?.targetNomineeCount;
 }
 
 /** Get vetting deadline from NOMINEE_VETTING stage */
 export function getVettingDeadline(ctx: TrackingState): number | undefined {
-  const vettingData = stageData<NomineeVettingData>(ctx, "NOMINEE_VETTING");
+  const vettingData = stageData(ctx, "NOMINEE_VETTING");
   return vettingData?.vettingDeadline;
 }
 
 /** Get timelock operation ID from election flow (MEMBER_ELECTION stage) */
 export function getElectionTimelockOperationId(ctx: TrackingState): string | undefined {
   // For elections, operation ID comes from MEMBER_ELECTION stage after execution
-  const memberData = stageData<MemberElectionData>(ctx, "MEMBER_ELECTION");
+  const memberData = stageData(ctx, "MEMBER_ELECTION");
   if (memberData?.operationId) return memberData.operationId;
 
   // Fall back to timelock stages

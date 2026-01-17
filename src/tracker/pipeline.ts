@@ -20,6 +20,7 @@ import {
   getGovernorAddress,
   getProposalId,
   getProposalData,
+  getProposalType,
   getIsElection,
   getTimelockAddress,
   getOperationId,
@@ -188,6 +189,7 @@ async function trackL2TimelockStage(state: TrackingState): Promise<StageResult> 
     {
       cachedExecutionTxHash: getL2ExecutionTxHash(state),
       allStages: state.stages,
+      proposalType: getProposalType(state),
       chunkSize: state.chunkingConfig.l2ChunkSize,
     }
   );

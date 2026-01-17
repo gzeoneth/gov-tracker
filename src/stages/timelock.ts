@@ -93,8 +93,10 @@ interface TrackTimelockOptions {
   /** Whether to check for Security Council enrichment (L2 only) */
   checkSecurityCouncil?: boolean;
   additionalPayload?: Record<string, unknown>;
-  /** All tracked stages (used for salt computation from other stages) */
+  /** All tracked stages (used for salt computation from PROPOSAL_CREATED description or L2_TO_L1_MESSAGE event) */
   allStages?: TrackedStage[];
+  /** Proposal type from PROPOSAL_CREATED stage - used to skip SC check for governor proposals */
+  proposalType?: string;
   /** Override chunk size for log searches */
   chunkSize?: number;
 }
@@ -127,17 +129,6 @@ export interface L1TimelockResult extends TimelockStageResult {
 const GOVERNOR_PROPOSAL_TYPES = new Set(["CONSTITUTIONAL", "NON_CONSTITUTIONAL"]);
 
 /**
- * Check if proposal is from a known governor (not a Security Council operation).
- * Governor proposals have proposalType of CONSTITUTIONAL or NON_CONSTITUTIONAL.
- */
-function isKnownGovernorProposal(allStages?: TrackedStage[]): boolean {
-  if (!allStages) return false;
-  const proposalStage = allStages.find((s) => s.type === "PROPOSAL_CREATED");
-  const proposalType = proposalStage?.data.proposalType as string | undefined;
-  return proposalType ? GOVERNOR_PROPOSAL_TYPES.has(proposalType) : false;
-}
-
-/**
  * Get Security Council enrichment data if applicable.
  * Returns data to merge into stage, or null if not a SC operation.
  *
@@ -147,10 +138,10 @@ async function getSecurityCouncilData(
   timelockState: TimelockState,
   operationId: string,
   provider: ethers.providers.Provider,
-  allStages?: TrackedStage[]
+  proposalType?: string
 ): Promise<Record<string, unknown> | null> {
   // Skip for known governor proposals - they are never SC operations
-  if (isKnownGovernorProposal(allStages)) {
+  if (proposalType && GOVERNOR_PROPOSAL_TYPES.has(proposalType)) {
     return null;
   }
 
@@ -278,7 +269,7 @@ async function trackTimelock(
       timelockState,
       operationId,
       provider,
-      options.allStages
+      options.proposalType
     );
     if (scData) {
       builder.data(scData);
@@ -487,13 +478,19 @@ export async function trackL2Timelock(
   provider: ethers.providers.Provider,
   fromBlock: number,
   callScheduledData: CallScheduledData,
-  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[]; chunkSize?: number } = {}
+  options: {
+    cachedExecutionTxHash?: string;
+    allStages?: TrackedStage[];
+    proposalType?: string;
+    chunkSize?: number;
+  } = {}
 ): Promise<TimelockStageResult> {
   return trackTimelock(L2_TIMELOCK_CONFIG, timelockAddress, operationId, provider, fromBlock, {
     callScheduledData,
     cachedExecutionTxHash: options.cachedExecutionTxHash,
     checkSecurityCouncil: true,
     allStages: options.allStages,
+    proposalType: options.proposalType,
     chunkSize: options.chunkSize,
   });
 }

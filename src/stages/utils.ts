@@ -346,24 +346,15 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
  * @returns The operationId if found, undefined otherwise
  */
 export function extractOperationId(stages: TrackedStage[]): string | undefined {
-  // Check PROPOSAL_QUEUED first (most common)
-  const queuedStage = stages.find((s) => s.type === "PROPOSAL_QUEUED");
-  if (queuedStage?.type === "PROPOSAL_QUEUED") {
-    const opId = queuedStage.data.operationId;
-    if (typeof opId === "string" && opId.length > 0) {
-      return opId;
+  // Check stages that contain operationId (PROPOSAL_QUEUED is most common)
+  for (const stage of stages) {
+    if (stage.type === "PROPOSAL_QUEUED" || stage.type === "L2_TIMELOCK") {
+      const opId = stage.data.operationId;
+      if (typeof opId === "string" && opId.length > 0) {
+        return opId;
+      }
     }
   }
-
-  // Fallback to L2_TIMELOCK
-  const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
-  if (l2TimelockStage?.type === "L2_TIMELOCK") {
-    const opId = l2TimelockStage.data.operationId;
-    if (typeof opId === "string" && opId.length > 0) {
-      return opId;
-    }
-  }
-
   return undefined;
 }
 

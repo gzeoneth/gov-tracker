@@ -72,28 +72,19 @@ export async function detectAllRetryableTargetChains(
   // Count InboxMessageDelivered events grouped by inbox address
   const counts = countLogsByAddress(receipt.logs, { topic: EVENT_TOPICS.TICKET_CREATED });
 
-  const arb1Count = counts.get(ADDRESSES.ARB1_DELAYED_INBOX.toLowerCase()) ?? 0;
-  const novaCount = counts.get(ADDRESSES.NOVA_DELAYED_INBOX.toLowerCase()) ?? 0;
+  const chainConfigs: Array<{ chain: L2Chain; inbox: string }> = [
+    { chain: "arb1", inbox: ADDRESSES.ARB1_DELAYED_INBOX },
+    { chain: "nova", inbox: ADDRESSES.NOVA_DELAYED_INBOX },
+  ];
 
-  const targets: RetryableTargetInfo[] = [];
-
-  if (arb1Count > 0) {
-    targets.push({
-      chain: "arb1",
-      inboxAddress: ADDRESSES.ARB1_DELAYED_INBOX,
-      messageCount: arb1Count,
-    });
-  }
-
-  if (novaCount > 0) {
-    targets.push({
-      chain: "nova",
-      inboxAddress: ADDRESSES.NOVA_DELAYED_INBOX,
-      messageCount: novaCount,
-    });
-  }
-
-  return targets;
+  return chainConfigs
+    .map((c) => ({
+      chain: c.chain,
+      inboxAddress: c.inbox,
+      count: counts.get(c.inbox.toLowerCase()) ?? 0,
+    }))
+    .filter((c) => c.count > 0)
+    .map((c) => ({ chain: c.chain, inboxAddress: c.inboxAddress, messageCount: c.count }));
 }
 
 /**
@@ -117,45 +108,41 @@ export interface TrackRetryablesOptions {
  * @param l1Provider - Ethereum L1 provider
  * @param options - L2 provider options (l2Provider required, novaProvider optional)
  */
+type RetryableResult = {
+  stage: TypedTrackedStage<"RETRYABLE_EXECUTED">;
+  messages: ParentToChildMessageReader[];
+  isComplete: boolean;
+  targetChains: L2Chain[];
+};
+
+/** Create a skipped retryable result */
+function skipRetryableResult(reason: string): RetryableResult {
+  return {
+    stage: new StageBuilder("RETRYABLE_EXECUTED", "arb1").skip(reason).build(),
+    messages: [],
+    isComplete: true,
+    targetChains: [],
+  };
+}
+
 export async function trackRetryables(
   l1ExecutionTxHash: string,
   l1Provider: ethers.providers.Provider,
   options: TrackRetryablesOptions
-): Promise<{
-  stage: TypedTrackedStage<"RETRYABLE_EXECUTED">;
-  messages: ParentToChildMessageReader[];
-  isComplete: boolean;
-  /** All target chains for retryables (can be both arb1 and nova) */
-  targetChains: L2Chain[];
-}> {
+): Promise<RetryableResult> {
   const { l2Provider, novaProvider } = options;
 
   // Detect ALL chains that the retryables target
   const targetInfos = await detectAllRetryableTargetChains(l1ExecutionTxHash, l1Provider);
 
-  // No retryables found
   if (targetInfos.length === 0) {
-    return {
-      stage: new StageBuilder("RETRYABLE_EXECUTED", "arb1")
-        .skip("No retryable tickets in transaction")
-        .build(),
-      messages: [],
-      isComplete: true,
-      targetChains: [],
-    };
+    return skipRetryableResult("No retryable tickets in transaction");
   }
 
   // Get L1 receipt once (shared across all chains)
   const l1Receipt = await queryWithRetry(() => l1Provider.getTransactionReceipt(l1ExecutionTxHash));
   if (!l1Receipt) {
-    return {
-      stage: new StageBuilder("RETRYABLE_EXECUTED", "arb1")
-        .skip("L1 transaction receipt not found")
-        .build(),
-      messages: [],
-      isComplete: true,
-      targetChains: [],
-    };
+    return skipRetryableResult("L1 transaction receipt not found");
   }
   const l1Timestamp = await getBlockTimestamp(l1Receipt.blockNumber, l1Provider);
 

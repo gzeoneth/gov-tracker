@@ -29,6 +29,7 @@ import {
   isElectionGovernor,
   isTimelockStage,
   isConstitutional,
+  Chain,
   buildDefaultTargets,
   isCheckpointComplete,
   isCheckpointErrored,
@@ -285,16 +286,14 @@ export function createProvidersFromOptions(opts: {
   const novaRpc = opts.novaRpc || process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
 
   // Warn when using default public RPCs (no env var or CLI option provided)
-  const warnings: string[] = [];
-  if (!opts.l1Rpc && !process.env.ETH_RPC) {
-    warnings.push("Using public RPC URL for Ethereum (ETH_RPC not set)");
-  }
-  if (!opts.l2Rpc && !process.env.ARB1_RPC) {
-    warnings.push("Using public RPC URL for Arbitrum One (ARB1_RPC not set)");
-  }
-  if (!opts.novaRpc && !process.env.NOVA_RPC) {
-    warnings.push("Using public RPC URL for Nova (NOVA_RPC not set)");
-  }
+  const rpcConfigs = [
+    { opt: opts.l1Rpc, env: "ETH_RPC", name: "Ethereum" },
+    { opt: opts.l2Rpc, env: "ARB1_RPC", name: "Arbitrum One" },
+    { opt: opts.novaRpc, env: "NOVA_RPC", name: "Nova" },
+  ] as const;
+  const warnings = rpcConfigs
+    .filter(({ opt, env }) => !opt && !process.env[env])
+    .map(({ name, env }) => `Using public RPC URL for ${name} (${env} not set)`);
   if (warnings.length > 0) {
     console.warn(`Warning: ${warnings.join("; ")}. Public RPCs may have rate limits.`);
   }
@@ -326,6 +325,12 @@ export function createSigner(privateKey: string): ethers.Wallet {
 // Transaction Execution
 // ============================================================================
 
+function getProviderForChain(chain: Chain, providers: ProviderBundle): ethers.providers.Provider {
+  if (chain === "ethereum") return providers.l1Provider;
+  if (chain === "nova") return providers.novaProvider;
+  return providers.l2Provider;
+}
+
 export async function executeTransaction(
   prepared: PreparedTransaction,
   signer: ethers.Wallet,
@@ -335,12 +340,7 @@ export async function executeTransaction(
   const isRetryable = prepared.description?.toLowerCase().includes("retryable") ?? false;
 
   try {
-    const provider =
-      prepared.chain === "ethereum"
-        ? providers.l1Provider
-        : prepared.chain === "nova"
-          ? providers.novaProvider
-          : providers.l2Provider;
+    const provider = getProviderForChain(prepared.chain, providers);
 
     const connectedSigner = signer.connect(provider);
 
@@ -402,17 +402,12 @@ export async function executeTransaction(
 // Output Formatting
 // ============================================================================
 
-export function formatDryRun(prepared: PreparedTransaction): string {
-  const lines = [
-    `[DRY RUN] ${prepared.description}`,
-    `  Chain: ${prepared.chain}`,
-    `  To: ${prepared.to}`,
-  ];
-
+/** Format the body of a prepared transaction (without header) */
+function formatPreparedTxBody(prepared: PreparedTransaction): string[] {
+  const lines = [`  Chain: ${prepared.chain}`, `  To: ${prepared.to}`];
   if (prepared.operationId) lines.push(`  OperationId: ${prepared.operationId}`);
   if (prepared.value !== "0") lines.push(`  Value: ${prepared.value}`);
   lines.push(`  Data: ${prepared.data}`);
-
   if (prepared.hashValidation) {
     lines.push(
       prepared.hashValidation.isValid
@@ -420,8 +415,11 @@ export function formatDryRun(prepared: PreparedTransaction): string {
         : `  WARNING: Hash validation failed - ${prepared.hashValidation.error}`
     );
   }
+  return lines;
+}
 
-  return lines.join("\n");
+export function formatDryRun(prepared: PreparedTransaction): string {
+  return [`[DRY RUN] ${prepared.description}`, ...formatPreparedTxBody(prepared)].join("\n");
 }
 
 /**
@@ -433,25 +431,13 @@ export function formatMultiplePreparedTransactions(
   if (preparedTransactions.length === 0) return "";
   if (preparedTransactions.length === 1) return formatDryRun(preparedTransactions[0]);
 
-  const lines: string[] = [];
-  for (let i = 0; i < preparedTransactions.length; i++) {
-    const prepared = preparedTransactions[i];
-    lines.push(`[DRY RUN ${i + 1}/${preparedTransactions.length}] ${prepared.description}`);
-    lines.push(`  Chain: ${prepared.chain}`);
-    lines.push(`  To: ${prepared.to}`);
-    if (prepared.operationId) lines.push(`  OperationId: ${prepared.operationId}`);
-    if (prepared.value !== "0") lines.push(`  Value: ${prepared.value}`);
-    lines.push(`  Data: ${prepared.data}`);
-    if (prepared.hashValidation) {
-      lines.push(
-        prepared.hashValidation.isValid
-          ? `  Hash Valid: YES`
-          : `  WARNING: Hash validation failed - ${prepared.hashValidation.error}`
-      );
-    }
-    if (i < preparedTransactions.length - 1) lines.push(""); // Blank line between transactions
-  }
-  return lines.join("\n");
+  return preparedTransactions
+    .map((prepared, i) => [
+      `[DRY RUN ${i + 1}/${preparedTransactions.length}] ${prepared.description}`,
+      ...formatPreparedTxBody(prepared),
+    ])
+    .map((lines) => lines.join("\n"))
+    .join("\n\n");
 }
 
 export function formatTrackingResult(result: TrackingResult, label?: string): string {

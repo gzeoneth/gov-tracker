@@ -832,6 +832,149 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
   });
 });
 
+describe("trackElection Cache Behavior (Mocked)", () => {
+  const mockL1Provider = {} as ethers.providers.Provider;
+  const mockL2Provider = {} as ethers.providers.Provider;
+
+  function createMockCache() {
+    const storage = new Map<string, unknown>();
+    return {
+      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
+      set: async <T>(key: string, value: T): Promise<void> => {
+        storage.set(key, value);
+      },
+      delete: async (key: string): Promise<void> => {
+        storage.delete(key);
+      },
+      clear: async (): Promise<void> => {
+        storage.clear();
+      },
+      has: async (key: string): Promise<boolean> => storage.has(key),
+      keys: (prefix?: string): string[] =>
+        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
+      _storage: storage,
+    };
+  }
+
+  describe("trackElection cache hit", () => {
+    it("should return cached COMPLETED election without RPC calls", async () => {
+      // #given - tracker with cache containing a COMPLETED election
+      const mockCache = createMockCache();
+      const cachedStatus: ElectionProposalStatus = {
+        electionIndex: 2,
+        phase: "COMPLETED",
+        cohort: 0,
+        nomineeProposalId: "0x1234",
+        nomineeProposalState: "Executed",
+        memberProposalId: "0xabcd",
+        memberProposalState: "Executed",
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+      };
+
+      await mockCache.set("election:2", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 2 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: cachedStatus },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting election checkpoint (to verify cache works)
+      const result = await tracker.getElectionCheckpoint(2);
+
+      // #then - should return cached status
+      expect(result).toBeDefined();
+      expect(result?.status.phase).toBe("COMPLETED");
+      expect(result?.status.electionIndex).toBe(2);
+    });
+  });
+
+  describe("getElectionCheckpoint additional tests", () => {
+    it("should return null for non-existent election index", async () => {
+      // #given - cache without the requested election
+      const mockCache = createMockCache();
+      await mockCache.set("election:0", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 0 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: { phase: "COMPLETED", electionIndex: 0 } },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting an election that doesn't exist
+      const result = await tracker.getElectionCheckpoint(999);
+
+      // #then - should return null
+      expect(result).toBeNull();
+    });
+
+    it("should return election with incomplete phase", async () => {
+      // #given - cache with MEMBER_ELECTION phase (not complete)
+      const mockCache = createMockCache();
+      const incompleteStatus: ElectionProposalStatus = {
+        electionIndex: 1,
+        phase: "MEMBER_ELECTION",
+        cohort: 1,
+        nomineeProposalId: "0x1234",
+        nomineeProposalState: "Executed",
+        memberProposalId: "0xabcd",
+        memberProposalState: "Active",
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: true,
+      };
+
+      await mockCache.set("election:1", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 1 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: incompleteStatus },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - getting the election checkpoint
+      const result = await tracker.getElectionCheckpoint(1);
+
+      // #then - should return the incomplete status
+      expect(result).toBeDefined();
+      expect(result?.status.phase).toBe("MEMBER_ELECTION");
+      expect(result?.status.canExecuteMember).toBe(true);
+    });
+  });
+});
+
 describe("trackFromCheckpoint Edge Cases", () => {
   const mockL1Provider = {} as ethers.providers.Provider;
   const mockL2Provider = {} as ethers.providers.Provider;

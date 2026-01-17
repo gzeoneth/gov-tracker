@@ -17,7 +17,7 @@ import {
 } from "../utils/index.js";
 import type { ElectionStatus, ElectionProposalStatus } from "../../../types/index.js";
 import { useElectionData } from "../hooks/useElectionData.js";
-import { getTxUrl } from "../../../constants.js";
+import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
 import { formatDate, ELECTION_PHASE_COLORS, ELECTION_PHASE_ICONS } from "../utils/index.js";
 
 interface ElectionViewProps {
@@ -110,15 +110,15 @@ function buildDetailLines(election: ElectionProposalStatus): DisplayLine[] {
   if (election.creationTxHash) {
     lines.push({ text: "" });
     lines.push({ text: `  Created: ${election.creationTxHash}`, dimColor: true });
-    lines.push({ text: `    ${getTxUrl(42161, election.creationTxHash)}`, color: "blue" });
+    lines.push({ text: `    ${getTxUrl(CHAIN_IDS.ARB_ONE, election.creationTxHash)}`, color: "blue" });
   }
   if (election.nomineeExecuteTxHash) {
     lines.push({ text: `  Nominee Executed: ${election.nomineeExecuteTxHash}`, dimColor: true });
-    lines.push({ text: `    ${getTxUrl(42161, election.nomineeExecuteTxHash)}`, color: "blue" });
+    lines.push({ text: `    ${getTxUrl(CHAIN_IDS.ARB_ONE, election.nomineeExecuteTxHash)}`, color: "blue" });
   }
   if (election.memberExecuteTxHash) {
     lines.push({ text: `  Member Executed: ${election.memberExecuteTxHash}`, dimColor: true });
-    lines.push({ text: `    ${getTxUrl(42161, election.memberExecuteTxHash)}`, color: "blue" });
+    lines.push({ text: `    ${getTxUrl(CHAIN_IDS.ARB_ONE, election.memberExecuteTxHash)}`, color: "blue" });
   }
   if (election.timelockOperationId) {
     lines.push({ text: `  Timelock Op: ${election.timelockOperationId}`, dimColor: true });

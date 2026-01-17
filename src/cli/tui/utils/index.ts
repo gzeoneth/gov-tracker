@@ -9,12 +9,7 @@ export {
   toggleFoldKey,
 } from "./calldata-formatter.js";
 export type { FormattedLine } from "./calldata-formatter.js";
-export {
-  CHAIN_TO_CHAIN_ID,
-  safeStringify,
-  formatValue,
-  formatStageData,
-} from "./stage-formatter.js";
+export { safeStringify, formatValue, formatStageData } from "./stage-formatter.js";
 export type { StageDataItem } from "./stage-formatter.js";
 export { parseMarkdown } from "./markdown-parser.js";
 export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";

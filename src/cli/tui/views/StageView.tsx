@@ -15,7 +15,6 @@ import {
 } from "../components/ScrollIndicator.js";
 import {
   getVisibleRows,
-  CHAIN_TO_CHAIN_ID,
   formatStageData,
   getStages,
   buildBreadcrumb,
@@ -83,7 +82,7 @@ export function StageView({
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>Transactions:</Text>
           {stage.transactions.map((tx, i) => {
-            const url = getTxUrl(CHAIN_TO_CHAIN_ID[tx.chain], tx.hash);
+            const url = getTxUrl(tx.chainId, tx.hash);
             return (
               <Box key={i} flexDirection="column" marginLeft={1}>
                 <Box><Text color="gray">[{i + 1}] </Text><Text color="blue">{tx.hash}</Text></Box>

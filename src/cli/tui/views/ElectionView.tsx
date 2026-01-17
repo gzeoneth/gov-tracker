@@ -32,8 +32,6 @@ interface DisplayLine {
   dimColor?: boolean;
 }
 
-
-
 function buildStatusLines(status: ElectionStatus): DisplayLine[] {
   const lines: DisplayLine[] = [];
   const cohortName = status.cohort === 0 ? "FIRST" : "SECOND";

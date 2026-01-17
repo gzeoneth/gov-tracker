@@ -63,7 +63,7 @@ jobs:
         run: yarn build
 
       - name: Run all tests
-        run: yarn test:coverage:all --reporter=junit --outputFile=junit.xml
+        run: yarn test:coverage --reporter=junit --outputFile=junit.xml
         env:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           ARB1_RPC: ${{ secrets.ARB1_RPC }}

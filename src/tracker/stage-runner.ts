@@ -9,8 +9,9 @@
  */
 
 import { loggers } from "../utils/logger";
-import { StageType, TrackedStage } from "../types";
+import { StageType, TrackedStage, chainToChainId } from "../types";
 import { TrackingState, addStage, getCompletedStage, getCachedStage } from "./state";
+import { getChainForStage } from "../stages/utils";
 
 const { pipeline: log } = loggers;
 
@@ -91,12 +92,12 @@ export function placeholder(
   status: "NOT_STARTED" | "SKIPPED",
   reason: string
 ): TrackedStage {
-  const L1_STAGES = new Set(["L1_TIMELOCK"]);
+  const chain = getChainForStage(type);
   return {
     type,
     status,
-    chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
-    chainId: L1_STAGES.has(type) ? 1 : 42161,
+    chain,
+    chainId: chainToChainId(chain) ?? 0,
     transactions: [],
     data: { reason },
   } as TrackedStage;

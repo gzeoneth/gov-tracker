@@ -115,6 +115,7 @@ import { prepareTransaction as prepareTransactionInternal } from "./tracker/exec
  * This bridges the unified pipeline approach with the existing election API.
  */
 function buildElectionStatusFromState(state: TrackingState): ElectionProposalStatus {
+  // Extract basic state with defaults
   const electionIndex = getElectionIndex(state) ?? 0;
   const nomineeProposalId = getNomineeProposalId(state) ?? null;
   const memberProposalId = getMemberProposalId(state) ?? null;
@@ -124,60 +125,41 @@ function buildElectionStatusFromState(state: TrackingState): ElectionProposalSta
     getTargetNomineeCount(state) ?? TIMING.SECURITY_COUNCIL_TARGET_NOMINEES;
   const vettingDeadline = getVettingDeadline(state) ?? null;
 
-  // Extract proposal states from stages
-  const nomineeStage = state.stages.find((s) => s.type === "NOMINEE_ELECTION");
-  const memberStage = state.stages.find((s) => s.type === "MEMBER_ELECTION");
-  const vettingStage = state.stages.find((s) => s.type === "NOMINEE_VETTING");
+  // Stage lookups (typed for data access)
+  const createStage = findStage(state.stages, "CREATE_ELECTION");
+  const nomineeStage = findStage(state.stages, "NOMINEE_ELECTION");
+  const vettingStage = findStage(state.stages, "NOMINEE_VETTING");
+  const memberStage = findStage(state.stages, "MEMBER_ELECTION");
 
+  // Extract proposal states from typed stages
   const nomineeProposalState =
-    nomineeStage?.type === "NOMINEE_ELECTION"
-      ? ((nomineeStage.data as NomineeElectionData)
-          .proposalState as ElectionProposalStatus["nomineeProposalState"])
-      : null;
-
+    ((nomineeStage?.data as NomineeElectionData | undefined)
+      ?.proposalState as ElectionProposalStatus["nomineeProposalState"]) ?? null;
   const memberProposalState =
-    memberStage?.type === "MEMBER_ELECTION"
-      ? ((memberStage.data as MemberElectionData)
-          .proposalState as ElectionProposalStatus["memberProposalState"])
-      : null;
+    ((memberStage?.data as MemberElectionData | undefined)
+      ?.proposalState as ElectionProposalStatus["memberProposalState"]) ?? null;
 
-  // Determine if in vetting period
   const isInVettingPeriod = vettingStage?.status === "PENDING";
 
-  // Determine phase
-  const phase = determineElectionPhase(
-    nomineeProposalState,
-    memberProposalId,
-    memberProposalState,
-    isInVettingPeriod
-  );
-
-  // Determine action availability
-  const canProceedToMemberPhase = vettingStage?.status === "READY";
-  const canExecuteMember = memberStage?.status === "READY";
-
-  // Extract transaction hashes
-  const createStage = state.stages.find((s) => s.type === "CREATE_ELECTION");
-  const creationTxHash = createStage?.transactions?.[0]?.hash;
-  const nomineeExecuteTxHash = vettingStage?.transactions?.[0]?.hash;
-  const memberExecuteTxHash = memberStage?.transactions?.find(
-    (t) => t.description === "executed"
-  )?.hash;
-
-  // Determine failure
-  const isFailed =
-    nomineeStage?.status === "FAILED" ||
-    memberStage?.status === "FAILED" ||
-    vettingStage?.status === "FAILED";
+  // Determine failure from any failed stage
+  const failedStage = [nomineeStage, vettingStage, memberStage].find((s) => s?.status === "FAILED");
   const failureReason =
-    (nomineeStage?.status === "FAILED" && "Nominee election failed") ||
-    (vettingStage?.status === "FAILED" && "Not enough compliant nominees") ||
-    (memberStage?.status === "FAILED" && "Member election failed") ||
-    undefined;
+    failedStage === nomineeStage
+      ? "Nominee election failed"
+      : failedStage === vettingStage
+        ? "Not enough compliant nominees"
+        : failedStage === memberStage
+          ? "Member election failed"
+          : undefined;
 
   return {
     electionIndex,
-    phase,
+    phase: determineElectionPhase(
+      nomineeProposalState,
+      memberProposalId,
+      memberProposalState,
+      isInVettingPeriod
+    ),
     cohort,
     nomineeProposalId,
     memberProposalId,
@@ -187,15 +169,15 @@ function buildElectionStatusFromState(state: TrackingState): ElectionProposalSta
     targetNomineeCount,
     vettingDeadline,
     isInVettingPeriod,
-    canProceedToMemberPhase,
-    canExecuteMember,
+    canProceedToMemberPhase: vettingStage?.status === "READY",
+    canExecuteMember: memberStage?.status === "READY",
     stages: state.stages,
-    isFailed: isFailed || undefined,
+    isFailed: failedStage !== undefined ? true : undefined,
     failureReason,
     timelockOperationId: getElectionTimelockOperationId(state),
-    creationTxHash,
-    nomineeExecuteTxHash,
-    memberExecuteTxHash,
+    creationTxHash: createStage?.transactions?.[0]?.hash,
+    nomineeExecuteTxHash: vettingStage?.transactions?.[0]?.hash,
+    memberExecuteTxHash: memberStage?.transactions?.find((t) => t.description === "executed")?.hash,
   };
 }
 
@@ -204,30 +186,16 @@ function buildElectionStatusFromState(state: TrackingState): ElectionProposalSta
  */
 export function extractTimelockLink(stages: TrackedStage[]): TimelockLink | undefined {
   const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
-
-  if (
-    !queuedStage ||
-    queuedStage.type !== "PROPOSAL_QUEUED" ||
-    queuedStage.status !== "COMPLETED"
-  ) {
+  if (queuedStage?.status !== "COMPLETED" || queuedStage.type !== "PROPOSAL_QUEUED") {
     return undefined;
   }
 
-  const txHash = queuedStage.transactions[0]?.hash;
-  const operationId = queuedStage.data.operationId;
-  const timelockAddress = queuedStage.data.timelockAddress;
-  const queueBlockNumber = queuedStage.transactions[0]?.blockNumber;
+  const tx = queuedStage.transactions[0];
+  const { operationId, timelockAddress } = queuedStage.data;
 
-  if (!txHash || !operationId || !timelockAddress || !queueBlockNumber) {
-    return undefined;
-  }
-
-  return {
-    txHash,
-    operationId,
-    timelockAddress,
-    queueBlockNumber,
-  };
+  return tx?.hash && operationId && timelockAddress && tx.blockNumber
+    ? { txHash: tx.hash, operationId, timelockAddress, queueBlockNumber: tx.blockNumber }
+    : undefined;
 }
 
 /**

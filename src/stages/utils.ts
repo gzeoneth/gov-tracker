@@ -103,24 +103,24 @@ function createStage(
   } as TrackedStage;
 }
 
-/** Full proposal stages (from governor proposal) */
-const FULL_PROPOSAL_STAGES: StageType[] = [
-  "PROPOSAL_CREATED",
-  "VOTING_ACTIVE",
-  "PROPOSAL_QUEUED",
+/** Common timelock stages shared by all paths */
+const COMMON_TIMELOCK_STAGES: StageType[] = [
   "L2_TIMELOCK",
   "L2_TO_L1_MESSAGE",
   "L1_TIMELOCK",
   "RETRYABLE_EXECUTED",
 ];
 
-/** Timelock-only stages (direct timelock entry) */
-const TIMELOCK_ONLY_STAGES: StageType[] = [
-  "L2_TIMELOCK",
-  "L2_TO_L1_MESSAGE",
-  "L1_TIMELOCK",
-  "RETRYABLE_EXECUTED",
+/** Full proposal stages (from governor proposal) */
+const FULL_PROPOSAL_STAGES: StageType[] = [
+  "PROPOSAL_CREATED",
+  "VOTING_ACTIVE",
+  "PROPOSAL_QUEUED",
+  ...COMMON_TIMELOCK_STAGES,
 ];
+
+/** Timelock-only stages (direct timelock entry) */
+const TIMELOCK_ONLY_STAGES: StageType[] = COMMON_TIMELOCK_STAGES;
 
 /** Election stages (full election lifecycle) */
 const ELECTION_STAGES: StageType[] = [
@@ -128,10 +128,7 @@ const ELECTION_STAGES: StageType[] = [
   "NOMINEE_ELECTION",
   "NOMINEE_VETTING",
   "MEMBER_ELECTION",
-  "L2_TIMELOCK",
-  "L2_TO_L1_MESSAGE",
-  "L1_TIMELOCK",
-  "RETRYABLE_EXECUTED",
+  ...COMMON_TIMELOCK_STAGES,
 ];
 
 /**
@@ -158,18 +155,17 @@ export function getStagesForTrackingPath(path: TrackingPath): StageType[] {
  * Initialize all stages for a tracking path
  * @param path - The tracking path type: "governor", "timelock", or "election"
  */
+/** L1 stages (execute on Ethereum mainnet) */
+const L1_STAGES = new Set<StageType>(["L1_TIMELOCK", "RETRYABLE_EXECUTED"]);
+
+/** Get chain for a stage type (L1 stages run on ethereum, others on arb1) */
+export const getChainForStage = (type: StageType): Chain =>
+  L1_STAGES.has(type) ? "ethereum" : "arb1";
+
 export function initializeStagesForTrackingPath(path: TrackingPath): TrackedStage[] {
-  const stageTypes = getStagesForTrackingPath(path);
-
-  return stageTypes.map((type) => {
-    // Determine chain for each stage type
-    // L1_TIMELOCK and RETRYABLE_EXECUTED are L1 stages
-    // L2_TO_L1_MESSAGE is cross-chain but logically completes on L1
-    const chain: Chain =
-      type === "L1_TIMELOCK" || type === "RETRYABLE_EXECUTED" ? "ethereum" : "arb1";
-
-    return createStage(type, chain, "NOT_STARTED");
-  });
+  return getStagesForTrackingPath(path).map((type) =>
+    createStage(type, getChainForStage(type), "NOT_STARTED")
+  );
 }
 
 // ============================================================================

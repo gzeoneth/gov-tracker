@@ -56,10 +56,11 @@ export function chainIdToChain(chainId: ChainId): Chain {
 }
 
 /**
- * Convert chain name to chainId
+ * Convert chain name to chainId.
+ * Returns 0 for unknown chains (safe sentinel value).
  */
-export function chainToChainId(chain: Chain): ChainId | undefined {
-  if (chain === "unknown") return undefined;
+export function chainToChainId(chain: Chain): ChainId {
+  if (chain === "unknown") return 0;
   return CHAIN_ID_MAP[chain];
 }
 

@@ -89,7 +89,7 @@ function createStage(
   chain: Chain,
   status: StageStatus = "NOT_STARTED"
 ): TrackedStage {
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
   // Assertion needed: we create placeholder stages with empty data that get
   // replaced by properly-built stages. TypeScript can't track this flow.
   return {
@@ -646,7 +646,7 @@ export async function searchAndCompleteTimelockExecution(
 
   if (event) {
     const execTimestamp = await getBlockTimestamp(event.blockNumber, provider);
-    const chainId = chainToChainId(chain) ?? 0;
+    const chainId = chainToChainId(chain);
     builder
       .status("COMPLETED")
       .tx(event.txHash, event.blockNumber, chain, chainId, {

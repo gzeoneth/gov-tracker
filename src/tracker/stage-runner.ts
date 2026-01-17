@@ -97,7 +97,7 @@ export function placeholder(
     type,
     status,
     chain,
-    chainId: chainToChainId(chain) ?? 0,
+    chainId: chainToChainId(chain),
     transactions: [],
     data: { reason },
   } as TrackedStage;

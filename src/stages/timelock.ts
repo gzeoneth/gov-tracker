@@ -343,7 +343,7 @@ async function trackTimelock(
   const scheduled = timelockState.scheduledData;
   if (scheduled?.txHash && scheduled.blockNumber !== undefined) {
     queueTimestamp = await getBlockTimestamp(scheduled.blockNumber, provider);
-    const chainId = chainToChainId(config.chain) ?? 0;
+    const chainId = chainToChainId(config.chain);
     builder.tx(scheduled.txHash, scheduled.blockNumber, config.chain, chainId, {
       timestamp: queueTimestamp,
       description: "queued",
@@ -373,7 +373,7 @@ async function trackTimelock(
       const receipt = await queryWithRetry(() => provider.getTransactionReceipt(cachedTxHash));
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
-        const chainId = chainToChainId(config.chain) ?? 0;
+        const chainId = chainToChainId(config.chain);
         builder
           .status("COMPLETED")
           .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, chainId, {
@@ -691,7 +691,7 @@ export async function prepareTimelockOperation(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
 
   return {
     success: true,
@@ -779,7 +779,7 @@ export async function prepareTimelockBatch(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
 
   return {
     success: true,

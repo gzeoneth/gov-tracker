@@ -36,7 +36,7 @@ export class StageBuilder<T extends StageType> {
   private _stage: BuilderState<T>;
 
   constructor(type: T, chain: Chain, status: StageStatus = "NOT_STARTED") {
-    const chainId = chainToChainId(chain) ?? 0;
+    const chainId = chainToChainId(chain);
     this._stage = {
       type,
       status,

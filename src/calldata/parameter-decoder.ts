@@ -7,7 +7,7 @@
  */
 
 import { ethers } from "ethers";
-import type { DecodedParameter } from "../types/calldata";
+import type { DecodedParameter, DecodedCalldata } from "../types/calldata";
 import type { Chain } from "../types";
 
 /**
@@ -82,6 +82,48 @@ const KNOWN_ADDRESSES_INDEXED: Record<
 export function getAddressLabel(address: string, chain: Chain | undefined): string | undefined {
   if (!chain || chain === "unknown") return undefined;
   return KNOWN_ADDRESSES_INDEXED[chain][address.toLowerCase()];
+}
+
+/**
+ * Options for createParam helper
+ */
+interface CreateParamOptions {
+  isNested?: boolean;
+  nested?: DecodedCalldata;
+  chain?: Chain;
+  rawBytesArray?: string[];
+}
+
+/**
+ * Create a DecodedParameter with sensible defaults
+ *
+ * @param name - Parameter name
+ * @param type - Solidity type
+ * @param value - Raw value (used for both rawValue and displayValue)
+ * @param options - Optional nested, chain context, etc.
+ * @returns DecodedParameter
+ */
+export function createParam(
+  name: string,
+  type: string,
+  value: unknown,
+  options: CreateParamOptions = {}
+): DecodedParameter {
+  const { isNested = false, nested, chain, rawBytesArray } = options;
+  const param: DecodedParameter = {
+    name,
+    type,
+    displayValue: typeof value === "string" ? value : formatDecodedValue(value, type),
+    rawValue: value,
+    isNested,
+  };
+  if (type === "address" && typeof value === "string") {
+    const label = getAddressLabel(value, chain);
+    if (label) param.addressLabel = label;
+  }
+  if (nested) param.nested = nested;
+  if (rawBytesArray) param._rawBytesArray = rawBytesArray;
+  return param;
 }
 
 /**

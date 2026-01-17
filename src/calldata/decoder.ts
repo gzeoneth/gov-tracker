@@ -9,7 +9,12 @@ import Debug from "debug";
 import type { DecodedCalldata, DecodedParameter } from "../types/calldata";
 import { Chain, TrackedStage, ExtractedCalldata } from "../types";
 import { lookupSignature } from "./signature-lookup";
-import { decodeParameters, isLikelyCalldata, getAddressLabel } from "./parameter-decoder";
+import {
+  decodeParameters,
+  isLikelyCalldata,
+  createParam,
+  getAddressLabel,
+} from "./parameter-decoder";
 import { isRetryableTicketMagic, decodeRetryableTicket } from "./retryable-ticket";
 
 const debug = Debug("gov-tracker:calldata");
@@ -174,55 +179,19 @@ async function processNestedParams(
             signature: null,
             isRetryable: true,
             parameters: [
-              {
-                name: "inbox",
-                type: "address",
-                displayValue: retryable.targetInbox,
-                rawValue: retryable.targetInbox,
-                isNested: false,
-                addressLabel: getAddressLabel(retryable.targetInbox, "ethereum"),
-              },
-              {
-                name: "l2Target",
-                type: "address",
-                displayValue: retryable.l2Target,
-                rawValue: retryable.l2Target,
-                isNested: false,
-                addressLabel: getAddressLabel(retryable.l2Target, l2ChainContext),
-              },
-              {
-                name: "l2Value",
-                type: "uint256",
-                displayValue: retryable.l2Value,
-                rawValue: retryable.l2Value,
-                isNested: false,
-              },
-              {
-                name: "gasLimit",
-                type: "uint256",
-                displayValue: retryable.gasLimit,
-                rawValue: retryable.gasLimit,
-                isNested: false,
-              },
-              {
-                name: "maxFeePerGas",
-                type: "uint256",
-                displayValue: retryable.maxFeePerGas,
-                rawValue: retryable.maxFeePerGas,
-                isNested: false,
-              },
-              {
-                name: "l2Calldata",
-                type: "bytes",
-                displayValue: retryable.l2Calldata,
-                rawValue: retryable.l2Calldata,
+              createParam("inbox", "address", retryable.targetInbox, { chain: "ethereum" }),
+              createParam("l2Target", "address", retryable.l2Target, { chain: l2ChainContext }),
+              createParam("l2Value", "uint256", retryable.l2Value),
+              createParam("gasLimit", "uint256", retryable.gasLimit),
+              createParam("maxFeePerGas", "uint256", retryable.maxFeePerGas),
+              createParam("l2Calldata", "bytes", retryable.l2Calldata, {
                 isNested: !!nestedL2Call,
                 nested: nestedL2Call,
-              },
+              }),
             ],
             raw: bytesItem,
             decodingSource: "local",
-            targetChain: retryable.chain, // Explicit target L2 chain field
+            targetChain: retryable.chain,
           };
 
           nestedArray.push(retryableDecoded);

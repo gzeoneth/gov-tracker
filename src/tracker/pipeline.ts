@@ -64,6 +64,31 @@ import { findLog } from "../utils/log-search";
 
 const { pipeline: log, tracker: logTracker } = loggers;
 
+/** Guard for election stages - returns election index and nominee proposal ID if available */
+function getElectionContext(
+  state: TrackingState
+): { electionIndex: number; nomineeProposalId: string } | null {
+  const electionIndex = getElectionIndex(state);
+  const nomineeProposalId = getNomineeProposalId(state);
+  return electionIndex !== undefined && nomineeProposalId
+    ? { electionIndex, nomineeProposalId }
+    : null;
+}
+
+/** Map proposal state string to stage status */
+function proposalStateToStageStatus(proposalState: string): {
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  complete: boolean;
+} {
+  if (proposalState === "Active" || proposalState === "Pending") {
+    return { status: "PENDING", complete: false };
+  }
+  if (proposalState === "Defeated" || proposalState === "Canceled") {
+    return { status: "FAILED", complete: false };
+  }
+  return { status: "COMPLETED", complete: true };
+}
+
 // ============================================================================
 // Governor Stage Trackers
 // ============================================================================
@@ -373,23 +398,21 @@ async function trackCreateElectionStage(state: TrackingState): Promise<StageResu
 }
 
 async function trackNomineeElectionStage(state: TrackingState): Promise<StageResult> {
-  const electionIndex = getElectionIndex(state);
-  const nomineeProposalId = getNomineeProposalId(state);
-
-  if (electionIndex === undefined || !nomineeProposalId) return { state, continue: false };
+  const ctx = getElectionContext(state);
+  if (!ctx) return { state, continue: false };
 
   log("NOMINEE_ELECTION: tracking");
 
   const nomineeGovernorAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
   const nomineeResults = await multicall(state.providers.l2, [
     buildCallInput<number>(nomineeGovernorAddress, nomineeElectionGovernorInterface, "state", [
-      nomineeProposalId,
+      ctx.nomineeProposalId,
     ]),
     buildCallInput<BigNumber>(
       nomineeGovernorAddress,
       nomineeElectionGovernorInterface,
       "compliantNomineeCount",
-      [nomineeProposalId]
+      [ctx.nomineeProposalId]
     ),
   ]);
 
@@ -397,32 +420,21 @@ async function trackNomineeElectionStage(state: TrackingState): Promise<StageRes
   const nomineeProposalState = proposalStateToString(nomineeState);
   const compliantNomineeCount = ((nomineeResults[1] as BigNumber) ?? BigNumber.from(0)).toNumber();
 
-  const stageBuilder = new StageBuilder("NOMINEE_ELECTION", "arb1").data({
-    nomineeProposalId,
+  const { status, complete } = proposalStateToStageStatus(nomineeProposalState);
+  const stageBuilder = new StageBuilder("NOMINEE_ELECTION", "arb1").status(status).data({
+    nomineeProposalId: ctx.nomineeProposalId,
     proposalState: nomineeProposalState,
     contenderCount: 0,
     compliantNomineeCount,
     targetNomineeCount: TIMING.SECURITY_COUNCIL_TARGET_NOMINEES,
   });
 
-  let complete = false;
-  if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
-    stageBuilder.status("PENDING");
-  } else if (nomineeProposalState === "Defeated" || nomineeProposalState === "Canceled") {
-    stageBuilder.status("FAILED");
-  } else {
-    stageBuilder.status("COMPLETED");
-    complete = true;
-  }
-
   return { state: await addStage(state, stageBuilder.build()), continue: complete };
 }
 
 async function trackNomineeVettingStage(state: TrackingState): Promise<StageResult> {
-  const electionIndex = getElectionIndex(state);
-  const nomineeProposalId = getNomineeProposalId(state);
-
-  if (electionIndex === undefined || !nomineeProposalId) return { state, continue: false };
+  const ctx = getElectionContext(state);
+  if (!ctx) return { state, continue: false };
 
   log("NOMINEE_VETTING: tracking");
 
@@ -436,16 +448,16 @@ async function trackNomineeVettingStage(state: TrackingState): Promise<StageResu
         nomineeGovernorAddress,
         nomineeElectionGovernorInterface,
         "proposalVettingDeadline",
-        [nomineeProposalId]
+        [ctx.nomineeProposalId]
       ),
       buildCallInput<BigNumber>(
         nomineeGovernorAddress,
         nomineeElectionGovernorInterface,
         "compliantNomineeCount",
-        [nomineeProposalId]
+        [ctx.nomineeProposalId]
       ),
       buildCallInput<number>(nomineeGovernorAddress, nomineeElectionGovernorInterface, "state", [
-        nomineeProposalId,
+        ctx.nomineeProposalId,
       ]),
     ]),
     getL1BlockNumberFromL2(state.providers.l2),
@@ -462,7 +474,10 @@ async function trackNomineeVettingStage(state: TrackingState): Promise<StageResu
 
   // Check if member proposal exists
   let memberProposalId: string | null = null;
-  const computedMemberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
+  const computedMemberProposalId = await computeElectionProposalId(
+    ctx.electionIndex,
+    memberGovernor
+  );
 
   try {
     await queryWithRetry(() => memberGovernor.state(computedMemberProposalId));
@@ -472,7 +487,7 @@ async function trackNomineeVettingStage(state: TrackingState): Promise<StageResu
   }
 
   const stageBuilder = new StageBuilder("NOMINEE_VETTING", "arb1").data({
-    nomineeProposalId,
+    nomineeProposalId: ctx.nomineeProposalId,
     vettingDeadline,
     currentL1Block: currentL1Block.toNumber(),
     compliantNomineeCount,
@@ -493,7 +508,7 @@ async function trackNomineeVettingStage(state: TrackingState): Promise<StageResu
 
     try {
       const executeEvent = await findElectionExecuteTxHash(
-        nomineeProposalId,
+        ctx.nomineeProposalId,
         nomineeGovernorAddress,
         state.providers.l2,
         state.chunkingConfig.l2ChunkSize

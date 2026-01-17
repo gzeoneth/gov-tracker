@@ -418,46 +418,32 @@ export function createModularCheckpoints(
   // Determine timelockOpKey from state or derive from data
   const timelockOpKey = ctx.timelockOpKey ?? null;
 
-  // Parent checkpoint - only contains parent stages
-  const parentLastStage =
-    [...parentStages].reverse().find((s) => s.status !== "NOT_STARTED")?.type ?? null;
-  const parentCheckpoint: TrackingCheckpoint = {
+  // Helper to build checkpoint from stages
+  const buildCheckpoint = (
+    input: TrackingInput,
+    stages: TrackedStage[],
+    extraMetadata?: Record<string, unknown>
+  ): TrackingCheckpoint => ({
     version: 1,
     createdAt: Date.now(),
-    input: ctx.input,
-    lastProcessedStage: parentLastStage,
+    input,
+    lastProcessedStage: [...stages].reverse().find((s) => s.status !== "NOT_STARTED")?.type ?? null,
     lastProcessedBlock: { l1: 0, l2: 0, nova: 0 },
-    cachedData: { completedStages: parentStages },
-    metadata: {
-      errorCount: 0,
-      lastTrackedAt: Date.now(),
-      timelockOpKey: timelockOpKey ?? undefined,
-    },
-  };
+    cachedData: { completedStages: stages },
+    metadata: { errorCount: 0, lastTrackedAt: Date.now(), ...extraMetadata },
+  });
+
+  const parentCheckpoint = buildCheckpoint(ctx.input, parentStages, {
+    timelockOpKey: timelockOpKey ?? undefined,
+  });
 
   // Timelock checkpoint - only contains timelock stages
-  let timelockCheckpoint: TrackingCheckpoint | null = null;
-  if (timelockStages.length > 0 && hasTimelockProgress(ctx.stages)) {
-    const timelockLastStage =
-      [...timelockStages].reverse().find((s) => s.status !== "NOT_STARTED")?.type ?? null;
-
-    // Create timelock input from ctx
-    const timelockInput = deriveTimelockInput(ctx);
-
-    timelockCheckpoint = {
-      version: 1,
-      createdAt: Date.now(),
-      input: timelockInput,
-      lastProcessedStage: timelockLastStage,
-      lastProcessedBlock: { l1: 0, l2: 0, nova: 0 },
-      cachedData: { completedStages: timelockStages },
-      metadata: {
-        errorCount: 0,
-        lastTrackedAt: Date.now(),
-        sourceCheckpoint: parentCacheKey,
-      },
-    };
-  }
+  const timelockCheckpoint =
+    timelockStages.length > 0 && hasTimelockProgress(ctx.stages)
+      ? buildCheckpoint(deriveTimelockInput(ctx), timelockStages, {
+          sourceCheckpoint: parentCacheKey,
+        })
+      : null;
 
   return {
     parentCheckpoint,
@@ -488,34 +474,30 @@ function deriveTimelockInput(ctx: TrackingState): TrackingInput {
   return ctx.input;
 }
 
+/** Find tx hash from a completed stage by description */
+function findTxHashFromStage(
+  ctx: TrackingState,
+  stageType: StageType,
+  description: string,
+  requireCompleted = true
+): string | undefined {
+  const stage = findStage(ctx, stageType);
+  if (requireCompleted && stage?.status !== "COMPLETED") return undefined;
+  if (!requireCompleted && !stage) return undefined;
+  return stage?.transactions?.find((t) => t.description === description)?.hash;
+}
+
 /**
  * Derive the scheduled tx hash from tracking state.
  * For proposals: queue tx hash from PROPOSAL_QUEUED
  * For elections: member execute tx hash from MEMBER_ELECTION
  */
 function deriveScheduledTxHash(ctx: TrackingState): string | undefined {
-  // From PROPOSAL_QUEUED stage
-  const queuedStage = findStage(ctx, "PROPOSAL_QUEUED");
-  if (queuedStage?.status === "COMPLETED") {
-    const execTxn = queuedStage.transactions?.find((t) => t.description === "queued");
-    if (execTxn?.hash) return execTxn.hash;
-  }
-
-  // From MEMBER_ELECTION stage (for elections)
-  const memberStage = findStage(ctx, "MEMBER_ELECTION");
-  if (memberStage?.status === "COMPLETED") {
-    const execTxn = memberStage.transactions?.find((t) => t.description === "executed");
-    if (execTxn?.hash) return execTxn.hash;
-  }
-
-  // From L2_TIMELOCK stage
-  const l2Stage = findStage(ctx, "L2_TIMELOCK");
-  if (l2Stage) {
-    const scheduleTxn = l2Stage.transactions?.find((t) => t.description === "scheduled");
-    if (scheduleTxn?.hash) return scheduleTxn.hash;
-  }
-
-  return undefined;
+  return (
+    findTxHashFromStage(ctx, "PROPOSAL_QUEUED", "queued") ??
+    findTxHashFromStage(ctx, "MEMBER_ELECTION", "executed") ??
+    findTxHashFromStage(ctx, "L2_TIMELOCK", "scheduled", false)
+  );
 }
 
 /**

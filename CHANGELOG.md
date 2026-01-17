@@ -7,11 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Election module consolidation** - Reduced from 9 files to 7 files:
+  - Merged `tracking.ts` → `proposal-ids.ts` (proposal ID lookup utilities)
+  - Merged `prepare.ts` → `params.ts` (transaction preparation with proposal params)
+
 ### Added
 
+- **Unified Tracking Pipeline** - Refactored proposal and election tracking into a single modular pipeline architecture with three composable modules:
+  - **Election Preamble** (CREATE_ELECTION → NOMINEE_ELECTION → NOMINEE_VETTING → MEMBER_ELECTION)
+  - **Proposal Voting** (PROPOSAL_CREATED → VOTING_ACTIVE → PROPOSAL_QUEUED)
+  - **Timelock Execution** (L2_TIMELOCK → L2_TO_L1_MESSAGE → L1_TIMELOCK → RETRYABLE_EXECUTED)
+- **TrackingPath type** - New `"governor" | "timelock" | "election"` path type for stage initialization
+- **Election stage functions** - `pipelineTrackCreateElection`, `pipelineTrackNomineeElection`, `pipelineTrackNomineeVetting`, `pipelineTrackMemberElection` in pipeline.ts
+- **Pipeline dispatch** - Each pipeline (`trackGovernorPipeline`, `trackTimelockPipeline`, `trackElectionPipeline`) handles its own stage tracking
+- **Election-specific state getters** - `getElectionIndex`, `getNomineeProposalId`, `getMemberProposalId`, `getElectionCohort`, `getCompliantNomineeCount`, etc.
 - **Election type exports** - Export detailed election types from main package index: `ElectionContender`, `ElectionNominee`, `MemberElectionNominee`, `NomineeElectionDetails`, `MemberElectionDetails`, and serializable variants (`SerializableContender`, `SerializableNominee`, `SerializableMemberNominee`, `SerializableNomineeDetails`, `SerializableMemberDetails`)
 - **Election serialization exports** - Export `serializeNomineeDetails()` and `serializeMemberDetails()` for caching election data
 - **Cached L1 block fetch** - `getL1BlockNumberFromL2(provider, blockTag?)` now accepts optional block tag/number (default: "latest") and caches results for specific block numbers (immutable mapping)
+- **Modular Caching** - Parent checkpoints (proposals/elections) and timelock checkpoints are now stored separately and linked via `timelockOpKey`:
+  - `createModularCheckpoints(state, parentCacheKey)` - Splits stages into parent and timelock checkpoints
+  - `splitStages(stages)` - Separates parent stages from timelock path stages
+  - `hasTimelockProgress(stages)` - Checks if any timelock stages have started
+  - `isTimelockPathStage(type)` - Type guard for L2_TIMELOCK → RETRYABLE_EXECUTED stages
+  - `setTimelockOpKey(state, key)` - Links parent state to timelock operation
+- **Linked checkpoint loading** - `createTrackingState` accepts `linkedTimelockCheckpoint` option to merge timelock stages from a separate checkpoint
+
+### Changed
+
+- **`trackElection()` now uses unified pipeline** - ProposalStageTracker.trackElection() internally uses `trackElectionWithPipeline()` for stage-based election tracking
+
+### Breaking Changes
+
+- **Removed deprecated path functions** - Use the new `TrackingPath`-based functions instead:
+  - `getStagesForPath(boolean)` → `getStagesForTrackingPath("governor" | "timelock" | "election")`
+  - `initializeStagesForPath(boolean)` → `initializeStagesForTrackingPath("governor" | "timelock" | "election")`
+
+- **Removed standalone election tracking functions** - The following functions have been removed from the public API:
+  - `trackElectionProposal()` - Use `ProposalStageTracker.trackElection(electionIndex)` instead
+  - `trackAllElections()` - Use `ProposalStageTracker.trackAllElections()` instead
+  - `trackIncompleteElections()` - Use `ProposalStageTracker.trackAllElections()` and filter by phase
+
+  Migration example:
+  ```typescript
+  // Before (removed)
+  import { trackElectionProposal } from "gov-tracker";
+  const status = await trackElectionProposal(0, l2Provider, l1Provider);
+
+  // After (use tracker)
+  import { ProposalStageTracker } from "gov-tracker";
+  const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
+  const status = await tracker.trackElection(0);
+  ```
 
 ## [0.3.0] - 2026-01-16
 

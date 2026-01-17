@@ -1,17 +1,22 @@
 /**
- * Pipeline Stage Functions
+ * Pipeline Stage Tracking
  *
- * Pure functions that track stages and return updated state.
- * Each function reads from state, performs tracking, and returns new state.
+ * Declarative pipelines for tracking governance proposals and elections.
+ * Each stage is a config object with type and track function.
+ * The stage runner handles caching automatically.
+ *
+ * Three tracking paths:
+ * - Governor: PROPOSAL_CREATED → VOTING_ACTIVE → PROPOSAL_QUEUED → timelock
+ * - Timelock: L2_TIMELOCK → L2_TO_L1_MESSAGE → L1_TIMELOCK → RETRYABLE_EXECUTED
+ * - Election: CREATE_ELECTION → NOMINEE_ELECTION → NOMINEE_VETTING → MEMBER_ELECTION → timelock
  */
 
+import { ethers, BigNumber } from "ethers";
 import { loggers } from "../utils/logger";
-import { StageType, TrackedStage } from "../types";
+import { StageType, TrackedStage, CohortType, MemberElectionData } from "../types";
 import {
   TrackingState,
   addStage,
-  getCompletedStage,
-  getCachedStage,
   getGovernorAddress,
   getProposalId,
   getProposalData,
@@ -25,269 +30,188 @@ import {
   getOutboxExecutionTx,
   getL1ExecutionTxHash,
   getVotingEndBlock,
+  getElectionIndex,
+  getNomineeProposalId,
+  getMemberProposalId,
 } from "./state";
+import {
+  StageConfig,
+  StageResult,
+  runPipeline,
+  addPlaceholders,
+  getCachedStage,
+} from "./stage-runner";
 import { isConstitutional } from "../stages/utils";
 import { trackProposalCreated } from "../stages/proposal-created";
 import { trackVotingStage } from "../stages/voting";
 import { trackProposalQueued } from "../stages/proposal-queued";
-import { getFirstL2BlockForL1Block } from "../utils/timing";
+import { getFirstL2BlockForL1Block, getL1BlockNumberFromL2 } from "../utils/timing";
 import { trackL2Timelock, trackL1Timelock } from "../stages/timelock";
 import { trackL2ToL1Message } from "../stages/l2-to-l1-message";
 import { trackRetryables } from "../stages/retryables";
-import { BLOCK_TIMES } from "../constants";
+import { BLOCK_TIMES, ADDRESSES, TIMING, proposalStateToString } from "../constants";
 import { getCurrentBlockInfo } from "../utils/timing";
+import { StageBuilder } from "../stages/builder";
+import { queryWithRetry } from "../utils/rpc-utils";
+import { multicall, buildCallInput } from "../utils/multicall";
+import { nomineeElectionGovernorInterface, proposalExecutedInterface } from "../abis";
+import { getNomineeGovernor, getMemberGovernor } from "../election/contracts";
+import { computeElectionProposalId, getElectionProposalId } from "../election/proposal-ids";
+import { findCallScheduledByTxHash } from "../discovery/timelock-discovery";
+import { findLog } from "../utils/log-search";
 
-// Logging
 const { pipeline: log, tracker: logTracker } = loggers;
 
-// Stage chain mapping for L1 stages
-// L1_TIMELOCK is the only L1 stage; RETRYABLE_EXECUTED runs on L2 (Arb1/Nova)
-const L1_STAGES = new Set(["L1_TIMELOCK"]);
+// ============================================================================
+// Governor Stage Trackers
+// ============================================================================
 
-// Helper: create placeholder stage
-const placeholder = (
-  type: StageType,
-  status: "NOT_STARTED" | "SKIPPED",
-  reason: string
-): TrackedStage =>
-  // Assertion needed: placeholder stages have partial data that gets filled later
-  ({
-    type,
-    status,
-    chain: L1_STAGES.has(type) ? "ethereum" : "arb1",
-    chainId: L1_STAGES.has(type) ? 1 : 42161,
-    transactions: [],
-    data: { reason },
-  }) as TrackedStage;
-
-// Helper: track with cache check
-async function withCache<K extends string, T>(
-  state: TrackingState,
-  stageType: StageType,
-  key: K,
-  onCached: (cached: TrackedStage) => T,
-  onTrack: () => Promise<{ state: TrackingState } & Record<K, T>>
-): Promise<{ state: TrackingState } & Record<K, T>> {
-  const cached = getCompletedStage(state, stageType);
-  if (cached) {
-    log("%s: using cached stage", stageType);
-    return { state: await addStage(state, cached), [key]: onCached(cached) } as {
-      state: TrackingState;
-    } & Record<K, T>;
-  }
-  return onTrack();
-}
-
-// Helper: track stage with error handling
-async function track<K extends string, T>(
-  state: TrackingState,
-  stageType: StageType,
-  key: K,
-  tracker: () => Promise<{ stage: TrackedStage; result: T }>
-): Promise<{ state: TrackingState } & Record<K, T>> {
-  try {
-    const { stage, result } = await tracker();
-    return { state: await addStage(state, stage), [key]: result } as {
-      state: TrackingState;
-    } & Record<K, T>;
-  } catch (error) {
-    throw new Error(
-      `Failed to track ${stageType}: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
-
-// Governor Stages (1-3)
-
-async function pipelineTrackProposalCreated(
-  state: TrackingState
-): Promise<{ state: TrackingState; found: boolean }> {
+async function trackProposalCreatedStage(state: TrackingState): Promise<StageResult> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
 
-  if (!governorAddress || !proposalId) return { state, found: false };
-  if (getIsElection(state)) return { state, found: false };
+  if (!governorAddress || !proposalId) return { state, continue: false };
+  if (getIsElection(state)) return { state, continue: false };
 
-  return withCache(
-    state,
-    "PROPOSAL_CREATED",
-    "found",
-    () => true,
-    async () => {
-      log("PROPOSAL_CREATED: tracking");
-      const creationTxHash =
-        state.input.type === "governor" ? state.input.creationTxHash : undefined;
-      return track(state, "PROPOSAL_CREATED", "found", async () => {
-        const r = await trackProposalCreated(governorAddress, proposalId, state.providers.l2, {
-          creationTxHash,
-          chunkSize: state.chunkingConfig.l2ChunkSize,
-        });
-        return { stage: r.stage, result: r.proposalData !== null };
-      });
-    }
-  );
+  log("PROPOSAL_CREATED: tracking");
+  const creationTxHash = state.input.type === "governor" ? state.input.creationTxHash : undefined;
+
+  const result = await trackProposalCreated(governorAddress, proposalId, state.providers.l2, {
+    creationTxHash,
+    chunkSize: state.chunkingConfig.l2ChunkSize,
+  });
+
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.proposalData !== null,
+  };
 }
 
-async function pipelineTrackVoting(
-  state: TrackingState
-): Promise<{ state: TrackingState; complete: boolean }> {
+async function trackVotingStage_(state: TrackingState): Promise<StageResult> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
   const proposalData = getProposalData(state);
 
-  if (!governorAddress || !proposalId || !proposalData) return { state, complete: false };
+  if (!governorAddress || !proposalId || !proposalData) return { state, continue: false };
 
-  return withCache(
-    state,
-    "VOTING_ACTIVE",
-    "complete",
-    (c) => c.status === "COMPLETED",
-    async () => {
-      log("VOTING_ACTIVE: tracking");
-      return track(state, "VOTING_ACTIVE", "complete", async () => {
-        const r = await trackVotingStage(
-          governorAddress,
-          proposalId,
-          proposalData,
-          state.providers.l2
-        );
-        return { stage: r.stage, result: r.stage.status === "COMPLETED" };
-      });
-    }
+  log("VOTING_ACTIVE: tracking");
+  const result = await trackVotingStage(
+    governorAddress,
+    proposalId,
+    proposalData,
+    state.providers.l2
   );
+
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.stage.status === "COMPLETED",
+  };
 }
 
-async function pipelineTrackProposalQueued(
-  state: TrackingState
-): Promise<{ state: TrackingState; queued: boolean }> {
+async function trackProposalQueuedStage(state: TrackingState): Promise<StageResult> {
   const governorAddress = getGovernorAddress(state);
   const proposalId = getProposalId(state);
   const proposalData = getProposalData(state);
 
-  if (!governorAddress || !proposalId) return { state, queued: false };
+  if (!governorAddress || !proposalId) return { state, continue: false };
 
-  return withCache(
-    state,
-    "PROPOSAL_QUEUED",
-    "queued",
-    () => true,
-    async () => {
-      log("PROPOSAL_QUEUED: tracking");
-      return track(state, "PROPOSAL_QUEUED", "queued", async () => {
-        // Voting deadline is L1 block number - convert to L2 for searching
-        // Use bounds to speed up binary search: min=creation block, max=creation+7M (~20 days)
-        const votingDeadlineL1 = getVotingEndBlock(state);
-        let votingEndBlock: number | undefined;
-        if (votingDeadlineL1) {
-          const creationBlock = proposalData?.creationBlock ?? 0;
-          const { blockNumber: currentL2Block } = await getCurrentBlockInfo(state.providers.l2);
-          const maxL2Block = Math.min(creationBlock + 7_000_000, currentL2Block);
-          votingEndBlock = await getFirstL2BlockForL1Block(state.providers.l2, votingDeadlineL1, {
-            minL2Block: creationBlock,
-            maxL2Block,
-          });
-        }
-        const r = await trackProposalQueued(
-          governorAddress,
-          proposalId,
-          state.providers.l2,
-          proposalData?.creationBlock ?? 0,
-          { votingEndBlock, chunkSize: state.chunkingConfig.l2ChunkSize }
-        );
-        let stage: TrackedStage = r.stage;
-        if (stage.type === "PROPOSAL_QUEUED" && stage.status === "READY" && proposalData) {
-          // Enrich stage data with proposal info for READY state
-          stage = {
-            ...stage,
-            data: {
-              ...stage.data,
-              targets: proposalData.targets,
-              values: Array.from(proposalData.values).map((v) => v.toString()),
-              calldatas: proposalData.calldatas,
-              description: proposalData.description,
-            },
-          };
-        }
-        return { stage, result: r.operationId !== null && r.timelockAddress !== null };
-      });
-    }
+  log("PROPOSAL_QUEUED: tracking");
+
+  // Convert L1 voting deadline to L2 block for searching
+  const votingDeadlineL1 = getVotingEndBlock(state);
+  let votingEndBlock: number | undefined;
+  if (votingDeadlineL1) {
+    const creationBlock = proposalData?.creationBlock ?? 0;
+    const { blockNumber: currentL2Block } = await getCurrentBlockInfo(state.providers.l2);
+    const maxL2Block = Math.min(creationBlock + 7_000_000, currentL2Block);
+    votingEndBlock = await getFirstL2BlockForL1Block(state.providers.l2, votingDeadlineL1, {
+      minL2Block: creationBlock,
+      maxL2Block,
+    });
+  }
+
+  const result = await trackProposalQueued(
+    governorAddress,
+    proposalId,
+    state.providers.l2,
+    proposalData?.creationBlock ?? 0,
+    { votingEndBlock, chunkSize: state.chunkingConfig.l2ChunkSize }
   );
+
+  let stage: TrackedStage = result.stage;
+
+  // Enrich stage data with proposal info for READY state
+  if (stage.type === "PROPOSAL_QUEUED" && stage.status === "READY" && proposalData) {
+    stage = {
+      ...stage,
+      data: {
+        ...stage.data,
+        targets: proposalData.targets,
+        values: Array.from(proposalData.values).map((v) => v.toString()),
+        calldatas: proposalData.calldatas,
+        description: proposalData.description,
+      },
+    };
+  }
+
+  return {
+    state: await addStage(state, stage),
+    continue: result.operationId !== null && result.timelockAddress !== null,
+  };
 }
 
-// Timelock Stage (4)
+// ============================================================================
+// Timelock Stage Trackers
+// ============================================================================
 
-async function pipelineTrackL2Timelock(
-  state: TrackingState
-): Promise<{ state: TrackingState; executed: boolean }> {
+async function trackL2TimelockStage(state: TrackingState): Promise<StageResult> {
   const timelockAddress = getTimelockAddress(state);
   const operationId = getOperationId(state);
+  const firstCallScheduledData = getFirstCallScheduledData(state);
 
-  // timelockAddress and operationId are needed for both cached and fresh tracking
-  if (!timelockAddress || !operationId) return { state, executed: false };
-
-  // Check for completed cached stage first (zero-RPC resume path)
-  const cached = getCompletedStage(state, "L2_TIMELOCK");
-  if (cached) {
-    log("L2_TIMELOCK: using cached stage");
-    return { state: await addStage(state, cached), executed: cached.status === "COMPLETED" };
-  }
+  if (!timelockAddress || !operationId) return { state, continue: false };
 
   // Fresh tracking requires callScheduledData
-  const firstCallScheduledData = getFirstCallScheduledData(state);
   if (!firstCallScheduledData) {
     log("L2_TIMELOCK: missing callScheduledData for fresh tracking");
-    return { state, executed: false };
+    return { state, continue: false };
   }
 
   log("L2_TIMELOCK: tracking");
-  return track(state, "L2_TIMELOCK", "executed", async () => {
-    const r = await trackL2Timelock(
-      timelockAddress,
-      operationId,
-      state.providers.l2,
-      getQueueBlockNumber(state) ?? 0,
-      firstCallScheduledData,
-      {
-        cachedExecutionTxHash: getL2ExecutionTxHash(state),
-        allStages: state.stages,
-        chunkSize: state.chunkingConfig.l2ChunkSize,
-      }
-    );
-    return { stage: r.stage, result: r.executionTxHash !== null };
-  });
-}
+  const result = await trackL2Timelock(
+    timelockAddress,
+    operationId,
+    state.providers.l2,
+    getQueueBlockNumber(state) ?? 0,
+    firstCallScheduledData,
+    {
+      cachedExecutionTxHash: getL2ExecutionTxHash(state),
+      allStages: state.stages,
+      chunkSize: state.chunkingConfig.l2ChunkSize,
+    }
+  );
 
-// L2→L1 Message Stage (5) - Unified
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.executionTxHash !== null,
+  };
+}
 
 const L1_ROUNDTRIP_STAGES: StageType[] = ["L2_TO_L1_MESSAGE", "L1_TIMELOCK", "RETRYABLE_EXECUTED"];
 
-async function addSkippedL1Stages(state: TrackingState): Promise<TrackingState> {
-  let s = state;
-  for (const type of L1_ROUNDTRIP_STAGES)
-    s = await addStage(s, placeholder(type, "SKIPPED", "L2-only path"));
-  return s;
-}
-
-async function pipelineTrackL2ToL1Message(
-  state: TrackingState
-): Promise<{ state: TrackingState; executed: boolean; needsL1: boolean }> {
+async function trackL2ToL1MessageStage(state: TrackingState): Promise<StageResult> {
   const l2ExecutionTxHash = getL2ExecutionTxHash(state);
   const addressForPath = getGovernorAddress(state) ?? getTimelockAddress(state);
   const needsL1 = addressForPath ? isConstitutional(addressForPath) : true;
 
+  // L2-only path: skip all L1 stages
   if (!needsL1) {
     log("L2_TO_L1_MESSAGE: L2-only path, skipping L1 stages");
-    return { state: await addSkippedL1Stages(state), executed: false, needsL1: false };
+    const newState = await addPlaceholders(state, L1_ROUNDTRIP_STAGES, "SKIPPED", "L2-only path");
+    return { state: newState, continue: false };
   }
 
-  if (!l2ExecutionTxHash) return { state, executed: false, needsL1: true };
-
-  // Check completed cache
-  const cached = getCompletedStage(state, "L2_TO_L1_MESSAGE");
-  if (cached) {
-    log("L2_TO_L1_MESSAGE: using cached stage");
-    return { state: await addStage(state, cached), executed: true, needsL1: true };
-  }
+  if (!l2ExecutionTxHash) return { state, continue: false };
 
   // Fast-path for pending (still in challenge period)
   const pending = getCachedStage(state, "L2_TO_L1_MESSAGE");
@@ -308,159 +232,444 @@ async function pipelineTrackL2ToL1Message(
             delaySeconds: remainingSeconds,
           },
         };
-        return { state: await addStage(state, updated), executed: false, needsL1: true };
+        return { state: await addStage(state, updated), continue: false };
       }
     }
   }
 
   // Full tracking
   log("L2_TO_L1_MESSAGE: tracking");
-  const { state: newState, executed } = await track(
-    state,
-    "L2_TO_L1_MESSAGE",
-    "executed",
-    async () => {
-      const r = await trackL2ToL1Message(
-        l2ExecutionTxHash,
-        state.providers.l2,
-        state.providers.l1,
-        {
-          chunkSize: state.chunkingConfig.l1ChunkSize,
-        }
-      );
-      return { stage: r.stage, result: r.isExecuted };
-    }
+  const result = await trackL2ToL1Message(
+    l2ExecutionTxHash,
+    state.providers.l2,
+    state.providers.l1,
+    { chunkSize: state.chunkingConfig.l1ChunkSize }
   );
-  return { state: newState, executed, needsL1: true };
+
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.isExecuted,
+  };
 }
 
-// L1 Timelock Stage (6)
+async function trackL1TimelockStage(state: TrackingState): Promise<StageResult> {
+  log("L1_TIMELOCK: tracking");
+  const result = await trackL1Timelock(state.providers.l1, {
+    outboxExecutionTx: getOutboxExecutionTx(state),
+    fromBlock: getFirstExecutableBlock(state),
+    allStages: state.stages,
+    chunkSize: state.chunkingConfig.l1ChunkSize,
+  });
 
-async function pipelineTrackL1Timelock(
-  state: TrackingState
-): Promise<{ state: TrackingState; executed: boolean }> {
-  return withCache(
-    state,
-    "L1_TIMELOCK",
-    "executed",
-    (c) => c.status === "COMPLETED",
-    async () => {
-      log("L1_TIMELOCK: tracking");
-      return track(state, "L1_TIMELOCK", "executed", async () => {
-        const r = await trackL1Timelock(state.providers.l1, {
-          outboxExecutionTx: getOutboxExecutionTx(state),
-          fromBlock: getFirstExecutableBlock(state),
-          allStages: state.stages,
-          chunkSize: state.chunkingConfig.l1ChunkSize,
-        });
-        return { stage: r.stage, result: r.executionTxHash !== null };
-      });
-    }
-  );
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.executionTxHash !== null,
+  };
 }
 
-// Retryable Stage (7)
-
-async function pipelineTrackRetryables(
-  state: TrackingState
-): Promise<{ state: TrackingState; redeemed: boolean }> {
+async function trackRetryablesStage(state: TrackingState): Promise<StageResult> {
   const l1ExecutionTxHash = getL1ExecutionTxHash(state);
-  if (!l1ExecutionTxHash) return { state, redeemed: false };
+  if (!l1ExecutionTxHash) return { state, continue: false };
 
-  return withCache(
-    state,
-    "RETRYABLE_EXECUTED",
-    "redeemed",
-    (c) => c.status === "COMPLETED",
-    async () => {
-      log("RETRYABLE_EXECUTED: tracking");
-      return track(state, "RETRYABLE_EXECUTED", "redeemed", async () => {
-        const r = await trackRetryables(l1ExecutionTxHash, state.providers.l1, {
-          l2Provider: state.providers.l2,
-          novaProvider: state.providers.nova,
-        });
-        return { stage: r.stage, result: r.stage.status === "COMPLETED" };
-      });
-    }
+  log("RETRYABLE_EXECUTED: tracking");
+  const result = await trackRetryables(l1ExecutionTxHash, state.providers.l1, {
+    l2Provider: state.providers.l2,
+    novaProvider: state.providers.nova,
+  });
+
+  return {
+    state: await addStage(state, result.stage),
+    continue: result.stage.status === "COMPLETED",
+  };
+}
+
+// ============================================================================
+// Election Stage Trackers
+// ============================================================================
+
+async function findElectionExecuteTxHash(
+  proposalId: string,
+  governorAddress: string,
+  provider: ethers.providers.Provider,
+  l2ChunkSize: number = 100000
+): Promise<{ txHash: string; blockNumber: number } | null> {
+  const governor = getNomineeGovernor(governorAddress, provider);
+  const topic = proposalExecutedInterface.getEventTopic("ProposalExecuted");
+
+  const snapshotL1 = await queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId));
+  const snapshotL2 = await getFirstL2BlockForL1Block(provider, snapshotL1.toNumber());
+  if (!snapshotL2) return null;
+
+  const currentBlock = await queryWithRetry(() => provider.getBlockNumber());
+
+  const matchingLog = await findLog(
+    provider,
+    { address: governorAddress, topics: [topic], fromBlock: snapshotL2, toBlock: currentBlock },
+    (eventLog) => {
+      try {
+        const parsed = proposalExecutedInterface.parseLog(eventLog);
+        return parsed.args.proposalId.toString() === proposalId;
+      } catch {
+        return false;
+      }
+    },
+    { chunkSize: l2ChunkSize }
   );
+
+  return matchingLog
+    ? { txHash: matchingLog.transactionHash, blockNumber: matchingLog.blockNumber }
+    : null;
 }
 
-// Full Pipelines
+async function trackCreateElectionStage(state: TrackingState): Promise<StageResult> {
+  const electionIndex = getElectionIndex(state);
+  if (electionIndex === undefined) return { state, continue: false };
 
-async function addPlaceholders(
-  state: TrackingState,
-  types: StageType[],
-  reason: string
-): Promise<TrackingState> {
-  let s = state;
-  for (const type of types) s = await addStage(s, placeholder(type, "NOT_STARTED", reason));
-  return s;
+  log("CREATE_ELECTION: tracking election %d", electionIndex);
+
+  const nomineeGovernorAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
+  const nomineeGovernor = getNomineeGovernor(nomineeGovernorAddress, state.providers.l2);
+
+  const cohort = (await queryWithRetry<number>(() =>
+    nomineeGovernor.electionIndexToCohort(electionIndex)
+  )) as CohortType;
+
+  const nomineeProposalId = await getElectionProposalId(
+    electionIndex,
+    state.providers.l2,
+    nomineeGovernorAddress
+  );
+
+  if (!nomineeProposalId) {
+    const notStartedStage = new StageBuilder("CREATE_ELECTION", "arb1")
+      .status("NOT_STARTED")
+      .data({ electionIndex, cohort, startTimestamp: 0, reason: "Election not yet created" })
+      .build();
+    return { state: await addStage(state, notStartedStage), continue: false };
+  }
+
+  const createStage = new StageBuilder("CREATE_ELECTION", "arb1")
+    .status("COMPLETED")
+    .data({ electionIndex, cohort, startTimestamp: 0, nomineeProposalId })
+    .build();
+
+  return { state: await addStage(state, createStage), continue: true };
 }
 
-const RETRYABLE_STAGES: StageType[] = ["RETRYABLE_EXECUTED"];
+async function trackNomineeElectionStage(state: TrackingState): Promise<StageResult> {
+  const electionIndex = getElectionIndex(state);
+  const nomineeProposalId = getNomineeProposalId(state);
+
+  if (electionIndex === undefined || !nomineeProposalId) return { state, continue: false };
+
+  log("NOMINEE_ELECTION: tracking");
+
+  const nomineeGovernorAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
+  const nomineeResults = await multicall(state.providers.l2, [
+    buildCallInput<number>(nomineeGovernorAddress, nomineeElectionGovernorInterface, "state", [
+      nomineeProposalId,
+    ]),
+    buildCallInput<BigNumber>(
+      nomineeGovernorAddress,
+      nomineeElectionGovernorInterface,
+      "compliantNomineeCount",
+      [nomineeProposalId]
+    ),
+  ]);
+
+  const nomineeState = nomineeResults[0] as number;
+  const nomineeProposalState = proposalStateToString(nomineeState);
+  const compliantNomineeCount = ((nomineeResults[1] as BigNumber) ?? BigNumber.from(0)).toNumber();
+
+  const stageBuilder = new StageBuilder("NOMINEE_ELECTION", "arb1").data({
+    nomineeProposalId,
+    proposalState: nomineeProposalState,
+    contenderCount: 0,
+    compliantNomineeCount,
+    targetNomineeCount: TIMING.SECURITY_COUNCIL_TARGET_NOMINEES,
+  });
+
+  let complete = false;
+  if (nomineeProposalState === "Active" || nomineeProposalState === "Pending") {
+    stageBuilder.status("PENDING");
+  } else if (nomineeProposalState === "Defeated" || nomineeProposalState === "Canceled") {
+    stageBuilder.status("FAILED");
+  } else {
+    stageBuilder.status("COMPLETED");
+    complete = true;
+  }
+
+  return { state: await addStage(state, stageBuilder.build()), continue: complete };
+}
+
+async function trackNomineeVettingStage(state: TrackingState): Promise<StageResult> {
+  const electionIndex = getElectionIndex(state);
+  const nomineeProposalId = getNomineeProposalId(state);
+
+  if (electionIndex === undefined || !nomineeProposalId) return { state, continue: false };
+
+  log("NOMINEE_VETTING: tracking");
+
+  const nomineeGovernorAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
+  const memberGovernorAddress = ADDRESSES.ELECTION_MEMBER_GOVERNOR;
+  const memberGovernor = getMemberGovernor(memberGovernorAddress, state.providers.l2);
+
+  const [vettingResults, currentL1Block] = await Promise.all([
+    multicall(state.providers.l2, [
+      buildCallInput<BigNumber>(
+        nomineeGovernorAddress,
+        nomineeElectionGovernorInterface,
+        "proposalVettingDeadline",
+        [nomineeProposalId]
+      ),
+      buildCallInput<BigNumber>(
+        nomineeGovernorAddress,
+        nomineeElectionGovernorInterface,
+        "compliantNomineeCount",
+        [nomineeProposalId]
+      ),
+      buildCallInput<number>(nomineeGovernorAddress, nomineeElectionGovernorInterface, "state", [
+        nomineeProposalId,
+      ]),
+    ]),
+    getL1BlockNumberFromL2(state.providers.l2),
+  ]);
+
+  const vettingDeadlineBN = (vettingResults[0] as BigNumber) ?? BigNumber.from(0);
+  const vettingDeadline = vettingDeadlineBN.toNumber();
+  const compliantNomineeCount = ((vettingResults[1] as BigNumber) ?? BigNumber.from(0)).toNumber();
+  const nomineeState = vettingResults[2] as number;
+  const nomineeProposalState = proposalStateToString(nomineeState);
+
+  const isInVettingPeriod =
+    nomineeProposalState === "Succeeded" && currentL1Block.lte(vettingDeadlineBN);
+
+  // Check if member proposal exists
+  let memberProposalId: string | null = null;
+  const computedMemberProposalId = await computeElectionProposalId(electionIndex, memberGovernor);
+
+  try {
+    await queryWithRetry(() => memberGovernor.state(computedMemberProposalId));
+    memberProposalId = computedMemberProposalId;
+  } catch {
+    // Member election not yet created
+  }
+
+  const stageBuilder = new StageBuilder("NOMINEE_VETTING", "arb1").data({
+    nomineeProposalId,
+    vettingDeadline,
+    currentL1Block: currentL1Block.toNumber(),
+    compliantNomineeCount,
+    memberProposalId: memberProposalId ?? undefined,
+  });
+
+  const canProceedToMemberPhase =
+    nomineeProposalState === "Succeeded" &&
+    !isInVettingPeriod &&
+    compliantNomineeCount >= TIMING.SECURITY_COUNCIL_TARGET_NOMINEES &&
+    !memberProposalId;
+
+  let complete = false;
+
+  if (nomineeProposalState === "Executed" || memberProposalId) {
+    stageBuilder.status("COMPLETED");
+    complete = true;
+
+    try {
+      const executeEvent = await findElectionExecuteTxHash(
+        nomineeProposalId,
+        nomineeGovernorAddress,
+        state.providers.l2,
+        state.chunkingConfig.l2ChunkSize
+      );
+      if (executeEvent) {
+        stageBuilder.tx(executeEvent.txHash, executeEvent.blockNumber, "arb1", 42161);
+      }
+    } catch {
+      // TX hash discovery failed
+    }
+  } else if (canProceedToMemberPhase) {
+    stageBuilder.status("READY").executable(true);
+  } else if (isInVettingPeriod) {
+    stageBuilder.status("PENDING");
+  } else if (compliantNomineeCount < TIMING.SECURITY_COUNCIL_TARGET_NOMINEES) {
+    stageBuilder.status("FAILED");
+  }
+
+  return {
+    state: await addStage(state, stageBuilder.build()),
+    continue: complete && memberProposalId !== null,
+  };
+}
+
+async function trackMemberElectionStage(state: TrackingState): Promise<StageResult> {
+  const electionIndex = getElectionIndex(state);
+  const memberProposalId = getMemberProposalId(state);
+
+  if (electionIndex === undefined || !memberProposalId) return { state, continue: false };
+
+  log("MEMBER_ELECTION: tracking");
+
+  const memberGovernorAddress = ADDRESSES.ELECTION_MEMBER_GOVERNOR;
+  const memberGovernor = getMemberGovernor(memberGovernorAddress, state.providers.l2);
+
+  const memberState: number = await queryWithRetry(() => memberGovernor.state(memberProposalId));
+  const memberProposalState = proposalStateToString(memberState);
+
+  const stageBuilder = new StageBuilder("MEMBER_ELECTION", "arb1").data({
+    memberProposalId,
+    proposalState: memberProposalState,
+    winnersCount: 0,
+  });
+
+  let executed = false;
+  let newState = state;
+
+  if (memberProposalState === "Active" || memberProposalState === "Pending") {
+    stageBuilder.status("PENDING");
+  } else if (memberProposalState === "Succeeded") {
+    stageBuilder.status("READY").executable(true);
+  } else if (memberProposalState === "Executed") {
+    stageBuilder.status("COMPLETED");
+    executed = true;
+
+    try {
+      const executeEvent = await findElectionExecuteTxHash(
+        memberProposalId,
+        memberGovernorAddress,
+        state.providers.l2,
+        state.chunkingConfig.l2ChunkSize
+      );
+      if (executeEvent) {
+        stageBuilder.tx(executeEvent.txHash, executeEvent.blockNumber, "arb1", 42161, {
+          description: "executed",
+        });
+
+        // Find CallScheduled events and inject into state for timelock pipeline
+        const callScheduledEvents = await findCallScheduledByTxHash(
+          executeEvent.txHash,
+          state.providers.l2
+        );
+        if (callScheduledEvents?.length) {
+          const firstEvent = callScheduledEvents[0];
+          stageBuilder.data({
+            memberProposalId,
+            proposalState: memberProposalState,
+            winnersCount: 0,
+            operationId: firstEvent.operationId,
+            timelockAddress: firstEvent.timelockAddress,
+          } as MemberElectionData);
+
+          // Inject callScheduledData for timelock pipeline
+          newState = { ...state, callScheduledData: callScheduledEvents };
+        }
+      }
+    } catch {
+      // TX hash discovery failed
+    }
+  } else if (memberProposalState === "Defeated" || memberProposalState === "Canceled") {
+    stageBuilder.status("FAILED");
+  }
+
+  return {
+    state: await addStage(newState, stageBuilder.build()),
+    continue: executed,
+  };
+}
+
+// ============================================================================
+// Stage Configurations
+// ============================================================================
+
+const GOVERNOR_STAGES: StageConfig[] = [
+  { type: "PROPOSAL_CREATED", track: trackProposalCreatedStage },
+  { type: "VOTING_ACTIVE", track: trackVotingStage_ },
+  { type: "PROPOSAL_QUEUED", track: trackProposalQueuedStage },
+];
+
+const TIMELOCK_STAGES: StageConfig[] = [
+  {
+    type: "L2_TIMELOCK",
+    track: trackL2TimelockStage,
+    // Custom cache: also check if we have callScheduledData
+    checkCache: async (state) => {
+      const timelockAddress = getTimelockAddress(state);
+      const operationId = getOperationId(state);
+      if (!timelockAddress || !operationId) return { state, continue: false };
+
+      const cached = getCachedStage(state, "L2_TIMELOCK");
+      if (cached?.status === "COMPLETED" || cached?.status === "SKIPPED") {
+        log("L2_TIMELOCK: cached");
+        return { state: await addStage(state, cached), continue: true };
+      }
+      return undefined; // Fall through to track
+    },
+  },
+  {
+    type: "L2_TO_L1_MESSAGE",
+    track: trackL2ToL1MessageStage,
+    // Custom cache: handle pending fast-path in track function
+    checkCache: async (state) => {
+      const cached = getCachedStage(state, "L2_TO_L1_MESSAGE");
+      if (cached?.status === "COMPLETED" || cached?.status === "SKIPPED") {
+        log("L2_TO_L1_MESSAGE: cached");
+        return { state: await addStage(state, cached), continue: true };
+      }
+      return undefined;
+    },
+  },
+  { type: "L1_TIMELOCK", track: trackL1TimelockStage },
+  { type: "RETRYABLE_EXECUTED", track: trackRetryablesStage },
+];
+
+const ELECTION_STAGES: StageConfig[] = [
+  { type: "CREATE_ELECTION", track: trackCreateElectionStage },
+  { type: "NOMINEE_ELECTION", track: trackNomineeElectionStage },
+  { type: "NOMINEE_VETTING", track: trackNomineeVettingStage },
+  { type: "MEMBER_ELECTION", track: trackMemberElectionStage },
+];
+
+// ============================================================================
+// Pipeline Exports
+// ============================================================================
 
 /**
- * Track full governor proposal pipeline.
- * Returns final state after tracking all stages.
+ * Track governor proposal pipeline (stages 1-7).
  */
 export async function trackGovernorPipeline(state: TrackingState): Promise<TrackingState> {
-  // Stage 1: Proposal Created
-  const { state: state1, found } = await pipelineTrackProposalCreated(state);
-  if (!found) {
-    logTracker("proposal not found, stopping");
-    return state1;
+  logTracker("running governor pipeline");
+  state = await runPipeline(state, GOVERNOR_STAGES);
+
+  // Continue with timelock if proposal was queued
+  const queued = state.stages.find((s) => s.type === "PROPOSAL_QUEUED");
+  if (queued?.status === "COMPLETED") {
+    return runPipeline(state, TIMELOCK_STAGES);
   }
 
-  // Stage 2: Voting
-  const { state: state2, complete: votingComplete } = await pipelineTrackVoting(state1);
-  if (!votingComplete) {
-    logTracker("voting not complete, stopping");
-    return state2;
-  }
-
-  // Stage 3: Proposal Queued
-  const { state: state3, queued } = await pipelineTrackProposalQueued(state2);
-  if (!queued) {
-    logTracker("proposal not queued, stopping");
-    return state3;
-  }
-
-  // Continue with timelock pipeline
-  return trackTimelockPipeline(state3);
+  return state;
 }
 
 /**
  * Track timelock pipeline (stages 4-7).
- * Used by governor pipeline and direct timelock tracking.
+ * Used by governor pipeline, election pipeline, and direct timelock tracking.
  */
 export async function trackTimelockPipeline(state: TrackingState): Promise<TrackingState> {
-  // Stage 4: L2 Timelock (unified)
-  const { state: state1, executed: l2Executed } = await pipelineTrackL2Timelock(state);
-  if (!l2Executed) {
-    logTracker("L2 timelock not executed, stopping");
-    return addPlaceholders(state1, L1_ROUNDTRIP_STAGES, "L2 timelock not executed");
+  logTracker("running timelock pipeline");
+  return runPipeline(state, TIMELOCK_STAGES);
+}
+
+/**
+ * Track election pipeline (stages 1-8).
+ */
+export async function trackElectionPipeline(state: TrackingState): Promise<TrackingState> {
+  logTracker("running election pipeline");
+  state = await runPipeline(state, ELECTION_STAGES);
+
+  // Continue with timelock if member election was executed
+  const memberStage = state.stages.find((s) => s.type === "MEMBER_ELECTION");
+  if (memberStage?.status === "COMPLETED") {
+    return runPipeline(state, TIMELOCK_STAGES);
   }
 
-  // Stage 5: L2→L1 Message (unified)
-  const {
-    state: state2,
-    executed: msgExecuted,
-    needsL1,
-  } = await pipelineTrackL2ToL1Message(state1);
-  if (!needsL1) return state2; // L2-only path, already added SKIPPED stages
-  if (!msgExecuted) {
-    logTracker("L2→L1 message not executed, stopping");
-    return addPlaceholders(state2, L1_ROUNDTRIP_STAGES.slice(1), "Waiting for L2→L1 message");
-  }
-
-  // Stage 6: L1 Timelock (unified)
-  const { state: state3, executed: l1Executed } = await pipelineTrackL1Timelock(state2);
-  if (!l1Executed) {
-    logTracker("L1 timelock not executed, stopping");
-    return addPlaceholders(state3, RETRYABLE_STAGES, "L1 timelock not executed");
-  }
-
-  // Stage 7: Retryables
-  const { state: finalState } = await pipelineTrackRetryables(state3);
-  return finalState;
+  return state;
 }

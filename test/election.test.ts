@@ -16,7 +16,8 @@ import {
   getElectionProposalParams,
   prepareMemberElectionTrigger,
   prepareElectionCreation,
-  trackElectionProposal,
+  ProposalStageTracker,
+  ElectionProposalStatus,
   DEFAULT_RPC_URLS,
 } from "../src";
 import { getVettingDeadline } from "./helpers/election-helpers";
@@ -90,10 +91,10 @@ describe("Election Module", () => {
 describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => {
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
+  let tracker: ProposalStageTracker;
 
   // Cached election tracking results - populated once in beforeAll
-  type ElectionProposalStatusWithTx = Awaited<ReturnType<typeof trackElectionProposal>>;
-  const electionCache = new Map<number, ElectionProposalStatusWithTx>();
+  const electionCache = new Map<number, ElectionProposalStatus>();
 
   beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
@@ -107,10 +108,11 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
 
     l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
     l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
+    tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
     // Track elections 0-4 once upfront for all tests in this suite
     const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {
-      const status = await trackElectionProposal(i, l2Provider, l1Provider);
+      const status = await tracker.trackElection(i);
       electionCache.set(i, status);
     });
     await Promise.all(trackingPromises);
@@ -238,8 +240,8 @@ describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => 
       );
 
       if (status.electionCount > 0) {
-        // Track a completed election (should not be able to proceed)
-        const electionStatus = await trackElectionProposal(0, l2Provider, l1Provider);
+        // Use cached election 0 (should be completed and cannot proceed)
+        const electionStatus = electionCache.get(0)!;
 
         // A completed election cannot proceed to member phase
         if (electionStatus.phase === "COMPLETED") {

@@ -5,7 +5,11 @@ import { governorInterface } from "../abis";
 import { multicall, buildCallInput } from "../utils/multicall";
 import { saltFromDescription } from "../utils/salt-computation";
 import { BlockScopedCache } from "../utils/block-cache";
+import { loggers } from "../utils/logger";
 import { getNomineeGovernor, getMemberGovernor } from "./contracts";
+import { checkElectionStatus } from "./status";
+
+const log = loggers.election;
 
 export interface ElectionProposalIds {
   nomineeProposalId: string | null;
@@ -122,4 +126,53 @@ export async function getElectionProposalIds(
   electionProposalIdsCache.set(electionIndex, result, blockNumber);
 
   return result;
+}
+
+/**
+ * Find the election index for a given proposal ID (nominee or member).
+ *
+ * Searches through all elections to find which one contains the given proposal ID.
+ * Returns null if the proposal ID is not found in any election.
+ */
+export async function getElectionIndexForProposalId(
+  proposalId: string,
+  l2Provider: ethers.providers.Provider,
+  l1Provider: ethers.providers.Provider,
+  options: { novaProvider?: ethers.providers.Provider; blockNumber?: number } = {}
+): Promise<number | null> {
+  const { blockNumber } = options;
+  log("getElectionIndexForProposalId: searching for proposal %s", proposalId);
+
+  const status = await checkElectionStatus(l2Provider, l1Provider);
+  const electionCount = status.electionCount;
+
+  for (let i = electionCount - 1; i >= 0; i--) {
+    log("checking election %d", i);
+    try {
+      const { nomineeProposalId, memberProposalId } = await getElectionProposalIds(i, l2Provider, {
+        blockNumber,
+      });
+      log("got election %d proposal IDs", i);
+
+      const nomMatch = nomineeProposalId === proposalId;
+      const memMatch = memberProposalId === proposalId;
+
+      log("election %d: nomId=%s nomMatch=%s", i, nomineeProposalId, nomMatch);
+
+      if (nomMatch) {
+        log("Found proposal %s as nominee proposal for election %d", proposalId, i);
+        return i;
+      }
+      if (memMatch) {
+        log("Found proposal %s as member proposal for election %d", proposalId, i);
+        return i;
+      }
+    } catch (err) {
+      log("  -> error: %s", (err as Error).message);
+      continue;
+    }
+  }
+
+  log("Proposal %s not found in any election", proposalId);
+  return null;
 }

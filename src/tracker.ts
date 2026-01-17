@@ -15,7 +15,7 @@
 import { ethers } from "ethers";
 import { loggers } from "./utils/logger";
 import { isGasEstimationError } from "./utils/rpc-utils";
-import { getCurrentBlockInfo, getL1BlockNumberFromL2 } from "./utils/timing";
+import { getCurrentBlockInfo } from "./utils/timing";
 import {
   incrementErrorCount,
   createCheckpointMetadata,
@@ -25,7 +25,6 @@ import {
 import {
   TrackerOptions,
   TrackingResult,
-  TrackingContext,
   GovernorTrackingInput,
   TimelockTrackingInput,
   TrackedStage,
@@ -45,7 +44,6 @@ import { DEFAULT_CHUNKING_CONFIG, ADDRESSES, DEFAULT_RPC_URLS } from "./constant
 import {
   checkElectionStatus,
   prepareElectionCreation,
-  trackElectionProposal,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
   getElectionIndexForProposalId,
@@ -61,56 +59,6 @@ import { findStage } from "./stages/utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
 
-/**
- * Build a TrackingContext with current block numbers and timestamp.
- * Called once at the start of a tracking session for consistent state.
- */
-async function buildTrackingContext(options: {
-  l2Provider: ethers.providers.Provider;
-  l1Provider?: ethers.providers.Provider;
-  novaProvider?: ethers.providers.Provider;
-  chunkSize?: number;
-  skipCache?: boolean;
-}): Promise<TrackingContext> {
-  const { l2Provider, l1Provider, novaProvider, chunkSize, skipCache } = options;
-
-  const l2BlockInfo = await getCurrentBlockInfo(l2Provider);
-  const context: TrackingContext = {
-    l2BlockNumber: l2BlockInfo.blockNumber,
-    timestamp: l2BlockInfo.timestamp,
-    chunkSize,
-    skipCache,
-  };
-
-  logTracker(
-    "buildTrackingContext: l2Block=%d timestamp=%d",
-    context.l2BlockNumber,
-    context.timestamp
-  );
-
-  if (l1Provider) {
-    try {
-      const l1Block = await getL1BlockNumberFromL2(l2Provider);
-      context.l1BlockNumber = l1Block.toNumber();
-      logTracker("buildTrackingContext: l1Block=%d", context.l1BlockNumber);
-    } catch (err) {
-      logTracker("buildTrackingContext: failed to get L1 block: %s", (err as Error).message);
-    }
-  }
-
-  if (novaProvider) {
-    try {
-      const novaBlockInfo = await getCurrentBlockInfo(novaProvider);
-      context.novaBlockNumber = novaBlockInfo.blockNumber;
-      logTracker("buildTrackingContext: novaBlock=%d", context.novaBlockNumber);
-    } catch (err) {
-      logTracker("buildTrackingContext: failed to get Nova block: %s", (err as Error).message);
-    }
-  }
-
-  return context;
-}
-
 // Import context and pipeline from tracker modules
 import {
   createTrackingState,
@@ -120,9 +68,27 @@ import {
   getProposalState,
   getIsElection,
   createCheckpoint,
+  createModularCheckpoints,
+  setTimelockOpKey,
   TrackingState,
+  getElectionIndex,
+  getNomineeProposalId,
+  getMemberProposalId,
+  getElectionCohort,
+  getCompliantNomineeCount,
+  getTargetNomineeCount,
+  getVettingDeadline,
+  getElectionTimelockOperationId,
+  getOperationId,
 } from "./tracker/state";
-import { trackGovernorPipeline, trackTimelockPipeline } from "./tracker/pipeline";
+import {
+  trackGovernorPipeline,
+  trackTimelockPipeline,
+  trackElectionPipeline,
+} from "./tracker/pipeline";
+import { ElectionTrackingInput, NomineeElectionData, MemberElectionData } from "./types";
+import { determineElectionPhase } from "./election/status";
+import { TIMING } from "./constants";
 
 // Import from focused modules
 import { readCacheStatus, FileCache } from "./tracker/cache";
@@ -143,6 +109,95 @@ import {
   getStats as getStatsInternal,
 } from "./tracker/query";
 import { prepareTransaction as prepareTransactionInternal } from "./tracker/execute";
+
+/**
+ * Build ElectionProposalStatus from TrackingState.
+ * This bridges the unified pipeline approach with the existing election API.
+ */
+function buildElectionStatusFromState(state: TrackingState): ElectionProposalStatus {
+  const electionIndex = getElectionIndex(state) ?? 0;
+  const nomineeProposalId = getNomineeProposalId(state) ?? null;
+  const memberProposalId = getMemberProposalId(state) ?? null;
+  const cohort = getElectionCohort(state) ?? 0;
+  const compliantNomineeCount = getCompliantNomineeCount(state) ?? 0;
+  const targetNomineeCount =
+    getTargetNomineeCount(state) ?? TIMING.SECURITY_COUNCIL_TARGET_NOMINEES;
+  const vettingDeadline = getVettingDeadline(state) ?? null;
+
+  // Extract proposal states from stages
+  const nomineeStage = state.stages.find((s) => s.type === "NOMINEE_ELECTION");
+  const memberStage = state.stages.find((s) => s.type === "MEMBER_ELECTION");
+  const vettingStage = state.stages.find((s) => s.type === "NOMINEE_VETTING");
+
+  const nomineeProposalState =
+    nomineeStage?.type === "NOMINEE_ELECTION"
+      ? ((nomineeStage.data as NomineeElectionData)
+          .proposalState as ElectionProposalStatus["nomineeProposalState"])
+      : null;
+
+  const memberProposalState =
+    memberStage?.type === "MEMBER_ELECTION"
+      ? ((memberStage.data as MemberElectionData)
+          .proposalState as ElectionProposalStatus["memberProposalState"])
+      : null;
+
+  // Determine if in vetting period
+  const isInVettingPeriod = vettingStage?.status === "PENDING";
+
+  // Determine phase
+  const phase = determineElectionPhase(
+    nomineeProposalState,
+    memberProposalId,
+    memberProposalState,
+    isInVettingPeriod
+  );
+
+  // Determine action availability
+  const canProceedToMemberPhase = vettingStage?.status === "READY";
+  const canExecuteMember = memberStage?.status === "READY";
+
+  // Extract transaction hashes
+  const createStage = state.stages.find((s) => s.type === "CREATE_ELECTION");
+  const creationTxHash = createStage?.transactions?.[0]?.hash;
+  const nomineeExecuteTxHash = vettingStage?.transactions?.[0]?.hash;
+  const memberExecuteTxHash = memberStage?.transactions?.find(
+    (t) => t.description === "executed"
+  )?.hash;
+
+  // Determine failure
+  const isFailed =
+    nomineeStage?.status === "FAILED" ||
+    memberStage?.status === "FAILED" ||
+    vettingStage?.status === "FAILED";
+  const failureReason =
+    (nomineeStage?.status === "FAILED" && "Nominee election failed") ||
+    (vettingStage?.status === "FAILED" && "Not enough compliant nominees") ||
+    (memberStage?.status === "FAILED" && "Member election failed") ||
+    undefined;
+
+  return {
+    electionIndex,
+    phase,
+    cohort,
+    nomineeProposalId,
+    memberProposalId,
+    nomineeProposalState,
+    memberProposalState,
+    compliantNomineeCount,
+    targetNomineeCount,
+    vettingDeadline,
+    isInVettingPeriod,
+    canProceedToMemberPhase,
+    canExecuteMember,
+    stages: state.stages,
+    isFailed: isFailed || undefined,
+    failureReason,
+    timelockOperationId: getElectionTimelockOperationId(state),
+    creationTxHash,
+    nomineeExecuteTxHash,
+    memberExecuteTxHash,
+  };
+}
 
 /**
  * Extract TimelockLink from stages if PROPOSAL_QUEUED is completed
@@ -741,8 +796,95 @@ export class ProposalStageTracker {
     return [];
   }
 
+  // ============================================================================
+  // Unified Pipeline Tracking
+  // ============================================================================
+
+  /**
+   * Unified pipeline tracking method.
+   * Handles all common tracking patterns: state creation, pipeline execution,
+   * checkpoint management, and timelockOpKey derivation.
+   */
+  private async runTrackingPipeline(config: {
+    input: GovernorTrackingInput | TimelockTrackingInput | ElectionTrackingInput;
+    checkpoint?: TrackingCheckpoint;
+    cacheKey: string;
+    pipeline: (state: TrackingState) => Promise<TrackingState>;
+    loadLinkedTimelock: boolean;
+    modularCaching: boolean;
+    skipCaching?: boolean;
+    callScheduledData?: import("./types").CallScheduledData[];
+    timelockKeySource?: {
+      stageType: "PROPOSAL_QUEUED" | "MEMBER_ELECTION";
+      txDescription: "queued" | "executed";
+    };
+  }): Promise<TrackingState> {
+    // Load linked timelock checkpoint if configured and available
+    let linkedTimelockCheckpoint: TrackingCheckpoint | undefined;
+    if (config.loadLinkedTimelock && this.cache && config.checkpoint?.metadata?.timelockOpKey) {
+      linkedTimelockCheckpoint =
+        (await this.cache.get<TrackingCheckpoint>(config.checkpoint.metadata.timelockOpKey)) ??
+        undefined;
+      if (linkedTimelockCheckpoint) {
+        logTracker(
+          "loaded linked timelock checkpoint: %s",
+          config.checkpoint.metadata.timelockOpKey
+        );
+      }
+    }
+
+    // Create tracking state
+    const initialState = createTrackingState({
+      providers: {
+        l2: this.l2Provider,
+        l1: this.l1Provider,
+        nova: this.novaProvider,
+      },
+      input: config.input,
+      onProgress: this.onProgress,
+      chunkingConfig: this.chunkingConfig,
+      checkpoint: config.checkpoint,
+      linkedTimelockCheckpoint,
+      cacheKey: config.cacheKey,
+      callScheduledData: config.callScheduledData,
+    });
+
+    // Run the pipeline
+    let finalState = await config.pipeline(initialState);
+
+    // Derive and set timelockOpKey if configured
+    if (config.timelockKeySource && !finalState.timelockOpKey) {
+      const { stageType, txDescription } = config.timelockKeySource;
+      const operationId =
+        stageType === "MEMBER_ELECTION"
+          ? getElectionTimelockOperationId(finalState)
+          : getOperationId(finalState);
+      const stage = finalState.stages.find((s) => s.type === stageType);
+      const txHash = stage?.transactions?.find((t) => t.description === txDescription)?.hash;
+      if (operationId && txHash) {
+        const timelockOpKey = timelockOpCacheKey(txHash, operationId);
+        finalState = setTimelockOpKey(finalState, timelockOpKey);
+      }
+    }
+
+    // Save checkpoints (unless caller handles caching)
+    if (!config.skipCaching && this.cache && config.cacheKey) {
+      if (config.modularCaching) {
+        await this.saveModularCheckpoints(finalState, config.cacheKey);
+      } else {
+        const checkpoint = createCheckpoint(finalState);
+        checkpoint.metadata = { errorCount: 0, lastTrackedAt: Date.now() };
+        await this.cache.set(config.cacheKey, checkpoint);
+        logTracker("saved checkpoint to cache: %s", config.cacheKey);
+      }
+    }
+
+    return finalState;
+  }
+
   /**
    * Track governor proposal using TrackingState (stateful tracking)
+   * Uses modular caching: parent stages saved separately from timelock stages.
    */
   private async trackGovernorWithPipeline(
     governorAddress: string,
@@ -751,29 +893,17 @@ export class ProposalStageTracker {
     checkpoint: TrackingCheckpoint | undefined,
     cacheKey: string
   ): Promise<TrackingResult> {
-    const input: GovernorTrackingInput = {
-      type: "governor",
-      governorAddress,
-      proposalId,
-      creationTxHash,
-    };
-
-    // Create tracking context
-    const initialState = createTrackingState({
-      providers: {
-        l2: this.l2Provider,
-        l1: this.l1Provider,
-        nova: this.novaProvider,
-      },
-      input,
-      onProgress: this.onProgress,
-      chunkingConfig: this.chunkingConfig,
+    // Run unified pipeline (with skipCaching - we handle election case specially)
+    const finalState = await this.runTrackingPipeline({
+      input: { type: "governor", governorAddress, proposalId, creationTxHash },
       checkpoint,
       cacheKey,
+      pipeline: trackGovernorPipeline,
+      loadLinkedTimelock: true,
+      modularCaching: true,
+      skipCaching: true,
+      timelockKeySource: { stageType: "PROPOSAL_QUEUED", txDescription: "queued" },
     });
-
-    // Run the governor pipeline (stages 1-7)
-    const finalState = await trackGovernorPipeline(initialState);
 
     // Build result from state
     const result = this.buildResultFromState(finalState);
@@ -794,15 +924,12 @@ export class ProposalStageTracker {
         }
         return result;
       }
-      // If election tracking failed, fall through to save tx:* checkpoint for retry
       logTracker("election tracking failed, saving tx:* checkpoint for retry");
     }
 
-    // Save checkpoint to cache (non-elections and failed election tracking)
+    // Save checkpoints using modular caching
     if (this.cache && cacheKey) {
-      result.checkpoint.metadata = { errorCount: 0, lastTrackedAt: Date.now() };
-      await this.cache.set(cacheKey, result.checkpoint);
-      logTracker("saved checkpoint to cache: %s", cacheKey);
+      await this.saveModularCheckpoints(finalState, cacheKey);
     }
 
     return result;
@@ -819,42 +946,71 @@ export class ProposalStageTracker {
     cacheKey: string,
     callScheduledEvent?: import("./types").CallScheduledData
   ): Promise<TrackingResult> {
-    const input: TimelockTrackingInput = {
-      type: "timelock",
-      timelockAddress,
-      operationId,
-      scheduledTxHash,
-    };
-
-    // Create tracking context with bootstrap data
-    const initialState = createTrackingState({
-      providers: {
-        l2: this.l2Provider,
-        l1: this.l1Provider,
-        nova: this.novaProvider,
-      },
-      input,
-      onProgress: this.onProgress,
-      chunkingConfig: this.chunkingConfig,
+    // Run unified pipeline
+    const finalState = await this.runTrackingPipeline({
+      input: { type: "timelock", timelockAddress, operationId, scheduledTxHash },
       checkpoint,
       cacheKey,
+      pipeline: trackTimelockPipeline,
+      loadLinkedTimelock: false,
+      modularCaching: false,
       callScheduledData: callScheduledEvent ? [callScheduledEvent] : undefined,
     });
 
-    // Run the timelock pipeline (stages 4-7)
-    const finalState = await trackTimelockPipeline(initialState);
+    return this.buildResultFromState(finalState);
+  }
 
-    // Build result from state
-    const result = this.buildResultFromState(finalState);
+  /**
+   * Track election using TrackingState (stateful tracking)
+   *
+   * This is the unified pipeline version that tracks elections through the
+   * same stage-based approach as proposals and timelock operations.
+   * Uses modular caching: election stages saved separately from timelock stages.
+   */
+  private async trackElectionWithPipeline(
+    electionIndex: number,
+    checkpoint: TrackingCheckpoint | undefined,
+    cacheKey: string
+  ): Promise<{ status: ElectionProposalStatus; finalState: TrackingState }> {
+    // Run unified pipeline (caller handles caching)
+    const finalState = await this.runTrackingPipeline({
+      input: { type: "election", electionIndex },
+      checkpoint,
+      cacheKey,
+      pipeline: trackElectionPipeline,
+      loadLinkedTimelock: true,
+      modularCaching: true,
+      skipCaching: true,
+      timelockKeySource: { stageType: "MEMBER_ELECTION", txDescription: "executed" },
+    });
 
-    // Save checkpoint to cache
-    if (this.cache && cacheKey) {
-      result.checkpoint.metadata = { errorCount: 0, lastTrackedAt: Date.now() };
-      await this.cache.set(cacheKey, result.checkpoint);
-      logTracker("saved checkpoint to cache: %s", cacheKey);
+    return { status: buildElectionStatusFromState(finalState), finalState };
+  }
+
+  /**
+   * Save checkpoints using modular caching.
+   * Saves parent stages and timelock stages in separate checkpoints.
+   */
+  private async saveModularCheckpoints(
+    state: TrackingState,
+    parentCacheKey: string
+  ): Promise<void> {
+    if (!this.cache) return;
+
+    const { parentCheckpoint, timelockCheckpoint, timelockOpKey } = createModularCheckpoints(
+      state,
+      parentCacheKey
+    );
+
+    // Save parent checkpoint
+    await this.cache.set(parentCacheKey, parentCheckpoint);
+    logTracker("saved parent checkpoint: %s", parentCacheKey);
+
+    // Save timelock checkpoint if we have one
+    if (timelockCheckpoint && timelockOpKey) {
+      await this.cache.set(timelockOpKey, timelockCheckpoint);
+      logTracker("saved linked timelock checkpoint: %s", timelockOpKey);
     }
-
-    return result;
   }
 
   /**
@@ -1008,7 +1164,7 @@ export class ProposalStageTracker {
    * Track election status for a given proposal ID.
    *
    * Searches through elections to find the one containing this proposal,
-   * then tracks the full election lifecycle.
+   * then tracks the full election lifecycle using the unified pipeline.
    */
   private async trackElectionStatus(proposalId: string): Promise<ElectionProposalStatus | null> {
     logTracker("trackElectionStatus for proposal %s", proposalId);
@@ -1030,9 +1186,8 @@ export class ProposalStageTracker {
       }
 
       logTracker("found election index %d for proposal %s", electionIndex, proposalId);
-      return trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider, {
-        novaProvider: this.novaProvider,
-      });
+      // Use unified pipeline via trackElection
+      return this.trackElection(electionIndex);
     } catch (error) {
       // Election tracking is non-critical - log and return null
       // The proposal stages are already tracked successfully
@@ -1062,6 +1217,8 @@ export class ProposalStageTracker {
   ): Promise<ElectionProposalStatus> {
     logTracker("trackElection for index %d (force=%s)", electionIndex, options.force ?? false);
 
+    const cacheKey = `election:${electionIndex}`;
+
     // Check cache first for completed elections (skip RPC calls)
     if (this.cache && !options.force) {
       const cached = await this.getElectionCheckpoint(electionIndex);
@@ -1071,23 +1228,26 @@ export class ProposalStageTracker {
       }
     }
 
-    // Build full tracking context for consistent state across all calls
-    const context = await buildTrackingContext({
-      l2Provider: this.l2Provider,
-      l1Provider: this.l1Provider,
-      novaProvider: this.novaProvider,
-      skipCache: options.force,
-    });
+    // Load checkpoint from cache for resume
+    let checkpoint: TrackingCheckpoint | undefined;
+    if (this.cache && !options.force) {
+      checkpoint = (await this.cache.get<TrackingCheckpoint>(cacheKey)) ?? undefined;
+      if (checkpoint) {
+        logTracker("loaded election checkpoint from cache: %s", cacheKey);
+      }
+    }
 
-    // Track fresh for incomplete elections or cache miss
-    const status = await trackElectionProposal(electionIndex, this.l2Provider, this.l1Provider, {
-      novaProvider: this.novaProvider,
-      l2BlockNumber: context.l2BlockNumber,
-      timestamp: context.timestamp,
-      skipCache: context.skipCache,
-    });
+    // Track using the unified pipeline
+    const { status, finalState } = await this.trackElectionWithPipeline(
+      electionIndex,
+      checkpoint,
+      cacheKey
+    );
 
+    // Save checkpoints using modular caching
     if (this.cache) {
+      await this.saveModularCheckpoints(finalState, cacheKey);
+      // Also save election-specific data
       await this.saveElectionCheckpoint(status);
     }
 
@@ -1114,14 +1274,6 @@ export class ProposalStageTracker {
       options.force ?? false
     );
 
-    // Build context once at the start for consistent state across all elections
-    const context = await buildTrackingContext({
-      l2Provider: this.l2Provider,
-      l1Provider: this.l1Provider,
-      novaProvider: this.novaProvider,
-      skipCache: options.force,
-    });
-
     const status = await checkElectionStatus(this.l2Provider, this.l1Provider);
     const electionCount = status.electionCount;
     const results: ElectionProposalStatus[] = [];
@@ -1129,28 +1281,9 @@ export class ProposalStageTracker {
     // Track existing elections (indices 0 to electionCount-1)
     for (let i = 0; i < electionCount; i++) {
       try {
-        // Check cache first for completed elections (skip RPC calls)
-        if (this.cache && !options.force) {
-          const cached = await this.getElectionCheckpoint(i);
-          if (cached && cached.status.phase === "COMPLETED") {
-            logTracker("returning cached COMPLETED election %d (0 RPC calls)", i);
-            results.push(cached.status);
-            continue;
-          }
-        }
-
-        // Track with shared context
-        const electionStatus = await trackElectionProposal(i, this.l2Provider, this.l1Provider, {
-          novaProvider: this.novaProvider,
-          l2BlockNumber: context.l2BlockNumber,
-          timestamp: context.timestamp,
-          skipCache: context.skipCache,
-        });
+        // Use unified pipeline via trackElection
+        const electionStatus = await this.trackElection(i, { force: options.force });
         results.push(electionStatus);
-
-        if (this.cache) {
-          await this.saveElectionCheckpoint(electionStatus);
-        }
       } catch (err) {
         logTracker("Failed to track election %d: %s", i, err);
       }
@@ -1160,16 +1293,7 @@ export class ProposalStageTracker {
     if (options.includeNext ?? true) {
       try {
         // Next election always needs fresh RPC calls since it doesn't exist yet
-        const nextElectionStatus = await trackElectionProposal(
-          electionCount,
-          this.l2Provider,
-          this.l1Provider,
-          {
-            novaProvider: this.novaProvider,
-            l2BlockNumber: context.l2BlockNumber,
-            timestamp: context.timestamp,
-          }
-        );
+        const nextElectionStatus = await this.trackElection(electionCount, { force: true });
         results.push({
           ...nextElectionStatus,
           canCreateElection: status.canCreateElection,

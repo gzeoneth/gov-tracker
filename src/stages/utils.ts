@@ -122,21 +122,47 @@ const TIMELOCK_ONLY_STAGES: StageType[] = [
   "RETRYABLE_EXECUTED",
 ];
 
+/** Election stages (full election lifecycle) */
+const ELECTION_STAGES: StageType[] = [
+  "CREATE_ELECTION",
+  "NOMINEE_ELECTION",
+  "NOMINEE_VETTING",
+  "MEMBER_ELECTION",
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+];
+
+/**
+ * Tracking path types for stage initialization
+ */
+export type TrackingPath = "governor" | "timelock" | "election";
+
 /**
  * Get stage types for a tracking path.
- * @param includeProposalStages - Include proposal stages (default: true)
+ * @param path - The tracking path type: "governor", "timelock", or "election"
  */
-export function getStagesForPath(includeProposalStages: boolean = true): StageType[] {
-  return includeProposalStages ? FULL_PROPOSAL_STAGES : TIMELOCK_ONLY_STAGES;
+export function getStagesForTrackingPath(path: TrackingPath): StageType[] {
+  switch (path) {
+    case "governor":
+      return FULL_PROPOSAL_STAGES;
+    case "timelock":
+      return TIMELOCK_ONLY_STAGES;
+    case "election":
+      return ELECTION_STAGES;
+  }
 }
 
 /**
- * Initialize all stages for a path
+ * Initialize all stages for a tracking path
+ * @param path - The tracking path type: "governor", "timelock", or "election"
  */
-export function initializeStagesForPath(includeProposalStages: boolean = true): TrackedStage[] {
-  const stageTypes = getStagesForPath(includeProposalStages);
+export function initializeStagesForTrackingPath(path: TrackingPath): TrackedStage[] {
+  const stageTypes = getStagesForTrackingPath(path);
 
   return stageTypes.map((type) => {
+    // Determine chain for each stage type
     // L1_TIMELOCK and RETRYABLE_EXECUTED are L1 stages
     // L2_TO_L1_MESSAGE is cross-chain but logically completes on L1
     const chain: Chain =
@@ -144,6 +170,61 @@ export function initializeStagesForPath(includeProposalStages: boolean = true): 
 
     return createStage(type, chain, "NOT_STARTED");
   });
+}
+
+// ============================================================================
+// Modular Caching: Stage Splitting
+// ============================================================================
+
+/** All timelock path stages for modular caching (full path, not just executable) */
+const TIMELOCK_PATH_STAGES: Set<StageType> = new Set([
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+]);
+
+/**
+ * Check if a stage type is part of the timelock path (for modular caching).
+ * Includes all stages after proposal/election execution: L2_TIMELOCK → RETRYABLE_EXECUTED
+ */
+export function isTimelockPathStage(type: StageType): boolean {
+  return TIMELOCK_PATH_STAGES.has(type);
+}
+
+/**
+ * Split stages into parent and timelock stages for modular caching.
+ *
+ * Parent stages:
+ * - Governor: PROPOSAL_CREATED, VOTING_ACTIVE, PROPOSAL_QUEUED
+ * - Election: CREATE_ELECTION, NOMINEE_ELECTION, NOMINEE_VETTING, MEMBER_ELECTION
+ *
+ * Timelock stages: L2_TIMELOCK, L2_TO_L1_MESSAGE, L1_TIMELOCK, RETRYABLE_EXECUTED
+ */
+export function splitStages(stages: TrackedStage[]): {
+  parentStages: TrackedStage[];
+  timelockStages: TrackedStage[];
+} {
+  const parentStages: TrackedStage[] = [];
+  const timelockStages: TrackedStage[] = [];
+
+  for (const stage of stages) {
+    if (isTimelockPathStage(stage.type)) {
+      timelockStages.push(stage);
+    } else {
+      parentStages.push(stage);
+    }
+  }
+
+  return { parentStages, timelockStages };
+}
+
+/**
+ * Check if stages have any timelock progress (for determining if we need linked checkpoint).
+ * Returns true if any timelock path stage has been started.
+ */
+export function hasTimelockProgress(stages: TrackedStage[]): boolean {
+  return stages.some((s) => isTimelockPathStage(s.type) && s.status !== "NOT_STARTED");
 }
 
 /**

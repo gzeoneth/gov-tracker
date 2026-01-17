@@ -15,15 +15,13 @@ src/
 ├── tracker.ts           # ProposalStageTracker class
 ├── tracker/             # Pipeline, state, discovery, execute, query, cache
 ├── stages/              # Stage implementations (voting, timelock, etc.)
-├── election/            # Security Council election tracking
+├── election/            # Security Council election tracking (7 files)
 │   ├── contracts.ts     # Governor contract factories
-│   ├── proposal-ids.ts  # ID computation + caching
-│   ├── params.ts        # Proposal parameters
+│   ├── proposal-ids.ts  # ID computation, caching, and lookup
+│   ├── params.ts        # Proposal parameters and tx preparation
 │   ├── participants.ts  # Contenders, nominees
 │   ├── details.ts       # Full election details
-│   ├── prepare.ts       # Transaction preparation
-│   ├── status.ts        # Phase determination
-│   └── tracking.ts      # Main orchestration
+│   └── status.ts        # Phase determination
 ├── discovery/           # Governor & timelock introspection
 ├── utils/               # Timing, log search, operation IDs
 ├── types/               # Type definitions

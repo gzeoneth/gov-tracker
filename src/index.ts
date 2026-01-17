@@ -326,10 +326,7 @@ export {
   getElectionCount,
   checkElectionStatus,
   hasVettingPeriod,
-  // Election tracking
-  trackElectionProposal,
-  trackAllElections,
-  trackIncompleteElections,
+  // Election tracking utilities
   getElectionIndexForProposalId,
   // Election proposal IDs
   getElectionProposalId,

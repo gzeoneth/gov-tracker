@@ -168,6 +168,17 @@ export interface TrackingCheckpoint {
      * @see linkCheckpointToChild
      */
     sourceCheckpoint?: string;
+    /**
+     * Cache key linking to the timelock operation checkpoint.
+     * Format: tx:{scheduleTxHash}:op:{operationId}
+     *
+     * When present, timelock stages (L2_TIMELOCK → RETRYABLE_EXECUTED) are stored
+     * in a separate checkpoint referenced by this key. This enables:
+     * - Independent resumption of timelock tracking
+     * - Reduced data duplication
+     * - Clear separation between parent (proposal/election) and timelock stages
+     */
+    timelockOpKey?: string;
   };
 }
 

@@ -5,16 +5,23 @@
 // Contracts
 export { getNomineeGovernor, getMemberGovernor } from "./contracts";
 
-// Proposal IDs
+// Proposal IDs and lookup
 export {
   clearElectionCache,
   getElectionProposalId,
   getMemberElectionProposalId,
+  getElectionIndexForProposalId,
 } from "./proposal-ids";
 
-// Params
-export { getElectionProposalParams, getMemberElectionProposalParams } from "./params";
-export type { ElectionProposalParams } from "./params";
+// Params and preparation
+export {
+  getElectionProposalParams,
+  getMemberElectionProposalParams,
+  prepareElectionCreation,
+  prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
+} from "./params";
+export type { ElectionProposalParams, PreparedElectionCreation } from "./params";
 
 // Participants
 export { getContenders, getNomineesWithVotes, getExcludedNominees } from "./participants";
@@ -27,14 +34,6 @@ export {
   serializeMemberDetails,
 } from "./details";
 
-// Prepare
-export {
-  prepareElectionCreation,
-  prepareMemberElectionTrigger,
-  prepareMemberElectionExecution,
-} from "./prepare";
-export type { PreparedElectionCreation } from "./prepare";
-
 // Status
 export {
   getElectionCount,
@@ -42,11 +41,3 @@ export {
   hasVettingPeriod,
   determineElectionPhase,
 } from "./status";
-
-// Tracking
-export {
-  trackElectionProposal,
-  trackAllElections,
-  trackIncompleteElections,
-  getElectionIndexForProposalId,
-} from "./tracking";

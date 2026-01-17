@@ -115,18 +115,8 @@ describe("TrackingContext", () => {
       });
     });
 
-    describe("trackElectionProposal", () => {
-      it("should accept context with l2BlockNumber", async () => {
-        // #given
-        const { trackElectionProposal } = await import("../src/election");
-
-        // #when / #then - function signature accepts context
-        expect(typeof trackElectionProposal).toBe("function");
-
-        // Function should accept options parameter
-        // Full integration test would require mocked RPC responses
-      });
-    });
+    // Note: trackElectionProposal was removed in favor of ProposalStageTracker.trackElection()
+    // The new unified pipeline handles election tracking with better caching support
   });
 
   describe("block-scoped caching with context", () => {

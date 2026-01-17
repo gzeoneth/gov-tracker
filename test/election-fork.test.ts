@@ -12,13 +12,7 @@
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import * as dotenv from "dotenv";
 import { startDualForksAtL2Block, getTestRpcUrls, DualForkResult } from "./helpers/anvil-fork";
-import {
-  checkElectionStatus,
-  prepareElectionCreation,
-  trackElectionProposal,
-  createTracker,
-  ADDRESSES,
-} from "../src";
+import { checkElectionStatus, prepareElectionCreation, createTracker, ADDRESSES } from "../src";
 
 dotenv.config({ quiet: true });
 
@@ -150,7 +144,7 @@ describe("Election Proposal Tracking with Forks", () => {
     }
   });
 
-  describe("trackElectionProposal", () => {
+  describe("trackElection (via tracker)", () => {
     it("should track election proposal status at historical block", async () => {
       // Use the ELECTION_POKE block which is known to have elections
       forks = await startDualForksAtL2Block({
@@ -168,11 +162,14 @@ describe("Election Proposal Tracking with Forks", () => {
 
       // Track an earlier election (if any exist)
       if (status.electionCount > 0) {
-        const electionStatus = await trackElectionProposal(
-          0, // First election
-          forks.l2.provider,
-          forks.l1.provider
-        );
+        // Use the unified pipeline via tracker
+        const tracker = createTracker({
+          l1Provider: forks.l1.provider,
+          l2Provider: forks.l2.provider,
+          novaProvider: forks.l2.provider,
+        });
+
+        const electionStatus = await tracker.trackElection(0); // First election
 
         expect(electionStatus.electionIndex).toBe(0);
         expect([0, 1]).toContain(electionStatus.cohort);

@@ -13,8 +13,8 @@ import {
   needsAction,
   getTrackingStatusSummary,
   isConstitutional,
-  getStagesForPath,
-  initializeStagesForPath,
+  getStagesForTrackingPath,
+  initializeStagesForTrackingPath,
   findStage,
   updateStageInList,
   getCurrentStage,
@@ -327,11 +327,11 @@ describe("Stages Base Utilities", () => {
     });
   });
 
-  describe("getStagesForPath", () => {
-    it("should return all 7 stages with proposal stages", () => {
-      // #given - includeProposalStages = true
+  describe("getStagesForTrackingPath", () => {
+    it("should return all 7 stages for governor path", () => {
+      // #given - governor path
       // #when - getting stages for path
-      const stages = getStagesForPath(true);
+      const stages = getStagesForTrackingPath("governor");
 
       // #then - returns all 7 governance stages in order
       expect(stages.length).toBe(7);
@@ -344,10 +344,10 @@ describe("Stages Base Utilities", () => {
       expect(stages[6]).toBe("RETRYABLE_EXECUTED");
     });
 
-    it("should return 4 stages without proposal stages", () => {
-      // #given - includeProposalStages = false
+    it("should return 4 stages for timelock path", () => {
+      // #given - timelock path
       // #when - getting stages for path
-      const stages = getStagesForPath(false);
+      const stages = getStagesForTrackingPath("timelock");
 
       // #then - returns only timelock/execution stages
       expect(stages.length).toBe(4);
@@ -358,11 +358,11 @@ describe("Stages Base Utilities", () => {
     });
   });
 
-  describe("initializeStagesForPath", () => {
-    it("should create all stages with correct chains", () => {
-      // #given - includeProposalStages = true
+  describe("initializeStagesForTrackingPath", () => {
+    it("should create all stages with correct chains for governor path", () => {
+      // #given - governor path
       // #when - initializing stages for path
-      const stages = initializeStagesForPath(true);
+      const stages = initializeStagesForTrackingPath("governor");
 
       // #then - creates stages with appropriate chain assignments
       expect(stages.length).toBe(7);
@@ -373,9 +373,9 @@ describe("Stages Base Utilities", () => {
     });
 
     it("should set all stages to NOT_STARTED", () => {
-      // #given - includeProposalStages = true
+      // #given - governor path
       // #when - initializing stages for path
-      const stages = initializeStagesForPath(true);
+      const stages = initializeStagesForTrackingPath("governor");
 
       // #then - all stages have NOT_STARTED status
       expect(stages.every((s) => s.status === "NOT_STARTED")).toBe(true);
@@ -384,8 +384,8 @@ describe("Stages Base Utilities", () => {
 
   describe("findStage", () => {
     it("should find stage by type", () => {
-      // #given - initialized stages with proposal stages
-      const stages = initializeStagesForPath(true);
+      // #given - initialized stages with governor path
+      const stages = initializeStagesForTrackingPath("governor");
 
       // #when - finding stage by type
       const found = findStage(stages, "L2_TIMELOCK");

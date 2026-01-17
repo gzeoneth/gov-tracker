@@ -186,29 +186,24 @@ export async function findL1OperationIdFromTx(
   l1ScheduleTxHash: string;
   l1ScheduleBlock: number;
 }> {
+  const result = {
+    l1OperationId: null as string | null,
+    l1ScheduleTxHash: outboxTxHash,
+    l1ScheduleBlock: outboxTxBlock,
+  };
   const receipt = await queryWithRetry(() => l1Provider.getTransactionReceipt(outboxTxHash));
+  if (!receipt) return result;
 
-  if (!receipt) {
-    return { l1OperationId: null, l1ScheduleTxHash: outboxTxHash, l1ScheduleBlock: outboxTxBlock };
+  const callScheduledLog = receipt.logs.find(
+    (log) =>
+      addressEquals(log.address, ADDRESSES.L1_TIMELOCK) &&
+      log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED
+  );
+  if (callScheduledLog) {
+    const parsed = parseCallScheduledEvent(callScheduledLog);
+    if (parsed) result.l1OperationId = parsed.operationId;
   }
-
-  for (const logEntry of receipt.logs) {
-    if (
-      addressEquals(logEntry.address, ADDRESSES.L1_TIMELOCK) &&
-      logEntry.topics[0] === EVENT_TOPICS.CALL_SCHEDULED
-    ) {
-      const parsed = parseCallScheduledEvent(logEntry);
-      if (parsed) {
-        return {
-          l1OperationId: parsed.operationId,
-          l1ScheduleTxHash: outboxTxHash,
-          l1ScheduleBlock: outboxTxBlock,
-        };
-      }
-    }
-  }
-
-  return { l1OperationId: null, l1ScheduleTxHash: outboxTxHash, l1ScheduleBlock: outboxTxBlock };
+  return result;
 }
 
 // ============================================================================
@@ -290,33 +285,26 @@ async function trackTimelock(
     }
   }
 
-  // Compute and cache salt and predecessor
+  // Compute salt and predecessor, then validate operation type
+  let salt = ethers.constants.HashZero;
+  let predecessor = ethers.constants.HashZero;
+
   if (config.stageType === "L2_TIMELOCK") {
-    // Get current stage data for salt computation
     const currentData = builder.build().data;
-    const salt = await computeL2TimelockSalt(currentData, options.allStages, provider);
-    builder.data({ salt });
-
-    // Cache predecessor from CallScheduled event (usually HashZero for governor proposals)
-    if (allData.length > 0 && allData[0].predecessor) {
-      builder.data({ predecessor: allData[0].predecessor });
-    }
-
+    salt = await computeL2TimelockSalt(currentData, options.allStages, provider);
+    predecessor = allData[0]?.predecessor ?? ethers.constants.HashZero;
+    builder.data({ salt, predecessor });
     log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   } else if (config.stageType === "L1_TIMELOCK") {
-    const { salt, predecessor } = computeL1TimelockSalt(options.allStages);
-    builder.data({ salt });
-    if (predecessor) {
-      builder.data({ predecessor });
-    }
+    const computed = computeL1TimelockSalt(options.allStages);
+    salt = computed.salt;
+    predecessor = computed.predecessor ?? ethers.constants.HashZero;
+    builder.data({ salt, predecessor });
     log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   }
 
   // Determine if operation uses scheduleBatch or schedule by trying both validations
   if (allData.length > 0) {
-    const salt = builder.build().data.salt ?? ethers.constants.HashZero;
-    const predecessor = builder.build().data.predecessor ?? ethers.constants.HashZero;
-
     // Try batch validation first (common for L2 timelock)
     const targets = allData.map((d) => d.target);
     const values = allData.map((d) => d.value);

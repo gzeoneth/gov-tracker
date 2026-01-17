@@ -86,13 +86,8 @@ export async function findOutboxExecutionTransaction(
   const { blockNumber: currentBlock } = await getCurrentBlockInfo(l1Provider);
 
   // Get the Outbox address from Arbitrum network config
-  let outboxAddress: string;
-  try {
-    const network = await getArbitrumNetwork(l2Provider);
-    outboxAddress = network.ethBridge.outbox;
-  } catch {
-    outboxAddress = ADDRESSES.ARB1_OUTBOX;
-  }
+  const network = await getArbitrumNetwork(l2Provider).catch(() => null);
+  const outboxAddress = network?.ethBridge.outbox ?? ADDRESSES.ARB1_OUTBOX;
 
   const executedTopic = outboxInterface.getEventTopic("OutBoxTransactionExecuted");
 

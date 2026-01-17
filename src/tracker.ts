@@ -141,16 +141,14 @@ function buildElectionStatusFromState(state: TrackingState): ElectionProposalSta
 
   const isInVettingPeriod = vettingStage?.status === "PENDING";
 
-  // Determine failure from any failed stage
+  // Determine failure from any failed stage using Map for O(1) lookup
+  const stageFailureReasons = new Map<TrackedStage | undefined, string>([
+    [nomineeStage, "Nominee election failed"],
+    [vettingStage, "Not enough compliant nominees"],
+    [memberStage, "Member election failed"],
+  ]);
   const failedStage = [nomineeStage, vettingStage, memberStage].find((s) => s?.status === "FAILED");
-  const failureReason =
-    failedStage === nomineeStage
-      ? "Nominee election failed"
-      : failedStage === vettingStage
-        ? "Not enough compliant nominees"
-        : failedStage === memberStage
-          ? "Member election failed"
-          : undefined;
+  const failureReason = failedStage ? stageFailureReasons.get(failedStage) : undefined;
 
   return {
     electionIndex,
@@ -172,7 +170,7 @@ function buildElectionStatusFromState(state: TrackingState): ElectionProposalSta
     canProceedToMemberPhase: vettingStage?.status === "READY",
     canExecuteMember: memberStage?.status === "READY",
     stages: state.stages,
-    isFailed: failedStage !== undefined ? true : undefined,
+    isFailed: failedStage ? true : undefined,
     failureReason,
     timelockOperationId: getElectionTimelockOperationId(state),
     creationTxHash: createStage?.transactions?.[0]?.hash,
@@ -1019,45 +1017,33 @@ export class ProposalStageTracker {
    * ```
    */
   async trackFromCheckpoint(checkpoint: TrackingCheckpoint): Promise<TrackingResult> {
-    const input = checkpoint.input;
+    const { input } = checkpoint;
+
+    const trackAndWarn = async (txHash: string, entityType: string): Promise<TrackingResult> => {
+      const results = await this.trackByTxHash(txHash);
+      if (results.length === 0) {
+        throw new Error(`No ${entityType} found in tx ${txHash}`);
+      }
+      if (results.length > 1) {
+        logTracker(
+          "WARNING: trackFromCheckpoint found %d results in tx %s, returning first only. " +
+            "Use trackByTxHash() to get all results.",
+          results.length,
+          txHash
+        );
+      }
+      return results[0];
+    };
 
     if (input.type === "governor") {
-      if (!input.creationTxHash) {
-        throw new Error("Governor checkpoint missing creationTxHash");
-      }
-      const results = await this.trackByTxHash(input.creationTxHash);
-      if (results.length === 0) {
-        throw new Error(`No proposal found in tx ${input.creationTxHash}`);
-      }
-      if (results.length > 1) {
-        logTracker(
-          "WARNING: trackFromCheckpoint found %d results in tx %s, returning first only. " +
-            "Use trackByTxHash() to get all results.",
-          results.length,
-          input.creationTxHash
-        );
-      }
-      return results[0];
-    } else if (input.type === "timelock") {
-      if (!input.scheduledTxHash) {
-        throw new Error("Timelock checkpoint missing scheduledTxHash");
-      }
-      const results = await this.trackByTxHash(input.scheduledTxHash);
-      if (results.length === 0) {
-        throw new Error(`No timelock operation found in tx ${input.scheduledTxHash}`);
-      }
-      if (results.length > 1) {
-        logTracker(
-          "WARNING: trackFromCheckpoint found %d results in tx %s, returning first only. " +
-            "Use trackByTxHash() to get all results.",
-          results.length,
-          input.scheduledTxHash
-        );
-      }
-      return results[0];
-    } else {
-      throw new Error(`Unsupported checkpoint input type: ${(input as { type: string }).type}`);
+      if (!input.creationTxHash) throw new Error("Governor checkpoint missing creationTxHash");
+      return trackAndWarn(input.creationTxHash, "proposal");
     }
+    if (input.type === "timelock") {
+      if (!input.scheduledTxHash) throw new Error("Timelock checkpoint missing scheduledTxHash");
+      return trackAndWarn(input.scheduledTxHash, "timelock operation");
+    }
+    throw new Error(`Unsupported checkpoint input type: ${(input as { type: string }).type}`);
   }
 
   // Transaction Preparation

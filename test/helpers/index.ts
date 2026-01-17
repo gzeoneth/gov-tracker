@@ -5,3 +5,4 @@
 export * from "./timing-helpers";
 export * from "./discovery-helpers";
 export * from "./election-helpers";
+export * from "./test-helpers";

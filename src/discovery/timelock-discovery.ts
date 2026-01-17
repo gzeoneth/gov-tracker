@@ -402,17 +402,17 @@ export async function findAllCallScheduledInTx(
   return results.sort((a, b) => a.index.toNumber() - b.index.toNumber());
 }
 
+/** Lookup map: governor address → L2 timelock address */
+const GOVERNOR_TO_TIMELOCK = new Map<string, string>([
+  [ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase(), ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK],
+  [ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR.toLowerCase(), ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK],
+]);
+
 /**
  * Get the L2 timelock address for a governor type
  */
 export function getL2TimelockForGovernor(governorAddress: string): string | null {
-  if (addressEquals(governorAddress, ADDRESSES.CONSTITUTIONAL_GOVERNOR)) {
-    return ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
-  }
-  if (addressEquals(governorAddress, ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR)) {
-    return ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK;
-  }
-  return null;
+  return GOVERNOR_TO_TIMELOCK.get(governorAddress.toLowerCase()) ?? null;
 }
 
 // Discovery Types and Functions (merged from monitor-discovery.ts)
@@ -443,18 +443,19 @@ export async function discoverTimelockOps(
     { chunkSize: options.chunkSize ?? defaultChunkSize }
   );
 
+  // Deduplicate by operationId (batch operations have multiple calls with same operationId)
   const seen = new Set<string>();
-  return logs.flatMap((log) => {
-    const operationId = log.topics[1];
-    if (seen.has(operationId)) return [];
-    seen.add(operationId);
-    return [
-      {
-        timelockAddress,
-        operationId,
-        scheduledTxHash: log.transactionHash,
-        queueBlock: log.blockNumber,
-      },
-    ];
-  });
+  return logs
+    .filter((log) => {
+      const operationId = log.topics[1];
+      if (seen.has(operationId)) return false;
+      seen.add(operationId);
+      return true;
+    })
+    .map((log) => ({
+      timelockAddress,
+      operationId: log.topics[1],
+      scheduledTxHash: log.transactionHash,
+      queueBlock: log.blockNumber,
+    }));
 }

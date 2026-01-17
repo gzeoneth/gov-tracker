@@ -38,6 +38,7 @@ import {
   TrackingPath,
   splitStages,
   hasTimelockProgress,
+  isStageSuccess,
 } from "../stages/utils";
 import { isElectionProposal, detectProposalType } from "../discovery/governor-discovery";
 import { DEFAULT_CHUNKING_CONFIG } from "../constants";
@@ -207,14 +208,13 @@ const findStage = (ctx: TrackingState, type: StageType) => ctx.stages.find((s) =
 
 /** Check if a stage is completed (COMPLETED or SKIPPED). */
 export function isStageCompleted(ctx: TrackingState, type: StageType): boolean {
-  const s = findStage(ctx, type);
-  return s?.status === "COMPLETED" || s?.status === "SKIPPED";
+  return isStageSuccess(findStage(ctx, type)?.status);
 }
 
 /** Get a completed stage for zero-RPC resume. */
 export function getCompletedStage(ctx: TrackingState, type: StageType): TrackedStage | undefined {
   const s = findStage(ctx, type);
-  return s?.status === "COMPLETED" || s?.status === "SKIPPED" ? s : undefined;
+  return isStageSuccess(s?.status) ? s : undefined;
 }
 
 /** Get a cached stage (any status). */

@@ -42,7 +42,7 @@ import {
   addPlaceholders,
   getCachedStage,
 } from "./stage-runner";
-import { isConstitutional } from "../stages/utils";
+import { isConstitutional, isStageSuccess } from "../stages/utils";
 import { trackProposalCreated } from "../stages/proposal-created";
 import { trackVotingStage } from "../stages/voting";
 import { trackProposalQueued } from "../stages/proposal-queued";
@@ -629,7 +629,7 @@ const TIMELOCK_STAGES: StageConfig[] = [
       if (!timelockAddress || !operationId) return { state, continue: false };
 
       const cached = getCachedStage(state, "L2_TIMELOCK");
-      if (cached?.status === "COMPLETED" || cached?.status === "SKIPPED") {
+      if (cached && isStageSuccess(cached.status)) {
         log("L2_TIMELOCK: cached");
         return { state: await addStage(state, cached), continue: true };
       }
@@ -642,7 +642,7 @@ const TIMELOCK_STAGES: StageConfig[] = [
     // Custom cache: handle pending fast-path in track function
     checkCache: async (state) => {
       const cached = getCachedStage(state, "L2_TO_L1_MESSAGE");
-      if (cached?.status === "COMPLETED" || cached?.status === "SKIPPED") {
+      if (cached && isStageSuccess(cached.status)) {
         log("L2_TO_L1_MESSAGE: cached");
         return { state: await addStage(state, cached), continue: true };
       }

@@ -236,11 +236,25 @@ export function updateStageInList(
 // ============================================================================
 
 /**
+ * Check if status is terminal (COMPLETED, SKIPPED, or FAILED)
+ */
+export function isStageTerminal(status: StageStatus | undefined): boolean {
+  return status === "COMPLETED" || status === "SKIPPED" || status === "FAILED";
+}
+
+/**
+ * Check if status represents successful completion (COMPLETED or SKIPPED)
+ */
+export function isStageSuccess(status: StageStatus | undefined): boolean {
+  return status === "COMPLETED" || status === "SKIPPED";
+}
+
+/**
  * Get the current active stage (first non-completed stage)
  */
 export function getCurrentStage(stages: TrackedStage[]): TrackedStage | null {
   for (const stage of stages) {
-    if (stage.status !== "COMPLETED" && stage.status !== "SKIPPED" && stage.status !== "FAILED") {
+    if (!isStageTerminal(stage.status)) {
       return stage;
     }
   }
@@ -251,9 +265,7 @@ export function getCurrentStage(stages: TrackedStage[]): TrackedStage | null {
  * Check if all stages are complete
  */
 export function areAllStagesComplete(stages: TrackedStage[]): boolean {
-  return stages.every(
-    (s) => s.status === "COMPLETED" || s.status === "SKIPPED" || s.status === "FAILED"
-  );
+  return stages.every((s) => isStageTerminal(s.status));
 }
 
 /**

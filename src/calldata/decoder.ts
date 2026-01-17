@@ -265,14 +265,9 @@ export async function decodeCalldataArray(
   targets: string[],
   chainContext: Chain = "arb1"
 ): Promise<DecodedCalldata[]> {
-  const results: DecodedCalldata[] = [];
-
-  for (let i = 0; i < calldatas.length; i++) {
-    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, chainContext);
-    results.push(decoded);
-  }
-
-  return results;
+  return Promise.all(
+    calldatas.map((calldata, i) => decodeCalldata(calldata, targets[i], 0, chainContext))
+  );
 }
 
 /**
@@ -320,12 +315,7 @@ export function extractCalldataFromStage(stage: TrackedStage): ExtractedCalldata
       throw new Error(`Mismatch in values length: expected ${count}, got ${values.length}`);
     }
 
-    for (let i = 0; i < count; i++) {
-      result.calldatas.push(data.calldatas[i]);
-      result.targets.push(targets[i]);
-      result.values.push(values[i]);
-    }
-    return result;
+    return { calldatas: [...data.calldatas], targets: [...targets], values: [...values] };
   }
 
   // 2. Check for Timelock scheduled data (L1/L2 Timelock)

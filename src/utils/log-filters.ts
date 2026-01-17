@@ -50,18 +50,14 @@ export function filterLogs(logs: Log[], options: LogFilterOptions): Log[] {
  * const events = parseLogsSafe(logs, parseCallScheduledEvent);
  */
 export function parseLogsSafe<T>(logs: Log[], parser: (log: Log) => T | null): T[] {
-  const results: T[] = [];
-  for (const log of logs) {
+  return logs.flatMap((log) => {
     try {
       const parsed = parser(log);
-      if (parsed !== null) {
-        results.push(parsed);
-      }
+      return parsed !== null ? [parsed] : [];
     } catch {
-      // Skip logs that fail to parse
+      return [];
     }
-  }
-  return results;
+  });
 }
 
 /**

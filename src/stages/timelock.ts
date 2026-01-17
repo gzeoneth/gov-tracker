@@ -340,32 +340,27 @@ async function trackTimelock(
 
   // Add queue transaction if available (for all statuses where scheduled)
   let queueTimestamp: number | undefined;
-  if (
-    timelockState.scheduledData?.txHash &&
-    timelockState.scheduledData.blockNumber !== undefined
-  ) {
-    queueTimestamp = await getBlockTimestamp(timelockState.scheduledData.blockNumber, provider);
+  const scheduled = timelockState.scheduledData;
+  if (scheduled?.txHash && scheduled.blockNumber !== undefined) {
+    queueTimestamp = await getBlockTimestamp(scheduled.blockNumber, provider);
     const chainId = chainToChainId(config.chain) ?? 0;
-    builder.tx(
-      timelockState.scheduledData.txHash,
-      timelockState.scheduledData.blockNumber,
-      config.chain,
-      chainId,
-      { timestamp: queueTimestamp, description: "queued" }
-    );
+    builder.tx(scheduled.txHash, scheduled.blockNumber, config.chain, chainId, {
+      timestamp: queueTimestamp,
+      description: "queued",
+    });
   }
 
   // Determine status based on operation state
   // Priority: COMPLETED (isDone) > READY (isReady) > PENDING (isPending) > NOT_STARTED
   if (operationState.isDone) {
-    let executionSearchStart = timelockState?.scheduledData?.blockNumber ?? fromBlock;
+    let executionSearchStart = scheduled?.blockNumber ?? fromBlock;
 
-    if (timelockState?.scheduledData) {
-      const delaySeconds = timelockState.scheduledData.delay.toNumber();
+    if (scheduled) {
+      const delaySeconds = scheduled.delay.toNumber();
       if (delaySeconds > 0) {
         executionSearchStart = await blockAfterDelay(
           provider,
-          timelockState.scheduledData.blockNumber,
+          scheduled.blockNumber,
           delaySeconds,
           config.blockTimeSeconds
         );

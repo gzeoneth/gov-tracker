@@ -25,13 +25,12 @@ yarn test                # Fast pre-commit tests (no RPC)
 yarn test:integration    # Full integration tests
 yarn test:all            # All tests except fork tests
 yarn test:fork           # Fork tests with custom config
-yarn test:coverage:all   # All tests coverage (./coverage)
-yarn test:fork:coverage  # Fork tests coverage (./coverage-fork)
+yarn test:coverage:all   # All tests coverages
 ```
 
 **Single file test & coverages:**
 ```bash
-yarn test:coverage:all test/testfile.test.ts
+yarn test:coverage test/testfile.test.ts
 yarn test:fork:coverage test/forktest.test.ts
 ```
 

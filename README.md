@@ -201,7 +201,6 @@ const result = await lookupSignature("0x12345678", { disableApiLookup: true });
 ```bash
 yarn build              # Compile TypeScript
 yarn test               # Run fast tests (no RPC)
-yarn test:coverage      # Run tests with coverage
 yarn lint               # Run ESLint
 ```
 

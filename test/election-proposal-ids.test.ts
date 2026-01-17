@@ -31,16 +31,22 @@ vi.mock("../src/election/contracts", () => ({
   getMemberGovernor: vi.fn(),
 }));
 
+vi.mock("../src/election/status", () => ({
+  checkElectionStatus: vi.fn(),
+}));
+
 // Import after mocking
 import {
   computeElectionProposalId,
   getElectionProposalId,
   getMemberElectionProposalId,
   getElectionProposalIds,
+  getElectionIndexForProposalId,
   clearElectionCache,
   clearElectionProposalIdsCache,
 } from "../src/election/proposal-ids";
 import { getNomineeGovernor, getMemberGovernor } from "../src/election/contracts";
+import { checkElectionStatus } from "../src/election/status";
 import { multicall } from "../src/utils/multicall";
 import { ADDRESSES } from "../src/constants";
 
@@ -868,5 +874,350 @@ describe("Cache immutability logic", () => {
 
     // #then - should NOT cache because state is mutable (isImmutable returns false)
     expect(multicall).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("getElectionIndexForProposalId", () => {
+  const mockL2Provider = {} as ethers.providers.Provider;
+  const mockL1Provider = {} as ethers.providers.Provider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearElectionCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should return election index when nominee proposal ID matches", async () => {
+    // #given - election count is 3, proposal ID matches election 2's nominee
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 3,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    // Mock governor setup for getElectionProposalIds
+    const nomineeProposalId = BigNumber.from("111");
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(nomineeProposalId),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("222")),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, null]); // Nominee exists
+
+    // #when - search for nominee proposal ID "111"
+    const result = await getElectionIndexForProposalId(
+      nomineeProposalId.toString(),
+      mockL2Provider,
+      mockL1Provider
+    );
+
+    // #then - should return election index 2 (searches from newest first)
+    expect(result).toBe(2);
+  });
+
+  it("should return election index when member proposal ID matches", async () => {
+    // #given - election count is 2, proposal ID matches election 1's member
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 2,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    const memberProposalId = BigNumber.from("333");
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("111")),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(memberProposalId),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, 1]); // Both exist
+
+    // #when - search for member proposal ID "333"
+    const result = await getElectionIndexForProposalId(
+      memberProposalId.toString(),
+      mockL2Provider,
+      mockL1Provider
+    );
+
+    // #then - should return election index 1 (found in second iteration)
+    expect(result).toBe(1);
+  });
+
+  it("should return null when proposal ID is not found in any election", async () => {
+    // #given - election count is 2, no matching proposal IDs
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 2,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("111")),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("222")),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, 1]);
+
+    // #when - search for proposal ID "999" that doesn't exist
+    const result = await getElectionIndexForProposalId("999", mockL2Provider, mockL1Provider);
+
+    // #then - should return null
+    expect(result).toBeNull();
+  });
+
+  it("should continue searching when getElectionProposalIds throws an error", async () => {
+    // #given - election count is 3, first call throws, subsequent calls succeed
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 3,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    const nomineeProposalId = BigNumber.from("555");
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        // First call (election 2) throws
+        .mockRejectedValueOnce(new Error("RPC error"))
+        // Second call (election 1) succeeds with matching ID
+        .mockResolvedValueOnce([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(nomineeProposalId),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("666")),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, null]);
+
+    // #when - search for proposal ID "555"
+    const result = await getElectionIndexForProposalId(
+      nomineeProposalId.toString(),
+      mockL2Provider,
+      mockL1Provider
+    );
+
+    // #then - should skip failed election and find match in election 1
+    expect(result).toBe(1);
+  });
+
+  it("should pass blockNumber option to getElectionProposalIds", async () => {
+    // #given - blockNumber option provided
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 1,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    const nomineeProposalId = BigNumber.from("777");
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(nomineeProposalId),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("888")),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, null]);
+
+    // #when - search with blockNumber option
+    const result = await getElectionIndexForProposalId(
+      nomineeProposalId.toString(),
+      mockL2Provider,
+      mockL1Provider,
+      { blockNumber: 12345 }
+    );
+
+    // #then - should find the match
+    expect(result).toBe(0);
+  });
+
+  it("should return null when election count is 0", async () => {
+    // #given - no elections exist
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 0,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: true,
+      secondsUntilElection: 0,
+      timeUntilElection: "now",
+    });
+
+    // #when - search for any proposal ID
+    const result = await getElectionIndexForProposalId("111", mockL2Provider, mockL1Provider);
+
+    // #then - should return null without calling getElectionProposalIds
+    expect(result).toBeNull();
+    expect(multicall).not.toHaveBeenCalled();
+  });
+
+  it("should search elections in reverse order (newest first)", async () => {
+    // #given - 3 elections
+    vi.mocked(checkElectionStatus).mockResolvedValue({
+      electionCount: 3,
+      cohort: 0,
+      nextElectionTimestamp: 1700000000,
+      currentL1Timestamp: 1699990000,
+      canCreateElection: false,
+      secondsUntilElection: 10000,
+      timeUntilElection: "2h",
+    });
+
+    // Track which election index is being queried
+    let callCount = 0;
+    const mockNomineeGovernor = {
+      getProposeArgs: vi.fn().mockImplementation(() => {
+        callCount++;
+        return Promise.resolve([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          `Nominee ${callCount}`,
+        ]);
+      }),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from(callCount.toString())),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(BigNumber.from("999")),
+    };
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    // Return null for nominee state to trigger all iterations (no early match)
+    vi.mocked(multicall).mockResolvedValue([null, null]);
+
+    // #when - search for proposal ID that won't be found
+    await getElectionIndexForProposalId("nonexistent", mockL2Provider, mockL1Provider);
+
+    // #then - should have searched all 3 elections (indices 2, 1, 0)
+    expect(mockNomineeGovernor.getProposeArgs).toHaveBeenCalledTimes(3);
   });
 });

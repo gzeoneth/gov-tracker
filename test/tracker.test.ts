@@ -19,6 +19,7 @@ import * as dotenv from "dotenv";
 import {
   createMockCache,
   shouldSkipRpc,
+  createRpcTestSuite,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
   CONSTITUTIONAL_GOVERNOR_IN_PROGRESS,
@@ -34,7 +35,6 @@ import {
   validateSaltBatch,
   TimelockParams,
   TimelockBatchParams,
-  DEFAULT_RPC_URLS,
   TrackingResult,
   TrackedStage,
   StageTransaction,
@@ -1226,6 +1226,9 @@ describe("trackByTxHash Error Handling (Mocked)", () => {
 });
 
 describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
+
+  // Provider references for tests that need direct access
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;
@@ -1238,21 +1241,13 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   let timelockResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+    await beforeAllSetup();
 
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    const providers = cache.getProviders();
+    l1Provider = providers.l1Provider;
+    l2Provider = providers.l2Provider;
+    novaProvider = providers.novaProvider;
+    tracker = cache.getTracker();
 
     // Track all proposals once
     console.log("Tracking proposals for test suite...");
@@ -1766,28 +1761,12 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
  * Covers pipeline early exit path when voting is not successful
  */
 describe.skipIf(shouldSkipRpc())("Failed Voting Proposals", () => {
-  let l1Provider: ethers.providers.JsonRpcProvider;
-  let l2Provider: ethers.providers.JsonRpcProvider;
-  let novaProvider: ethers.providers.JsonRpcProvider;
-  let tracker: ProposalStageTracker;
+  const { cache, beforeAllSetup } = createRpcTestSuite();
   let failedVotingResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    await beforeAllSetup();
+    const tracker = cache.getTracker();
 
     // Track failed voting proposal once
     console.log("Tracking FAILED voting proposal...");

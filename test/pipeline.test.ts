@@ -9,9 +9,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import {
-  createTracker,
   ProposalStageTracker,
-  DEFAULT_RPC_URLS,
   TrackingResult,
   TrackedStage,
   createTrackingState,
@@ -20,6 +18,7 @@ import {
 } from "../src";
 import {
   shouldSkipRpc,
+  createRpcTestSuite,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
 } from "./helpers";
@@ -329,27 +328,14 @@ describe("Pipeline Module", () => {
 });
 
 describe.skipIf(shouldSkipRpc())("Pipeline Integration Tests", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
   let tracker: ProposalStageTracker;
   let fullRoundtripResult: TrackingResult;
   let l2OnlyResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("ETH_RPC environment variable required");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-    const l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    const l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    const novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    await beforeAllSetup();
+    tracker = cache.getTracker();
 
     const [full, l2Only] = await Promise.all([
       tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),

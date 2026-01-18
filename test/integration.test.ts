@@ -4,45 +4,26 @@
  *
  * Tests discovery functions (governor, timelock), utilities, and Security Council detection
  * using real RPC data. For full tracker workflow tests, see tracker.test.ts.
- *
- * Run with: npx vitest run test/integration.test.ts
- *
- * Set environment variables:
- * - ARB1_RPC: Arbitrum One RPC (optional, uses default if not set)
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { ethers } from "ethers";
-import * as dotenv from "dotenv";
-
-import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
+import { shouldSkipRpc, createL2OnlyTestSuite, FIXTURES } from "./helpers/rpc-test-setup";
 
 import {
-  // Discovery functions
   discoverProposalByTxHash,
   findCallScheduledByTxHash,
   getTimelockOperationState,
   getProposalState,
-
-  // Security Council
   isSecurityCouncilElectionProposal,
-
-  // Utilities
   ADDRESSES,
-  DEFAULT_RPC_URLS,
 } from "../src";
-
-// Import queryWithRetry from internal module for testing
 import { queryWithRetry } from "../src/utils/rpc-utils";
 
-dotenv.config({ quiet: true });
-
-describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
-  let l2Provider: ethers.providers.JsonRpcProvider;
+describe.skipIf(shouldSkipRpc())("Integration Tests", () => {
+  const { getProvider, beforeAllSetup } = createL2OnlyTestSuite();
 
   beforeAll(() => {
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+    beforeAllSetup();
   });
 
   describe("Governor Discovery", () => {
@@ -50,22 +31,22 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
       // #given - a known proposal creation transaction hash
       // #when - discovering proposal by tx hash
       const result = await discoverProposalByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash,
-        l2Provider
+        FIXTURES.FULL_ROUNDTRIP.creationTxHash,
+        getProvider()
       );
 
       // #then - should return the proposal with matching ID
       expect(result).not.toBeNull();
-      expect(result!.proposalId).toBe(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.proposalId);
+      expect(result!.proposalId).toBe(FIXTURES.FULL_ROUNDTRIP.proposalId);
     });
 
     it("should get proposal state", async () => {
       // #given - a completed proposal's governor address and ID
       // #when - querying the proposal state
       const state = await getProposalState(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.governorAddress,
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.proposalId,
-        l2Provider
+        FIXTURES.FULL_ROUNDTRIP.governorAddress,
+        FIXTURES.FULL_ROUNDTRIP.proposalId,
+        getProvider()
       );
 
       // #then - should return "Executed" for a completed proposal
@@ -78,26 +59,25 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
       // #given - a known timelock transaction hash
       // #when - finding CallScheduled events by tx hash
       const results = await findCallScheduledByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.timelockTxHash,
-        l2Provider
+        FIXTURES.FULL_ROUNDTRIP.timelockTxHash,
+        getProvider()
       );
 
       // #then - should return events with matching operation ID
       expect(results).not.toBeNull();
       expect(results!.length).toBeGreaterThan(0);
       expect(results![0].operationId.toLowerCase()).toBe(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.operationId.toLowerCase()
+        FIXTURES.FULL_ROUNDTRIP.operationId.toLowerCase()
       );
     });
-    // Note: isL1Timelock unit tests are in utils.test.ts
 
     it("should get L2 timelock operation state (completed)", async () => {
       // #given - a completed L2 timelock operation
       // #when - querying the operation state
       const state = await getTimelockOperationState(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.l2TimelockAddress,
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.operationId,
-        l2Provider
+        FIXTURES.FULL_ROUNDTRIP.l2TimelockAddress,
+        FIXTURES.FULL_ROUNDTRIP.operationId,
+        getProvider()
       );
 
       // #then - should show isDone=true for completed operation
@@ -149,4 +129,3 @@ describe.skipIf(process.env.NO_RPC === "1")("Integration Tests", () => {
     });
   });
 });
-// Note: isL1Timelock unit tests are in utils.test.ts

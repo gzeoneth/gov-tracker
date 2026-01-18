@@ -7,11 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Election module consolidation** - Reduced from 9 files to 7 files:
-  - Merged `tracking.ts` → `proposal-ids.ts` (proposal ID lookup utilities)
-  - Merged `prepare.ts` → `params.ts` (transaction preparation with proposal params)
+## [0.4.0] - 2026-01-18
 
 ### Added
 
@@ -33,10 +29,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `isTimelockPathStage(type)` - Type guard for L2_TIMELOCK → RETRYABLE_EXECUTED stages
   - `setTimelockOpKey(state, key)` - Links parent state to timelock operation
 - **Linked checkpoint loading** - `createTrackingState` accepts `linkedTimelockCheckpoint` option to merge timelock stages from a separate checkpoint
+- **Stage helper functions** - New utilities for working with stages:
+  - `isStageTerminal(status)` - Check if stage is in a terminal state (COMPLETED, FAILED, SKIPPED)
+  - `isStageSuccess(status)` - Check if stage completed successfully (COMPLETED, SKIPPED)
+  - `createParam(name, type, value)` - Helper to create DecodedParameter objects
+- **Type-safe stage data access** - `StageDataMap` provides compile-time type checking when accessing stage-specific data
 
 ### Changed
 
+- **Election module consolidation** - Reduced from 9 files to 7 files:
+  - Merged `tracking.ts` → `proposal-ids.ts` (proposal ID lookup utilities)
+  - Merged `prepare.ts` → `params.ts` (transaction preparation with proposal params)
 - **`trackElection()` now uses unified pipeline** - ProposalStageTracker.trackElection() internally uses `trackElectionWithPipeline()` for stage-based election tracking
+- **Simplified chain utilities** - `chainToChainId()` now always returns a number (never undefined)
+- **Code quality improvements** - Extensive refactoring across all modules:
+  - Extracted common patterns into reusable helpers
+  - Simplified try-catch blocks using `.catch()` pattern
+  - Replaced verbose conditionals with functional patterns
+  - Removed redundant chain ID lookups and dead exports
+  - Improved type safety throughout the codebase
+
+### Fixed
+
+- **CREATE_ELECTION stage** - Now includes creation transaction hash in stage transactions
+
+### Testing
+
+- **Expanded test coverage** - Added comprehensive unit tests for:
+  - Election module (proposal IDs, participants, status)
+  - CLI utilities (formatters, RPC warnings)
+  - Security Council extraction functions
+  - Tracker election cache behavior
+- **Test infrastructure improvements**:
+  - Shared RPC test setup helpers (`createRpcTestSuite`, `TestDataCache`)
+  - Centralized `MockCache` implementation
+  - Consistent `shouldSkipRpc()` pattern across all test files
+  - Unified fixture imports through helpers module
+- **Coverage merge infrastructure** - Support for merging coverage from unit and fork tests
 
 ### Breaking Changes
 
@@ -203,7 +232,8 @@ Initial release with 7-stage governance tracking across Ethereum L1, Arbitrum On
 
 ---
 
-[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.1.2...v0.2.0

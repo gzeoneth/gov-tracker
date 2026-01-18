@@ -57,7 +57,7 @@ Proposal from Election Governor detected
         ↓
 getElectionIndexForProposalId() → find election index
         ↓
-trackElectionProposal() → get phase, cohort, nominees
+trackElectionWithPipeline() → track stages, get phase, cohort, nominees
         ↓
 TrackingResult.electionStatus populated
         ↓

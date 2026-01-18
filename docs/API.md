@@ -123,13 +123,15 @@ console.log(`${status.electionCount} elections, next in ${status.timeUntilElecti
 #### Track All Elections
 
 ```typescript
-import { trackAllElections, trackIncompleteElections } from "@gzeoneth/gov-tracker";
+import { ProposalStageTracker } from "@gzeoneth/gov-tracker";
+
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
 // Track all elections (complete + active)
-const allElections = await trackAllElections(l2Provider, l1Provider);
+const allElections = await tracker.trackAllElections();
 
-// Track only active elections
-const activeElections = await trackIncompleteElections(l2Provider, l1Provider);
+// Filter to active elections only
+const activeElections = allElections.filter(e => e.phase !== "COMPLETED");
 
 for (const election of activeElections) {
   console.log(`Election ${election.electionIndex}: ${election.phase}`);
@@ -139,9 +141,11 @@ for (const election of activeElections) {
 #### Track Single Election
 
 ```typescript
-import { trackElectionProposal } from "@gzeoneth/gov-tracker";
+import { ProposalStageTracker } from "@gzeoneth/gov-tracker";
 
-const election = await trackElectionProposal(0, l2Provider, l1Provider);
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
+const election = await tracker.trackElection(0);
+
 console.log(election.phase);             // "COMPLETED"
 console.log(election.nomineeProposalId); // "0x..."
 console.log(election.memberProposalId);  // "0x..."
@@ -154,12 +158,14 @@ The full election lifecycle has three executable steps:
 
 ```typescript
 import {
+  ProposalStageTracker,
   prepareElectionCreation,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
   checkElectionStatus,
-  trackElectionProposal,
 } from "@gzeoneth/gov-tracker";
+
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
 // Step A: Create nominee election (when conditions match)
 const status = await checkElectionStatus(l2Provider, l1Provider);
@@ -169,7 +175,7 @@ if (status.canCreateElection) {
 }
 
 // Step B: Execute nominee election → creates member election
-const election = await trackElectionProposal(0, l2Provider, l1Provider);
+const election = await tracker.trackElection(0);
 if (election.canProceedToMemberPhase) {
   const tx = await prepareMemberElectionTrigger(election, l2Provider);
   if (tx) await signer.sendTransaction(tx);

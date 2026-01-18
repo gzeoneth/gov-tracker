@@ -652,6 +652,65 @@ describe("Tracker Query Module", () => {
       expect(keys).toContain("tx:0x333");
       expect(keys).not.toContain("tx:0x111:op:0xaaa");
     });
+
+    it("should filter incomplete SC ops when completed SC op has higher nonce", async () => {
+      // #given - incomplete low-nonce SC op and completed high-nonce SC op
+      const scOpIncomplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("5")],
+      });
+
+      // Create a completed SC operation with higher nonce
+      const scOpCompleted = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createScTimelockStageWithStatus("10", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpIncomplete);
+      await cache.set("tx:0x222:op:0xbbb", scOpCompleted);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - incomplete SC op with nonce 5 should be filtered because
+      // completed SC op with nonce 10 exists
+      expect(result).toHaveLength(0);
+    });
+
+    it("should not filter incomplete SC ops when completed SC op has lower nonce", async () => {
+      // #given - incomplete high-nonce SC op and completed low-nonce SC op
+      const scOpIncomplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("10")],
+      });
+
+      // Create a completed SC operation with lower nonce
+      const scOpCompleted = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createScTimelockStageWithStatus("5", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpIncomplete);
+      await cache.set("tx:0x222:op:0xbbb", scOpCompleted);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - incomplete SC op with nonce 10 should be returned because
+      // it's the highest nonce (completed nonce 5 is lower)
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe("tx:0x111:op:0xaaa");
+    });
   });
 
   describe("getHighestScNonceFromCheckpoints", () => {
@@ -782,9 +841,19 @@ describe("Security Council Nonce Utilities", () => {
  * Includes minimal required fields for TimelockStageData to satisfy type checking.
  */
 function createScTimelockStage(nonce: string): TrackedStage {
+  return createScTimelockStageWithStatus(nonce, "PENDING");
+}
+
+/**
+ * Helper to create an SC timelock stage with a specific nonce and status.
+ */
+function createScTimelockStageWithStatus(
+  nonce: string,
+  status: "PENDING" | "READY" | "COMPLETED" | "FAILED"
+): TrackedStage {
   return {
     type: "L2_TIMELOCK",
-    status: "PENDING",
+    status,
     chain: "arb1",
     chainId: 42161,
     transactions: [],

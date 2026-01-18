@@ -8,8 +8,7 @@ import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import * as dotenv from "dotenv";
 import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
-import { MockCache, shouldSkipRpc } from "./helpers";
-import { DEFAULT_RPC_URLS } from "../src";
+import { MockCache, shouldSkipRpc, createRpcTestSuite } from "./helpers";
 import {
   detectProposalType,
   isElectionProposal,
@@ -1064,6 +1063,7 @@ describe("Tracker Discovery Module", () => {
  * Uses block range 369846189-389241837 which contains elections, proposals, and timelock ops.
  */
 describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
+  const { cache: testCache, beforeAllSetup } = createRpcTestSuite();
   let l2Provider: ethers.providers.JsonRpcProvider;
   let cache: MockCache;
 
@@ -1073,9 +1073,9 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
   const TEST_FROM_BLOCK = 369_846_188;
   const TEST_TO_BLOCK = 389_241_837;
 
-  beforeAll(() => {
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+  beforeAll(async () => {
+    await beforeAllSetup();
+    l2Provider = testCache.getProviders().l2Provider;
   });
 
   beforeEach(() => {

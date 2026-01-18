@@ -13,40 +13,9 @@ import {
   queryIncompleteCheckpoints,
   getStats,
 } from "../src/tracker/query";
-import type { CacheAdapter, TrackingCheckpoint } from "../src/types";
+import type { TrackingCheckpoint } from "../src/types";
 import { ADDRESSES } from "../src/constants";
-import { createTestCheckpoint, createTestStage } from "./helpers";
-
-/**
- * Mock cache adapter for testing
- */
-class MockCache implements CacheAdapter {
-  private store = new Map<string, unknown>();
-
-  async get<T>(key: string): Promise<T | null> {
-    return (this.store.get(key) as T) ?? null;
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    this.store.set(key, value);
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  async keys(): Promise<string[]> {
-    return Array.from(this.store.keys());
-  }
-
-  async has(key: string): Promise<boolean> {
-    return this.store.has(key);
-  }
-
-  async clear(): Promise<void> {
-    this.store.clear();
-  }
-}
+import { createTestCheckpoint, createTestStage, MockCache } from "./helpers";
 
 // Aliases for cleaner test code
 const createCheckpoint = createTestCheckpoint;

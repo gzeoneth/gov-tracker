@@ -7,7 +7,8 @@
 import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import * as dotenv from "dotenv";
-import type { CacheAdapter, TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
+import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
+import { MockCache } from "./helpers";
 import { DEFAULT_RPC_URLS } from "../src";
 import {
   detectProposalType,
@@ -704,37 +705,6 @@ describe("Security Council Discovery", () => {
     });
   });
 });
-
-/**
- * Mock cache adapter for testing tracker discovery
- */
-class MockCache implements CacheAdapter {
-  private store = new Map<string, unknown>();
-
-  async get<T>(key: string): Promise<T | null> {
-    return (this.store.get(key) as T) ?? null;
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    this.store.set(key, value);
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  async keys(): Promise<string[]> {
-    return Array.from(this.store.keys());
-  }
-
-  async has(key: string): Promise<boolean> {
-    return this.store.has(key);
-  }
-
-  async clear(): Promise<void> {
-    this.store.clear();
-  }
-}
 
 describe("Tracker Discovery Module", () => {
   let cache: MockCache;

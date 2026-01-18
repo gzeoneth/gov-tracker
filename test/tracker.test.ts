@@ -23,6 +23,7 @@ import {
   DIRECT_TIMELOCK_OPERATION,
   CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
 } from "./fixtures";
+import { createMockCache } from "./helpers";
 
 import {
   ProposalStageTracker,
@@ -365,26 +366,6 @@ describe("Tracker Cache Methods (Mocked)", () => {
 describe("Tracker Cache Methods (With Mock Cache)", () => {
   const mockL1Provider = {} as ethers.providers.Provider;
   const mockL2Provider = {} as ethers.providers.Provider;
-
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
 
   describe("loadWatermarks with cache", () => {
     it("should return watermarks and hashes from cache when stored", async () => {
@@ -935,26 +916,6 @@ describe("trackElection Cache Behavior (Mocked)", () => {
   const mockL1Provider = {} as ethers.providers.Provider;
   const mockL2Provider = {} as ethers.providers.Provider;
 
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
-
   describe("trackElection cache hit", () => {
     it("should return cached COMPLETED election without RPC calls", async () => {
       // #given - tracker with cache containing a COMPLETED election
@@ -1168,27 +1129,6 @@ describe("trackFromCheckpoint Edge Cases", () => {
 });
 
 describe("trackByTxHash Error Handling (Mocked)", () => {
-  // Helper to create a mock cache
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
-
   it("should save checkpoint with incremented error count on tracking failure (lines 370-398)", async () => {
     // #given - tracker with cache and mock provider that throws
     const mockCache = createMockCache();

@@ -18,10 +18,9 @@ import {
   prepareElectionCreation,
   ProposalStageTracker,
   ElectionProposalStatus,
-  DEFAULT_RPC_URLS,
 } from "../src";
 import { getVettingDeadline } from "./helpers/election-helpers";
-import { shouldSkipRpc } from "./helpers";
+import { shouldSkipRpc, createRpcTestSuite } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -90,6 +89,7 @@ describe("Election Module", () => {
 });
 
 describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
   let tracker: ProposalStageTracker;
@@ -98,18 +98,11 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
   const electionCache = new Map<number, ElectionProposalStatus>();
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    const arbRpc = process.env.ARB1_ARCHIVE_RPC || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-
-    if (!ethRpc) {
-      throw new Error(
-        "RPC URLs required: Set ETH_RPC and ARB1_ARCHIVE_RPC/ARB1_RPC environment variables"
-      );
-    }
-
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    tracker = new ProposalStageTracker({ l2Provider, l1Provider });
+    await beforeAllSetup();
+    const providers = cache.getProviders();
+    l2Provider = providers.l2Provider;
+    l1Provider = providers.l1Provider;
+    tracker = cache.getTracker();
 
     // Track elections 0-4 once upfront for all tests in this suite
     const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {

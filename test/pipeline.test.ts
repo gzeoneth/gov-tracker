@@ -22,6 +22,7 @@ import {
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
 } from "./fixtures";
+import { shouldSkipRpc } from "./helpers";
 import { StageBuilder } from "../src/stages/builder";
 import type { TrackingInput } from "../src/types";
 
@@ -327,7 +328,7 @@ describe("Pipeline Module", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("Pipeline Integration Tests", () => {
+describe.skipIf(shouldSkipRpc())("Pipeline Integration Tests", () => {
   let tracker: ProposalStageTracker;
   let fullRoundtripResult: TrackingResult;
   let l2OnlyResult: TrackingResult;

@@ -21,6 +21,7 @@ import {
   DEFAULT_RPC_URLS,
 } from "../src";
 import { getVettingDeadline } from "./helpers/election-helpers";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -88,7 +89,7 @@ describe("Election Module", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("Election Integration Tests", () => {
+describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
   let tracker: ProposalStageTracker;

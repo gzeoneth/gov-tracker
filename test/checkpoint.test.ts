@@ -22,6 +22,7 @@ import {
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
 } from "./fixtures";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -256,7 +257,7 @@ describe("Checkpoint Module (Unit Tests)", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("Checkpoint Integration Tests", () => {
+describe.skipIf(shouldSkipRpc())("Checkpoint Integration Tests", () => {
   let tracker: ProposalStageTracker;
   let cache: MemoryCache;
   let initialResult: TrackingResult;

@@ -25,6 +25,7 @@ import {
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
 } from "./fixtures";
 import { createTracker, TrackingResult } from "../src";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -522,7 +523,7 @@ describe("L2 to L1 Message Stage", () => {
  *
  * These tests require RPC connections and verify the full tracking pipeline.
  */
-describe.skipIf(process.env.NO_RPC === "1")(
+describe.skipIf(shouldSkipRpc())(
   "L2 to L1 Message Tracking (RPC)",
   {
     timeout: 300000, // 5 minutes for slow RPC tests

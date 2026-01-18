@@ -11,6 +11,7 @@ import { saltFromDescription } from "../src/utils/salt-computation";
 import { DEFAULT_RPC_URLS } from "../src";
 import type { TrackedStage } from "../src/types";
 import * as dotenv from "dotenv";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -21,7 +22,7 @@ const AIP_1_2_TX = "0x385043172e9314cdc34facf04efb540de5ff6ec99a41ec2ff373d79d04
 // Security Council rotation: Creates multiple operations with SC-specific salt
 const SC_ROTATION_TX = "0xa0d5366b53fc16ad524446a74f19cad23de4c96a939dfcd64555b3b12036c700";
 
-describe.skipIf(process.env.NO_RPC === "1")("Salt Resolution Integration", () => {
+describe.skipIf(shouldSkipRpc())("Salt Resolution Integration", () => {
   let tracker: ProposalStageTracker;
   let governorStages: TrackedStage[];
   let scStages: TrackedStage[];

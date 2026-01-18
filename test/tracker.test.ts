@@ -23,7 +23,7 @@ import {
   DIRECT_TIMELOCK_OPERATION,
   CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
 } from "./fixtures";
-import { createMockCache } from "./helpers";
+import { createMockCache, shouldSkipRpc } from "./helpers";
 
 import {
   ProposalStageTracker,
@@ -1224,7 +1224,7 @@ describe("trackByTxHash Error Handling (Mocked)", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
+describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;
@@ -1764,7 +1764,7 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
  * Tests for proposals that FAILED voting
  * Covers pipeline early exit path when voting is not successful
  */
-describe.skipIf(process.env.NO_RPC === "1")("Failed Voting Proposals", () => {
+describe.skipIf(shouldSkipRpc())("Failed Voting Proposals", () => {
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;

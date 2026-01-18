@@ -19,8 +19,7 @@ import {
 } from "../src";
 import { createCheckpoint, createTrackingState } from "../src/tracker/state";
 
-import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
-import { shouldSkipRpc } from "./helpers";
+import { shouldSkipRpc, CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./helpers";
 
 dotenv.config({ quiet: true });
 

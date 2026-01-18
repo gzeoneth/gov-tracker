@@ -17,13 +17,14 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
 import {
+  createMockCache,
+  shouldSkipRpc,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
   CONSTITUTIONAL_GOVERNOR_IN_PROGRESS,
   DIRECT_TIMELOCK_OPERATION,
   CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
-} from "./fixtures";
-import { createMockCache, shouldSkipRpc } from "./helpers";
+} from "./helpers";
 
 import {
   ProposalStageTracker,

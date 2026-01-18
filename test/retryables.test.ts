@@ -21,9 +21,10 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
 import {
+  shouldSkipRpc,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
-} from "./fixtures";
+} from "./helpers";
 
 import {
   detectAllRetryableTargetChains,
@@ -53,8 +54,6 @@ interface RetryableTrackingResult {
   isComplete: boolean;
   targetChains: L2Chain[];
 }
-
-import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 

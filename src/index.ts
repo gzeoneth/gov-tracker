@@ -200,7 +200,11 @@ export {
   isSecurityCouncilElectionProposal,
   extractSecurityCouncilParams,
   extractSecurityCouncilParamsForOperation,
+  extractAllSecurityCouncilParams,
   checkVettingPeriod,
+  // SC nonce deduplication utilities
+  getHighestScNonce,
+  isScOperationSuperseded,
 } from "./discovery/security-council";
 export type {
   SecurityCouncilOperationParams,

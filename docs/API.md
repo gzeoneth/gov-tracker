@@ -91,14 +91,23 @@ const { proposals, timelockOps, watermarks } = await tracker.discoverAll(
 | `listCheckpointKeys()` | List all checkpoint keys |
 | `getCheckpoint(key)` | Get specific checkpoint |
 | `getAllCheckpoints()` | Get all checkpoints |
-| `queryIncompleteCheckpoints(opts)` | Find items needing re-track |
+| `queryIncompleteCheckpoints(opts)` | Find items needing re-track (filters superseded SC operations) |
 | `getStats()` | Get cache statistics |
+| `getHighestScNonce()` | Get highest Security Council nonce from incomplete checkpoints |
 
 ```typescript
 const incomplete = await tracker.queryIncompleteCheckpoints({
-  maxAgeDays: 60,
-  maxErrorCount: 5,
+  maxAgeDays: 60,      // Default: 60 days
+  maxErrorCount: 5,    // Default: 5
 });
+// Note: SC operations with lower nonces are automatically filtered out
+// when higher nonce SC operations exist (superseded operations)
+
+// Query highest SC nonce directly
+const highestNonce = await tracker.getHighestScNonce();
+if (highestNonce) {
+  console.log(`Highest SC nonce: ${highestNonce.toString()}`);
+}
 ```
 
 ### Bundled Cache
@@ -471,6 +480,27 @@ interface DeduplicationStats {
 | Function | Description |
 |----------|-------------|
 | `isGasEstimationError(error)` | Check if error is gas estimation failure |
+
+### Security Council Utilities
+
+| Function | Description |
+|----------|-------------|
+| `getHighestScNonce(nonces)` | Get highest nonce from BigNumber array |
+| `isScOperationSuperseded(nonce, highest)` | Check if SC operation is superseded by higher nonce |
+| `extractAllSecurityCouncilParams(receipt)` | Extract all SC params from tx receipt |
+| `extractSecurityCouncilParamsForOperation(receipt, opId)` | Extract SC params for specific operation |
+
+```typescript
+import { getHighestScNonce, isScOperationSuperseded } from "@gzeoneth/gov-tracker";
+import { BigNumber } from "ethers";
+
+// Find highest nonce from array
+const nonces = [BigNumber.from(3), BigNumber.from(9), BigNumber.from(5)];
+const highest = getHighestScNonce(nonces); // BigNumber(9)
+
+// Check if operation is superseded
+const isSuperseded = isScOperationSuperseded(BigNumber.from(3), highest); // true
+```
 
 ### Advanced Context
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Security Council nonce-based deduplication** - `queryIncompleteCheckpoints()` now filters out SC operations with lower nonces when higher nonces exist (superseded operations are skipped)
+- **SC nonce utility functions**:
+  - `getHighestScNonce(nonces)` - Find highest nonce from array
+  - `isScOperationSuperseded(nonce, highestNonce)` - Check if operation is superseded
+  - `tracker.getHighestScNonce()` - Query highest SC nonce from cache
+
+### Changed
+
+- **60-day age filter** - `queryIncompleteCheckpoints()` defaults to `maxAgeDays: 60`, filtering out checkpoints older than 60 days
+
 ## [0.4.0] - 2026-01-18
 
 ### Added

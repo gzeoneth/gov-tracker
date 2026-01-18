@@ -239,3 +239,33 @@ export function extractSecurityCouncilParams(
 ): SecurityCouncilOperationParams | null {
   return extractAllSecurityCouncilParams(receipt)?.operations.at(-1) ?? null;
 }
+
+// ============================================================================
+// SC Nonce-based Deduplication
+// ============================================================================
+
+/**
+ * Get the highest Security Council nonce from a list of nonces.
+ *
+ * SC actions have incrementing nonces - higher nonces supersede lower ones.
+ * Operations with lower nonces are effectively stale and should be skipped.
+ */
+export function getHighestScNonce(nonces: BigNumber[]): BigNumber | null {
+  if (nonces.length === 0) return null;
+  return nonces.reduce((max, n) => (n.gt(max) ? n : max), nonces[0]);
+}
+
+/**
+ * Check if a Security Council operation should be skipped because a higher nonce exists.
+ *
+ * @param operationNonce - The nonce of the operation being checked
+ * @param highestKnownNonce - The highest SC nonce we know about
+ * @returns true if this operation should be skipped (superseded by higher nonce)
+ */
+export function isScOperationSuperseded(
+  operationNonce: BigNumber,
+  highestKnownNonce: BigNumber | null
+): boolean {
+  if (!highestKnownNonce) return false;
+  return operationNonce.lt(highestKnownNonce);
+}

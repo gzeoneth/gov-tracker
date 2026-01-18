@@ -17,12 +17,15 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
 import {
+  createMockCache,
+  shouldSkipRpc,
+  createRpcTestSuite,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
   CONSTITUTIONAL_GOVERNOR_IN_PROGRESS,
   DIRECT_TIMELOCK_OPERATION,
   CONSTITUTIONAL_GOVERNOR_FAILED_VOTING,
-} from "./fixtures";
+} from "./helpers";
 
 import {
   ProposalStageTracker,
@@ -32,7 +35,6 @@ import {
   validateSaltBatch,
   TimelockParams,
   TimelockBatchParams,
-  DEFAULT_RPC_URLS,
   TrackingResult,
   TrackedStage,
   StageTransaction,
@@ -366,26 +368,6 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
   const mockL1Provider = {} as ethers.providers.Provider;
   const mockL2Provider = {} as ethers.providers.Provider;
 
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
-
   describe("loadWatermarks with cache", () => {
     it("should return watermarks and hashes from cache when stored", async () => {
       // #given - cache with stored watermarks using valid DiscoveryKey values
@@ -624,6 +606,105 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
     });
   });
 
+  describe("clearTxCacheEntries with cache", () => {
+    it("should clear base tx key from cache", async () => {
+      // #given - cache with a tx entry
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xabc123", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should clear the entry
+      expect(cleared).toBe(1);
+      expect(await mockCache.has("tx:0xabc123")).toBe(false);
+    });
+
+    it("should clear operation-specific keys for tx", async () => {
+      // #given - cache with base tx and operation-specific keys
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xabc123", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+      await mockCache.set("tx:0xabc123:op:0xop1", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "timelock", operationId: "0xop1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+      await mockCache.set("tx:0xabc123:op:0xop2", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "timelock", operationId: "0xop2" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should clear all 3 entries
+      expect(cleared).toBe(3);
+      expect(await mockCache.has("tx:0xabc123")).toBe(false);
+      expect(await mockCache.has("tx:0xabc123:op:0xop1")).toBe(false);
+      expect(await mockCache.has("tx:0xabc123:op:0xop2")).toBe(false);
+    });
+
+    it("should return 0 when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should return 0
+      expect(cleared).toBe(0);
+    });
+
+    it("should return 0 when key does not exist", async () => {
+      // #given - cache without the tx entry
+      const mockCache = createMockCache();
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing non-existent tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xnonexistent");
+
+      // #then - should return 0
+      expect(cleared).toBe(0);
+    });
+  });
+
   describe("saveElectionCheckpoint with cache", () => {
     it("should save election checkpoint to cache", async () => {
       // #given - tracker with cache
@@ -835,26 +916,6 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
 describe("trackElection Cache Behavior (Mocked)", () => {
   const mockL1Provider = {} as ethers.providers.Provider;
   const mockL2Provider = {} as ethers.providers.Provider;
-
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
 
   describe("trackElection cache hit", () => {
     it("should return cached COMPLETED election without RPC calls", async () => {
@@ -1069,27 +1130,6 @@ describe("trackFromCheckpoint Edge Cases", () => {
 });
 
 describe("trackByTxHash Error Handling (Mocked)", () => {
-  // Helper to create a mock cache
-  function createMockCache() {
-    const storage = new Map<string, unknown>();
-    return {
-      get: async <T>(key: string): Promise<T | null> => (storage.get(key) as T) ?? null,
-      set: async <T>(key: string, value: T): Promise<void> => {
-        storage.set(key, value);
-      },
-      delete: async (key: string): Promise<void> => {
-        storage.delete(key);
-      },
-      clear: async (): Promise<void> => {
-        storage.clear();
-      },
-      has: async (key: string): Promise<boolean> => storage.has(key),
-      keys: (prefix?: string): string[] =>
-        [...storage.keys()].filter((k) => !prefix || k.startsWith(prefix)),
-      _storage: storage,
-    };
-  }
-
   it("should save checkpoint with incremented error count on tracking failure (lines 370-398)", async () => {
     // #given - tracker with cache and mock provider that throws
     const mockCache = createMockCache();
@@ -1185,7 +1225,10 @@ describe("trackByTxHash Error Handling (Mocked)", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
+describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
+
+  // Provider references for tests that need direct access
   let l1Provider: ethers.providers.JsonRpcProvider;
   let l2Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;
@@ -1198,21 +1241,13 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
   let timelockResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+    await beforeAllSetup();
 
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    const providers = cache.getProviders();
+    l1Provider = providers.l1Provider;
+    l2Provider = providers.l2Provider;
+    novaProvider = providers.novaProvider;
+    tracker = cache.getTracker();
 
     // Track all proposals once
     console.log("Tracking proposals for test suite...");
@@ -1725,29 +1760,13 @@ describe.skipIf(process.env.NO_RPC === "1")("ProposalStageTracker", () => {
  * Tests for proposals that FAILED voting
  * Covers pipeline early exit path when voting is not successful
  */
-describe.skipIf(process.env.NO_RPC === "1")("Failed Voting Proposals", () => {
-  let l1Provider: ethers.providers.JsonRpcProvider;
-  let l2Provider: ethers.providers.JsonRpcProvider;
-  let novaProvider: ethers.providers.JsonRpcProvider;
-  let tracker: ProposalStageTracker;
+describe.skipIf(shouldSkipRpc())("Failed Voting Proposals", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
   let failedVotingResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    await beforeAllSetup();
+    const tracker = cache.getTracker();
 
     // Track failed voting proposal once
     console.log("Tracking FAILED voting proposal...");

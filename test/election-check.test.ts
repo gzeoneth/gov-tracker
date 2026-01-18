@@ -13,6 +13,7 @@ import * as dotenv from "dotenv";
 import { formatElectionStatus } from "../src/cli/lib/election-check";
 import { ProviderBundle } from "../src/cli/lib/cli";
 import { ElectionStatus, ElectionProposalStatus, DEFAULT_RPC_URLS } from "../src/index";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -248,7 +249,7 @@ describe("Election Check Utilities", () => {
 /**
  * RPC tests for checkAndExecuteElection
  */
-describe.skipIf(process.env.NO_RPC === "1")(
+describe.skipIf(shouldSkipRpc())(
   "checkAndExecuteElection (RPC)",
   {
     timeout: 180000, // 3 minutes - election tracking queries L1, L2, and Nova

@@ -326,10 +326,7 @@ export {
   getElectionCount,
   checkElectionStatus,
   hasVettingPeriod,
-  // Election tracking
-  trackElectionProposal,
-  trackAllElections,
-  trackIncompleteElections,
+  // Election tracking utilities
   getElectionIndexForProposalId,
   // Election proposal IDs
   getElectionProposalId,
@@ -413,6 +410,8 @@ export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "
 // ============================================================================
 
 export { createCheckpoint, createTrackingState } from "./tracker/state";
+
+export { getElectionContext, proposalStateToStageStatus } from "./tracker/pipeline";
 
 export {
   createCheckpointMetadata,

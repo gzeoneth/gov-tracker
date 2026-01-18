@@ -182,27 +182,23 @@ export function extractAllSecurityCouncilParams(
     return null;
   }
 
-  const operations: SecurityCouncilOperationParams[] = [];
-
-  for (const log of callScheduledLogs) {
+  const operations = callScheduledLogs.flatMap((log) => {
     const parsed = timelockInterface.parseLog(log);
     const operationId = parsed.args.id as string;
-    const callData = parsed.args.data as string;
+    const extracted = extractMembersAndNonceFromCallData(parsed.args.data as string);
+    return extracted
+      ? [
+          {
+            members: extracted.members,
+            nonce: extracted.nonce,
+            timelockAddress: log.address,
+            operationId,
+          },
+        ]
+      : [];
+  });
 
-    const extracted = extractMembersAndNonceFromCallData(callData);
-    if (extracted) {
-      operations.push({
-        members: extracted.members,
-        nonce: extracted.nonce,
-        timelockAddress: log.address,
-        operationId,
-      });
-    }
-  }
-
-  if (operations.length === 0) {
-    return null;
-  }
+  if (operations.length === 0) return null;
 
   return {
     operations,
@@ -241,9 +237,5 @@ export function extractSecurityCouncilParamsForOperation(
 export function extractSecurityCouncilParams(
   receipt: ethers.providers.TransactionReceipt
 ): SecurityCouncilOperationParams | null {
-  const batch = extractAllSecurityCouncilParams(receipt);
-  if (!batch || batch.operations.length === 0) {
-    return null;
-  }
-  return batch.operations[batch.operations.length - 1];
+  return extractAllSecurityCouncilParams(receipt)?.operations.at(-1) ?? null;
 }

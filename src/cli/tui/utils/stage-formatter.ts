@@ -5,7 +5,6 @@
  */
 
 export {
-  CHAIN_TO_CHAIN_ID,
   safeStringify,
   formatValue,
   type StageDataItem,

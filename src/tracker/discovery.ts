@@ -479,15 +479,11 @@ export async function discoverAll(
   // Only need to fetch once since all keys use the same toBlock
   let toBlockHash: string | undefined;
   if (activeKeys.length > 0) {
-    try {
-      const block = await queryWithRetry(() => l2Provider.getBlock(toBlock));
-      if (block) {
-        toBlockHash = block.hash;
-      }
-    } catch {
-      // Failed to get block hash - continue without it
+    const block = await queryWithRetry(() => l2Provider.getBlock(toBlock)).catch(() => {
       logDiscovery("failed to fetch toBlock hash for reorg detection");
-    }
+      return null;
+    });
+    toBlockHash = block?.hash;
   }
 
   // Update hashes for all active keys with toBlock hash

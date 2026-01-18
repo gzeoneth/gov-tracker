@@ -93,8 +93,10 @@ interface TrackTimelockOptions {
   /** Whether to check for Security Council enrichment (L2 only) */
   checkSecurityCouncil?: boolean;
   additionalPayload?: Record<string, unknown>;
-  /** All tracked stages (used for salt computation from other stages) */
+  /** All tracked stages (used for salt computation from PROPOSAL_CREATED description or L2_TO_L1_MESSAGE event) */
   allStages?: TrackedStage[];
+  /** Proposal type from PROPOSAL_CREATED stage - used to skip SC check for governor proposals */
+  proposalType?: string;
   /** Override chunk size for log searches */
   chunkSize?: number;
 }
@@ -127,17 +129,6 @@ export interface L1TimelockResult extends TimelockStageResult {
 const GOVERNOR_PROPOSAL_TYPES = new Set(["CONSTITUTIONAL", "NON_CONSTITUTIONAL"]);
 
 /**
- * Check if proposal is from a known governor (not a Security Council operation).
- * Governor proposals have proposalType of CONSTITUTIONAL or NON_CONSTITUTIONAL.
- */
-function isKnownGovernorProposal(allStages?: TrackedStage[]): boolean {
-  if (!allStages) return false;
-  const proposalStage = allStages.find((s) => s.type === "PROPOSAL_CREATED");
-  const proposalType = proposalStage?.data.proposalType as string | undefined;
-  return proposalType ? GOVERNOR_PROPOSAL_TYPES.has(proposalType) : false;
-}
-
-/**
  * Get Security Council enrichment data if applicable.
  * Returns data to merge into stage, or null if not a SC operation.
  *
@@ -147,10 +138,10 @@ async function getSecurityCouncilData(
   timelockState: TimelockState,
   operationId: string,
   provider: ethers.providers.Provider,
-  allStages?: TrackedStage[]
+  proposalType?: string
 ): Promise<Record<string, unknown> | null> {
   // Skip for known governor proposals - they are never SC operations
-  if (isKnownGovernorProposal(allStages)) {
+  if (proposalType && GOVERNOR_PROPOSAL_TYPES.has(proposalType)) {
     return null;
   }
 
@@ -186,29 +177,24 @@ export async function findL1OperationIdFromTx(
   l1ScheduleTxHash: string;
   l1ScheduleBlock: number;
 }> {
+  const result = {
+    l1OperationId: null as string | null,
+    l1ScheduleTxHash: outboxTxHash,
+    l1ScheduleBlock: outboxTxBlock,
+  };
   const receipt = await queryWithRetry(() => l1Provider.getTransactionReceipt(outboxTxHash));
+  if (!receipt) return result;
 
-  if (!receipt) {
-    return { l1OperationId: null, l1ScheduleTxHash: outboxTxHash, l1ScheduleBlock: outboxTxBlock };
+  const callScheduledLog = receipt.logs.find(
+    (log) =>
+      addressEquals(log.address, ADDRESSES.L1_TIMELOCK) &&
+      log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED
+  );
+  if (callScheduledLog) {
+    const parsed = parseCallScheduledEvent(callScheduledLog);
+    if (parsed) result.l1OperationId = parsed.operationId;
   }
-
-  for (const logEntry of receipt.logs) {
-    if (
-      addressEquals(logEntry.address, ADDRESSES.L1_TIMELOCK) &&
-      logEntry.topics[0] === EVENT_TOPICS.CALL_SCHEDULED
-    ) {
-      const parsed = parseCallScheduledEvent(logEntry);
-      if (parsed) {
-        return {
-          l1OperationId: parsed.operationId,
-          l1ScheduleTxHash: outboxTxHash,
-          l1ScheduleBlock: outboxTxBlock,
-        };
-      }
-    }
-  }
-
-  return { l1OperationId: null, l1ScheduleTxHash: outboxTxHash, l1ScheduleBlock: outboxTxBlock };
+  return result;
 }
 
 // ============================================================================
@@ -283,40 +269,33 @@ async function trackTimelock(
       timelockState,
       operationId,
       provider,
-      options.allStages
+      options.proposalType
     );
     if (scData) {
       builder.data(scData);
     }
   }
 
-  // Compute and cache salt and predecessor
+  // Compute salt and predecessor, then validate operation type
+  let salt = ethers.constants.HashZero;
+  let predecessor = ethers.constants.HashZero;
+
   if (config.stageType === "L2_TIMELOCK") {
-    // Get current stage data for salt computation
     const currentData = builder.build().data;
-    const salt = await computeL2TimelockSalt(currentData, options.allStages, provider);
-    builder.data({ salt });
-
-    // Cache predecessor from CallScheduled event (usually HashZero for governor proposals)
-    if (allData.length > 0 && allData[0].predecessor) {
-      builder.data({ predecessor: allData[0].predecessor });
-    }
-
+    salt = await computeL2TimelockSalt(currentData, options.allStages, provider);
+    predecessor = allData[0]?.predecessor ?? ethers.constants.HashZero;
+    builder.data({ salt, predecessor });
     log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   } else if (config.stageType === "L1_TIMELOCK") {
-    const { salt, predecessor } = computeL1TimelockSalt(options.allStages);
-    builder.data({ salt });
-    if (predecessor) {
-      builder.data({ predecessor });
-    }
+    const computed = computeL1TimelockSalt(options.allStages);
+    salt = computed.salt;
+    predecessor = computed.predecessor ?? ethers.constants.HashZero;
+    builder.data({ salt, predecessor });
     log("%s: Computed salt: %s", config.logPrefix, salt.slice(0, 10) + "...");
   }
 
   // Determine if operation uses scheduleBatch or schedule by trying both validations
   if (allData.length > 0) {
-    const salt = builder.build().data.salt ?? ethers.constants.HashZero;
-    const predecessor = builder.build().data.predecessor ?? ethers.constants.HashZero;
-
     // Try batch validation first (common for L2 timelock)
     const targets = allData.map((d) => d.target);
     const values = allData.map((d) => d.value);
@@ -361,32 +340,27 @@ async function trackTimelock(
 
   // Add queue transaction if available (for all statuses where scheduled)
   let queueTimestamp: number | undefined;
-  if (
-    timelockState.scheduledData?.txHash &&
-    timelockState.scheduledData.blockNumber !== undefined
-  ) {
-    queueTimestamp = await getBlockTimestamp(timelockState.scheduledData.blockNumber, provider);
-    const chainId = chainToChainId(config.chain) ?? 0;
-    builder.tx(
-      timelockState.scheduledData.txHash,
-      timelockState.scheduledData.blockNumber,
-      config.chain,
-      chainId,
-      { timestamp: queueTimestamp, description: "queued" }
-    );
+  const scheduled = timelockState.scheduledData;
+  if (scheduled?.txHash && scheduled.blockNumber !== undefined) {
+    queueTimestamp = await getBlockTimestamp(scheduled.blockNumber, provider);
+    const chainId = chainToChainId(config.chain);
+    builder.tx(scheduled.txHash, scheduled.blockNumber, config.chain, chainId, {
+      timestamp: queueTimestamp,
+      description: "queued",
+    });
   }
 
   // Determine status based on operation state
   // Priority: COMPLETED (isDone) > READY (isReady) > PENDING (isPending) > NOT_STARTED
   if (operationState.isDone) {
-    let executionSearchStart = timelockState?.scheduledData?.blockNumber ?? fromBlock;
+    let executionSearchStart = scheduled?.blockNumber ?? fromBlock;
 
-    if (timelockState?.scheduledData) {
-      const delaySeconds = timelockState.scheduledData.delay.toNumber();
+    if (scheduled) {
+      const delaySeconds = scheduled.delay.toNumber();
       if (delaySeconds > 0) {
         executionSearchStart = await blockAfterDelay(
           provider,
-          timelockState.scheduledData.blockNumber,
+          scheduled.blockNumber,
           delaySeconds,
           config.blockTimeSeconds
         );
@@ -399,7 +373,7 @@ async function trackTimelock(
       const receipt = await queryWithRetry(() => provider.getTransactionReceipt(cachedTxHash));
       if (receipt) {
         const execTimestamp = await getBlockTimestamp(receipt.blockNumber, provider);
-        const chainId = chainToChainId(config.chain) ?? 0;
+        const chainId = chainToChainId(config.chain);
         builder
           .status("COMPLETED")
           .tx(options.cachedExecutionTxHash, receipt.blockNumber, config.chain, chainId, {
@@ -499,13 +473,19 @@ export async function trackL2Timelock(
   provider: ethers.providers.Provider,
   fromBlock: number,
   callScheduledData: CallScheduledData,
-  options: { cachedExecutionTxHash?: string; allStages?: TrackedStage[]; chunkSize?: number } = {}
+  options: {
+    cachedExecutionTxHash?: string;
+    allStages?: TrackedStage[];
+    proposalType?: string;
+    chunkSize?: number;
+  } = {}
 ): Promise<TimelockStageResult> {
   return trackTimelock(L2_TIMELOCK_CONFIG, timelockAddress, operationId, provider, fromBlock, {
     callScheduledData,
     cachedExecutionTxHash: options.cachedExecutionTxHash,
     checkSecurityCouncil: true,
     allStages: options.allStages,
+    proposalType: options.proposalType,
     chunkSize: options.chunkSize,
   });
 }
@@ -711,7 +691,7 @@ export async function prepareTimelockOperation(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
 
   return {
     success: true,
@@ -799,7 +779,7 @@ export async function prepareTimelockBatch(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
 
   return {
     success: true,

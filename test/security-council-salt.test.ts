@@ -27,6 +27,7 @@ import { generateSecurityCouncilSalt } from "../src/utils/salt-computation";
 import { computeAndValidateOperationHash } from "../src/utils/operation-id";
 import { DEFAULT_RPC_URLS, EVENT_TOPICS } from "../src/constants";
 import { createTracker } from "../src";
+import { shouldSkipRpc } from "./helpers";
 
 dotenv.config({ quiet: true });
 
@@ -59,7 +60,7 @@ function extractMembersAndNonceFromCallData(
   }
 }
 
-describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation", () => {
+describe.skipIf(shouldSkipRpc())("Security Council Salt Calculation", () => {
   let provider: ethers.providers.JsonRpcProvider;
   let receipt: ethers.providers.TransactionReceipt;
   let callScheduledLogs: ethers.providers.Log[];
@@ -148,7 +149,7 @@ describe.skipIf(process.env.NO_RPC === "1")("Security Council Salt Calculation",
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("Security Council Rotation Tracking", () => {
+describe.skipIf(shouldSkipRpc())("Security Council Rotation Tracking", () => {
   let l2Provider: ethers.providers.JsonRpcProvider;
   let l1Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;

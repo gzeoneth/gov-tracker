@@ -107,21 +107,6 @@ describe("Election Module Exports", () => {
   });
 
   describe("tracking functions", () => {
-    it("should export trackElectionProposal", () => {
-      expect(election.trackElectionProposal).toBeDefined();
-      expect(typeof election.trackElectionProposal).toBe("function");
-    });
-
-    it("should export trackAllElections", () => {
-      expect(election.trackAllElections).toBeDefined();
-      expect(typeof election.trackAllElections).toBe("function");
-    });
-
-    it("should export trackIncompleteElections", () => {
-      expect(election.trackIncompleteElections).toBeDefined();
-      expect(typeof election.trackIncompleteElections).toBe("function");
-    });
-
     it("should export getElectionIndexForProposalId", () => {
       expect(election.getElectionIndexForProposalId).toBeDefined();
       expect(typeof election.getElectionIndexForProposalId).toBe("function");

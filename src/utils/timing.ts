@@ -115,27 +115,25 @@ export function invalidateBlockInfoCache(): void {
 export async function getCurrentBlockInfo(
   provider: ethers.providers.Provider
 ): Promise<{ blockNumber: number; timestamp: number }> {
-  const cached = blockInfoCache.get(provider);
   const now = Date.now();
+  const cached = blockInfoCache.get(provider);
 
   if (cached && now - cached.fetchedAt < BLOCK_INFO_CACHE_TTL_MS) {
     log("getBlock(latest): block=%d (cached)", cached.blockNumber);
     return { blockNumber: cached.blockNumber, timestamp: cached.timestamp };
   }
 
-  const start = now;
   const block = await queryWithRetry(() => provider.getBlock("latest"));
-  log("getBlock(latest): block=%d (%dms)", block.number, Date.now() - start);
+  log("getBlock(latest): block=%d (%dms)", block.number, Date.now() - now);
 
-  const result = {
+  blockInfoCache.set(provider, {
     blockNumber: block.number,
     timestamp: block.timestamp,
     fetchedAt: now,
-  };
-  blockInfoCache.set(provider, result);
+  });
   cachedProviders.add(provider);
 
-  return { blockNumber: result.blockNumber, timestamp: result.timestamp };
+  return { blockNumber: block.number, timestamp: block.timestamp };
 }
 
 // Cache for L1 block number from L2 - only caches specific block numbers (immutable)

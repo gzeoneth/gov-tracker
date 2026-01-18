@@ -585,31 +585,35 @@ if (!status.canCreateElection) {
 ### Track All Elections
 
 ```typescript
-import { trackAllElections, trackIncompleteElections } from "@gzeoneth/gov-tracker";
+import { ProposalStageTracker } from "@gzeoneth/gov-tracker";
+
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
 // Track all elections (including completed)
-const allElections = await trackAllElections(l2Provider, l1Provider);
+const allElections = await tracker.trackAllElections();
 for (const election of allElections) {
   console.log(`Election #${election.electionIndex}: ${election.phase}`);
   console.log(`  Cohort: ${election.cohort === 0 ? "First" : "Second"}`);
   console.log(`  Nominees: ${election.compliantNomineeCount}/6`);
 }
 
-// Track only active elections
-const activeElections = await trackIncompleteElections(l2Provider, l1Provider);
+// Filter to active elections only
+const activeElections = allElections.filter(e => e.phase !== "COMPLETED");
 ```
 
 ### Track Single Election with Details
 
 ```typescript
 import {
-  trackElectionProposal,
+  ProposalStageTracker,
   getNomineeElectionDetails,
   getMemberElectionDetails,
 } from "@gzeoneth/gov-tracker";
 
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
+
 // Track election by index
-const election = await trackElectionProposal(0, l2Provider, l1Provider);
+const election = await tracker.trackElection(0);
 console.log(`Phase: ${election.phase}`);
 console.log(`Nominee proposal: ${election.nomineeProposalId}`);
 console.log(`Member proposal: ${election.memberProposalId}`);
@@ -649,12 +653,14 @@ if (election.memberProposalId) {
 
 ```typescript
 import {
+  ProposalStageTracker,
   checkElectionStatus,
   prepareElectionCreation,
-  trackElectionProposal,
   prepareMemberElectionTrigger,
   prepareMemberElectionExecution,
 } from "@gzeoneth/gov-tracker";
+
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
 // Step 1: Create new election (when time has elapsed)
 const status = await checkElectionStatus(l2Provider, l1Provider);
@@ -666,7 +672,7 @@ if (status.canCreateElection) {
 }
 
 // Step 2: Track and advance election phases
-const election = await trackElectionProposal(0, l2Provider, l1Provider);
+const election = await tracker.trackElection(0);
 
 // Trigger member election (after vetting period)
 if (election.canProceedToMemberPhase) {
@@ -692,7 +698,9 @@ if (election.canExecuteMember) {
 ### Monitor Elections in Background
 
 ```typescript
-import { trackAllElections, checkElectionStatus } from "@gzeoneth/gov-tracker";
+import { ProposalStageTracker, checkElectionStatus } from "@gzeoneth/gov-tracker";
+
+const tracker = new ProposalStageTracker({ l2Provider, l1Provider });
 
 async function monitorElections() {
   // Check for new election opportunity
@@ -702,7 +710,7 @@ async function monitorElections() {
   }
 
   // Check for actionable elections
-  const elections = await trackAllElections(l2Provider, l1Provider);
+  const elections = await tracker.trackAllElections();
   for (const election of elections) {
     if (election.canProceedToMemberPhase) {
       await notifySlack(`Election #${election.electionIndex}: Ready to trigger member phase`);

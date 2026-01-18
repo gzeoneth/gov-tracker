@@ -22,7 +22,7 @@ import {
   PROPOSAL_STATE_MAP,
   CHUNK_SIZES,
 } from "../constants";
-import { findLog, findAndParseEvent, searchLogsInChunks } from "../utils/log-search";
+import { findAndParseEvent, searchLogsInChunks } from "../utils/log-search";
 import { findFirstLog } from "../utils/log-filters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { getCurrentBlockInfo, getL1BlockNumberFromL2 } from "../utils/timing";
@@ -34,8 +34,23 @@ import {
 } from "../abis";
 import { hasVettingPeriod } from "../election";
 import { multicall, buildCallInput } from "../utils/multicall";
-import { addressEquals } from "../utils/chain";
 import { truncateDescription } from "../utils/sanitize";
+
+/**
+ * Resolve search range from hint with L2 defaults.
+ * Returns fromBlock, toBlock, and reverseDirection based on hint.
+ */
+async function resolveSearchRange(
+  provider: ethers.providers.Provider,
+  hint?: SearchHint
+): Promise<{ fromBlock: number; toBlock: number; reverseDirection: boolean }> {
+  const { blockNumber: currentBlock } = await getCurrentBlockInfo(provider);
+  return {
+    fromBlock: hint?.startBlock ?? GOVERNANCE_START_BLOCKS.L2,
+    toBlock: hint?.endBlock ?? currentBlock,
+    reverseDirection: hint?.direction === "backward" || !hint?.direction,
+  };
+}
 
 // Discovery Types (merged from monitor-discovery.ts)
 
@@ -47,17 +62,18 @@ export interface DiscoveredProposal {
   creationBlock: number;
 }
 
+const GOVERNOR_TYPE_MAP: Record<string, ProposalType> = {
+  [ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase()]: "CONSTITUTIONAL",
+  [ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR.toLowerCase()]: "NON_CONSTITUTIONAL",
+  [ADDRESSES.ELECTION_NOMINEE_GOVERNOR.toLowerCase()]: "ELECTION_NOMINEE",
+  [ADDRESSES.ELECTION_MEMBER_GOVERNOR.toLowerCase()]: "ELECTION_MEMBER",
+};
+
 /**
  * Detect governor type from address
  */
 export function detectProposalType(governorAddress: string): ProposalType {
-  if (addressEquals(governorAddress, ADDRESSES.CONSTITUTIONAL_GOVERNOR)) return "CONSTITUTIONAL";
-  if (addressEquals(governorAddress, ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR))
-    return "NON_CONSTITUTIONAL";
-  if (addressEquals(governorAddress, ADDRESSES.ELECTION_NOMINEE_GOVERNOR))
-    return "ELECTION_NOMINEE";
-  if (addressEquals(governorAddress, ADDRESSES.ELECTION_MEMBER_GOVERNOR)) return "ELECTION_MEMBER";
-  return "UNKNOWN";
+  return GOVERNOR_TYPE_MAP[governorAddress.toLowerCase()] ?? "UNKNOWN";
 }
 
 /**
@@ -188,12 +204,7 @@ export async function findProposalCreatedEvent(
   provider: ethers.providers.Provider,
   hint?: SearchHint
 ): Promise<ProposalData | null> {
-  const { blockNumber: currentBlock } = await getCurrentBlockInfo(provider);
-
-  // Apply search hint (default: search backward from current block)
-  const fromBlock = hint?.startBlock ?? GOVERNANCE_START_BLOCKS.L2;
-  const toBlock = hint?.endBlock ?? currentBlock;
-  const reverseDirection = hint?.direction === "backward" || !hint?.direction;
+  const { fromBlock, toBlock, reverseDirection } = await resolveSearchRange(provider, hint);
 
   // Note: ProposalCreated event does NOT have indexed proposalId
   // We filter by event topic only and use predicate for exact matching
@@ -320,6 +331,25 @@ export async function getVotingData(
 }
 
 /**
+ * Parse ProposalQueued event and return extracted data
+ */
+function parseProposalQueuedEvent(
+  log: ethers.providers.Log
+): { blockNumber: number; txHash: string; eta: BigNumber; proposalId: BigNumber } | null {
+  try {
+    const parsed = proposalQueuedInterface.parseLog(log);
+    return {
+      blockNumber: log.blockNumber,
+      txHash: log.transactionHash,
+      eta: parsed.args.eta,
+      proposalId: parsed.args.proposalId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Find ProposalQueued event for a proposal
  *
  * Note: ProposalQueued(uint256 proposalId, uint256 eta) has NON-INDEXED parameters,
@@ -333,55 +363,24 @@ export async function findProposalQueuedEvent(
   proposalId: string,
   provider: ethers.providers.Provider,
   hint?: SearchHint
-): Promise<{
-  blockNumber: number;
-  txHash: string;
-  eta: BigNumber;
-} | null> {
-  const { blockNumber: currentBlock } = await getCurrentBlockInfo(provider);
-
-  // Apply search hint (default: search backward from current block)
-  const fromBlock = hint?.startBlock ?? GOVERNANCE_START_BLOCKS.L2;
-  const toBlock = hint?.endBlock ?? currentBlock;
-  const reverseDirection = hint?.direction === "backward" || !hint?.direction;
-
+): Promise<{ blockNumber: number; txHash: string; eta: BigNumber } | null> {
+  const { fromBlock, toBlock, reverseDirection } = await resolveSearchRange(provider, hint);
   const targetProposalId = BigNumber.from(proposalId);
 
   // ProposalQueued has non-indexed parameters, so we search by event signature only
-  // and decode the data to match the proposalId
-  const log = await findLog(
+  // and decode the data to match the proposalId. Use findAndParseEvent to avoid double-parsing.
+  const result = await findAndParseEvent(
     provider,
-    {
-      address: governorAddress,
-      topics: [EVENT_TOPICS.PROPOSAL_QUEUED],
-      fromBlock,
-      toBlock,
-    },
-    (logEntry) => {
-      try {
-        const parsed = proposalQueuedInterface.parseLog(logEntry);
-        return parsed.args.proposalId.eq(targetProposalId);
-      } catch {
-        return false;
-      }
-    },
+    { address: governorAddress, topics: [EVENT_TOPICS.PROPOSAL_QUEUED], fromBlock, toBlock },
+    (log) => parseProposalQueuedEvent(log)?.proposalId.eq(targetProposalId) ?? false,
+    parseProposalQueuedEvent,
     { chunkSize: hint?.chunkSize ?? CHUNK_SIZES.L2, reverseDirection }
   );
 
-  if (!log) {
-    return null;
-  }
-
-  try {
-    const parsed = proposalQueuedInterface.parseLog(log);
-    return {
-      blockNumber: log.blockNumber,
-      txHash: log.transactionHash,
-      eta: parsed.args.eta,
-    };
-  } catch {
-    return null;
-  }
+  // Strip proposalId from result (not part of the public interface)
+  return result
+    ? { blockNumber: result.blockNumber, txHash: result.txHash, eta: result.eta }
+    : null;
 }
 
 // Discovery Functions (merged from monitor-discovery.ts)

@@ -21,24 +21,46 @@ yarn format:check       # Check formatting
 
 ### Testing
 ```bash
-yarn test                # Fast pre-commit tests (no RPC)
-yarn test:integration    # Full integration tests
-yarn test:all            # All tests except fork tests
-yarn test:fork           # Fork tests with custom config
-yarn test:coverage:all   # All tests coverage (./coverage)
-yarn test:fork:coverage  # Fork tests coverage (./coverage-fork)
+yarn test           # Fast pre-commit tests (NO_RPC=1)
+yarn test:rpc       # All regular tests with RPC
+yarn test:fork      # Fork tests (requires archive RPC + Anvil)
 ```
 
-**Single file test & coverages:**
+**Coverage:**
 ```bash
-yarn test:coverage:all test/testfile.test.ts
-yarn test:fork:coverage test/forktest.test.ts
+yarn test:cov       # Regular tests with coverage → coverage/
+yarn test:cov:fork  # Fork tests with coverage → coverage-fork/
+yarn test:cov:all   # Both + merge → coverage-merged/
 ```
 
-**Skip RPC tests:**
+**Single file:**
 ```bash
-NO_RPC=1 yarn test
+yarn test:cov test/file.test.ts
+yarn test:cov:fork test/file-fork.test.ts
 ```
+
+### Coverage Architecture
+
+Coverage is collected separately due to different execution requirements:
+
+| Test Type | Command | Output Dir | Characteristics |
+|-----------|---------|------------|-----------------|
+| Regular | `test:cov` | `coverage/` | Fast, mocked + RPC tests |
+| Fork | `test:cov:fork` | `coverage-fork/` | Slow, historical state, sequential |
+| Merged | `test:cov:all` | `coverage-merged/` | Combined report |
+
+**Merged output:**
+- `index.html` - Browser-viewable HTML report
+- `coverage-summary.json` - JSON for programmatic use
+- `lcov.info` - LCOV format for CI/Codecov
+
+**Test organization:**
+- **Regular tests**: Unit tests, mocked integrations, RPC tests with `describe.skipIf(NO_RPC)` wrapper
+- **Fork tests**: Anvil forks at historical blocks, sequential execution (`*-fork.test.ts`)
+
+**Coverage strategy:**
+- Prefer regular tests for pure functions and mocked scenarios (fast, reliable)
+- Use fork tests only for: time-sensitive logic, READY/PENDING state verification, multi-block scenarios
 
 ## Architecture
 
@@ -47,7 +69,11 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for SDK internals.
 **Key concepts:**
 - **Prepare-only SDK**: Tracks stages and prepares transactions, never executes
 - **Functional pipeline**: Immutable `TrackingState` flows through pure stage tracking functions
-- **7 stages**: PROPOSAL_CREATED -> VOTING_ACTIVE -> PROPOSAL_QUEUED -> L2_TIMELOCK -> L2_TO_L1_MESSAGE -> L1_TIMELOCK -> RETRYABLE_EXECUTED
+- **Unified pipeline architecture**: Three composable modules with different entry points:
+  - **Election path** (8 stages): CREATE_ELECTION → NOMINEE_ELECTION → NOMINEE_VETTING → MEMBER_ELECTION → [timelock stages]
+  - **Governor path** (7 stages): PROPOSAL_CREATED → VOTING_ACTIVE → PROPOSAL_QUEUED → [timelock stages]
+  - **Timelock path** (4 stages): L2_TIMELOCK → L2_TO_L1_MESSAGE → L1_TIMELOCK → RETRYABLE_EXECUTED
+- **TrackingPath type**: `"governor" | "timelock" | "election"` determines which stages to initialize
 
 ## Module Organization
 
@@ -71,16 +97,14 @@ src/
 │   ├── timelock.ts         # Stages 4 & 6: L2/L1 timelock delays
 │   ├── l2-to-l1-message.ts # Stage 5: Cross-chain message
 │   └── retryables.ts       # Stage 7: Retryable ticket redemption
-├── election/               # Security Council election tracking
+├── election/               # Security Council election tracking (7 files)
 │   ├── index.ts            # Module exports (public API)
 │   ├── contracts.ts        # Election governor contract factories
-│   ├── proposal-ids.ts     # Proposal ID computation and caching
-│   ├── params.ts           # Election proposal parameters
+│   ├── proposal-ids.ts     # Proposal ID computation, caching, and lookup
+│   ├── params.ts           # Proposal parameters and transaction preparation
 │   ├── participants.ts     # Contenders, nominees, and vote tracking
 │   ├── details.ts          # Detailed election information
-│   ├── prepare.ts          # Transaction preparation for election actions
-│   ├── status.ts           # Election status and phase determination
-│   └── tracking.ts         # Main election tracking orchestration
+│   └── status.ts           # Election status and phase determination
 ├── calldata/               # Calldata decoding module
 ├── simulation/             # Simulation data preparation
 ├── discovery/              # Governor and timelock introspection

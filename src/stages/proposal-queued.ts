@@ -106,7 +106,10 @@ export async function trackProposalQueued(
   // Stage is complete - proposal is queued
   builder
     .status("COMPLETED")
-    .tx(queueEvent.txHash, queueEvent.blockNumber, "arb1", 42161, { timestamp })
+    .tx(queueEvent.txHash, queueEvent.blockNumber, "arb1", 42161, {
+      timestamp,
+      description: "queued",
+    })
     .timing({ startedAt: timestamp, eta })
     .data({
       proposalState,

@@ -21,9 +21,10 @@ import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 
 import {
+  shouldSkipRpc,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
-} from "./fixtures";
+} from "./helpers";
 
 import {
   detectAllRetryableTargetChains,
@@ -59,7 +60,7 @@ dotenv.config({ quiet: true });
 // L1 execution tx that creates retryables to Arb1
 const L1_TX_WITH_RETRYABLE = CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.expectedStages.L1_TIMELOCK.hash;
 
-describe.skipIf(process.env.NO_RPC === "1")(
+describe.skipIf(shouldSkipRpc())(
   "Retryable Lifecycle Tests",
   {
     timeout: 300000, // 5 minutes for slow retryable tests

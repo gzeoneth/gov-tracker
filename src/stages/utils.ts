@@ -89,7 +89,7 @@ function createStage(
   chain: Chain,
   status: StageStatus = "NOT_STARTED"
 ): TrackedStage {
-  const chainId = chainToChainId(chain) ?? 0;
+  const chainId = chainToChainId(chain);
   // Assertion needed: we create placeholder stages with empty data that get
   // replaced by properly-built stages. TypeScript can't track this flow.
   return {
@@ -103,47 +103,115 @@ function createStage(
   } as TrackedStage;
 }
 
+/** Common timelock stages shared by all paths */
+const COMMON_TIMELOCK_STAGES: StageType[] = [
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+];
+
 /** Full proposal stages (from governor proposal) */
 const FULL_PROPOSAL_STAGES: StageType[] = [
   "PROPOSAL_CREATED",
   "VOTING_ACTIVE",
   "PROPOSAL_QUEUED",
-  "L2_TIMELOCK",
-  "L2_TO_L1_MESSAGE",
-  "L1_TIMELOCK",
-  "RETRYABLE_EXECUTED",
+  ...COMMON_TIMELOCK_STAGES,
 ];
 
 /** Timelock-only stages (direct timelock entry) */
-const TIMELOCK_ONLY_STAGES: StageType[] = [
+const TIMELOCK_ONLY_STAGES: StageType[] = COMMON_TIMELOCK_STAGES;
+
+/** Election stages (full election lifecycle) */
+const ELECTION_STAGES: StageType[] = [
+  "CREATE_ELECTION",
+  "NOMINEE_ELECTION",
+  "NOMINEE_VETTING",
+  "MEMBER_ELECTION",
+  ...COMMON_TIMELOCK_STAGES,
+];
+
+/**
+ * Tracking path types for stage initialization
+ */
+export type TrackingPath = "governor" | "timelock" | "election";
+
+/**
+ * Get stage types for a tracking path.
+ * @param path - The tracking path type: "governor", "timelock", or "election"
+ */
+export function getStagesForTrackingPath(path: TrackingPath): StageType[] {
+  switch (path) {
+    case "governor":
+      return FULL_PROPOSAL_STAGES;
+    case "timelock":
+      return TIMELOCK_ONLY_STAGES;
+    case "election":
+      return ELECTION_STAGES;
+  }
+}
+
+/**
+ * Initialize all stages for a tracking path
+ * @param path - The tracking path type: "governor", "timelock", or "election"
+ */
+/** L1 stages (execute on Ethereum mainnet) */
+const L1_STAGES = new Set<StageType>(["L1_TIMELOCK", "RETRYABLE_EXECUTED"]);
+
+/** Get chain for a stage type (L1 stages run on ethereum, others on arb1) */
+export const getChainForStage = (type: StageType): Chain =>
+  L1_STAGES.has(type) ? "ethereum" : "arb1";
+
+export function initializeStagesForTrackingPath(path: TrackingPath): TrackedStage[] {
+  return getStagesForTrackingPath(path).map((type) =>
+    createStage(type, getChainForStage(type), "NOT_STARTED")
+  );
+}
+
+// ============================================================================
+// Modular Caching: Stage Splitting
+// ============================================================================
+
+/** All timelock path stages for modular caching (full path, not just executable) */
+const TIMELOCK_PATH_STAGES: Set<StageType> = new Set([
   "L2_TIMELOCK",
   "L2_TO_L1_MESSAGE",
   "L1_TIMELOCK",
   "RETRYABLE_EXECUTED",
-];
+]);
 
 /**
- * Get stage types for a tracking path.
- * @param includeProposalStages - Include proposal stages (default: true)
+ * Check if a stage type is part of the timelock path (for modular caching).
+ * Includes all stages after proposal/election execution: L2_TIMELOCK → RETRYABLE_EXECUTED
  */
-export function getStagesForPath(includeProposalStages: boolean = true): StageType[] {
-  return includeProposalStages ? FULL_PROPOSAL_STAGES : TIMELOCK_ONLY_STAGES;
+export function isTimelockPathStage(type: StageType): boolean {
+  return TIMELOCK_PATH_STAGES.has(type);
 }
 
 /**
- * Initialize all stages for a path
+ * Split stages into parent and timelock stages for modular caching.
+ *
+ * Parent stages:
+ * - Governor: PROPOSAL_CREATED, VOTING_ACTIVE, PROPOSAL_QUEUED
+ * - Election: CREATE_ELECTION, NOMINEE_ELECTION, NOMINEE_VETTING, MEMBER_ELECTION
+ *
+ * Timelock stages: L2_TIMELOCK, L2_TO_L1_MESSAGE, L1_TIMELOCK, RETRYABLE_EXECUTED
  */
-export function initializeStagesForPath(includeProposalStages: boolean = true): TrackedStage[] {
-  const stageTypes = getStagesForPath(includeProposalStages);
+export function splitStages(stages: TrackedStage[]): {
+  parentStages: TrackedStage[];
+  timelockStages: TrackedStage[];
+} {
+  const parentStages = stages.filter((s) => !isTimelockPathStage(s.type));
+  const timelockStages = stages.filter((s) => isTimelockPathStage(s.type));
+  return { parentStages, timelockStages };
+}
 
-  return stageTypes.map((type) => {
-    // L1_TIMELOCK and RETRYABLE_EXECUTED are L1 stages
-    // L2_TO_L1_MESSAGE is cross-chain but logically completes on L1
-    const chain: Chain =
-      type === "L1_TIMELOCK" || type === "RETRYABLE_EXECUTED" ? "ethereum" : "arb1";
-
-    return createStage(type, chain, "NOT_STARTED");
-  });
+/**
+ * Check if stages have any timelock progress (for determining if we need linked checkpoint).
+ * Returns true if any timelock path stage has been started.
+ */
+export function hasTimelockProgress(stages: TrackedStage[]): boolean {
+  return stages.some((s) => isTimelockPathStage(s.type) && s.status !== "NOT_STARTED");
 }
 
 /**
@@ -168,11 +236,25 @@ export function updateStageInList(
 // ============================================================================
 
 /**
+ * Check if status is terminal (COMPLETED, SKIPPED, or FAILED)
+ */
+export function isStageTerminal(status: StageStatus | undefined): boolean {
+  return status === "COMPLETED" || status === "SKIPPED" || status === "FAILED";
+}
+
+/**
+ * Check if status represents successful completion (COMPLETED or SKIPPED)
+ */
+export function isStageSuccess(status: StageStatus | undefined): boolean {
+  return status === "COMPLETED" || status === "SKIPPED";
+}
+
+/**
  * Get the current active stage (first non-completed stage)
  */
 export function getCurrentStage(stages: TrackedStage[]): TrackedStage | null {
   for (const stage of stages) {
-    if (stage.status !== "COMPLETED" && stage.status !== "SKIPPED" && stage.status !== "FAILED") {
+    if (!isStageTerminal(stage.status)) {
       return stage;
     }
   }
@@ -183,9 +265,7 @@ export function getCurrentStage(stages: TrackedStage[]): TrackedStage | null {
  * Check if all stages are complete
  */
 export function areAllStagesComplete(stages: TrackedStage[]): boolean {
-  return stages.every(
-    (s) => s.status === "COMPLETED" || s.status === "SKIPPED" || s.status === "FAILED"
-  );
+  return stages.every((s) => isStageTerminal(s.status));
 }
 
 /**
@@ -265,24 +345,15 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
  * @returns The operationId if found, undefined otherwise
  */
 export function extractOperationId(stages: TrackedStage[]): string | undefined {
-  // Check PROPOSAL_QUEUED first (most common)
-  const queuedStage = stages.find((s) => s.type === "PROPOSAL_QUEUED");
-  if (queuedStage?.type === "PROPOSAL_QUEUED") {
-    const opId = queuedStage.data.operationId;
-    if (typeof opId === "string" && opId.length > 0) {
-      return opId;
+  // Check stages that contain operationId (PROPOSAL_QUEUED is most common)
+  for (const stage of stages) {
+    if (stage.type === "PROPOSAL_QUEUED" || stage.type === "L2_TIMELOCK") {
+      const opId = stage.data.operationId;
+      if (typeof opId === "string" && opId.length > 0) {
+        return opId;
+      }
     }
   }
-
-  // Fallback to L2_TIMELOCK
-  const l2TimelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
-  if (l2TimelockStage?.type === "L2_TIMELOCK") {
-    const opId = l2TimelockStage.data.operationId;
-    if (typeof opId === "string" && opId.length > 0) {
-      return opId;
-    }
-  }
-
   return undefined;
 }
 
@@ -587,7 +658,7 @@ export async function searchAndCompleteTimelockExecution(
 
   if (event) {
     const execTimestamp = await getBlockTimestamp(event.blockNumber, provider);
-    const chainId = chainToChainId(chain) ?? 0;
+    const chainId = chainToChainId(chain);
     builder
       .status("COMPLETED")
       .tx(event.txHash, event.blockNumber, chain, chainId, {

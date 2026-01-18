@@ -19,11 +19,11 @@ import {
 } from "../src";
 import { createCheckpoint, createTrackingState } from "../src/tracker/state";
 
-import { CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./fixtures";
+import { shouldSkipRpc, CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP } from "./helpers";
 
 dotenv.config({ quiet: true });
 
-describe.skipIf(process.env.NO_RPC === "1")(
+describe.skipIf(shouldSkipRpc())(
   "Zero-RPC Resume",
   {
     timeout: 180000, // 3 minutes for slow RPC tracking

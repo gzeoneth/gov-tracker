@@ -7,6 +7,9 @@ import {
   NomineeElectionDetails,
   MemberElectionDetails,
   MemberElectionNominee,
+  ElectionNominee,
+  SerializableNominee,
+  SerializableMemberNominee,
   SerializableNomineeDetails,
   SerializableMemberDetails,
 } from "../types";
@@ -16,6 +19,34 @@ import { computeElectionProposalId, getElectionProposalId } from "./proposal-ids
 import { getContenders, getNomineesWithVotes } from "./participants";
 
 const log = loggers.election;
+
+// ============================================================================
+// Serialization Helpers
+// ============================================================================
+
+function serializeNominee(n: ElectionNominee): SerializableNominee {
+  return {
+    address: n.address,
+    votesReceived: n.votesReceived.toString(),
+    isExcluded: n.isExcluded,
+    nominatedAtBlock: n.nominatedAtBlock,
+    excludedAtBlock: n.excludedAtBlock,
+    exclusionTxHash: n.exclusionTxHash,
+  };
+}
+
+function serializeMemberNominee(n: MemberElectionNominee): SerializableMemberNominee {
+  return {
+    address: n.address,
+    weightReceived: n.weightReceived.toString(),
+    isWinner: n.isWinner,
+    rank: n.rank,
+  };
+}
+
+// ============================================================================
+// Election Details Functions
+// ============================================================================
 
 export async function getNomineeElectionDetails(
   electionIndex: number,
@@ -162,30 +193,9 @@ export function serializeNomineeDetails(
       registeredAtBlock: c.registeredAtBlock,
       registrationTxHash: c.registrationTxHash,
     })),
-    nominees: details.nominees.map((n) => ({
-      address: n.address,
-      votesReceived: n.votesReceived.toString(),
-      isExcluded: n.isExcluded,
-      nominatedAtBlock: n.nominatedAtBlock,
-      excludedAtBlock: n.excludedAtBlock,
-      exclusionTxHash: n.exclusionTxHash,
-    })),
-    compliantNominees: details.compliantNominees.map((n) => ({
-      address: n.address,
-      votesReceived: n.votesReceived.toString(),
-      isExcluded: n.isExcluded,
-      nominatedAtBlock: n.nominatedAtBlock,
-      excludedAtBlock: n.excludedAtBlock,
-      exclusionTxHash: n.exclusionTxHash,
-    })),
-    excludedNominees: details.excludedNominees.map((n) => ({
-      address: n.address,
-      votesReceived: n.votesReceived.toString(),
-      isExcluded: n.isExcluded,
-      nominatedAtBlock: n.nominatedAtBlock,
-      excludedAtBlock: n.excludedAtBlock,
-      exclusionTxHash: n.exclusionTxHash,
-    })),
+    nominees: details.nominees.map(serializeNominee),
+    compliantNominees: details.compliantNominees.map(serializeNominee),
+    excludedNominees: details.excludedNominees.map(serializeNominee),
     quorumThreshold: details.quorumThreshold.toString(),
     targetNomineeCount: details.targetNomineeCount,
   };
@@ -199,12 +209,7 @@ export function serializeMemberDetails(details: MemberElectionDetails): Serializ
   return {
     proposalId: details.proposalId,
     electionIndex: details.electionIndex,
-    nominees: details.nominees.map((n) => ({
-      address: n.address,
-      weightReceived: n.weightReceived.toString(),
-      isWinner: n.isWinner,
-      rank: n.rank,
-    })),
+    nominees: details.nominees.map(serializeMemberNominee),
     winners: details.winners,
     fullWeightDeadline: details.fullWeightDeadline,
     proposalDeadline: details.proposalDeadline,

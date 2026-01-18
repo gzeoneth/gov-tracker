@@ -21,9 +21,10 @@ import {
 import { arbSysInterface } from "../src/abis";
 import { ADDRESSES, DEFAULT_RPC_URLS } from "../src/constants";
 import {
+  shouldSkipRpc,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
-} from "./fixtures";
+} from "./helpers";
 import { createTracker, TrackingResult } from "../src";
 
 dotenv.config({ quiet: true });
@@ -522,7 +523,7 @@ describe("L2 to L1 Message Stage", () => {
  *
  * These tests require RPC connections and verify the full tracking pipeline.
  */
-describe.skipIf(process.env.NO_RPC === "1")(
+describe.skipIf(shouldSkipRpc())(
   "L2 to L1 Message Tracking (RPC)",
   {
     timeout: 300000, // 5 minutes for slow RPC tests

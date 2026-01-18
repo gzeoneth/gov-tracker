@@ -111,26 +111,18 @@ export async function getTimelockOperationState(
   const isDone = (results[3] as boolean) ?? false;
   const timestamp = (results[4] as BigNumber) ?? BigNumber.from(0);
 
-  let state: TimelockOperationState = "UNKNOWN";
+  // Determine state: priority is DONE > READY > PENDING > UNKNOWN
+  const state: TimelockOperationState = !isOperation
+    ? "UNKNOWN"
+    : isDone
+      ? "DONE"
+      : isReady
+        ? "READY"
+        : isPending
+          ? "PENDING"
+          : "UNKNOWN";
 
-  if (!isOperation) {
-    state = "UNKNOWN";
-  } else if (isDone) {
-    state = "DONE";
-  } else if (isReady) {
-    state = "READY";
-  } else if (isPending) {
-    state = "PENDING";
-  }
-
-  return {
-    state,
-    isOperation,
-    isPending,
-    isReady,
-    isDone,
-    timestamp,
-  };
+  return { state, isOperation, isPending, isReady, isDone, timestamp };
 }
 
 /**
@@ -397,41 +389,30 @@ export async function findAllCallScheduledInTx(
     return [];
   }
 
-  const results: CallScheduledData[] = [];
-
-  for (const log of receipt.logs) {
-    if (log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED) {
-      const parsed = parseCallScheduledEvent(log);
-      if (parsed) {
-        // If operationId is specified, only include events with that ID
-        // This distinguishes a batch (same ID, different index) from
-        // multiple separate operations (different IDs)
-        if (!operationId || addressEquals(parsed.operationId, operationId)) {
-          results.push(parsed);
-        }
-      }
-    }
-  }
+  // Filter CallScheduled events, parse them, and filter by operationId if specified
+  const results = receipt.logs
+    .filter((log) => log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED)
+    .map(parseCallScheduledEvent)
+    .filter(
+      (parsed): parsed is CallScheduledData =>
+        parsed !== null && (!operationId || addressEquals(parsed.operationId, operationId))
+    );
 
   // Sort by index to maintain order
   return results.sort((a, b) => a.index.toNumber() - b.index.toNumber());
 }
 
+/** Lookup map: governor address → L2 timelock address */
+const GOVERNOR_TO_TIMELOCK = new Map<string, string>([
+  [ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase(), ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK],
+  [ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR.toLowerCase(), ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK],
+]);
+
 /**
  * Get the L2 timelock address for a governor type
  */
 export function getL2TimelockForGovernor(governorAddress: string): string | null {
-  const normalized = governorAddress.toLowerCase();
-
-  if (normalized === ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase()) {
-    return ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
-  }
-
-  if (normalized === ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR.toLowerCase()) {
-    return ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK;
-  }
-
-  return null;
+  return GOVERNOR_TO_TIMELOCK.get(governorAddress.toLowerCase()) ?? null;
 }
 
 // Discovery Types and Functions (merged from monitor-discovery.ts)
@@ -462,18 +443,19 @@ export async function discoverTimelockOps(
     { chunkSize: options.chunkSize ?? defaultChunkSize }
   );
 
+  // Deduplicate by operationId (batch operations have multiple calls with same operationId)
   const seen = new Set<string>();
-  return logs.flatMap((log) => {
-    const operationId = log.topics[1];
-    if (seen.has(operationId)) return [];
-    seen.add(operationId);
-    return [
-      {
-        timelockAddress,
-        operationId,
-        scheduledTxHash: log.transactionHash,
-        queueBlock: log.blockNumber,
-      },
-    ];
-  });
+  return logs
+    .filter((log) => {
+      const operationId = log.topics[1];
+      if (seen.has(operationId)) return false;
+      seen.add(operationId);
+      return true;
+    })
+    .map((log) => ({
+      timelockAddress,
+      operationId: log.topics[1],
+      scheduledTxHash: log.transactionHash,
+      queueBlock: log.blockNumber,
+    }));
 }

@@ -42,7 +42,7 @@ export function prepareRetryableSimulation(
   l2Chain: Chain
 ): RetryableSimulationData {
   const networkId = getNetworkId(l2Chain);
-  const l2ChainId = chainToChainId(l2Chain) ?? 42161;
+  const l2ChainId = chainToChainId(l2Chain);
   const fromAddress = new Address(ADDRESSES.L1_TIMELOCK).applyAlias().value;
 
   return {
@@ -198,7 +198,7 @@ export function prepareCallSimulation(
   from?: string
 ): CallSimulationData {
   const networkId = getNetworkId(chain);
-  const chainId = chainToChainId(chain) ?? 1;
+  const chainId = chainToChainId(chain);
 
   // Default sender based on chain
   let fromAddress = from;

@@ -9,20 +9,185 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import {
-  createTracker,
   ProposalStageTracker,
-  DEFAULT_RPC_URLS,
   TrackingResult,
   TrackedStage,
+  createTrackingState,
+  getElectionContext,
+  proposalStateToStageStatus,
 } from "../src";
 import {
+  shouldSkipRpc,
+  createRpcTestSuite,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
   NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY,
-} from "./fixtures";
+} from "./helpers";
+import { StageBuilder } from "../src/stages/builder";
+import type { TrackingInput } from "../src/types";
 
 dotenv.config({ quiet: true });
 
+// Mock providers (minimal interface for testing)
+function createMockProviders() {
+  return {
+    l1: {} as ethers.providers.Provider,
+    l2: {} as ethers.providers.Provider,
+    nova: {} as ethers.providers.Provider,
+  };
+}
+
 describe("Pipeline Module", () => {
+  describe("proposalStateToStageStatus (unit tests)", () => {
+    it("should return PENDING for Active state", () => {
+      // #given - an Active proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Active");
+
+      // #then - should be PENDING with complete=false
+      expect(result.status).toBe("PENDING");
+      expect(result.complete).toBe(false);
+    });
+
+    it("should return PENDING for Pending state", () => {
+      // #given - a Pending proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Pending");
+
+      // #then - should be PENDING with complete=false
+      expect(result.status).toBe("PENDING");
+      expect(result.complete).toBe(false);
+    });
+
+    it("should return FAILED for Defeated state", () => {
+      // #given - a Defeated proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Defeated");
+
+      // #then - should be FAILED with complete=false
+      expect(result.status).toBe("FAILED");
+      expect(result.complete).toBe(false);
+    });
+
+    it("should return FAILED for Canceled state", () => {
+      // #given - a Canceled proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Canceled");
+
+      // #then - should be FAILED with complete=false
+      expect(result.status).toBe("FAILED");
+      expect(result.complete).toBe(false);
+    });
+
+    it("should return COMPLETED for Succeeded state", () => {
+      // #given - a Succeeded proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Succeeded");
+
+      // #then - should be COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    });
+
+    it("should return COMPLETED for Executed state", () => {
+      // #given - an Executed proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Executed");
+
+      // #then - should be COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    });
+
+    it("should return COMPLETED for Queued state", () => {
+      // #given - a Queued proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Queued");
+
+      // #then - should be COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    });
+
+    it("should return COMPLETED for Expired state", () => {
+      // #given - an Expired proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Expired");
+
+      // #then - should be COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    });
+
+    it("should return COMPLETED for unknown state", () => {
+      // #given - an unknown proposal state
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus("Unknown");
+
+      // #then - should default to COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    });
+  });
+
+  describe("getElectionContext (unit tests)", () => {
+    it("should return context when both electionIndex and nomineeProposalId exist", async () => {
+      // #given - an election context with CREATE_ELECTION stage containing nomineeProposalId
+      const mockProviders = createMockProviders();
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("CREATE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ electionIndex: 0, cohort: 0, nomineeProposalId: "12345" })
+        .build();
+      ctx = await (await import("../src/tracker/state")).addStage(ctx, stage);
+
+      // #when - getting election context
+      const result = getElectionContext(ctx);
+
+      // #then - should return both electionIndex and nomineeProposalId
+      expect(result).not.toBeNull();
+      expect(result?.electionIndex).toBe(0);
+      expect(result?.nomineeProposalId).toBe("12345");
+    });
+
+    it("should return null when only electionIndex exists (no nomineeProposalId)", () => {
+      // #given - an election context without CREATE_ELECTION stage
+      const mockProviders = createMockProviders();
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      // #when - getting election context (no nomineeProposalId in stages yet)
+      const result = getElectionContext(ctx);
+
+      // #then - should return null
+      expect(result).toBeNull();
+    });
+
+    it("should return null for non-election input", () => {
+      // #given - a governor context (no electionIndex)
+      const mockProviders = createMockProviders();
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: {
+          type: "governor",
+          governorAddress: "0x1234567890123456789012345678901234567890",
+          proposalId: "123",
+        } as TrackingInput,
+      });
+
+      // #when - getting election context
+      const result = getElectionContext(ctx);
+
+      // #then - should return null (no electionIndex)
+      expect(result).toBeNull();
+    });
+  });
+
   describe("Stage chain classification (unit tests)", () => {
     it("should classify L1_TIMELOCK as ethereum chain", () => {
       // #given - a stage representing L1 timelock with ethereum chain metadata
@@ -162,28 +327,15 @@ describe("Pipeline Module", () => {
   });
 });
 
-describe.skipIf(process.env.NO_RPC === "1")("Pipeline Integration Tests", () => {
+describe.skipIf(shouldSkipRpc())("Pipeline Integration Tests", () => {
+  const { cache, beforeAllSetup } = createRpcTestSuite();
   let tracker: ProposalStageTracker;
   let fullRoundtripResult: TrackingResult;
   let l2OnlyResult: TrackingResult;
 
   beforeAll(async () => {
-    const ethRpc = process.env.ETH_RPC;
-    if (!ethRpc) {
-      throw new Error("ETH_RPC environment variable required");
-    }
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
-
-    const l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-    const l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-    const novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-
-    tracker = createTracker({
-      l1Provider,
-      l2Provider,
-      novaProvider,
-    });
+    await beforeAllSetup();
+    tracker = cache.getTracker();
 
     const [full, l2Only] = await Promise.all([
       tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),

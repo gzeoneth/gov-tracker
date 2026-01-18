@@ -7,8 +7,8 @@
 import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
 import * as dotenv from "dotenv";
-import type { CacheAdapter, TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
-import { DEFAULT_RPC_URLS } from "../src";
+import type { TrackingCheckpoint, DiscoveryWatermarks } from "../src/types";
+import { MockCache, shouldSkipRpc, createRpcTestSuite } from "./helpers";
 import {
   detectProposalType,
   isElectionProposal,
@@ -705,37 +705,6 @@ describe("Security Council Discovery", () => {
   });
 });
 
-/**
- * Mock cache adapter for testing tracker discovery
- */
-class MockCache implements CacheAdapter {
-  private store = new Map<string, unknown>();
-
-  async get<T>(key: string): Promise<T | null> {
-    return (this.store.get(key) as T) ?? null;
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    this.store.set(key, value);
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  async keys(): Promise<string[]> {
-    return Array.from(this.store.keys());
-  }
-
-  async has(key: string): Promise<boolean> {
-    return this.store.has(key);
-  }
-
-  async clear(): Promise<void> {
-    this.store.clear();
-  }
-}
-
 describe("Tracker Discovery Module", () => {
   let cache: MockCache;
 
@@ -1093,7 +1062,8 @@ describe("Tracker Discovery Module", () => {
  * Tests discoverProposals, discoverTimelockOps, and discoverAll with real RPC.
  * Uses block range 369846189-389241837 which contains elections, proposals, and timelock ops.
  */
-describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
+describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
+  const { cache: testCache, beforeAllSetup } = createRpcTestSuite();
   let l2Provider: ethers.providers.JsonRpcProvider;
   let cache: MockCache;
 
@@ -1103,9 +1073,9 @@ describe.skipIf(process.env.NO_RPC === "1")("Discovery RPC Tests", () => {
   const TEST_FROM_BLOCK = 369_846_188;
   const TEST_TO_BLOCK = 389_241_837;
 
-  beforeAll(() => {
-    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+  beforeAll(async () => {
+    await beforeAllSetup();
+    l2Provider = testCache.getProviders().l2Provider;
   });
 
   beforeEach(() => {

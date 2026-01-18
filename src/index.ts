@@ -411,6 +411,8 @@ export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "
 
 export { createCheckpoint, createTrackingState } from "./tracker/state";
 
+export { getElectionContext, proposalStateToStageStatus } from "./tracker/pipeline";
+
 export {
   createCheckpointMetadata,
   isCheckpointComplete,

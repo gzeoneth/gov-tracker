@@ -59,7 +59,7 @@ async function findProposalCreatedParams(
         log("Found ProposalCreated event for proposal %s", proposalId);
         return {
           targets: args.targets,
-          values: args.values,
+          values: parsed.args[3], // `values` collides with ethers.js internals
           calldatas: args.calldatas,
           description: args.description,
           descriptionHash: saltFromDescription(args.description),

@@ -1257,4 +1257,207 @@ describe("TrackingState", () => {
       expect(cached?.status).toBe("PENDING");
     });
   });
+
+  describe("getTimelockAddress - multi-source fallback", () => {
+    it("should fallback to MEMBER_ELECTION stage data (election path)", async () => {
+      // #given - an election context with MEMBER_ELECTION stage containing timelockAddress
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("MEMBER_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({
+          memberProposalId: "123",
+          proposalState: "Executed",
+          winnersCount: 6,
+          timelockAddress: "0x7777777777777777777777777777777777777777",
+        })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting timelock address
+      const result = getTimelockAddress(ctx);
+
+      // #then - should return the timelock address from MEMBER_ELECTION stage
+      expect(result).toBe("0x7777777777777777777777777777777777777777");
+    });
+  });
+
+  describe("getOperationId - multi-source fallback", () => {
+    it("should fallback to MEMBER_ELECTION stage data (election path)", async () => {
+      // #given - an election context with MEMBER_ELECTION stage containing operationId
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("MEMBER_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({
+          memberProposalId: "123",
+          proposalState: "Executed",
+          winnersCount: 6,
+          operationId: "0xelection_op_id",
+        })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting operation ID
+      const result = getOperationId(ctx);
+
+      // #then - should return the operation ID from MEMBER_ELECTION stage
+      expect(result).toBe("0xelection_op_id");
+    });
+
+    it("should fallback to L2_TIMELOCK stage data", async () => {
+      // #given - a context with only L2_TIMELOCK stage containing operationId
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("PENDING")
+        .data({ operationId: "0xl2_timelock_op_id" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting operation ID
+      const result = getOperationId(ctx);
+
+      // #then - should return the operation ID from L2_TIMELOCK stage
+      expect(result).toBe("0xl2_timelock_op_id");
+    });
+  });
+
+  describe("getVotingEndBlock - extended deadline", () => {
+    it("should return extendedDeadline when greater than deadline", async () => {
+      // #given - a context with VOTING_ACTIVE stage with extended deadline
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalState: "Succeeded",
+          deadline: "100",
+          extendedDeadline: "200",
+        })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting voting end block
+      const result = getVotingEndBlock(ctx);
+
+      // #then - should return the extended deadline (higher value)
+      expect(result).toBe(200);
+    });
+
+    it("should return deadline when extendedDeadline is undefined", async () => {
+      // #given - a context with VOTING_ACTIVE stage without extended deadline
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalState: "Succeeded",
+          deadline: "150",
+        })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting voting end block
+      const result = getVotingEndBlock(ctx);
+
+      // #then - should return the deadline
+      expect(result).toBe(150);
+    });
+
+    it("should return undefined when no deadline", async () => {
+      // #given - a context with VOTING_ACTIVE stage without deadline
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("VOTING_ACTIVE", "arb1")
+        .status("PENDING")
+        .data({ proposalState: "Active" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting voting end block
+      const result = getVotingEndBlock(ctx);
+
+      // #then - should return undefined
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe("getProposalData - missing fields", () => {
+    it("should return undefined when missing startBlock", async () => {
+      // #given - a context with PROPOSAL_CREATED stage missing startBlock
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalId: "123",
+          endBlock: "100",
+          proposer: "0x1234567890123456789012345678901234567890",
+          targets: [],
+          values: [],
+          signatures: [],
+          calldatas: [],
+        })
+        .tx("0xhash", 1000, "arb1", 42161)
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting proposal data
+      const result = getProposalData(ctx);
+
+      // #then - should return undefined (missing startBlock)
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when missing transaction", async () => {
+      // #given - a context with PROPOSAL_CREATED stage missing transaction
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1")
+        .status("COMPLETED")
+        .data({
+          proposalId: "123",
+          startBlock: "50",
+          endBlock: "100",
+          proposer: "0x1234567890123456789012345678901234567890",
+          targets: [],
+          values: [],
+          signatures: [],
+          calldatas: [],
+        })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting proposal data
+      const result = getProposalData(ctx);
+
+      // #then - should return undefined (missing transaction)
+      expect(result).toBeUndefined();
+    });
+  });
 });

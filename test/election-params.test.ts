@@ -30,6 +30,9 @@ import {
   getMemberElectionProposalParams,
   buildExecuteTransaction,
   ElectionProposalParams,
+  prepareElectionCreation,
+  prepareMemberElectionTrigger,
+  prepareMemberElectionExecution,
 } from "../src/election/params";
 import { getNomineeGovernor, getMemberGovernor } from "../src/election/contracts";
 import { getElectionProposalId, computeElectionProposalId } from "../src/election/proposal-ids";
@@ -425,6 +428,210 @@ describe("Election Params (Mocked)", () => {
       expect(params.descriptionHash).toBe(expectedHash);
       // Verify it matches ethers.utils.id() output (same as keccak256(toUtf8Bytes()))
       expect(params.descriptionHash).toBe(ethers.utils.id(description));
+    });
+  });
+
+  describe("prepareElectionCreation", () => {
+    it("should build createElection transaction with correct params", () => {
+      // #given - an election status with electionCount
+      const electionStatus = { electionCount: 3 };
+      const nomineeGovernorAddress = "0x8a1cDA8dee421cD06023470608605934c16A05a0";
+
+      // Mock getNomineeGovernor to return a mock with interface
+      const mockInterface = {
+        encodeFunctionData: vi.fn().mockReturnValue("0xmockcalldata"),
+      };
+      vi.mocked(getNomineeGovernor).mockReturnValue({ interface: mockInterface } as any);
+
+      // #when
+      const result = prepareElectionCreation(electionStatus, nomineeGovernorAddress);
+
+      // #then
+      expect(result.electionIndex).toBe(3);
+      expect(result.transaction.to).toBe(nomineeGovernorAddress);
+      expect(result.transaction.value).toBe("0");
+      expect(result.transaction.chain).toBe("arb1");
+      expect(result.transaction.chainId).toBe(42161);
+      expect(result.transaction.description).toContain("election #3");
+      expect(mockInterface.encodeFunctionData).toHaveBeenCalledWith("createElection", []);
+    });
+  });
+
+  describe("prepareMemberElectionTrigger", () => {
+    it("should return null when canProceedToMemberPhase is false", async () => {
+      // #given - election status where member phase cannot be triggered
+      const electionStatus = { electionIndex: 5, canProceedToMemberPhase: false };
+
+      // #when
+      const result = await prepareMemberElectionTrigger(
+        electionStatus,
+        mockProvider,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).toBeNull();
+      expect(getElectionProposalId).not.toHaveBeenCalled();
+    });
+
+    it("should return null when canProceedToMemberPhase is true but params not found", async () => {
+      // #given - ready to proceed but proposal params not found
+      const electionStatus = { electionIndex: 5, canProceedToMemberPhase: true };
+      vi.mocked(getElectionProposalId).mockResolvedValue(null);
+
+      // #when
+      const result = await prepareMemberElectionTrigger(
+        electionStatus,
+        mockProvider,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+
+    it("should return execute transaction when canProceedToMemberPhase is true and params found", async () => {
+      // #given - ready to proceed and params available
+      const electionStatus = { electionIndex: 5, canProceedToMemberPhase: true };
+      const proposalId = "123456789012345678901234567890";
+      vi.mocked(getElectionProposalId).mockResolvedValue(proposalId);
+
+      const mockGovernor = {
+        proposalSnapshot: vi.fn().mockResolvedValue(BigNumber.from(1000)),
+      };
+      vi.mocked(getNomineeGovernor).mockReturnValue(mockGovernor as any);
+
+      const proposalCreatedInterface = new ethers.utils.Interface([
+        "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)",
+      ]);
+
+      const eventLog = proposalCreatedInterface.encodeEventLog(
+        proposalCreatedInterface.getEvent("ProposalCreated"),
+        [
+          BigNumber.from(proposalId),
+          "0x0000000000000000000000000000000000000001",
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          [""],
+          ["0xabcd"],
+          1000,
+          2000,
+          "Nominee Election #5",
+        ]
+      );
+
+      const mockProviderWithMethods = {
+        getBlockNumber: vi.fn().mockResolvedValue(2000),
+        getLogs: vi.fn().mockResolvedValue([{ topics: eventLog.topics, data: eventLog.data }]),
+      };
+
+      // #when
+      const result = await prepareMemberElectionTrigger(
+        electionStatus,
+        mockProviderWithMethods as any,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).not.toBeNull();
+      expect(result!.to).toBe(mockGovernorAddress);
+      expect(result!.chain).toBe("arb1");
+      expect(result!.chainId).toBe(42161);
+      expect(result!.description).toContain("trigger member election #5");
+    });
+  });
+
+  describe("prepareMemberElectionExecution", () => {
+    it("should return null when canExecuteMember is false", async () => {
+      // #given - election status where member election cannot be executed
+      const electionStatus = { electionIndex: 5, canExecuteMember: false };
+
+      // #when
+      const result = await prepareMemberElectionExecution(
+        electionStatus,
+        mockProvider,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).toBeNull();
+      expect(computeElectionProposalId).not.toHaveBeenCalled();
+    });
+
+    it("should return null when canExecuteMember is true but params not found", async () => {
+      // #given - ready to execute but member proposal state check fails
+      const electionStatus = { electionIndex: 5, canExecuteMember: true };
+      const memberProposalId = "987654321098765432109876543210";
+      vi.mocked(computeElectionProposalId).mockResolvedValue(memberProposalId);
+
+      const mockGovernor = {
+        state: vi.fn().mockRejectedValue(new Error("Proposal does not exist")),
+      };
+      vi.mocked(getMemberGovernor).mockReturnValue(mockGovernor as any);
+      vi.mocked(queryWithRetry).mockImplementation((fn) => fn());
+
+      // #when
+      const result = await prepareMemberElectionExecution(
+        electionStatus,
+        mockProvider,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).toBeNull();
+    });
+
+    it("should return execute transaction when canExecuteMember is true and params found", async () => {
+      // #given - ready to execute and params available
+      const electionStatus = { electionIndex: 5, canExecuteMember: true };
+      const memberProposalId = "987654321098765432109876543210";
+      vi.mocked(computeElectionProposalId).mockResolvedValue(memberProposalId);
+
+      const proposalCreatedInterface = new ethers.utils.Interface([
+        "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)",
+      ]);
+
+      const eventLog = proposalCreatedInterface.encodeEventLog(
+        proposalCreatedInterface.getEvent("ProposalCreated"),
+        [
+          BigNumber.from(memberProposalId),
+          "0x0000000000000000000000000000000000000001",
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(100)],
+          [""],
+          ["0xef01"],
+          1000,
+          2000,
+          "Member Election #5",
+        ]
+      );
+
+      const mockProviderWithMethods = {
+        getBlockNumber: vi.fn().mockResolvedValue(2000),
+        getLogs: vi.fn().mockResolvedValue([{ topics: eventLog.topics, data: eventLog.data }]),
+      };
+
+      const mockGovernor = {
+        state: vi.fn().mockResolvedValue(4), // Succeeded state
+        proposalSnapshot: vi.fn().mockResolvedValue(BigNumber.from(1000)),
+      };
+      vi.mocked(getMemberGovernor).mockReturnValue(mockGovernor as any);
+      vi.mocked(queryWithRetry).mockImplementation((fn) => fn());
+
+      // #when
+      const result = await prepareMemberElectionExecution(
+        electionStatus,
+        mockProviderWithMethods as any,
+        mockGovernorAddress
+      );
+
+      // #then
+      expect(result).not.toBeNull();
+      expect(result!.to).toBe(mockGovernorAddress);
+      expect(result!.chain).toBe("arb1");
+      expect(result!.chainId).toBe(42161);
+      expect(result!.description).toContain("install new Security Council members");
+      expect(result!.description).toContain("election #5");
     });
   });
 });

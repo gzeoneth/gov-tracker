@@ -624,6 +624,105 @@ describe("Tracker Cache Methods (With Mock Cache)", () => {
     });
   });
 
+  describe("clearTxCacheEntries with cache", () => {
+    it("should clear base tx key from cache", async () => {
+      // #given - cache with a tx entry
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xabc123", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should clear the entry
+      expect(cleared).toBe(1);
+      expect(await mockCache.has("tx:0xabc123")).toBe(false);
+    });
+
+    it("should clear operation-specific keys for tx", async () => {
+      // #given - cache with base tx and operation-specific keys
+      const mockCache = createMockCache();
+      await mockCache.set("tx:0xabc123", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "governor", proposalId: "1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+      await mockCache.set("tx:0xabc123:op:0xop1", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "timelock", operationId: "0xop1" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+      await mockCache.set("tx:0xabc123:op:0xop2", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "timelock", operationId: "0xop2" },
+        cachedData: { completedStages: [] },
+        metadata: { errorCount: 0 },
+      });
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should clear all 3 entries
+      expect(cleared).toBe(3);
+      expect(await mockCache.has("tx:0xabc123")).toBe(false);
+      expect(await mockCache.has("tx:0xabc123:op:0xop1")).toBe(false);
+      expect(await mockCache.has("tx:0xabc123:op:0xop2")).toBe(false);
+    });
+
+    it("should return 0 when no cache configured", async () => {
+      // #given - tracker without cache
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+      });
+
+      // #when - clearing tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xabc123");
+
+      // #then - should return 0
+      expect(cleared).toBe(0);
+    });
+
+    it("should return 0 when key does not exist", async () => {
+      // #given - cache without the tx entry
+      const mockCache = createMockCache();
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - clearing non-existent tx cache entries
+      const cleared = await tracker.clearTxCacheEntries("0xnonexistent");
+
+      // #then - should return 0
+      expect(cleared).toBe(0);
+    });
+  });
+
   describe("saveElectionCheckpoint with cache", () => {
     it("should save election checkpoint to cache", async () => {
       // #given - tracker with cache

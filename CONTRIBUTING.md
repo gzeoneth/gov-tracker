@@ -39,24 +39,24 @@ yarn check:unused       # Check for dead code with knip
 ## Testing
 
 ```bash
-yarn test               # Fast tests (no RPC, ~1.5s)
-yarn test:coverage      # Fast tests with coverage
-yarn test:integration   # Integration tests with RPC (~2min)
-yarn test:all           # All tests except fork tests
-yarn test:fork          # Fork tests with Anvil (~5min)
+yarn test               # Fast tests (NO_RPC=1, ~15s)
+yarn test:rpc           # All regular tests with RPC (~3min)
+yarn test:fork          # Fork tests with Anvil (~7min)
+```
+
+### Coverage
+
+```bash
+yarn test:cov           # Regular tests with coverage → coverage/
+yarn test:cov:fork      # Fork tests with coverage → coverage-fork/
+yarn test:cov:all       # Both + merge → coverage-merged/
 ```
 
 ### Test a single file
 
 ```bash
 npx vitest run test/utils.test.ts
-npx vitest run test/tracker.test.ts
-```
-
-### Skip RPC tests
-
-```bash
-NO_RPC=1 yarn test:all
+yarn test:cov test/tracker.test.ts   # with coverage
 ```
 
 ### Fork tests

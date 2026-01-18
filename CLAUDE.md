@@ -21,23 +21,46 @@ yarn format:check       # Check formatting
 
 ### Testing
 ```bash
-yarn test                # Fast pre-commit tests (no RPC)
-yarn test:integration    # Full integration tests
-yarn test:all            # All tests except fork tests
-yarn test:fork           # Fork tests with custom config
-yarn test:coverage:all   # All tests coverages
+yarn test           # Fast pre-commit tests (NO_RPC=1)
+yarn test:rpc       # All regular tests with RPC
+yarn test:fork      # Fork tests (requires archive RPC + Anvil)
 ```
 
-**Single file test & coverages:**
+**Coverage:**
 ```bash
-yarn test:coverage test/testfile.test.ts
-yarn test:fork:coverage test/forktest.test.ts
+yarn test:cov       # Regular tests with coverage → coverage/
+yarn test:cov:fork  # Fork tests with coverage → coverage-fork/
+yarn test:cov:all   # Both + merge → coverage-merged/
 ```
 
-**Skip RPC tests:**
+**Single file:**
 ```bash
-NO_RPC=1 yarn test
+yarn test:cov test/file.test.ts
+yarn test:cov:fork test/file-fork.test.ts
 ```
+
+### Coverage Architecture
+
+Coverage is collected separately due to different execution requirements:
+
+| Test Type | Command | Output Dir | Characteristics |
+|-----------|---------|------------|-----------------|
+| Regular | `test:cov` | `coverage/` | Fast, mocked + RPC tests |
+| Fork | `test:cov:fork` | `coverage-fork/` | Slow, historical state, sequential |
+| Merged | `test:cov:all` | `coverage-merged/` | Combined report |
+
+**Merged output:**
+- `index.html` - Browser-viewable HTML report
+- `coverage-summary.json` - JSON for programmatic use
+- `lcov.info` - LCOV format for CI/Codecov
+
+**Test organization:**
+- **Regular tests**: Unit tests, mocked integrations, RPC tests with `describe.skipIf(NO_RPC)` wrapper
+- **Fork tests**: Anvil forks at historical blocks, sequential execution (`*-fork.test.ts`)
+
+**Coverage strategy:**
+- Prefer regular tests for pure functions and mocked scenarios (fast, reliable)
+- Use fork tests only for: time-sensitive logic, READY/PENDING state verification, multi-block scenarios
 
 ## Architecture
 

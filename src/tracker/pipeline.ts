@@ -65,7 +65,7 @@ import { findLog } from "../utils/log-search";
 const { pipeline: log, tracker: logTracker } = loggers;
 
 /** Guard for election stages - returns election index and nominee proposal ID if available */
-function getElectionContext(
+export function getElectionContext(
   state: TrackingState
 ): { electionIndex: number; nomineeProposalId: string } | null {
   const electionIndex = getElectionIndex(state);
@@ -76,7 +76,7 @@ function getElectionContext(
 }
 
 /** Map proposal state string to stage status */
-function proposalStateToStageStatus(proposalState: string): {
+export function proposalStateToStageStatus(proposalState: string): {
   status: "PENDING" | "COMPLETED" | "FAILED";
   complete: boolean;
 } {

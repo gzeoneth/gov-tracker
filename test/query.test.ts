@@ -6,14 +6,17 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { BigNumber } from "ethers";
 import {
   listCheckpointKeys,
   getCheckpoint,
   getAllCheckpoints,
   queryIncompleteCheckpoints,
   getStats,
+  getHighestScNonceFromCheckpoints,
 } from "../src/tracker/query";
-import type { TrackingCheckpoint } from "../src/types";
+import { getHighestScNonce, isScOperationSuperseded } from "../src/discovery/security-council";
+import type { TrackingCheckpoint, TrackedStage } from "../src/types";
 import { ADDRESSES } from "../src/constants";
 import { createTestCheckpoint, createTestStage, MockCache } from "./helpers";
 
@@ -550,4 +553,316 @@ describe("Tracker Query Module", () => {
       expect(result.proposals.total).toBe(0);
     });
   });
+
+  describe("queryIncompleteCheckpoints - SC nonce filtering", () => {
+    it("should skip SC operations with lower nonces when higher nonce exists", async () => {
+      // #given - two SC operations with different nonces
+      const scOpLowNonce = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("3")],
+      });
+      const scOpHighNonce = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("9")],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpLowNonce);
+      await cache.set("tx:0x222:op:0xbbb", scOpHighNonce);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - only the high nonce operation should be returned
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe("tx:0x222:op:0xbbb");
+    });
+
+    it("should return all SC operations when they have the same nonce", async () => {
+      // #given - multiple SC operations with the same nonce (from same SC action)
+      const scOp1 = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("5")],
+      });
+      const scOp2 = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("5")],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOp1);
+      await cache.set("tx:0x111:op:0xbbb", scOp2);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - both should be returned (same nonce)
+      expect(result).toHaveLength(2);
+    });
+
+    it("should not filter non-SC operations", async () => {
+      // #given - mixed SC and non-SC operations
+      const scOp = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("3")],
+      });
+      const regularProposal = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "PENDING"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOp);
+      await cache.set("tx:0x222", regularProposal);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - both should be returned (regular proposal is not filtered by SC nonce)
+      expect(result).toHaveLength(2);
+    });
+
+    it("should filter SC operations even when mixed with non-SC operations", async () => {
+      // #given - low-nonce SC op, high-nonce SC op, and a regular proposal
+      const scOpLow = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("3")],
+      });
+      const scOpHigh = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("9")],
+      });
+      const regularProposal = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "PENDING"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpLow);
+      await cache.set("tx:0x222:op:0xbbb", scOpHigh);
+      await cache.set("tx:0x333", regularProposal);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - low nonce SC op should be filtered, high nonce and regular should remain
+      expect(result).toHaveLength(2);
+      const keys = result.map((r) => r.key);
+      expect(keys).toContain("tx:0x222:op:0xbbb");
+      expect(keys).toContain("tx:0x333");
+      expect(keys).not.toContain("tx:0x111:op:0xaaa");
+    });
+
+    it("should filter incomplete SC ops when completed SC op has higher nonce", async () => {
+      // #given - incomplete low-nonce SC op and completed high-nonce SC op
+      const scOpIncomplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("5")],
+      });
+
+      // Create a completed SC operation with higher nonce
+      const scOpCompleted = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createScTimelockStageWithStatus("10", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpIncomplete);
+      await cache.set("tx:0x222:op:0xbbb", scOpCompleted);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - incomplete SC op with nonce 5 should be filtered because
+      // completed SC op with nonce 10 exists
+      expect(result).toHaveLength(0);
+    });
+
+    it("should not filter incomplete SC ops when completed SC op has lower nonce", async () => {
+      // #given - incomplete high-nonce SC op and completed low-nonce SC op
+      const scOpIncomplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("10")],
+      });
+
+      // Create a completed SC operation with lower nonce
+      const scOpCompleted = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createScTimelockStageWithStatus("5", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", scOpIncomplete);
+      await cache.set("tx:0x222:op:0xbbb", scOpCompleted);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - incomplete SC op with nonce 10 should be returned because
+      // it's the highest nonce (completed nonce 5 is lower)
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe("tx:0x111:op:0xaaa");
+    });
+  });
+
+  describe("getHighestScNonceFromCheckpoints", () => {
+    it("should return null for empty cache", async () => {
+      const result = await getHighestScNonceFromCheckpoints(cache);
+      expect(result).toBeNull();
+    });
+
+    it("should return null for cache with no SC operations", async () => {
+      // #given - only regular proposals
+      await cache.set(
+        "tx:0x111",
+        createCheckpoint({
+          stages: [createStage("PROPOSAL_CREATED", "COMPLETED")],
+        })
+      );
+
+      // #when
+      const result = await getHighestScNonceFromCheckpoints(cache);
+
+      // #then
+      expect(result).toBeNull();
+    });
+
+    it("should return the highest nonce from SC operations", async () => {
+      // #given - multiple SC operations with different nonces
+      await cache.set(
+        "tx:0x111:op:0xaaa",
+        createCheckpoint({
+          inputType: "timelock",
+          stages: [createScTimelockStage("3")],
+        })
+      );
+      await cache.set(
+        "tx:0x222:op:0xbbb",
+        createCheckpoint({
+          inputType: "timelock",
+          stages: [createScTimelockStage("9")],
+        })
+      );
+      await cache.set(
+        "tx:0x333:op:0xccc",
+        createCheckpoint({
+          inputType: "timelock",
+          stages: [createScTimelockStage("5")],
+        })
+      );
+
+      // #when
+      const result = await getHighestScNonceFromCheckpoints(cache);
+
+      // #then
+      expect(result).not.toBeNull();
+      expect(result!.toNumber()).toBe(9);
+    });
+
+    it("should skip completed checkpoints", async () => {
+      // #given - completed SC operation with high nonce
+      const completed = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createScTimelockStage("99"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+      // Update the L2_TIMELOCK status to COMPLETED
+      completed.cachedData.completedStages![0].status = "COMPLETED";
+
+      const incomplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [createScTimelockStage("5")],
+      });
+
+      await cache.set("tx:0x111:op:0xaaa", completed);
+      await cache.set("tx:0x222:op:0xbbb", incomplete);
+
+      // #when
+      const result = await getHighestScNonceFromCheckpoints(cache);
+
+      // #then - only incomplete checkpoints should be considered
+      expect(result).not.toBeNull();
+      expect(result!.toNumber()).toBe(5);
+    });
+  });
 });
+
+describe("Security Council Nonce Utilities", () => {
+  describe("getHighestScNonce", () => {
+    it("should return null for empty array", () => {
+      expect(getHighestScNonce([])).toBeNull();
+    });
+
+    it("should return single nonce when array has one element", () => {
+      const result = getHighestScNonce([BigNumber.from(5)]);
+      expect(result?.toNumber()).toBe(5);
+    });
+
+    it("should return highest nonce from array", () => {
+      const nonces = [BigNumber.from(3), BigNumber.from(9), BigNumber.from(5)];
+      const result = getHighestScNonce(nonces);
+      expect(result?.toNumber()).toBe(9);
+    });
+  });
+
+  describe("isScOperationSuperseded", () => {
+    it("should return false when highest nonce is null", () => {
+      expect(isScOperationSuperseded(BigNumber.from(5), null)).toBe(false);
+    });
+
+    it("should return false when operation nonce equals highest", () => {
+      expect(isScOperationSuperseded(BigNumber.from(5), BigNumber.from(5))).toBe(false);
+    });
+
+    it("should return false when operation nonce is higher", () => {
+      expect(isScOperationSuperseded(BigNumber.from(9), BigNumber.from(5))).toBe(false);
+    });
+
+    it("should return true when operation nonce is lower", () => {
+      expect(isScOperationSuperseded(BigNumber.from(3), BigNumber.from(9))).toBe(true);
+    });
+  });
+});
+
+/**
+ * Helper to create an SC timelock stage with a specific nonce.
+ * Includes minimal required fields for TimelockStageData to satisfy type checking.
+ */
+function createScTimelockStage(nonce: string): TrackedStage {
+  return createScTimelockStageWithStatus(nonce, "PENDING");
+}
+
+/**
+ * Helper to create an SC timelock stage with a specific nonce and status.
+ */
+function createScTimelockStageWithStatus(
+  nonce: string,
+  status: "PENDING" | "READY" | "COMPLETED" | "FAILED"
+): TrackedStage {
+  return {
+    type: "L2_TIMELOCK",
+    status,
+    chain: "arb1",
+    chainId: 42161,
+    transactions: [],
+    data: {
+      isSecurityCouncilOperation: true,
+      securityCouncilNonce: nonce,
+      operationId: "0x" + "a".repeat(64),
+      timelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+      callScheduledData: [],
+    },
+  } as TrackedStage;
+}

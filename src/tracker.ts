@@ -107,6 +107,7 @@ import {
   getAllCheckpoints as getAllCheckpointsInternal,
   queryIncompleteCheckpoints as queryIncompleteCheckpointsInternal,
   getStats as getStatsInternal,
+  getHighestScNonceFromCheckpoints as getHighestScNonceFromCheckpointsInternal,
 } from "./tracker/query";
 import { prepareTransaction as prepareTransactionInternal } from "./tracker/execute";
 
@@ -563,6 +564,18 @@ export class ProposalStageTracker {
    */
   async getStats(maxErrorCount: number = 5): Promise<TrackerStats> {
     return getStatsInternal(this.cache, maxErrorCount);
+  }
+
+  /**
+   * Get the highest Security Council nonce from incomplete checkpoints.
+   *
+   * Used to determine if lower-nonce SC operations should be skipped
+   * (superseded by higher nonce operations).
+   *
+   * @returns The highest SC nonce found, or null if no SC operations exist
+   */
+  async getHighestScNonce(): Promise<import("ethers").BigNumber | null> {
+    return getHighestScNonceFromCheckpointsInternal(this.cache);
   }
 
   // Main Tracking Entry Points

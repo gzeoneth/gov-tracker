@@ -5,6 +5,7 @@
  * Includes filtering, aggregation, and cache introspection.
  */
 
+import { BigNumber } from "ethers";
 import { TrackingCheckpoint, TrackerStats, CacheAdapter } from "../types";
 import { TIMING } from "../constants";
 import {
@@ -15,6 +16,7 @@ import {
   parseElectionKey,
   computeCacheStats,
 } from "./checkpoint-helpers";
+import { getHighestScNonce } from "../discovery/security-council";
 
 /**
  * List all checkpoint keys in the cache.
@@ -57,7 +59,31 @@ export async function getAllCheckpoints(
 }
 
 /**
+ * Extract SC nonce from a checkpoint's stages if it's an SC operation.
+ */
+function extractScNonceFromCheckpoint(checkpoint: TrackingCheckpoint): BigNumber | null {
+  const stages = checkpoint.cachedData.completedStages ?? [];
+  for (const stage of stages) {
+    if (stage.type === "L2_TIMELOCK" && stage.data?.isSecurityCouncilOperation) {
+      const nonceStr = stage.data.securityCouncilNonce as string | undefined;
+      if (nonceStr) {
+        return BigNumber.from(nonceStr);
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Query incomplete checkpoints that should be re-tracked.
+ *
+ * Applies multiple filters:
+ * - Skips completed checkpoints
+ * - Skips checkpoints with failed voting
+ * - Skips checkpoints with too many errors
+ * - Skips checkpoints older than maxAgeDays
+ * - Skips Security Council operations with lower nonces (superseded by higher nonce,
+ *   including completed SC operations)
  *
  * @param cache - Cache adapter to query
  * @param options.maxAgeDays - Skip items older than this (default: 60)
@@ -75,8 +101,28 @@ export async function queryIncompleteCheckpoints(
   const maxAgeMs = maxAgeDays * TIMING.MS_PER_DAY;
   const now = Date.now();
 
-  const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
   const keys = await listCheckpointKeys(cache);
+
+  // First pass: scan ALL checkpoints to find the highest SC nonce
+  // (including completed ones - a completed higher nonce supersedes incomplete lower nonces)
+  const allScNonces: BigNumber[] = [];
+  for (const key of keys) {
+    const checkpoint = await getCheckpoint(cache, key);
+    if (!checkpoint) continue;
+
+    const scNonce = extractScNonceFromCheckpoint(checkpoint);
+    if (scNonce) {
+      allScNonces.push(scNonce);
+    }
+  }
+  const highestScNonce = getHighestScNonce(allScNonces);
+
+  // Second pass: collect incomplete checkpoints with their SC nonces
+  const candidates: Array<{
+    key: string;
+    checkpoint: TrackingCheckpoint;
+    scNonce: BigNumber | null;
+  }> = [];
 
   for (const key of keys) {
     const checkpoint = await getCheckpoint(cache, key);
@@ -102,6 +148,18 @@ export async function queryIncompleteCheckpoints(
     // Skip if too old
     const createdAt = checkpoint.createdAt ?? 0;
     if (createdAt > 0 && now - createdAt > maxAgeMs) {
+      continue;
+    }
+
+    const scNonce = extractScNonceFromCheckpoint(checkpoint);
+    candidates.push({ key, checkpoint, scNonce });
+  }
+
+  // Third pass: filter out superseded SC operations
+  const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
+  for (const { key, checkpoint, scNonce } of candidates) {
+    // Skip SC operations with lower nonces (superseded by higher nonce)
+    if (scNonce && highestScNonce && scNonce.lt(highestScNonce)) {
       continue;
     }
 
@@ -136,4 +194,44 @@ export async function getStats(
   }
 
   return computeCacheStats(checkpoints, elections, maxErrorCount);
+}
+
+/**
+ * Get the highest Security Council nonce from incomplete checkpoints.
+ *
+ * Scans all incomplete timelock checkpoints that are Security Council operations
+ * and returns the highest nonce found. This is used to determine if lower-nonce
+ * SC operations should be skipped (superseded by higher nonce).
+ *
+ * @param cache - Cache adapter to query
+ * @returns The highest SC nonce found, or null if no SC operations exist
+ */
+export async function getHighestScNonceFromCheckpoints(
+  cache: CacheAdapter | undefined
+): Promise<BigNumber | null> {
+  if (!cache) return null;
+
+  const nonces: BigNumber[] = [];
+  const keys = await listCheckpointKeys(cache);
+
+  for (const key of keys) {
+    const checkpoint = await getCheckpoint(cache, key);
+    if (!checkpoint) continue;
+
+    // Only check incomplete checkpoints
+    if (isCheckpointComplete(checkpoint)) continue;
+
+    // Look for SC nonce in cached stages
+    const stages = checkpoint.cachedData.completedStages ?? [];
+    for (const stage of stages) {
+      if (stage.type === "L2_TIMELOCK" && stage.data?.isSecurityCouncilOperation) {
+        const nonceStr = stage.data.securityCouncilNonce as string | undefined;
+        if (nonceStr) {
+          nonces.push(BigNumber.from(nonceStr));
+        }
+      }
+    }
+  }
+
+  return getHighestScNonce(nonces);
 }

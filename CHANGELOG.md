@@ -7,19 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Security Council nonce-based deduplication** - `queryIncompleteCheckpoints()` now filters out SC operations with lower nonces when higher nonces exist (superseded operations are skipped)
-- **SC nonce utility functions**:
-  - `getHighestScNonce(nonces)` - Find highest nonce from array
-  - `isScOperationSuperseded(nonce, highestNonce)` - Check if operation is superseded
-  - `tracker.getHighestScNonce()` - Query highest SC nonce from cache
-
-### Changed
-
-- **60-day age filter** - `queryIncompleteCheckpoints()` defaults to `maxAgeDays: 60`, filtering out checkpoints older than 60 days
-
-## [0.4.0] - 2026-01-18
+## [0.4.0] - 2026-01-19
 
 ### Added
 
@@ -33,12 +21,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Modular checkpoint caching** - Parent checkpoints (proposals/elections) and timelock checkpoints are now stored separately and linked, enabling shared timelock tracking across multiple proposals
 - **Stage helper functions** - `isStageTerminal(status)`, `isStageSuccess(status)`, `createParam()` utilities
 - **Type-safe stage data access** - `StageDataMap` provides compile-time type checking when accessing stage-specific data
+- **Security Council nonce-based deduplication** - `queryIncompleteCheckpoints()` now filters out SC operations with lower nonces when higher nonces exist (superseded operations are skipped)
+- **SC nonce utility functions**:
+  - `getHighestScNonce(nonces)` - Find highest nonce from array
+  - `isScOperationSuperseded(nonce, highestNonce)` - Check if operation is superseded
+  - `tracker.getHighestScNonce()` - Query highest SC nonce from cache
 
 ### Changed
 
 - **Election module consolidation** - Merged 9 files into 7 for cleaner organization
 - **Simplified chain utilities** - `chainToChainId()` now always returns a number (never undefined)
 - **Internal refactoring** - Improved type safety and reduced code duplication
+- **60-day age filter** - `queryIncompleteCheckpoints()` defaults to `maxAgeDays: 60`, filtering out checkpoints older than 60 days
 
 ### Fixed
 

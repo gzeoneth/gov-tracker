@@ -701,7 +701,8 @@ export async function runWithLoop(
       await cycleFn();
       consecutiveErrors = 0;
     } catch (error) {
-      console.error("Cycle error:", (error as Error).message);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error("Cycle error:", errMsg);
       consecutiveErrors = Math.min(consecutiveErrors + 1, 10);
       const backoffMs = Math.min(5000 * Math.pow(2, consecutiveErrors - 1), 300000);
       console.log(

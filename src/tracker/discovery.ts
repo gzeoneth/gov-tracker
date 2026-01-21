@@ -359,9 +359,19 @@ export async function discoverAll(
       return { key, blockNumber: result.blockNumber };
     });
 
-    const verificationResults = await Promise.all(verificationPromises);
-    for (const { key, blockNumber } of verificationResults) {
-      verifiedWatermarks[key] = blockNumber;
+    const verificationResults = await Promise.allSettled(verificationPromises);
+    for (const result of verificationResults) {
+      if (result.status === "fulfilled") {
+        const { key, blockNumber } = result.value;
+        verifiedWatermarks[key] = blockNumber;
+      }
+      // Rejected verifications fall back to defaultStartBlock (handled below)
+    }
+    // Ensure all active keys have a watermark (fallback for rejected verifications)
+    for (const key of activeKeys) {
+      if (verifiedWatermarks[key] === undefined) {
+        verifiedWatermarks[key] = defaultStartBlock;
+      }
     }
   } else {
     // Skip verification - use provided watermarks directly

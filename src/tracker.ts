@@ -1245,15 +1245,17 @@ export class ProposalStageTracker {
     const electionCount = status.electionCount;
     const results: ElectionProposalStatus[] = [];
 
-    // Track existing elections (indices 0 to electionCount-1)
-    for (let i = 0; i < electionCount; i++) {
-      try {
-        // Use unified pipeline via trackElection
-        const electionStatus = await this.trackElection(i, { force: options.force });
-        results.push(electionStatus);
-      } catch (err) {
-        logTracker("Failed to track election %d: %s", i, err);
-      }
+    // Track existing elections in parallel (indices 0 to electionCount-1)
+    const electionPromises = Array.from({ length: electionCount }, (_, i) =>
+      this.trackElection(i, { force: options.force }).catch((err) => {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        logTracker("Failed to track election %d: %s", i, errMsg);
+        return null;
+      })
+    );
+    const electionResults = await Promise.all(electionPromises);
+    for (const result of electionResults) {
+      if (result) results.push(result);
     }
 
     // Optionally track the next election (not yet created) for createElection preparation
@@ -1269,7 +1271,8 @@ export class ProposalStageTracker {
         });
         // Don't cache the "next" election since it doesn't exist yet
       } catch (err) {
-        logTracker("Failed to track next election %d: %s", electionCount, err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        logTracker("Failed to track next election %d: %s", electionCount, errMsg);
       }
     }
 

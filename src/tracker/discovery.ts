@@ -246,40 +246,49 @@ export async function createPendingCheckpoints(
   void timelockOps;
   if (!cache) return;
 
-  let created = 0;
-  let skippedElections = 0;
-
-  // Create pending checkpoints for proposals (if not already tracked)
-  // Use tx: key format to match trackByTxHash cache keys
-  // Skip election proposals - they use election:* checkpoints
-  for (const p of proposals) {
+  // Filter out election proposals first (they use election:* checkpoints)
+  const governorProposals = proposals.filter((p) => {
     const proposalType = detectProposalType(p.governorAddress);
-    if (isElectionProposal(proposalType)) {
-      skippedElections++;
-      continue;
-    }
+    return !isElectionProposal(proposalType);
+  });
+  const skippedElections = proposals.length - governorProposals.length;
 
-    const key = `tx:${p.creationTxHash.toLowerCase()}`;
-    const existing = await cache.get<TrackingCheckpoint>(key);
-    if (existing) continue; // Already has a checkpoint
+  // Build cache keys and check existing checkpoints in parallel
+  const keys = governorProposals.map((p) => `tx:${p.creationTxHash.toLowerCase()}`);
+  const existingCheckpoints = await Promise.all(
+    keys.map((key) => cache.get<TrackingCheckpoint>(key))
+  );
 
-    const checkpoint: TrackingCheckpoint = {
-      version: 1,
-      createdAt: Date.now(),
-      input: {
-        type: "governor",
-        governorAddress: p.governorAddress,
-        proposalId: p.proposalId,
-        creationTxHash: p.creationTxHash,
+  // Create checkpoints only for proposals that don't exist yet
+  const now = Date.now();
+  const toCreate: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
+
+  for (let i = 0; i < governorProposals.length; i++) {
+    if (existingCheckpoints[i]) continue; // Already has a checkpoint
+
+    const p = governorProposals[i];
+    toCreate.push({
+      key: keys[i],
+      checkpoint: {
+        version: 1,
+        createdAt: now,
+        input: {
+          type: "governor",
+          governorAddress: p.governorAddress,
+          proposalId: p.proposalId,
+          creationTxHash: p.creationTxHash,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: p.creationBlock },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: 0 },
       },
-      lastProcessedStage: null,
-      lastProcessedBlock: { l1: 0, l2: p.creationBlock },
-      cachedData: {},
-      metadata: { errorCount: 0, lastTrackedAt: 0 }, // lastTrackedAt=0 means never tracked
-    };
-    await cache.set(key, checkpoint);
-    created++;
+    });
   }
+
+  // Write all new checkpoints in parallel
+  await Promise.all(toCreate.map(({ key, checkpoint }) => cache.set(key, checkpoint)));
+  const created = toCreate.length;
 
   if (created > 0 || skippedElections > 0) {
     logDiscovery(

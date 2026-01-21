@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Type safety** - Changed `RetryableSimulationData.l2Chain` from `Chain` to `L2Chain | "unknown"` to prevent invalid assignments
 - **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
 - **Performance** - Parallelize checkpoint loading in `getAllCheckpoints()` and `queryIncompleteCheckpoints()` using Promise.all
+- **Performance** - Parallelize cache lookups and writes in `createPendingCheckpoints()` for faster discovery
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
 
 ### Removed

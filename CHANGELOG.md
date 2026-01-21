@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, and EXAMPLES.md
 - **Documentation** - Clarified cache fallback comments to use more descriptive terminology
 - **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities
 - **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility

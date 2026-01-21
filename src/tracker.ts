@@ -624,7 +624,7 @@ export class ProposalStageTracker {
           logTracker("loaded checkpoint from cache: %s", opCacheKey);
         }
       }
-      // Fall back to base cache key (for governor proposals or legacy checkpoints)
+      // Fall back to base cache key (governor proposals or pre-modular cache entries)
       if (!checkpoint) {
         checkpoint = (await this.cache.get<TrackingCheckpoint>(baseCacheKey)) ?? undefined;
         if (checkpoint) {

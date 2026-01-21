@@ -354,8 +354,9 @@ export function getL1ExecutionTxHash(ctx: TrackingState): string | undefined {
 // Checkpoint & Result
 
 /**
- * Create a full checkpoint with all stages (legacy behavior).
- * For modular caching, use createModularCheckpoints instead.
+ * Create a full checkpoint with all stages in a single cache entry.
+ * Prefer createModularCheckpoints() for new code - it splits parent
+ * and timelock stages for independent cache management.
  */
 export function createCheckpoint(ctx: TrackingState): TrackingCheckpoint {
   const completedStages = ctx.stages.filter((s) => s.status !== "NOT_STARTED");

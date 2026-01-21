@@ -60,10 +60,11 @@ function getProposalInfo(checkpoint: TrackingCheckpoint) {
   const createdData = createdStage?.data as ProposalCreatedData | undefined;
   const votingData = votingStage?.data as VotingData | undefined;
 
+  const timelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
   const createdAt = createdStage?.timing?.startedAt
     ? createdStage.timing.startedAt * 1000
-    : stages.find((s) => s.type === "L2_TIMELOCK")?.timing?.startedAt
-      ? stages.find((s) => s.type === "L2_TIMELOCK")!.timing!.startedAt! * 1000
+    : timelockStage?.timing?.startedAt
+      ? timelockStage.timing.startedAt * 1000
       : null;
 
   let title = "Unknown";

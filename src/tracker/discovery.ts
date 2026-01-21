@@ -95,8 +95,10 @@ export async function verifyWatermark(
         logDiscovery("%s: no stored hash, establishing hash at block %d", key, blockNumber);
         return { blockNumber, isValid: true, newHash: block.hash };
       }
-    } catch {
-      // Block might not exist yet or provider error - continue without hash
+      // Block not found - could indicate reorg or future block
+      logDiscovery("%s: block %d not found when establishing hash", key, blockNumber);
+    } catch (error) {
+      logDiscovery("%s: provider error establishing hash at block %d: %s", key, blockNumber, error);
     }
     return { blockNumber, isValid: true };
   }

@@ -10,10 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Timeout cleanup** - Fixed potential resource leak where `clearTimeout()` was not called in error paths for API fetch operations (`signature-lookup.ts`, `cli.ts`)
+- **TUI crash** - Fixed potential runtime error from unsafe non-null assertion when L2_TIMELOCK stage is missing (`useProposals.ts`)
+- **Discovery logging** - Added logging for cases where block hash establishment fails during watermark verification (`discovery.ts`)
 
 ### Changed
 
 - **Documentation** - Clarified cache fallback comments to use more descriptive terminology
+- **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities
+- **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility
+
+### Removed
+
+- **Public API** - Removed internal TUI utilities `getAllFoldableKeys` and `toggleFoldKey` from public exports (internal to calldata view only)
 
 ## [0.4.0] - 2026-01-19
 

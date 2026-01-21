@@ -447,6 +447,8 @@ export async function discoverTimelockOps(
   const seen = new Set<string>();
   return logs
     .filter((log) => {
+      // CallScheduled events always have operationId as indexed topic[1]
+      if (log.topics.length < 2) return false;
       const operationId = log.topics[1];
       if (seen.has(operationId)) return false;
       seen.add(operationId);

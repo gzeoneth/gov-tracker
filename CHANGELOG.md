@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI crash** - Fixed potential runtime error from unsafe non-null assertion when L2_TIMELOCK stage is missing (`useProposals.ts`)
 - **Discovery logging** - Added logging for cases where block hash establishment fails during watermark verification (`discovery.ts`)
 - **Retryable ticket decoding** - `decodeRetryableTicket()` now returns null on decode failure instead of throwing, improving robustness when processing malformed calldata
+- **Topics bounds check** - Added bounds check before accessing `log.topics[1]` in timelock operation discovery (`timelock-discovery.ts`)
 
 ### Changed
 

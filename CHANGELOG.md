@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
 - **Performance** - Parallelize checkpoint loading in `getAllCheckpoints()` and `queryIncompleteCheckpoints()` using Promise.all
 - **Performance** - Parallelize cache lookups and writes in `createPendingCheckpoints()` for faster discovery
+- **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
+- **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
 
 ### Removed

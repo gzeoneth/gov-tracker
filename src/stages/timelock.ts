@@ -565,12 +565,14 @@ export async function trackL1Timelock(
 
 /**
  * Calculate retryable execution value for L1 timelock operations.
+ * @param gasPrice - Optional pre-fetched gas price to avoid redundant RPC calls in batch
  */
 export async function calculateRetryableExecutionValue(
   timelockAddress: string,
   target: string,
   data: string,
-  provider: ethers.providers.Provider
+  provider: ethers.providers.Provider,
+  gasPrice?: BigNumber
 ): Promise<BigNumber | null> {
   void timelockAddress;
   if (target.toLowerCase() !== ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase()) {
@@ -594,11 +596,11 @@ export async function calculateRetryableExecutionValue(
   const innerData = decoded[5] as string;
 
   const inbox = new ethers.Contract(inboxAddress, INBOX_ABI, provider);
-  const gasPrice = await queryWithRetry(() => provider.getGasPrice());
+  const resolvedGasPrice = gasPrice ?? (await queryWithRetry(() => provider.getGasPrice()));
   const dataLength = ethers.utils.hexDataLength(innerData);
 
   const submissionFee = await queryWithRetry<BigNumber>(() =>
-    inbox.callStatic.calculateRetryableSubmissionFee(dataLength, gasPrice)
+    inbox.callStatic.calculateRetryableSubmissionFee(dataLength, resolvedGasPrice)
   );
 
   return submissionFee.mul(2).add(innerGasLimit.mul(innerMaxFeePerGas)).add(innerValue);
@@ -606,6 +608,7 @@ export async function calculateRetryableExecutionValue(
 
 /**
  * Calculate batch retryable values for L1 timelock.
+ * Fetches gas price once and reuses for all retryable calculations.
  */
 export async function calculateBatchRetryableValues(
   timelockAddress: string,
@@ -614,9 +617,12 @@ export async function calculateBatchRetryableValues(
   payloads: string[],
   provider: ethers.providers.Provider
 ): Promise<BigNumber[]> {
+  // Fetch gas price once for the entire batch
+  const gasPrice = await queryWithRetry(() => provider.getGasPrice());
+
   const results = await Promise.all(
     targets.map((target, i) =>
-      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider)
+      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider, gasPrice)
     )
   );
   return results.map((retryableValue, i) => retryableValue ?? values[i]);

@@ -70,21 +70,25 @@ function decodeScheduleBatchParams(calldata: string): {
   predecessor: string;
   salt: string;
 } | null {
-  // Remove selector
-  const data = calldata.slice(10);
+  try {
+    // Remove selector
+    const data = calldata.slice(10);
 
-  const decoded = ethers.utils.defaultAbiCoder.decode(
-    ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
-    "0x" + data
-  );
+    const decoded = ethers.utils.defaultAbiCoder.decode(
+      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+      "0x" + data
+    );
 
-  return {
-    targets: (decoded[0] as string[]).map((a) => String(a)),
-    values: (decoded[1] as ethers.BigNumber[]).map((v) => v.toString()),
-    calldatas: decoded[2] as string[],
-    predecessor: decoded[3] as string,
-    salt: decoded[4] as string,
-  };
+    return {
+      targets: (decoded[0] as string[]).map((a) => String(a)),
+      values: (decoded[1] as ethers.BigNumber[]).map((v) => v.toString()),
+      calldatas: decoded[2] as string[],
+      predecessor: decoded[3] as string,
+      salt: decoded[4] as string,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -96,38 +100,42 @@ function decodeScheduleBatchParams(calldata: string): {
  * The delay parameter is removed when converting to execute
  */
 function convertScheduleToExecute(calldata: string): string {
-  if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.scheduleBatch)) {
-    // Decode scheduleBatch parameters (includes delay as 6th param)
-    const data = calldata.slice(10);
-    const decoded = ethers.utils.defaultAbiCoder.decode(
-      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
-      "0x" + data
-    );
+  try {
+    if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.scheduleBatch)) {
+      // Decode scheduleBatch parameters (includes delay as 6th param)
+      const data = calldata.slice(10);
+      const decoded = ethers.utils.defaultAbiCoder.decode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+        "0x" + data
+      );
 
-    // Re-encode as executeBatch (without delay)
-    const encoded = ethers.utils.defaultAbiCoder.encode(
-      ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
-      [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
-    );
+      // Re-encode as executeBatch (without delay)
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32"],
+        [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
+      );
 
-    return TIMELOCK_SELECTORS.executeBatch + encoded.slice(2);
-  }
+      return TIMELOCK_SELECTORS.executeBatch + encoded.slice(2);
+    }
 
-  if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.schedule)) {
-    // Decode schedule parameters (includes delay as 6th param)
-    const data = calldata.slice(10);
-    const decoded = ethers.utils.defaultAbiCoder.decode(
-      ["address", "uint256", "bytes", "bytes32", "bytes32", "uint256"],
-      "0x" + data
-    );
+    if (calldata.toLowerCase().startsWith(TIMELOCK_SELECTORS.schedule)) {
+      // Decode schedule parameters (includes delay as 6th param)
+      const data = calldata.slice(10);
+      const decoded = ethers.utils.defaultAbiCoder.decode(
+        ["address", "uint256", "bytes", "bytes32", "bytes32", "uint256"],
+        "0x" + data
+      );
 
-    // Re-encode as execute (without delay)
-    const encoded = ethers.utils.defaultAbiCoder.encode(
-      ["address", "uint256", "bytes", "bytes32", "bytes32"],
-      [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
-    );
+      // Re-encode as execute (without delay)
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address", "uint256", "bytes", "bytes32", "bytes32"],
+        [decoded[0], decoded[1], decoded[2], decoded[3], decoded[4]]
+      );
 
-    return TIMELOCK_SELECTORS.execute + encoded.slice(2);
+      return TIMELOCK_SELECTORS.execute + encoded.slice(2);
+    }
+  } catch {
+    // Decode failed, return original calldata
   }
 
   return calldata;

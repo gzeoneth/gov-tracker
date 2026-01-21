@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Discovery logging** - Added logging for cases where block hash establishment fails during watermark verification (`discovery.ts`)
 - **Retryable ticket decoding** - `decodeRetryableTicket()` now returns null on decode failure instead of throwing, improving robustness when processing malformed calldata
 - **Topics bounds check** - Added bounds check before accessing `log.topics[1]` in timelock operation discovery (`timelock-discovery.ts`)
+- **Simulation decode errors** - `prepareTimelockSimulation()` and `convertScheduleToExecute()` now return null/original on decode failure instead of throwing
 
 ### Changed
 

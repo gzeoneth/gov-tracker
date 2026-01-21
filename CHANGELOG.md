@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility
 - **Code cleanup** - Removed duplicate `isTimelockOpKey` function, now imports from checkpoint-helpers
 - **Code cleanup** - Removed duplicate block range logic in `params.ts`, now uses shared `getLogQueryBlockRange` from `contracts.ts`
+- **Code cleanup** - Consolidated duplicate SC nonce extraction logic in `getHighestScNonceFromCheckpoints()` to use shared helper
 - **Error handling** - Improved error type safety in election proposal ID lookup, CLI cycle errors, election tracking, and CLI error messages
 - **Logging** - Added debug logging for block range fallback in election contracts and L1→L2 block conversion failures
 - **Type safety** - Changed `RetryableSimulationData.l2Chain` from `Chain` to `L2Chain | "unknown"` to prevent invalid assignments

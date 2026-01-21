@@ -221,15 +221,10 @@ export async function getHighestScNonceFromCheckpoints(
     // Only check incomplete checkpoints
     if (isCheckpointComplete(checkpoint)) continue;
 
-    // Look for SC nonce in cached stages
-    const stages = checkpoint.cachedData.completedStages ?? [];
-    for (const stage of stages) {
-      if (stage.type === "L2_TIMELOCK" && stage.data?.isSecurityCouncilOperation) {
-        const nonceStr = stage.data.securityCouncilNonce as string | undefined;
-        if (nonceStr) {
-          nonces.push(BigNumber.from(nonceStr));
-        }
-      }
+    // Extract SC nonce using shared helper
+    const nonce = extractScNonceFromCheckpoint(checkpoint);
+    if (nonce) {
+      nonces.push(nonce);
     }
   }
 

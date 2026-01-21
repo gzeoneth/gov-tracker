@@ -254,7 +254,8 @@ function getDefaultCachePath(): string {
         console.log(`Initialized cache from bundled data (${bundledPath})`);
       } catch (err) {
         // Non-fatal: just start with empty cache
-        console.warn(`Warning: Could not copy bundled cache: ${err}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`Warning: Could not copy bundled cache: ${errMsg}`);
       }
     }
   }
@@ -518,7 +519,8 @@ runCmd
             console.error(`[ELECTION] ${error}`);
           }
         } catch (error) {
-          console.error(`[ELECTION] Check failed: ${(error as Error).message}`);
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.error(`[ELECTION] Check failed: ${errMsg}`);
         }
       }
     }
@@ -767,7 +769,8 @@ trackCmd
         }
       }
     } catch (e) {
-      console.error((e as Error).message);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.error(errMsg);
       process.exit(1);
     }
   });
@@ -1050,7 +1053,8 @@ electionCmd
           console.error(`[ERROR] ${error}`);
         }
       } catch (error) {
-        console.error("Election check failed:", (error as Error).message);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error("Election check failed:", errMsg);
       }
     }
 

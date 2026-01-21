@@ -8,7 +8,7 @@
 import { ethers } from "ethers";
 import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
 import type { DecodedCalldata } from "../types/calldata";
-import { Chain, chainToChainId } from "../types";
+import { Chain, L2Chain, chainToChainId } from "../types";
 import type {
   RetryableSimulationData,
   TimelockSimulationData,
@@ -39,7 +39,7 @@ export function prepareRetryableSimulation(
   l2Target: string,
   l2Calldata: string,
   l2Value: string,
-  l2Chain: Chain
+  l2Chain: L2Chain | "unknown"
 ): RetryableSimulationData {
   const networkId = getNetworkId(l2Chain);
   const l2ChainId = chainToChainId(l2Chain);

@@ -21,8 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities
 - **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility
 - **Code cleanup** - Removed duplicate `isTimelockOpKey` function, now imports from checkpoint-helpers
-- **Error handling** - Improved error type safety in election proposal ID lookup, CLI cycle errors, and election tracking
+- **Error handling** - Improved error type safety in election proposal ID lookup, CLI cycle errors, election tracking, and CLI error messages
 - **Logging** - Added debug logging for block range fallback in election contracts and L1→L2 block conversion failures
+- **Type safety** - Changed `RetryableSimulationData.l2Chain` from `Chain` to `L2Chain | "unknown"` to prevent invalid assignments
 - **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
 

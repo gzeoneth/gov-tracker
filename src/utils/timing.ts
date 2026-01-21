@@ -287,8 +287,17 @@ export async function getFirstL2BlockForL1Block(
         Date.now() - start
       );
       return result;
-    } catch {
+    } catch (err) {
       // l2BlockRangeForL1 reverts if no L2 block exists for this L1 block
+      // Log at debug level to aid troubleshooting without being noisy
+      if (offset === 0) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        log(
+          "getFirstL2BlockForL1Block: L1=%d no direct mapping, trying nearby blocks: %s",
+          targetL1Block,
+          errMsg
+        );
+      }
     }
   }
 

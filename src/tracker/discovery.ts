@@ -364,8 +364,11 @@ export async function discoverAll(
       if (result.status === "fulfilled") {
         const { key, blockNumber } = result.value;
         verifiedWatermarks[key] = blockNumber;
+      } else {
+        const errMsg =
+          result.reason instanceof Error ? result.reason.message : String(result.reason);
+        logDiscovery("Watermark verification failed, using fallback: %s", errMsg);
       }
-      // Rejected verifications fall back to defaultStartBlock (handled below)
     }
     // Ensure all active keys have a watermark (fallback for rejected verifications)
     for (const key of activeKeys) {

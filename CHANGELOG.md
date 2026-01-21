@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Logging** - Added debug logging for block range fallback in election contracts and L1→L2 block conversion failures
 - **Type safety** - Changed `RetryableSimulationData.l2Chain` from `Chain` to `L2Chain | "unknown"` to prevent invalid assignments
 - **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
+- **Performance** - Parallelize checkpoint loading in `getAllCheckpoints()` and `queryIncompleteCheckpoints()` using Promise.all
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
 
 ### Removed

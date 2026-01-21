@@ -43,16 +43,21 @@ export async function getCheckpoint(
 
 /**
  * Get all checkpoints from cache.
+ * Loads checkpoints in parallel for better performance.
  */
 export async function getAllCheckpoints(
   cache: CacheAdapter | undefined
 ): Promise<Map<string, TrackingCheckpoint>> {
   const map = new Map<string, TrackingCheckpoint>();
   const keys = await listCheckpointKeys(cache);
-  for (const key of keys) {
-    const checkpoint = await getCheckpoint(cache, key);
+
+  // Load all checkpoints in parallel
+  const checkpoints = await Promise.all(keys.map((key) => getCheckpoint(cache, key)));
+
+  for (let i = 0; i < keys.length; i++) {
+    const checkpoint = checkpoints[i];
     if (checkpoint) {
-      map.set(key, checkpoint);
+      map.set(keys[i], checkpoint);
     }
   }
   return map;
@@ -103,31 +108,32 @@ export async function queryIncompleteCheckpoints(
 
   const keys = await listCheckpointKeys(cache);
 
-  // First pass: scan ALL checkpoints to find the highest SC nonce
-  // (including completed ones - a completed higher nonce supersedes incomplete lower nonces)
+  // Load all checkpoints in parallel (single pass over cache)
+  const checkpointResults = await Promise.all(keys.map((key) => getCheckpoint(cache, key)));
+
+  // Build key-checkpoint pairs and extract SC nonces in one pass
   const allScNonces: BigNumber[] = [];
-  for (const key of keys) {
-    const checkpoint = await getCheckpoint(cache, key);
+  const checkpointPairs: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
+
+  for (let i = 0; i < keys.length; i++) {
+    const checkpoint = checkpointResults[i];
     if (!checkpoint) continue;
 
+    checkpointPairs.push({ key: keys[i], checkpoint });
+
+    // Extract SC nonce from all checkpoints (including completed)
     const scNonce = extractScNonceFromCheckpoint(checkpoint);
     if (scNonce) {
       allScNonces.push(scNonce);
     }
   }
+
   const highestScNonce = getHighestScNonce(allScNonces);
 
-  // Second pass: collect incomplete checkpoints with their SC nonces
-  const candidates: Array<{
-    key: string;
-    checkpoint: TrackingCheckpoint;
-    scNonce: BigNumber | null;
-  }> = [];
+  // Filter incomplete checkpoints with SC nonce handling
+  const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
 
-  for (const key of keys) {
-    const checkpoint = await getCheckpoint(cache, key);
-    if (!checkpoint) continue;
-
+  for (const { key, checkpoint } of checkpointPairs) {
     // Skip if already complete (works for both proposals and elections)
     if (isCheckpointComplete(checkpoint)) {
       continue;
@@ -151,14 +157,8 @@ export async function queryIncompleteCheckpoints(
       continue;
     }
 
-    const scNonce = extractScNonceFromCheckpoint(checkpoint);
-    candidates.push({ key, checkpoint, scNonce });
-  }
-
-  // Third pass: filter out superseded SC operations
-  const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
-  for (const { key, checkpoint, scNonce } of candidates) {
     // Skip SC operations with lower nonces (superseded by higher nonce)
+    const scNonce = extractScNonceFromCheckpoint(checkpoint);
     if (scNonce && highestScNonce && scNonce.lt(highestScNonce)) {
       continue;
     }

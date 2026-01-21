@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { TrackingCheckpoint, StageType } from "../../../types/index.js";
 import type { ProposalListItem, FilterType, SortType, CacheData } from "../types.js";
 import { isElectionGovernor } from "../../../constants.js";
+import { isTimelockOpKey } from "../../../tracker/checkpoint-helpers.js";
 import { parseProgress } from "../utils/index.js";
 
 type ProposalCreatedData = { description?: string; proposalType?: string };
@@ -146,10 +147,6 @@ const SORT_FN: Record<SortType, (a: ProposalListItem, b: ProposalListItem) => nu
     (parseProgress(b.stageProgress)?.current ?? 0) - (parseProgress(a.stageProgress)?.current ?? 0),
   status: (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
 };
-
-function isTimelockOpKey(key: string): boolean {
-  return key.startsWith("tx:") && key.includes(":op:");
-}
 
 function getBaseKey(opKey: string): string {
   return opKey.split(":op:")[0];

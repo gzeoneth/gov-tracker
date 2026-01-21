@@ -165,7 +165,8 @@ export async function getElectionIndexForProposalId(
         return i;
       }
     } catch (err) {
-      log("  -> error: %s", (err as Error).message);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      log("  -> error: %s", errMsg);
       continue;
     }
   }

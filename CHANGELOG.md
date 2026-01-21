@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation** - Clarified cache fallback comments to use more descriptive terminology
 - **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities
 - **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility
+- **Code cleanup** - Removed duplicate `isTimelockOpKey` function, now imports from checkpoint-helpers
+- **Error handling** - Improved error type safety in election proposal ID lookup
 
 ### Removed
 

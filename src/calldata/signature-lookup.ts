@@ -107,13 +107,12 @@ async function lookup4byteDirectory(selector: string): Promise<string | null> {
     return signatureCache.get(normalizedSelector) ?? null;
   }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
+  try {
     const url = `https://www.4byte.directory/api/v1/signatures/?hex_signature=${normalizedSelector}`;
     const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       debug("4byte.directory API error: %d", response.status);
@@ -126,7 +125,6 @@ async function lookup4byteDirectory(selector: string): Promise<string | null> {
     };
 
     if (data.results && data.results.length > 0) {
-      // Return the first (most common) signature
       const signature = data.results[0].text_signature;
       signatureCache.set(normalizedSelector, signature);
       debug("4byte.directory found: %s -> %s", normalizedSelector, signature);
@@ -139,6 +137,8 @@ async function lookup4byteDirectory(selector: string): Promise<string | null> {
     debug("4byte.directory lookup failed: %O", error);
     signatureCache.set(normalizedSelector, null);
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

@@ -711,13 +711,14 @@ export async function runWithLoop(
     }
 
     if (options.healthCheckUrl) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
         await fetch(options.healthCheckUrl, { method: "GET", signal: controller.signal });
-        clearTimeout(timeoutId);
       } catch {
         // Silently ignore health check errors (including timeouts)
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 

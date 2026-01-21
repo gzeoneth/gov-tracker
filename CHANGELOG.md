@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Timeout cleanup** - Fixed potential resource leak where `clearTimeout()` was not called in error paths for API fetch operations (`signature-lookup.ts`, `cli.ts`)
+
+### Changed
+
+- **Documentation** - Clarified cache fallback comments to use more descriptive terminology
+
 ## [0.4.0] - 2026-01-19
 
 ### Added

@@ -4,7 +4,7 @@
 
 import type { TrackedStage } from "../../../types/index.js";
 import type { ProposalListItem } from "../types.js";
-import { truncate } from "./text.js";
+import { truncate } from "../../../utils/formatters.js";
 
 export { formatDate, getTxHash, getProposalIdDisplay } from "../../../utils/formatters.js";
 

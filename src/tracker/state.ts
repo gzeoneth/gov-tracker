@@ -39,6 +39,7 @@ import {
   splitStages,
   hasTimelockProgress,
   isStageSuccess,
+  findStage as findStageInArray,
 } from "../stages/utils";
 import { isElectionProposal, detectProposalType } from "../discovery/governor-discovery";
 import { DEFAULT_CHUNKING_CONFIG } from "../constants";
@@ -203,8 +204,8 @@ export async function addStage(ctx: TrackingState, stage: TrackedStage): Promise
   return newCtx;
 }
 
-// Stage lookup helper (defined early for use in stage management functions)
-const findStage = (ctx: TrackingState, type: StageType) => ctx.stages.find((s) => s.type === type);
+// Stage lookup helper wrapping the shared utility
+const findStage = (ctx: TrackingState, type: StageType) => findStageInArray(ctx.stages, type);
 
 /** Check if a stage is completed (COMPLETED or SKIPPED). */
 export function isStageCompleted(ctx: TrackingState, type: StageType): boolean {

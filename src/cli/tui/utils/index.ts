@@ -1,4 +1,4 @@
-export { wrapText, truncate } from "./text.js";
+export { wrapText, truncate } from "../../../utils/formatters.js";
 export { getTerminalSize, getVisibleRows } from "./terminal.js";
 export type { TerminalSize } from "./terminal.js";
 export { copyToClipboard, formatForCopy } from "./clipboard.js";
@@ -7,10 +7,10 @@ export {
   filterVisibleLines,
   getAllFoldableKeys,
   toggleFoldKey,
-} from "./calldata-formatter.js";
-export type { FormattedLine } from "./calldata-formatter.js";
-export { safeStringify, formatValue, formatStageData } from "./stage-formatter.js";
-export type { StageDataItem } from "./stage-formatter.js";
+} from "../../../utils/formatters.js";
+export type { FormattedLine } from "../../../utils/formatters.js";
+export { safeStringify, formatValue, formatStageData } from "../../../utils/formatters.js";
+export type { StageDataItem } from "../../../utils/formatters.js";
 export { parseMarkdown } from "./markdown-parser.js";
 export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";
 export {

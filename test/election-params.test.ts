@@ -10,10 +10,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BigNumber, ethers } from "ethers";
 
 // Mock the modules before importing the functions under test
-vi.mock("../src/election/contracts", () => ({
-  getNomineeGovernor: vi.fn(),
-  getMemberGovernor: vi.fn(),
-}));
+vi.mock("../src/election/contracts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/election/contracts")>();
+  return {
+    ...actual,
+    getNomineeGovernor: vi.fn(),
+    getMemberGovernor: vi.fn(),
+  };
+});
 
 vi.mock("../src/election/proposal-ids", () => ({
   getElectionProposalId: vi.fn(),
@@ -186,7 +190,7 @@ describe("Election Params (Mocked)", () => {
       vi.mocked(getNomineeGovernor).mockReturnValue(mockGovernor as any);
 
       const mockProviderWithMethods = {
-        getBlockNumber: vi.fn().mockResolvedValue(50000),
+        getBlockNumber: vi.fn().mockResolvedValue(150000),
         getLogs: vi.fn().mockResolvedValue([]),
       };
 
@@ -197,11 +201,12 @@ describe("Election Params (Mocked)", () => {
         mockGovernorAddress
       );
 
-      // #then - should use fallback range (currentBlock - 10000)
+      // #then - should use fallback range (currentBlock - 100000)
+      // getLogQueryBlockRange uses 100000 as default fallback
       expect(mockProviderWithMethods.getLogs).toHaveBeenCalledWith(
         expect.objectContaining({
-          fromBlock: 40000, // 50000 - 10000
-          toBlock: 50000,
+          fromBlock: 50000, // 150000 - 100000
+          toBlock: 150000,
         })
       );
       expect(result).toBeNull();

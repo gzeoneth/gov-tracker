@@ -17,6 +17,23 @@ type TimelockData = {
   description?: string;
 };
 
+/**
+ * Extract a title from a description string.
+ * Tries markdown title first, then falls back to first non-empty line.
+ */
+function extractTitle(description: string | undefined, maxLen = 80): string | null {
+  if (!description) return null;
+  const mdTitle = extractMarkdownTitle(description);
+  if (mdTitle) return mdTitle;
+  const firstLine = description
+    .split("\n")
+    .find((l) => l.trim())
+    ?.trim();
+  if (!firstLine) return null;
+  if (firstLine.length <= maxLen) return firstLine;
+  return firstLine.slice(0, maxLen - 3) + "...";
+}
+
 function getTimelockTitle(checkpoint: TrackingCheckpoint): string | null {
   if (checkpoint.input.type !== "timelock") return null;
 
@@ -29,18 +46,7 @@ function getTimelockTitle(checkpoint: TrackingCheckpoint): string | null {
     return nonce ? `SC Rotation #${nonce}` : "SC Rotation";
   }
 
-  if (data?.description) {
-    const mdTitle = extractMarkdownTitle(data.description);
-    if (mdTitle) return mdTitle;
-    const firstLine = data.description
-      .split("\n")
-      .find((l) => l.trim())
-      ?.trim();
-    if (firstLine && firstLine.length <= 80) return firstLine;
-    if (firstLine) return firstLine.slice(0, 77) + "...";
-  }
-
-  return null;
+  return extractTitle(data?.description);
 }
 
 function getProposalInfo(checkpoint: TrackingCheckpoint) {
@@ -59,12 +65,7 @@ function getProposalInfo(checkpoint: TrackingCheckpoint) {
 
   let title = "Unknown";
   if (createdData?.description) {
-    const mdTitle = extractMarkdownTitle(createdData.description);
-    const firstLine = createdData.description
-      .split("\n")
-      .find((l) => l.trim())
-      ?.trim();
-    title = mdTitle ?? firstLine ?? title;
+    title = extractTitle(createdData.description) ?? title;
   } else if (checkpoint.input.type === "governor") {
     title = `Proposal ${checkpoint.input.proposalId}`;
   } else if (checkpoint.input.type === "timelock") {

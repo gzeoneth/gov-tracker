@@ -2,6 +2,7 @@
  * RPC utilities with retry logic and rate limiting
  */
 
+import { ethers } from "ethers";
 import { RetryConfig } from "../types";
 import { DEFAULT_RETRY_CONFIG } from "../constants";
 import { loggers } from "./logger";
@@ -164,4 +165,16 @@ export async function queryWithRetry<T>(
     undefined,
     lastError
   );
+}
+
+/**
+ * Fetch a transaction receipt with retry, returning null if not found.
+ * Consolidates the common pattern of fetching receipts with null checking.
+ */
+export async function getReceiptOrNull(
+  txHash: string,
+  provider: ethers.providers.Provider
+): Promise<ethers.providers.TransactionReceipt | null> {
+  const receipt = await queryWithRetry(() => provider.getTransactionReceipt(txHash));
+  return receipt ?? null;
 }

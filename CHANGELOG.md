@@ -54,12 +54,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
 
+### Added
+
+- **RPC utility helper** - Added `getReceiptOrNull()` to `rpc-utils.ts` for consolidated transaction receipt fetching with retry and null handling
+
 ### Refactored
 
 - **Gas error detection** - Consolidated duplicate gas error checking logic into single `isGasEstimationError()` function in `rpc-utils.ts`, now used by `checkpoint-helpers.ts` (`incrementErrorCount`) for consistent error classification across the codebase
 - **fromBlock validation** - Consolidated duplicate validation in `getTimelockState()` to single check at function start
 - **Markdown title extraction** - Extracted `extractMarkdownTitle()` to shared `markdown-parser.ts` utility, removed duplicate in `useProposals.ts`
 - **Type narrowing** - Replaced ad-hoc `stage.data as {...}` type casts with discriminated union narrowing in `StageRow.tsx` and `DescriptionView.tsx`
+- **Title extraction** - Extracted `extractTitle()` helper in `useProposals.ts` to consolidate duplicate title parsing logic from `getTimelockTitle()` and `getProposalInfo()`
 
 ### Removed
 

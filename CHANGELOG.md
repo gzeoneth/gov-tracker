@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Topics bounds check** - Added bounds check before accessing `log.topics[1]` in timelock operation discovery (`timelock-discovery.ts`)
 - **Simulation decode errors** - `prepareTimelockSimulation()` and `convertScheduleToExecute()` now return null/original on decode failure instead of throwing
 - **CLI gas settings** - `parseGasSettings()` now validates parsed float values with `isNaN()` check, falling back to defaults for invalid input
+- **TUI array cycling** - `cycleArray()` now handles edge case where current value is not in array, returning first element instead of undefined behavior
 
 ### Changed
 

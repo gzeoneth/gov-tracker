@@ -57,7 +57,8 @@ export function applyNavigation(current: number, action: NavigationAction, max: 
 }
 
 export function cycleArray<T>(array: readonly T[], current: T): T {
-  const nextIndex = (array.indexOf(current) + 1) % array.length;
+  const currentIndex = array.indexOf(current);
+  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % array.length;
   return array[nextIndex];
 }
 

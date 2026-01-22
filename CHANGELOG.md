@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, and EXAMPLES.md
+- **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, EXAMPLES.md, and `timing.ts` JSDoc
 - **Documentation** - Clarified cache fallback comments to use more descriptive terminology
 - **Documentation** - Fixed incorrect test command names in ARCHITECTURE.md (`test:coverage` → `test:cov`)
 - **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities

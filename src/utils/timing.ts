@@ -508,7 +508,7 @@ export function isStageStale(
  *
  * @example
  * ```typescript
- * const result = await tracker.trackFromGovernor(governor, proposalId);
+ * const result = await tracker.trackByTxHash(creationTxHash);
  * for (let i = 0; i < result.stages.length; i++) {
  *   const stage = result.stages[i];
  *   if (stage.status === "NOT_STARTED") {

@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI gas settings** - `parseGasSettings()` now validates parsed float values with `isNaN()` check, falling back to defaults for invalid input
 - **TUI array cycling** - `cycleArray()` now handles edge case where current value is not in array, returning first element instead of undefined behavior
 
+### Added
+
+- **BigNumber comparison helpers** - Added `compareBigNumber()` and `compareBigNumberDesc()` utility functions for consistent BigNumber sorting across the codebase (`chain.ts`)
+
 ### Changed
 
 - **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, EXAMPLES.md, and `timing.ts` JSDoc
@@ -36,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
 - **Performance** - Parallelize checkpoint loading in `getAllCheckpoints()` and `queryIncompleteCheckpoints()` using Promise.all
 - **Performance** - Parallelize cache lookups and writes in `createPendingCheckpoints()` for faster discovery
+- **Performance** - Parallelize cache reads in deduplication helpers (`deduplication.ts`)
+- **Performance** - Parallelize election proposal ID search with `Promise.allSettled` (`proposal-ids.ts`)
+- **Performance** - Cache SC nonce extraction during checkpoint filtering to avoid redundant computation (`query.ts`)
 - **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
 - **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
@@ -43,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 
 - **Gas error detection** - Consolidated duplicate gas error checking logic into single `isGasEstimationError()` function in `rpc-utils.ts`, now used by `checkpoint-helpers.ts` (`incrementErrorCount`) for consistent error classification across the codebase
+- **BigNumber sorting** - Refactored inline BigNumber sorting comparators to use shared `compareBigNumber()` helper (`timelock-discovery.ts`, `timelock.ts`, `details.ts`)
 
 ### Removed
 

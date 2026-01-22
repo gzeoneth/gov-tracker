@@ -143,31 +143,31 @@ export async function getElectionIndexForProposalId(
   const status = await checkElectionStatus(l2Provider, l1Provider);
   const electionCount = status.electionCount;
 
+  // Fetch all election proposal IDs in parallel
+  const electionIndices = Array.from({ length: electionCount }, (_, i) => i);
+  const results = await Promise.allSettled(
+    electionIndices.map((i) => getElectionProposalIds(i, l2Provider, { blockNumber }))
+  );
+
+  // Search from newest to oldest for a match
   for (let i = electionCount - 1; i >= 0; i--) {
-    log("checking election %d", i);
-    try {
-      const { nomineeProposalId, memberProposalId } = await getElectionProposalIds(i, l2Provider, {
-        blockNumber,
-      });
-      log("got election %d proposal IDs", i);
-
-      const nomMatch = nomineeProposalId === proposalId;
-      const memMatch = memberProposalId === proposalId;
-
-      log("election %d: nomId=%s nomMatch=%s", i, nomineeProposalId, nomMatch);
-
-      if (nomMatch) {
-        log("Found proposal %s as nominee proposal for election %d", proposalId, i);
-        return i;
-      }
-      if (memMatch) {
-        log("Found proposal %s as member proposal for election %d", proposalId, i);
-        return i;
-      }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      log("  -> error: %s", errMsg);
+    const result = results[i];
+    if (result.status === "rejected") {
+      const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      log("election %d: error - %s", i, errMsg);
       continue;
+    }
+
+    const { nomineeProposalId, memberProposalId } = result.value;
+    log("election %d: nomId=%s memId=%s", i, nomineeProposalId, memberProposalId);
+
+    if (nomineeProposalId === proposalId) {
+      log("Found proposal %s as nominee proposal for election %d", proposalId, i);
+      return i;
+    }
+    if (memberProposalId === proposalId) {
+      log("Found proposal %s as member proposal for election %d", proposalId, i);
+      return i;
     }
   }
 

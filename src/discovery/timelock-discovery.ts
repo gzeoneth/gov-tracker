@@ -18,7 +18,7 @@ import { findAndParseEvent, createOperationIdPredicate } from "../utils/log-sear
 import { findAndParseLogs } from "../utils/log-filters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import { getCurrentBlockInfo } from "../utils/timing";
-import { addressEquals, isAddressIn } from "../utils/chain";
+import { addressEquals, isAddressIn, compareBigNumber } from "../utils/chain";
 import { timelockInterface } from "../abis";
 import { multicall, buildCallInput } from "../utils/multicall";
 
@@ -398,8 +398,8 @@ export async function findAllCallScheduledInTx(
         parsed !== null && (!operationId || addressEquals(parsed.operationId, operationId))
     );
 
-  // Sort by index to maintain order (use BigNumber comparison to avoid overflow)
-  return results.sort((a, b) => (a.index.gt(b.index) ? 1 : a.index.lt(b.index) ? -1 : 0));
+  // Sort by index to maintain order
+  return results.sort((a, b) => compareBigNumber(a.index, b.index));
 }
 
 /** Lookup map: governor address → L2 timelock address */

@@ -113,16 +113,20 @@ export async function queryIncompleteCheckpoints(
 
   // Build key-checkpoint pairs and extract SC nonces in one pass
   const allScNonces: BigNumber[] = [];
-  const checkpointPairs: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
+  const checkpointPairs: Array<{
+    key: string;
+    checkpoint: TrackingCheckpoint;
+    scNonce: BigNumber | null;
+  }> = [];
 
   for (let i = 0; i < keys.length; i++) {
     const checkpoint = checkpointResults[i];
     if (!checkpoint) continue;
 
-    checkpointPairs.push({ key: keys[i], checkpoint });
-
-    // Extract SC nonce from all checkpoints (including completed)
+    // Extract SC nonce once and cache it
     const scNonce = extractScNonceFromCheckpoint(checkpoint);
+    checkpointPairs.push({ key: keys[i], checkpoint, scNonce });
+
     if (scNonce) {
       allScNonces.push(scNonce);
     }
@@ -133,7 +137,7 @@ export async function queryIncompleteCheckpoints(
   // Filter incomplete checkpoints with SC nonce handling
   const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
 
-  for (const { key, checkpoint } of checkpointPairs) {
+  for (const { key, checkpoint, scNonce } of checkpointPairs) {
     // Skip if already complete (works for both proposals and elections)
     if (isCheckpointComplete(checkpoint)) {
       continue;
@@ -158,7 +162,6 @@ export async function queryIncompleteCheckpoints(
     }
 
     // Skip SC operations with lower nonces (superseded by higher nonce)
-    const scNonce = extractScNonceFromCheckpoint(checkpoint);
     if (scNonce && highestScNonce && scNonce.lt(highestScNonce)) {
       continue;
     }

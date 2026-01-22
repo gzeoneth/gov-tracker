@@ -3,8 +3,15 @@
  */
 
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { ethers } from "ethers";
-import { getChain, getChainId, addressEquals, isAddressIn } from "../src/utils/chain";
+import { BigNumber, ethers } from "ethers";
+import {
+  getChain,
+  getChainId,
+  addressEquals,
+  isAddressIn,
+  compareBigNumber,
+  compareBigNumberDesc,
+} from "../src/utils/chain";
 import { CHAIN_IDS } from "../src/constants";
 import { isKnownChain, isL2Chain, getChainDisplayName, Chain } from "../src/types/core";
 
@@ -309,6 +316,118 @@ describe("buildDefaultTargets", () => {
     expect(targets.electionMemberGovernor).toBe(false);
     expect(targets.l2ConstitutionalTimelock).toBe(false);
     expect(targets.l2NonConstitutionalTimelock).toBe(false);
+  });
+});
+
+describe("BigNumber Comparison", () => {
+  describe("compareBigNumber", () => {
+    it("should return -1 when first is less than second", () => {
+      // #given - two BigNumbers where a < b
+      const a = BigNumber.from(5);
+      const b = BigNumber.from(10);
+
+      // #when - comparing them
+      const result = compareBigNumber(a, b);
+
+      // #then - should return -1
+      expect(result).toBe(-1);
+    });
+
+    it("should return 1 when first is greater than second", () => {
+      // #given - two BigNumbers where a > b
+      const a = BigNumber.from(10);
+      const b = BigNumber.from(5);
+
+      // #when - comparing them
+      const result = compareBigNumber(a, b);
+
+      // #then - should return 1
+      expect(result).toBe(1);
+    });
+
+    it("should return 0 when values are equal", () => {
+      // #given - two equal BigNumbers
+      const a = BigNumber.from(7);
+      const b = BigNumber.from(7);
+
+      // #when - comparing them
+      const result = compareBigNumber(a, b);
+
+      // #then - should return 0
+      expect(result).toBe(0);
+    });
+
+    it("should work for sorting in ascending order", () => {
+      // #given - an unsorted array of BigNumbers
+      const arr = [BigNumber.from(30), BigNumber.from(10), BigNumber.from(20)];
+
+      // #when - sorting with compareBigNumber
+      const sorted = arr.sort(compareBigNumber);
+
+      // #then - should be in ascending order
+      expect(sorted.map((n) => n.toNumber())).toEqual([10, 20, 30]);
+    });
+
+    it("should handle large values that would overflow Number", () => {
+      // #given - values larger than MAX_SAFE_INTEGER
+      const a = BigNumber.from("9007199254740992"); // 2^53
+      const b = BigNumber.from("9007199254740993"); // 2^53 + 1
+
+      // #when - comparing them
+      const result = compareBigNumber(a, b);
+
+      // #then - should correctly identify a < b
+      expect(result).toBe(-1);
+    });
+  });
+
+  describe("compareBigNumberDesc", () => {
+    it("should return 1 when first is less than second", () => {
+      // #given - two BigNumbers where a < b
+      const a = BigNumber.from(5);
+      const b = BigNumber.from(10);
+
+      // #when - comparing them (descending)
+      const result = compareBigNumberDesc(a, b);
+
+      // #then - should return 1 (opposite of ascending)
+      expect(result).toBe(1);
+    });
+
+    it("should return -1 when first is greater than second", () => {
+      // #given - two BigNumbers where a > b
+      const a = BigNumber.from(10);
+      const b = BigNumber.from(5);
+
+      // #when - comparing them (descending)
+      const result = compareBigNumberDesc(a, b);
+
+      // #then - should return -1 (opposite of ascending)
+      expect(result).toBe(-1);
+    });
+
+    it("should return 0 when values are equal", () => {
+      // #given - two equal BigNumbers
+      const a = BigNumber.from(7);
+      const b = BigNumber.from(7);
+
+      // #when - comparing them (descending)
+      const result = compareBigNumberDesc(a, b);
+
+      // #then - should return 0
+      expect(result).toBe(0);
+    });
+
+    it("should work for sorting in descending order", () => {
+      // #given - an unsorted array of BigNumbers
+      const arr = [BigNumber.from(10), BigNumber.from(30), BigNumber.from(20)];
+
+      // #when - sorting with compareBigNumberDesc
+      const sorted = arr.sort(compareBigNumberDesc);
+
+      // #then - should be in descending order
+      expect(sorted.map((n) => n.toNumber())).toEqual([30, 20, 10]);
+    });
   });
 });
 

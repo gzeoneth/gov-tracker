@@ -33,7 +33,7 @@ import { validateSalt, validateSaltBatch } from "../utils/operation-id";
 import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-computation";
 import { INBOX_ABI, timelockInterface } from "../abis";
 import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
-import { getChain, addressEquals } from "../utils/chain";
+import { getChain, addressEquals, compareBigNumber } from "../utils/chain";
 import {
   getBlockTimestamp,
   checkOperationReady,
@@ -837,9 +837,7 @@ export async function prepareTimelockStage(
   // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)
   const timelockStageData = stage.data as TimelockStageData;
 
-  const sortedData = [...callScheduledData].sort((a, b) =>
-    a.index.gt(b.index) ? 1 : a.index.lt(b.index) ? -1 : 0
-  );
+  const sortedData = [...callScheduledData].sort((a, b) => compareBigNumber(a.index, b.index));
   const targets = sortedData.map((d) => d.target);
   const values = sortedData.map((d) => d.value.toString());
   const payloads = sortedData.map((d) => d.data);

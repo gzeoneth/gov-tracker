@@ -32,7 +32,7 @@ function formatTiming(stage: TrackedStage): TimingInfo | null {
     return { text: new Date(etaMs).toLocaleDateString(), color: "gray", isCountdown: false };
   }
 
-  const tx = stage.transactions[0];
+  const tx = stage.transactions?.[0];
   if (tx?.timestamp) {
     const date = new Date(tx.timestamp * 1000);
     const result = formatElapsedMs(Date.now() - tx.timestamp * 1000, date);

@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Simulation decode errors** - `prepareTimelockSimulation()` and `convertScheduleToExecute()` now return null/original on decode failure instead of throwing
 - **CLI gas settings** - `parseGasSettings()` now validates parsed float values with `isNaN()` check, falling back to defaults for invalid input
 - **TUI array cycling** - `cycleArray()` now handles edge case where current value is not in array, returning first element instead of undefined behavior
+- **Unsafe array access** - Added optional chaining for `stage.transactions[0]` access in TUI components (`StageRow.tsx`, `json-state.ts`)
+- **Log topics bounds** - Added optional chaining for `log.topics[0]` access to handle edge case of empty topics array (`log-filters.ts`, `governor-discovery.ts`)
 
 ### Added
 

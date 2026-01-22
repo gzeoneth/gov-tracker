@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **BigNumber overflow** - Use BigNumber comparison methods (`.gt()`, `.lt()`) instead of `.toNumber()` for index sorting in CallScheduled events (`timelock-discovery.ts`, `timelock.ts`)
+- **CLI JSON parsing** - Added try-catch around `JSON.parse()` in `getPackageVersion()` to prevent crash on malformed package.json
 - **Timeout cleanup** - Fixed potential resource leak where `clearTimeout()` was not called in error paths for API fetch operations (`signature-lookup.ts`, `cli.ts`)
 - **TUI crash** - Fixed potential runtime error from unsafe non-null assertion when L2_TIMELOCK stage is missing (`useProposals.ts`)
 - **Discovery logging** - Added logging for cases where block hash establishment fails during watermark verification (`discovery.ts`)
@@ -38,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
 - **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
+
+### Refactored
+
+- **Gas error detection** - Consolidated duplicate gas error checking logic into single `isGasEstimationError()` function in `rpc-utils.ts`, now used by `checkpoint-helpers.ts` (`incrementErrorCount`) for consistent error classification across the codebase
 
 ### Removed
 

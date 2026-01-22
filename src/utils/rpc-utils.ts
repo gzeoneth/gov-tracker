@@ -106,7 +106,7 @@ export function isGasEstimationError(error: unknown): boolean {
     message.includes("execution reverted") ||
     message.includes("out of gas") ||
     message.includes("intrinsic gas too low") ||
-    message.includes("insufficient funds for gas") ||
+    message.includes("insufficient funds") || // Covers "insufficient funds for gas" and wallet balance issues
     message.includes("cannot estimate gas") ||
     message.includes("gas estimation") ||
     message.includes("transaction may fail") ||

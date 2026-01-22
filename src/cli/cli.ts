@@ -59,8 +59,15 @@ function getPackageVersion(): string {
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
-      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
-      return pkg.version || "unknown";
+      try {
+        const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+        return pkg.version || "unknown";
+      } catch (error) {
+        console.error(
+          `Failed to parse package.json at ${candidate}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return "unknown";
+      }
     }
   }
   return "unknown";

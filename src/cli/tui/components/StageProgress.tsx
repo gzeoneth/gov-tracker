@@ -4,6 +4,7 @@
 
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { TrackedStage } from "../../../types/index.js";
+import { findStage } from "../../../stages/utils.js";
 import { STAGE_TYPES, getStatusIcon, getStatusColor } from "../utils/index.js";
 
 interface StageProgressProps {
@@ -26,7 +27,7 @@ export function StageProgress({
       <Box marginBottom={1}>
         <Text color="gray">Progress: </Text>
         {STAGE_TYPES.map((type, i) => {
-          const stage = stages.find(s => s.type === type);
+          const stage = findStage(stages, type);
           const icon = getStatusIcon(stage);
           const color = getStatusColor(stage);
           const isSelected = i === currentIndex;

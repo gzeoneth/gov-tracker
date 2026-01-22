@@ -311,48 +311,46 @@ export async function getTimelockState(
     }
   }
 
+  // Validate fromBlock when log search is needed
+  const needsScheduledSearch =
+    !options.skipLogSearch && !state.scheduledData && contractState.isOperation;
+  const needsExecutedSearch =
+    !options.skipLogSearch && !options.skipExecutedSearch && contractState.isDone;
+  if ((needsScheduledSearch || needsExecutedSearch) && options.fromBlock === undefined) {
+    throw new Error("fromBlock is required when searching logs in getTimelockState");
+  }
+
   // SLOW PATH: Only search for logs when needed and not already provided
-  if (!options.skipLogSearch && !state.scheduledData) {
-    // fromBlock is required for log searches
-    if (options.fromBlock === undefined) {
-      throw new Error("fromBlock is required when searching logs in getTimelockState");
-    }
-    const fromBlock = options.fromBlock; // Store validated value for TypeScript
+  if (needsScheduledSearch) {
+    const fromBlock = options.fromBlock!; // Validated above
 
-    // Only search for scheduled data if the operation exists
-    if (contractState.isOperation) {
-      const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
-        startBlock: fromBlock,
-        endBlock: options.toBlock,
-        chunkSize: options.chunkSize,
-      });
-      if (scheduledData) {
-        state.scheduledData = scheduledData;
+    const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
+      startBlock: fromBlock,
+      endBlock: options.toBlock,
+      chunkSize: options.chunkSize,
+    });
+    if (scheduledData) {
+      state.scheduledData = scheduledData;
 
-        // Check if this is a batch operation by looking for multiple CallScheduled events
-        // with the SAME operationId (not just any events in the same tx)
-        const allScheduledData = await findAllCallScheduledInTx(
-          scheduledData.txHash,
-          provider,
-          operationId
-        );
-        if (allScheduledData.length > 1) {
-          state.allScheduledData = allScheduledData;
-          state.isBatch = true;
-        }
+      // Check if this is a batch operation by looking for multiple CallScheduled events
+      // with the SAME operationId (not just any events in the same tx)
+      const allScheduledData = await findAllCallScheduledInTx(
+        scheduledData.txHash,
+        provider,
+        operationId
+      );
+      if (allScheduledData.length > 1) {
+        state.allScheduledData = allScheduledData;
+        state.isBatch = true;
       }
     }
   }
 
   // Only search for executed data if the operation is done and caller wants it
   // Note: Caller may skip this to do an optimized search starting after the delay
-  if (!options.skipLogSearch && !options.skipExecutedSearch && contractState.isDone) {
-    // fromBlock is required for log searches
-    if (options.fromBlock === undefined) {
-      throw new Error("fromBlock is required when searching logs in getTimelockState");
-    }
-    // Use scheduledData blockNumber if available, otherwise use fromBlock
-    const executedSearchStart = state.scheduledData?.blockNumber ?? options.fromBlock;
+  if (needsExecutedSearch) {
+    // Use scheduledData blockNumber if available, otherwise use fromBlock (validated above)
+    const executedSearchStart = state.scheduledData?.blockNumber ?? options.fromBlock!;
     const executedData = await findCallExecutedEvent(timelockAddress, operationId, provider, {
       startBlock: executedSearchStart,
       endBlock: options.toBlock,

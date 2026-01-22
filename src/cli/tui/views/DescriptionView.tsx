@@ -9,6 +9,7 @@ import { useScrollableInput } from "../hooks/useScrollableInput.js";
 import { ViewLayout } from "../components/ViewLayout.js";
 import { ScrollIndicatorTop, ScrollIndicatorBottom, ScrollPosition } from "../components/ScrollIndicator.js";
 import { getVisibleRows, parseMarkdown, getStages, buildBreadcrumb } from "../utils/index.js";
+import { findStage } from "../../../stages/utils.js";
 import type { MarkdownLine } from "../utils/index.js";
 
 interface DescriptionViewProps {
@@ -18,9 +19,11 @@ interface DescriptionViewProps {
 
 function getDescription(proposal: ProposalListItem): string {
   const stages = getStages(proposal);
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-  const data = createdStage?.data as { description?: string } | undefined;
-  return data?.description ?? "No description available";
+  const createdStage = findStage(stages, "PROPOSAL_CREATED");
+  if (createdStage?.type === "PROPOSAL_CREATED") {
+    return createdStage.data.description ?? "No description available";
+  }
+  return "No description available";
 }
 
 const RESERVED_LINES = 8;

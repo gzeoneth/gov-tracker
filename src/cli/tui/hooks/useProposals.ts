@@ -7,7 +7,8 @@ import type { TrackingCheckpoint, StageType } from "../../../types/index.js";
 import type { ProposalListItem, FilterType, SortType, CacheData } from "../types.js";
 import { isElectionGovernor } from "../../../constants.js";
 import { isTimelockOpKey } from "../../../tracker/checkpoint-helpers.js";
-import { parseProgress } from "../utils/index.js";
+import { findStage } from "../../../stages/utils.js";
+import { parseProgress, extractMarkdownTitle } from "../utils/index.js";
 
 type ProposalCreatedData = { description?: string; proposalType?: string };
 type VotingData = { proposalState?: string };
@@ -16,17 +17,6 @@ type TimelockData = {
   securityCouncilNonce?: string;
   description?: string;
 };
-
-function extractMarkdownTitle(description: string | undefined): string | null {
-  if (!description) return null;
-  for (const line of description.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("#")) {
-      return trimmed.replace(/^#+\s*/, "").trim() || null;
-    }
-  }
-  return null;
-}
 
 function getTimelockTitle(checkpoint: TrackingCheckpoint): string | null {
   if (checkpoint.input.type !== "timelock") return null;
@@ -56,12 +46,12 @@ function getTimelockTitle(checkpoint: TrackingCheckpoint): string | null {
 
 function getProposalInfo(checkpoint: TrackingCheckpoint) {
   const stages = checkpoint.cachedData.completedStages ?? [];
-  const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
+  const createdStage = findStage(stages, "PROPOSAL_CREATED");
+  const votingStage = findStage(stages, "VOTING_ACTIVE");
   const createdData = createdStage?.data as ProposalCreatedData | undefined;
   const votingData = votingStage?.data as VotingData | undefined;
 
-  const timelockStage = stages.find((s) => s.type === "L2_TIMELOCK");
+  const timelockStage = findStage(stages, "L2_TIMELOCK");
   const createdAt = createdStage?.timing?.startedAt
     ? createdStage.timing.startedAt * 1000
     : timelockStage?.timing?.startedAt

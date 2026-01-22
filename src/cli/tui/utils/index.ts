@@ -11,7 +11,7 @@ export {
 export type { FormattedLine } from "../../../utils/formatters.js";
 export { safeStringify, formatValue, formatStageData } from "../../../utils/formatters.js";
 export type { StageDataItem } from "../../../utils/formatters.js";
-export { parseMarkdown } from "./markdown-parser.js";
+export { parseMarkdown, extractMarkdownTitle } from "./markdown-parser.js";
 export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";
 export {
   formatDate,

@@ -837,7 +837,9 @@ export async function prepareTimelockStage(
   // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)
   const timelockStageData = stage.data as TimelockStageData;
 
-  const sortedData = [...callScheduledData].sort((a, b) => a.index.toNumber() - b.index.toNumber());
+  const sortedData = [...callScheduledData].sort((a, b) =>
+    a.index.gt(b.index) ? 1 : a.index.lt(b.index) ? -1 : 0
+  );
   const targets = sortedData.map((d) => d.target);
   const values = sortedData.map((d) => d.value.toString());
   const payloads = sortedData.map((d) => d.data);

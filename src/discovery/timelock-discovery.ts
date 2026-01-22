@@ -398,8 +398,8 @@ export async function findAllCallScheduledInTx(
         parsed !== null && (!operationId || addressEquals(parsed.operationId, operationId))
     );
 
-  // Sort by index to maintain order
-  return results.sort((a, b) => a.index.toNumber() - b.index.toNumber());
+  // Sort by index to maintain order (use BigNumber comparison to avoid overflow)
+  return results.sort((a, b) => (a.index.gt(b.index) ? 1 : a.index.lt(b.index) ? -1 : 0));
 }
 
 /** Lookup map: governor address → L2 timelock address */

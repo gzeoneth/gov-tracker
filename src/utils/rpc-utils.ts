@@ -17,6 +17,14 @@ export function delay(ms: number): Promise<void> {
 }
 
 /**
+ * Extract error message from unknown error type.
+ * Consolidates the common pattern: error instanceof Error ? error.message : String(error)
+ */
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * Error type for RPC failures
  */
 class RpcError extends Error {

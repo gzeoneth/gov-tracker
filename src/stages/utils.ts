@@ -469,8 +469,8 @@ export async function checkOperationReady(
     buildCallInput<boolean>(timelockAddress, timelockInterface, "isOperationDone", [operationId]),
   ]);
 
-  const isReady = results[0] as boolean;
-  const isDone = results[1] as boolean;
+  const isReady = (results[0] as boolean | undefined) ?? false;
+  const isDone = (results[1] as boolean | undefined) ?? false;
 
   if (isReady) return null; // Ready - no error
   if (isDone) {

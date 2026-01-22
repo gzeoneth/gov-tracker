@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI array cycling** - `cycleArray()` now handles edge case where current value is not in array, returning first element instead of undefined behavior
 - **Unsafe array access** - Added optional chaining for `stage.transactions[0]` access in TUI components (`StageRow.tsx`, `json-state.ts`)
 - **Log topics bounds** - Added optional chaining for `log.topics[0]` access to handle edge case of empty topics array (`log-filters.ts`, `governor-discovery.ts`)
+- **Multicall results validation** - Added undefined fallbacks for multicall results array access to handle partial response failures (`timelock-discovery.ts`, `stages/utils.ts`)
 
 ### Changed
 
@@ -57,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **RPC utility helper** - Added `getReceiptOrNull()` to `rpc-utils.ts` for consolidated transaction receipt fetching with retry and null handling
+- **Error message utility** - Added `getErrorMessage()` to `rpc-utils.ts` to consolidate the common `error instanceof Error ? error.message : String(error)` pattern
 
 ### Refactored
 
@@ -65,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Markdown title extraction** - Extracted `extractMarkdownTitle()` to shared `markdown-parser.ts` utility, removed duplicate in `useProposals.ts`
 - **Type narrowing** - Replaced ad-hoc `stage.data as {...}` type casts with discriminated union narrowing in `StageRow.tsx` and `DescriptionView.tsx`
 - **Title extraction** - Extracted `extractTitle()` helper in `useProposals.ts` to consolidate duplicate title parsing logic from `getTimelockTitle()` and `getProposalInfo()`
+- **Error message handling** - CLI error handlers now use shared `getErrorMessage()` utility (`cli/cli.ts`, `cli/lib/cli.ts`)
+- **Nominee filtering** - Single-pass partition for compliant/excluded nominees instead of two filter calls (`election/details.ts`)
 
 ### Removed
 

@@ -105,11 +105,11 @@ export async function getTimelockOperationState(
     buildCallInput<BigNumber>(timelockAddress, timelockInterface, "getTimestamp", [operationId]),
   ]);
 
-  const isOperation = (results[0] as boolean) ?? false;
-  const isPending = (results[1] as boolean) ?? false;
-  const isReady = (results[2] as boolean) ?? false;
-  const isDone = (results[3] as boolean) ?? false;
-  const timestamp = (results[4] as BigNumber) ?? BigNumber.from(0);
+  const isOperation = (results[0] as boolean | undefined) ?? false;
+  const isPending = (results[1] as boolean | undefined) ?? false;
+  const isReady = (results[2] as boolean | undefined) ?? false;
+  const isDone = (results[3] as boolean | undefined) ?? false;
+  const timestamp = (results[4] as BigNumber | undefined) ?? BigNumber.from(0);
 
   // Determine state: priority is DONE > READY > PENDING > UNKNOWN
   const state: TimelockOperationState = !isOperation

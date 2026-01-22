@@ -314,10 +314,11 @@ async function trackTimelock(
       log("%s: Operation uses scheduleBatch", config.logPrefix);
     } else {
       // Try single validation
+      const first = allData[0];
       const isSingle = validateSalt(operationId, {
-        target: allData[0].target,
-        value: allData[0].value,
-        data: allData[0].data,
+        target: first.target,
+        value: first.value,
+        data: first.data,
         predecessor,
         salt,
       });

@@ -63,9 +63,7 @@ function getPackageVersion(): string {
         const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
         return pkg.version || "unknown";
       } catch (error) {
-        console.error(
-          `Failed to parse package.json at ${candidate}: ${error instanceof Error ? error.message : String(error)}`
-        );
+        console.error(`Failed to parse package.json at ${candidate}: ${getErrorMessage(error)}`);
         return "unknown";
       }
     }
@@ -86,6 +84,7 @@ import {
   PreparedTransaction,
   FileCache,
 } from "../index";
+import { getErrorMessage } from "../utils/rpc-utils";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
@@ -527,8 +526,7 @@ runCmd
             console.error(`[ELECTION] ${error}`);
           }
         } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error);
-          console.error(`[ELECTION] Check failed: ${errMsg}`);
+          console.error(`[ELECTION] Check failed: ${getErrorMessage(error)}`);
         }
       }
     }
@@ -1065,8 +1063,7 @@ electionCmd
           console.error(`[ERROR] ${error}`);
         }
       } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.error("Election check failed:", errMsg);
+        console.error("Election check failed:", getErrorMessage(error));
       }
     }
 

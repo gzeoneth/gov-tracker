@@ -73,8 +73,11 @@ export async function getNomineeElectionDetails(
     governor.quorum(snapshotBlock.toNumber())
   );
 
-  const compliantNominees = nominees.filter((n) => !n.isExcluded);
-  const excludedNominees = nominees.filter((n) => n.isExcluded);
+  const compliantNominees: typeof nominees = [];
+  const excludedNominees: typeof nominees = [];
+  for (const n of nominees) {
+    (n.isExcluded ? excludedNominees : compliantNominees).push(n);
+  }
 
   return {
     proposalId,

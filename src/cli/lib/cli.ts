@@ -46,6 +46,7 @@ import {
   invalidateBlockInfoCache,
   ElectionProposalStatus,
 } from "../../index";
+import { getErrorMessage } from "../../utils/rpc-utils";
 import { withScope } from "../../utils/logger";
 
 export { isElectionGovernor };
@@ -393,7 +394,7 @@ export async function executeTransaction(
 
     return { success: true, txHash: tx.hash };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
 
     // For retryables, check if already redeemed
     if (
@@ -713,7 +714,7 @@ export async function runWithLoop(
       await cycleFn();
       consecutiveErrors = 0;
     } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
+      const errMsg = getErrorMessage(error);
       console.error("Cycle error:", errMsg);
       consecutiveErrors = Math.min(consecutiveErrors + 1, 10);
       const backoffMs = Math.min(5000 * Math.pow(2, consecutiveErrors - 1), 300000);
@@ -1175,14 +1176,11 @@ export async function runMonitorCycle(
           await options.onTrack?.({
             key,
             result: null,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         } catch (callbackError) {
           // Log the callback error but don't let it mask the original error
-          console.error(
-            `Error in onTrack callback for ${key}:`,
-            callbackError instanceof Error ? callbackError.message : String(callbackError)
-          );
+          console.error(`Error in onTrack callback for ${key}:`, getErrorMessage(callbackError));
         }
       }
     });

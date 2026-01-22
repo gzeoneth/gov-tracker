@@ -245,11 +245,14 @@ export function validateCliOptions(opts: CommonCliOptions, command: "run" | "tra
  * Parse gas settings from CLI options
  */
 export function parseGasSettings(opts: { l2MaxFee?: string; l2PriorityFee?: string }): GasSettings {
+  const maxFeePerGas = opts.l2MaxFee ? parseFloat(opts.l2MaxFee) : NaN;
+  const maxPriorityFeePerGas = opts.l2PriorityFee ? parseFloat(opts.l2PriorityFee) : NaN;
+
   return {
-    maxFeePerGas: opts.l2MaxFee ? parseFloat(opts.l2MaxFee) : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
-    maxPriorityFeePerGas: opts.l2PriorityFee
-      ? parseFloat(opts.l2PriorityFee)
-      : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
+    maxFeePerGas: isNaN(maxFeePerGas) ? DEFAULT_L2_GAS_SETTINGS.maxFeePerGas : maxFeePerGas,
+    maxPriorityFeePerGas: isNaN(maxPriorityFeePerGas)
+      ? DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas
+      : maxPriorityFeePerGas,
   };
 }
 

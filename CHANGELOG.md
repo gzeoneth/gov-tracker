@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Retryable ticket decoding** - `decodeRetryableTicket()` now returns null on decode failure instead of throwing, improving robustness when processing malformed calldata
 - **Topics bounds check** - Added bounds check before accessing `log.topics[1]` in timelock operation discovery (`timelock-discovery.ts`)
 - **Simulation decode errors** - `prepareTimelockSimulation()` and `convertScheduleToExecute()` now return null/original on decode failure instead of throwing
+- **CLI gas settings** - `parseGasSettings()` now validates parsed float values with `isNaN()` check, falling back to defaults for invalid input
 
 ### Changed
 

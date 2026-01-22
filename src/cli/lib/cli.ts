@@ -770,8 +770,6 @@ export interface MonitorRunOptions {
   targets?: DiscoveryTargets;
   /** Skip discovery and only track elections (faster when only elections needed) */
   electionsOnly?: boolean;
-  /** Force re-track all elections, bypassing cache */
-  forceElections?: boolean;
 }
 
 export interface MonitorRunResult {
@@ -1047,8 +1045,7 @@ export async function runMonitorCycle(
     if (!isShuttingDown()) {
       try {
         // Use tracker's cached method - completed elections use cache (0 RPC calls)
-        // Use forceElections to bypass cache when --force is specified
-        const allElections = await tracker.trackAllElections({ force: options.forceElections });
+        const allElections = await tracker.trackAllElections();
         for (const electionStatus of allElections) {
           elections.push(electionStatus);
           // Print each election
@@ -1290,7 +1287,7 @@ export async function runMonitorCycle(
   if (shouldTrackElections && !isShuttingDown()) {
     try {
       // Use tracker's cached method - completed elections use cache (0 RPC calls)
-      const allElections = await tracker.trackAllElections({ force: options.forceElections });
+      const allElections = await tracker.trackAllElections();
       for (const electionStatus of allElections) {
         elections.push(electionStatus);
       }

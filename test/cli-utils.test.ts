@@ -2551,33 +2551,10 @@ describe("CLI Utilities", () => {
 
       // #then - discoverAll should NOT be called in elections-only mode
       expect(mockTracker.discoverAll).not.toHaveBeenCalled();
-      expect(mockTracker.trackAllElections).toHaveBeenCalledWith({ force: undefined });
+      expect(mockTracker.trackAllElections).toHaveBeenCalled();
       expect(result.elections).toHaveLength(1);
       expect(result.proposals).toEqual([]);
       expect(result.timelockOps).toEqual([]);
-    });
-
-    it("should pass forceElections option to trackAllElections", async () => {
-      // #given
-      const mockTracker = {
-        discoverAll: vi.fn(),
-        queryIncompleteCheckpoints: vi.fn(),
-        trackByTxHash: vi.fn(),
-        trackFromCheckpoint: vi.fn(),
-        prepareTransaction: vi.fn(),
-        trackAllElections: vi.fn().mockResolvedValue([]),
-        loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
-      };
-      const providers = createMockProviders();
-
-      // #when
-      await runMonitorCycle(mockTracker as unknown as ProposalStageTracker, providers, {
-        electionsOnly: true,
-        forceElections: true,
-      });
-
-      // #then
-      expect(mockTracker.trackAllElections).toHaveBeenCalledWith({ force: true });
     });
 
     it("should handle errors in electionsOnly mode gracefully", async () => {

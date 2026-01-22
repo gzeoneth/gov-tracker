@@ -1176,20 +1176,18 @@ export class ProposalStageTracker {
    * - Incomplete elections: Makes fresh RPC calls and updates cache
    * - No cache: Always makes fresh RPC calls
    *
+   * To force fresh tracking, clear the cache before calling this method.
+   *
    * @param electionIndex - Election index (0-based)
-   * @param options.force - Force fresh tracking even for completed elections
    * @returns Election status
    */
-  async trackElection(
-    electionIndex: number,
-    options: { force?: boolean } = {}
-  ): Promise<ElectionProposalStatus> {
-    logTracker("trackElection for index %d (force=%s)", electionIndex, options.force ?? false);
+  async trackElection(electionIndex: number): Promise<ElectionProposalStatus> {
+    logTracker("trackElection for index %d", electionIndex);
 
     const cacheKey = `election:${electionIndex}`;
 
     // Check cache first for completed elections (skip RPC calls)
-    if (this.cache && !options.force) {
+    if (this.cache) {
       const cached = await this.getElectionCheckpoint(electionIndex);
       if (cached && cached.status.phase === "COMPLETED") {
         logTracker("returning cached COMPLETED election %d (0 RPC calls)", electionIndex);
@@ -1199,7 +1197,7 @@ export class ProposalStageTracker {
 
     // Load checkpoint from cache for resume
     let checkpoint: TrackingCheckpoint | undefined;
-    if (this.cache && !options.force) {
+    if (this.cache) {
       checkpoint = (await this.cache.get<TrackingCheckpoint>(cacheKey)) ?? undefined;
       if (checkpoint) {
         logTracker("loaded election checkpoint from cache: %s", cacheKey);
@@ -1230,18 +1228,15 @@ export class ProposalStageTracker {
    * - COMPLETED elections: Returns cached data immediately (0 RPC calls)
    * - Incomplete elections: Makes fresh RPC calls and updates cache
    *
+   * To force fresh tracking, clear the cache before calling this method.
+   *
    * @param options.includeNext - Include the "next" election slot (default: true)
-   * @param options.force - Force fresh tracking for all elections
    * @returns Array of election statuses
    */
   async trackAllElections(
-    options: { includeNext?: boolean; force?: boolean } = {}
+    options: { includeNext?: boolean } = {}
   ): Promise<ElectionProposalStatus[]> {
-    logTracker(
-      "trackAllElections (includeNext=%s, force=%s)",
-      options.includeNext ?? true,
-      options.force ?? false
-    );
+    logTracker("trackAllElections (includeNext=%s)", options.includeNext ?? true);
 
     const status = await checkElectionStatus(this.l2Provider, this.l1Provider);
     const electionCount = status.electionCount;
@@ -1249,7 +1244,7 @@ export class ProposalStageTracker {
 
     // Track existing elections in parallel (indices 0 to electionCount-1)
     const electionPromises = Array.from({ length: electionCount }, (_, i) =>
-      this.trackElection(i, { force: options.force }).catch((err) => {
+      this.trackElection(i).catch((err) => {
         const errMsg = err instanceof Error ? err.message : String(err);
         logTracker("Failed to track election %d: %s", i, errMsg);
         return null;
@@ -1263,8 +1258,8 @@ export class ProposalStageTracker {
     // Optionally track the next election (not yet created) for createElection preparation
     if (options.includeNext ?? true) {
       try {
-        // Next election always needs fresh RPC calls since it doesn't exist yet
-        const nextElectionStatus = await this.trackElection(electionCount, { force: true });
+        // Next election won't have cache data since it doesn't exist yet
+        const nextElectionStatus = await this.trackElection(electionCount);
         results.push({
           ...nextElectionStatus,
           canCreateElection: status.canCreateElection,

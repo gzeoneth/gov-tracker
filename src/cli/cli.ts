@@ -336,6 +336,14 @@ runCmd
     // --no-cache disables cache entirely; use autoFlush: false for batch writes
     const cachePath = opts.noCache ? undefined : opts.cache;
     const cache = cachePath ? new FileCache(cachePath, { autoFlush: false }) : undefined;
+
+    // If --force is specified, clear cache at start to ensure fresh tracking
+    // This is cleaner than passing force flags through - all tracking methods
+    // work normally with the cache, which starts empty
+    if (opts.force && cache) {
+      await cache.clear();
+    }
+
     const tracker = createTracker({
       ...providers,
       cache,
@@ -344,7 +352,7 @@ runCmd
     });
     const signer = opts.write ? createSigner(opts.privateKey) : null;
 
-    // If --force is specified, clear cache for this run by using a fresh start block
+    // If --force is specified, start from block 0; otherwise use provided startBlock
     const startBlock = opts.force
       ? 0 // Force re-discovery from the beginning
       : opts.startBlock
@@ -425,7 +433,6 @@ runCmd
           concurrency,
           targets: discoveryTargets,
           electionsOnly,
-          forceElections: opts.force,
           onTrack: async (r): Promise<TrackCallbackReturn> => {
             // Skip showing complete elections
             if (r.result?.isElection && r.result?.isComplete) {
@@ -836,9 +843,16 @@ electionCmd
 
     // Create tracker with cache (unless --no-cache)
     const cachePath = opts.noCache ? undefined : opts.cache;
+    const cache = cachePath ? new FileCache(cachePath) : undefined;
+
+    // If --force is specified, clear cache at start to ensure fresh tracking
+    if (opts.force && cache) {
+      await cache.clear();
+    }
+
     const tracker = createTracker({
       ...providers,
-      cachePath,
+      cache,
     });
 
     // Import election tracking functions for detailed queries
@@ -852,8 +866,7 @@ electionCmd
     // --list: Show all elections (uses cached data for completed elections)
     if (opts.list) {
       console.log("Fetching all elections...\n");
-      // Use --force to bypass cache and re-track all elections
-      const elections = await tracker.trackAllElections({ force: opts.force });
+      const elections = await tracker.trackAllElections();
 
       if (elections.length === 0) {
         console.log("No elections found.");
@@ -886,7 +899,7 @@ electionCmd
       return;
     }
 
-    // --track <index>: Track specific election (uses cache unless --force)
+    // --track <index>: Track specific election (uses cache unless --force cleared it)
     if (opts.track !== undefined) {
       const electionIndex = parseInt(opts.track, 10);
       if (isNaN(electionIndex) || electionIndex < 0) {
@@ -895,7 +908,7 @@ electionCmd
       }
       console.log(`Tracking election #${electionIndex}...\n`);
 
-      const election = await tracker.trackElection(electionIndex, { force: opts.force });
+      const election = await tracker.trackElection(electionIndex);
 
       // Use shared formatter for consistent output with stages
       console.log(formatElectionResult(election));

@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
 - **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
+- **Performance** - `--force` now clears cache at session start instead of bypassing cache mid-session, avoiding redundant re-tracking of elections already tracked via proposal tracking (`cli.ts`)
 
 ### Added
 

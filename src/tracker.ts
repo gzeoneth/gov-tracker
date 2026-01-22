@@ -349,7 +349,7 @@ export class ProposalStageTracker {
    * For COMPLETED elections, automatically fetches and caches nominee/member
    * election details to enable zero-RPC reads for historical elections.
    *
-   * @param electionStatus - Election status from trackElectionProposal
+   * @param electionStatus - Election status from trackElection()
    * @param options.nomineeDetails - Pre-fetched nominee details (skips RPC fetch)
    * @param options.memberDetails - Pre-fetched member details (skips RPC fetch)
    */

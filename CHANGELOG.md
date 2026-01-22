@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unsafe array access** - Added optional chaining for `stage.transactions[0]` access in TUI components (`StageRow.tsx`, `json-state.ts`)
 - **Log topics bounds** - Added optional chaining for `log.topics[0]` access to handle edge case of empty topics array (`log-filters.ts`, `governor-discovery.ts`)
 - **Multicall results validation** - Added undefined fallbacks for multicall results array access to handle partial response failures (`timelock-discovery.ts`, `stages/utils.ts`)
+- **Election status validation** - Added explicit validation for multicall results in `checkElectionStatus()` with descriptive error messages on failure (`election/status.ts`)
 
 ### Changed
 

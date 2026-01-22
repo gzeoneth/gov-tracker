@@ -1,14 +1,16 @@
 /**
- * Shared time formatting utilities
+ * TUI-specific time formatting utilities
+ *
+ * Provides formatted time strings with color hints for Ink rendering.
+ * Re-exports time constants from central location.
  */
 
-export const MS_PER_MINUTE = 60 * 1000;
-export const MS_PER_HOUR = 60 * MS_PER_MINUTE;
-export const MS_PER_DAY = 24 * MS_PER_HOUR;
+import { TIMING } from "../../../constants.js";
 
-export const SEC_PER_MINUTE = 60;
-export const SEC_PER_HOUR = 3600;
-export const SEC_PER_DAY = 86400;
+// Re-export time constants for TUI convenience
+export const MS_PER_MINUTE = TIMING.MS_PER_MINUTE;
+export const MS_PER_HOUR = TIMING.MS_PER_HOUR;
+export const MS_PER_DAY = TIMING.MS_PER_DAY;
 
 export function formatDurationMs(diffMs: number): { text: string; color: string } {
   const hours = Math.floor(diffMs / MS_PER_HOUR);
@@ -35,8 +37,8 @@ export function formatElapsedMs(elapsedMs: number, date: Date): { text: string; 
 }
 
 export function formatDurationSec(remainingSec: number): string {
-  const days = Math.floor(remainingSec / SEC_PER_DAY);
-  const hours = Math.floor((remainingSec % SEC_PER_DAY) / SEC_PER_HOUR);
-  const mins = Math.floor((remainingSec % SEC_PER_HOUR) / SEC_PER_MINUTE);
+  const days = Math.floor(remainingSec / TIMING.SEC_PER_DAY);
+  const hours = Math.floor((remainingSec % TIMING.SEC_PER_DAY) / TIMING.SEC_PER_HOUR);
+  const mins = Math.floor((remainingSec % TIMING.SEC_PER_HOUR) / TIMING.SEC_PER_MINUTE);
   return `${days}d ${hours}h ${mins}m`;
 }

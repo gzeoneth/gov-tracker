@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Discovery provider error handling** - Provider errors during watermark verification now return `isValid: false` instead of silently returning `isValid: true`, properly triggering retry on next cycle (`discovery.ts`)
+- **CLI NaN validation** - Added `safeParseInt()` helper for NaN-safe integer parsing in CLI options with proper fallback defaults (`cli/lib/cli.ts`)
+- **CLI election index validation** - Added validation for negative and NaN election indices with user-friendly error message (`cli/cli.ts`)
+- **TUI unsafe array access** - Changed `proposals[0]` to `proposals.at(0)` in useElectionData for safer array access
 - **BigNumber overflow** - Use BigNumber comparison methods (`.gt()`, `.lt()`) instead of `.toNumber()` for index sorting in CallScheduled events (`timelock-discovery.ts`, `timelock.ts`)
 - **CLI JSON parsing** - Added try-catch around `JSON.parse()` in `getPackageVersion()` to prevent crash on malformed package.json
 - **Timeout cleanup** - Fixed potential resource leak where `clearTimeout()` was not called in error paths for API fetch operations (`signature-lookup.ts`, `cli.ts`)
@@ -41,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance** - Parallelize cache reads in deduplication helpers (`deduplication.ts`)
 - **Performance** - Parallelize election proposal ID search with `Promise.allSettled` (`proposal-ids.ts`)
 - **Performance** - Cache SC nonce extraction during checkpoint filtering to avoid redundant computation (`query.ts`)
+- **Performance** - Parallelize checkpoint loading in `getHighestScNonceFromCheckpoints()` using Promise.all (`query.ts`)
+- **Performance** - Parallelize cache deletion in `clearCacheForTx()` method using Promise.all (`tracker.ts`)
+- **Code consolidation** - Centralized time constants (MS_PER_*, SEC_PER_*) in `constants.ts` TIMING object; TUI time.ts now imports from there
+- **Code consolidation** - Updated `isElectionGovernor()` to use `isAddressIn()` utility for consistent address comparison
+- **Code consolidation** - Updated address comparison in `calculateRetryableExecutionValue()` to use `addressEquals()` utility
 - **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
 - **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
 - **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures

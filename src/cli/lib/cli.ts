@@ -242,6 +242,15 @@ export function validateCliOptions(opts: CommonCliOptions, command: "run" | "tra
 }
 
 /**
+ * Safely parse an integer from string, returning fallback if invalid.
+ */
+export function safeParseInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+/**
  * Parse gas settings from CLI options
  */
 export function parseGasSettings(opts: { l2MaxFee?: string; l2PriorityFee?: string }): GasSettings {
@@ -263,8 +272,8 @@ export function parseChunkingConfig(
   opts: { l1ChunkSize?: string; l2ChunkSize?: string },
   delayMs: number
 ): { l1ChunkSize: number; l2ChunkSize: number; novaChunkSize: number; delayBetweenChunks: number } {
-  const l1ChunkSize = parseInt(opts.l1ChunkSize || "0", 10);
-  const l2ChunkSize = parseInt(opts.l2ChunkSize || "0", 10);
+  const l1ChunkSize = safeParseInt(opts.l1ChunkSize, 0);
+  const l2ChunkSize = safeParseInt(opts.l2ChunkSize, 0);
   return {
     l1ChunkSize,
     l2ChunkSize,

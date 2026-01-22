@@ -99,8 +99,11 @@ export async function verifyWatermark(
       logDiscovery("%s: block %d not found when establishing hash", key, blockNumber);
     } catch (error) {
       logDiscovery("%s: provider error establishing hash at block %d: %s", key, blockNumber, error);
+      // Provider error during hash establishment - return invalid to trigger retry on next cycle
+      return { blockNumber, isValid: false };
     }
-    return { blockNumber, isValid: true };
+    // Block not found but no error - treat as invalid (may be future block or transient issue)
+    return { blockNumber, isValid: false };
   }
 
   // Verify stored hash against chain

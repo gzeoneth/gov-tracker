@@ -121,6 +121,7 @@ import {
   loopOptions,
   parseGasSettings,
   parseChunkingConfig,
+  safeParseInt,
 } from "./lib/cli";
 import { decodeCalldata, extractCalldataFromStage } from "../calldata";
 import { Chain } from "../types";
@@ -348,12 +349,12 @@ runCmd
     const startBlock = opts.force
       ? 0 // Force re-discovery from the beginning
       : opts.startBlock
-        ? parseInt(opts.startBlock, 10)
+        ? safeParseInt(opts.startBlock, 0) || undefined // 0 becomes undefined
         : undefined;
-    const blockLag = parseInt(opts.blockLag, 10);
-    const maxAgeDays = parseInt(opts.maxAgeDays, 10);
-    const intervalMs = parseInt(opts.interval, 10) * 1000;
-    const concurrency = parseInt(opts.concurrency, 10);
+    const blockLag = safeParseInt(opts.blockLag, DEFAULT_BLOCK_LAG);
+    const maxAgeDays = safeParseInt(opts.maxAgeDays, 60);
+    const intervalMs = safeParseInt(opts.interval, 60) * 1000;
+    const concurrency = safeParseInt(opts.concurrency, 1);
 
     const gasSettings: GasSettings = parseGasSettings(opts);
 
@@ -890,6 +891,10 @@ electionCmd
     // --track <index>: Track specific election (uses cache unless --force)
     if (opts.track !== undefined) {
       const electionIndex = parseInt(opts.track, 10);
+      if (isNaN(electionIndex) || electionIndex < 0) {
+        console.error(`Invalid election index: ${opts.track}`);
+        process.exit(1);
+      }
       console.log(`Tracking election #${electionIndex}...\n`);
 
       const election = await tracker.trackElection(electionIndex, { force: opts.force });
@@ -1065,7 +1070,7 @@ electionCmd
       }
     }
 
-    const intervalMs = parseInt(opts.interval, 10) * 1000;
+    const intervalMs = safeParseInt(opts.interval, 60) * 1000;
 
     if (opts.loop) {
       console.log(`Running in loop mode, checking every ${opts.interval} seconds...`);

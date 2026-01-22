@@ -214,17 +214,17 @@ export async function getHighestScNonceFromCheckpoints(
 ): Promise<BigNumber | null> {
   if (!cache) return null;
 
-  const nonces: BigNumber[] = [];
   const keys = await listCheckpointKeys(cache);
 
-  for (const key of keys) {
-    const checkpoint = await getCheckpoint(cache, key);
-    if (!checkpoint) continue;
+  // Load all checkpoints in parallel
+  const checkpoints = await Promise.all(keys.map((key) => getCheckpoint(cache, key)));
 
-    // Only check incomplete checkpoints
+  // Extract SC nonces from incomplete checkpoints
+  const nonces: BigNumber[] = [];
+  for (const checkpoint of checkpoints) {
+    if (!checkpoint) continue;
     if (isCheckpointComplete(checkpoint)) continue;
 
-    // Extract SC nonce using shared helper
     const nonce = extractScNonceFromCheckpoint(checkpoint);
     if (nonce) {
       nonces.push(nonce);

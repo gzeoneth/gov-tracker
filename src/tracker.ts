@@ -302,16 +302,18 @@ export class ProposalStageTracker {
       cleared++;
     }
 
-    // Clear all operation-specific keys for this tx
+    // Clear all operation-specific keys for this tx in parallel
     const allKeys = await this.cache.keys(prefix);
     const keys = Array.isArray(allKeys) ? allKeys : Array.from(allKeys as Iterable<string>);
-    for (const key of keys) {
-      if (key.startsWith(prefix)) {
-        await this.cache.delete(key);
+    const keysToDelete = keys.filter((key) => key.startsWith(prefix));
+
+    await Promise.all(
+      keysToDelete.map(async (key) => {
+        await this.cache!.delete(key);
         logTracker("cleared cache entry: %s", key);
-        cleared++;
-      }
-    }
+      })
+    );
+    cleared += keysToDelete.length;
 
     return cleared;
   }

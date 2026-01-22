@@ -103,7 +103,7 @@ export function useElectionData(options?: UseElectionDataOptions): UseElectionDa
 
       // Derive minimal ElectionStatus from cached data
       const electionCount = sortedIndices.length > 0 ? Math.max(...sortedIndices) + 1 : 0;
-      const latestElection = proposals[0];
+      const latestElection = proposals.at(0);
 
       // Calculate nextElectionTimestamp from cached data if available
       let nextElectionTimestamp = 0;

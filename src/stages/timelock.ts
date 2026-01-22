@@ -575,7 +575,7 @@ export async function calculateRetryableExecutionValue(
   gasPrice?: BigNumber
 ): Promise<BigNumber | null> {
   void timelockAddress;
-  if (target.toLowerCase() !== ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase()) {
+  if (!addressEquals(target, ADDRESSES.RETRYABLE_TICKET_MAGIC)) {
     return null;
   }
 

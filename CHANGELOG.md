@@ -22,10 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unsafe array access** - Added optional chaining for `stage.transactions[0]` access in TUI components (`StageRow.tsx`, `json-state.ts`)
 - **Log topics bounds** - Added optional chaining for `log.topics[0]` access to handle edge case of empty topics array (`log-filters.ts`, `governor-discovery.ts`)
 
-### Added
-
-- **BigNumber comparison helpers** - Added `compareBigNumber()` and `compareBigNumberDesc()` utility functions for consistent BigNumber sorting across the codebase (`chain.ts`)
-
 ### Changed
 
 - **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, EXAMPLES.md, and `timing.ts` JSDoc
@@ -52,8 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 
 - **Gas error detection** - Consolidated duplicate gas error checking logic into single `isGasEstimationError()` function in `rpc-utils.ts`, now used by `checkpoint-helpers.ts` (`incrementErrorCount`) for consistent error classification across the codebase
-- **BigNumber sorting** - Refactored inline BigNumber sorting comparators to use shared `compareBigNumber()` helper (`timelock-discovery.ts`, `timelock.ts`, `details.ts`)
-- **Stage lookup** - Replaced inline `stages.find(s => s.type === "...")` patterns with `findStage()` helper throughout codebase (`tracker.ts`, `pipeline.ts`, `cli.ts`, TUI components)
 - **fromBlock validation** - Consolidated duplicate validation in `getTimelockState()` to single check at function start
 - **Markdown title extraction** - Extracted `extractMarkdownTitle()` to shared `markdown-parser.ts` utility, removed duplicate in `useProposals.ts`
 - **Type narrowing** - Replaced ad-hoc `stage.data as {...}` type casts with discriminated union narrowing in `StageRow.tsx` and `DescriptionView.tsx`

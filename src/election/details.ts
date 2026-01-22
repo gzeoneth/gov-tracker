@@ -1,7 +1,6 @@
 import { ethers, BigNumber } from "ethers";
 import { ADDRESSES, TIMING } from "../constants";
 import { queryWithRetry } from "../utils/rpc-utils";
-import { compareBigNumberDesc } from "../utils/chain";
 import { memberElectionGovernorInterface } from "../abis";
 import { loggers } from "../utils/logger";
 import {
@@ -160,8 +159,9 @@ export async function getMemberElectionDetails(
     }));
   }
 
+  // Sort by weight descending (use BigNumber methods to avoid overflow)
   const nomineeDetails: MemberElectionNominee[] = nomineeWeights
-    .sort((a, b) => compareBigNumberDesc(a.weight, b.weight))
+    .sort((a, b) => (a.weight.lt(b.weight) ? 1 : a.weight.gt(b.weight) ? -1 : 0))
     .map((n, i) => ({
       address: n.addr,
       weightReceived: n.weight,

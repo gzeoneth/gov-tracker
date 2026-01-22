@@ -42,7 +42,7 @@ import {
   addPlaceholders,
   getCachedStage,
 } from "./stage-runner";
-import { isConstitutional, isStageSuccess, findStage } from "../stages/utils";
+import { isConstitutional, isStageSuccess } from "../stages/utils";
 import { trackProposalCreated } from "../stages/proposal-created";
 import { trackVotingStage } from "../stages/voting";
 import { trackProposalQueued } from "../stages/proposal-queued";
@@ -672,7 +672,7 @@ export async function trackGovernorPipeline(state: TrackingState): Promise<Track
   state = await runPipeline(state, GOVERNOR_STAGES);
 
   // Continue with timelock if proposal was queued
-  const queued = findStage(state.stages, "PROPOSAL_QUEUED");
+  const queued = state.stages.find((s) => s.type === "PROPOSAL_QUEUED");
   if (queued?.status === "COMPLETED") {
     return runPipeline(state, TIMELOCK_STAGES);
   }
@@ -697,7 +697,7 @@ export async function trackElectionPipeline(state: TrackingState): Promise<Track
   state = await runPipeline(state, ELECTION_STAGES);
 
   // Continue with timelock if member election was executed
-  const memberStage = findStage(state.stages, "MEMBER_ELECTION");
+  const memberStage = state.stages.find((s) => s.type === "MEMBER_ELECTION");
   if (memberStage?.status === "COMPLETED") {
     return runPipeline(state, TIMELOCK_STAGES);
   }

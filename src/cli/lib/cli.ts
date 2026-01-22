@@ -45,7 +45,6 @@ import {
   getStageData,
   invalidateBlockInfoCache,
   ElectionProposalStatus,
-  findStage,
 } from "../../index";
 import { withScope } from "../../utils/logger";
 
@@ -449,11 +448,10 @@ export function formatTrackingResult(result: TrackingResult, label?: string): st
 
   if (label) lines.push(`--- ${label} ---`);
 
-  const timelockStage = findStage(result.stages, "L2_TIMELOCK");
-  const timelockData = timelockStage ? getStageData(timelockStage, "L2_TIMELOCK") : null;
-  const operationId = timelockData?.operationId as string | undefined;
-  const isSecurityCouncil = timelockData?.isSecurityCouncilOperation === true;
-  const scNonce = timelockData?.securityCouncilNonce as string | undefined;
+  const timelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
+  const operationId = timelockStage?.data.operationId as string | undefined;
+  const isSecurityCouncil = timelockStage?.data.isSecurityCouncilOperation === true;
+  const scNonce = timelockStage?.data.securityCouncilNonce as string | undefined;
 
   if (operationId) lines.push(`OperationId: ${operationId}`);
   if (isSecurityCouncil && scNonce) lines.push(`Security Council Nonce: ${scNonce}`);

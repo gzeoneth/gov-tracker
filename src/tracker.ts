@@ -838,7 +838,7 @@ export class ProposalStageTracker {
         stageType === "MEMBER_ELECTION"
           ? getElectionTimelockOperationId(finalState)
           : getOperationId(finalState);
-      const stage = findStage(finalState.stages, stageType);
+      const stage = finalState.stages.find((s) => s.type === stageType);
       const txHash = stage?.transactions?.find((t) => t.description === txDescription)?.hash;
       if (operationId && txHash) {
         const timelockOpKey = timelockOpCacheKey(txHash, operationId);

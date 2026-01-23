@@ -261,8 +261,7 @@ function getDefaultCachePath(): string {
         console.log(`Initialized cache from bundled data (${bundledPath})`);
       } catch (err) {
         // Non-fatal: just start with empty cache
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.warn(`Warning: Could not copy bundled cache: ${errMsg}`);
+        console.warn(`Warning: Could not copy bundled cache: ${getErrorMessage(err)}`);
       }
     }
   }
@@ -782,8 +781,7 @@ trackCmd
         }
       }
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      console.error(errMsg);
+      console.error(getErrorMessage(e));
       process.exit(1);
     }
   });

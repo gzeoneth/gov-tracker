@@ -1,6 +1,6 @@
 import { ethers, BigNumber } from "ethers";
 import { ADDRESSES } from "../constants";
-import { queryWithRetry } from "../utils/rpc-utils";
+import { queryWithRetry, getErrorMessage } from "../utils/rpc-utils";
 import { governorInterface } from "../abis";
 import { multicall, buildCallInput } from "../utils/multicall";
 import { saltFromDescription } from "../utils/salt-computation";
@@ -153,8 +153,7 @@ export async function getElectionIndexForProposalId(
   for (let i = electionCount - 1; i >= 0; i--) {
     const result = results[i];
     if (result.status === "rejected") {
-      const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      log("election %d: error - %s", i, errMsg);
+      log("election %d: error - %s", i, getErrorMessage(result.reason));
       continue;
     }
 

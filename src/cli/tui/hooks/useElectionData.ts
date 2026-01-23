@@ -12,6 +12,7 @@ import type {
   TrackingCheckpoint,
 } from "../../../types/index.js";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
+import { getErrorMessage } from "../../../utils/rpc-utils.js";
 import { formatDurationSec } from "../utils/index.js";
 
 export interface ElectionData {
@@ -148,7 +149,7 @@ export function useElectionData(options?: UseElectionDataOptions): UseElectionDa
         status: null,
         proposals: [],
         loading: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: getErrorMessage(err),
         warning: null,
       });
     }

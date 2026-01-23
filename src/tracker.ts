@@ -14,7 +14,7 @@
 
 import { ethers } from "ethers";
 import { loggers } from "./utils/logger";
-import { isGasEstimationError } from "./utils/rpc-utils";
+import { isGasEstimationError, getErrorMessage } from "./utils/rpc-utils";
 import { getCurrentBlockInfo } from "./utils/timing";
 import {
   incrementErrorCount,
@@ -1245,8 +1245,7 @@ export class ProposalStageTracker {
     // Track existing elections in parallel (indices 0 to electionCount-1)
     const electionPromises = Array.from({ length: electionCount }, (_, i) =>
       this.trackElection(i).catch((err) => {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        logTracker("Failed to track election %d: %s", i, errMsg);
+        logTracker("Failed to track election %d: %s", i, getErrorMessage(err));
         return null;
       })
     );
@@ -1268,8 +1267,7 @@ export class ProposalStageTracker {
         });
         // Don't cache the "next" election since it doesn't exist yet
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        logTracker("Failed to track next election %d: %s", electionCount, errMsg);
+        logTracker("Failed to track next election %d: %s", electionCount, getErrorMessage(err));
       }
     }
 

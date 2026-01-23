@@ -32,7 +32,7 @@ function formatTiming(stage: TrackedStage): TimingInfo | null {
     return { text: new Date(etaMs).toLocaleDateString(), color: "gray", isCountdown: false };
   }
 
-  const tx = stage.transactions[0];
+  const tx = stage.transactions?.[0];
   if (tx?.timestamp) {
     const date = new Date(tx.timestamp * 1000);
     const result = formatElapsedMs(Date.now() - tx.timestamp * 1000, date);
@@ -43,39 +43,27 @@ function formatTiming(stage: TrackedStage): TimingInfo | null {
 }
 
 function getStageExtra(stage: TrackedStage): string | null {
-  if (stage.type === "VOTING_ACTIVE" && stage.data) {
-    const data = stage.data as {
-      proposalState?: string;
-      forVotes?: string;
-      againstVotes?: string;
-      quorumReached?: boolean;
-    };
-    if (data.proposalState) {
-      return data.proposalState;
+  if (stage.type === "VOTING_ACTIVE") {
+    if (stage.data.proposalState) {
+      return stage.data.proposalState;
     }
   }
 
-  if (stage.type === "RETRYABLE_EXECUTED" && stage.data) {
-    const data = stage.data as { ticketCount?: number; redeemedCount?: number };
-    if (data.ticketCount !== undefined) {
-      const redeemed = data.redeemedCount ?? 0;
-      return `${redeemed}/${data.ticketCount} tickets`;
+  if (stage.type === "RETRYABLE_EXECUTED") {
+    if (stage.data.ticketCount !== undefined) {
+      const redeemed = stage.data.redeemedCount ?? 0;
+      return `${redeemed}/${stage.data.ticketCount} tickets`;
     }
   }
 
-  if (
-    (stage.type === "L2_TIMELOCK" || stage.type === "L1_TIMELOCK") &&
-    stage.data
-  ) {
-    const data = stage.data as { state?: string };
-    if (data.state) return data.state;
+  if (stage.type === "L2_TIMELOCK" || stage.type === "L1_TIMELOCK") {
+    if (stage.data.state) return stage.data.state;
   }
 
-  if (stage.type === "L2_TO_L1_MESSAGE" && stage.data) {
-    const data = stage.data as { messageCount?: number; status?: string };
-    if (data.messageCount) {
-      const status = data.status ?? "pending";
-      return `${data.messageCount} msg${data.messageCount > 1 ? "s" : ""} (${status})`;
+  if (stage.type === "L2_TO_L1_MESSAGE") {
+    if (stage.data.messageCount) {
+      const status = stage.data.status ?? "pending";
+      return `${stage.data.messageCount} msg${stage.data.messageCount > 1 ? "s" : ""} (${status})`;
     }
   }
 

@@ -10,7 +10,7 @@ import {
   PreparedTransaction,
   ProposalCreatedEventArgs,
 } from "../types";
-import { getNomineeGovernor, getMemberGovernor } from "./contracts";
+import { getNomineeGovernor, getMemberGovernor, getLogQueryBlockRange } from "./contracts";
 import { computeElectionProposalId, getElectionProposalId } from "./proposal-ids";
 
 const log = loggers.election;
@@ -31,23 +31,14 @@ async function findProposalCreatedParams(
 ): Promise<ElectionProposalParams | null> {
   const topic = proposalCreatedInterface.getEventTopic("ProposalCreated");
 
-  let startBlock: number;
-  try {
-    const snapshot = await queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId));
-    startBlock = Math.max(0, snapshot.toNumber() - 1000);
-  } catch {
-    const currentBlock = await queryWithRetry(() => provider.getBlockNumber());
-    startBlock = Math.max(0, currentBlock - 10000);
-  }
-
-  const currentBlock = await queryWithRetry(() => provider.getBlockNumber());
+  const { fromBlock, toBlock } = await getLogQueryBlockRange(governor, proposalId, provider);
 
   const logs = await queryWithRetry(() =>
     provider.getLogs({
       address: governorAddress,
       topics: [topic],
-      fromBlock: startBlock,
-      toBlock: currentBlock,
+      fromBlock,
+      toBlock,
     })
   );
 

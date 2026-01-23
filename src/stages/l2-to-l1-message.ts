@@ -595,11 +595,11 @@ export async function prepareL2ToL1MessageStage(
   const readers = await getL2ToL1Messages(stageData.l2TxHash, l2Provider, l1Provider);
   if (readers.length === 0) return simpleBulkError("No L2→L1 messages found");
 
-  // Resolve outbox address
+  // Resolve outbox address (fallback to Arb1 default if network detection fails)
   let outboxAddress = options.outboxAddress;
   if (!outboxAddress) {
-    const network = await getArbitrumNetwork(l2Provider);
-    outboxAddress = network.ethBridge.outbox;
+    const network = await getArbitrumNetwork(l2Provider).catch(() => null);
+    outboxAddress = network?.ethBridge.outbox ?? ADDRESSES.ARB1_OUTBOX;
   }
 
   // Extract cached sendProps from stage data (populated during tracking phase)

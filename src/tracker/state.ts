@@ -39,6 +39,7 @@ import {
   splitStages,
   hasTimelockProgress,
   isStageSuccess,
+  findStage as findStageInArray,
 } from "../stages/utils";
 import { isElectionProposal, detectProposalType } from "../discovery/governor-discovery";
 import { DEFAULT_CHUNKING_CONFIG } from "../constants";
@@ -203,8 +204,8 @@ export async function addStage(ctx: TrackingState, stage: TrackedStage): Promise
   return newCtx;
 }
 
-// Stage lookup helper (defined early for use in stage management functions)
-const findStage = (ctx: TrackingState, type: StageType) => ctx.stages.find((s) => s.type === type);
+// Stage lookup helper wrapping the shared utility
+const findStage = (ctx: TrackingState, type: StageType) => findStageInArray(ctx.stages, type);
 
 /** Check if a stage is completed (COMPLETED or SKIPPED). */
 export function isStageCompleted(ctx: TrackingState, type: StageType): boolean {
@@ -353,8 +354,9 @@ export function getL1ExecutionTxHash(ctx: TrackingState): string | undefined {
 // Checkpoint & Result
 
 /**
- * Create a full checkpoint with all stages (legacy behavior).
- * For modular caching, use createModularCheckpoints instead.
+ * Create a full checkpoint with all stages in a single cache entry.
+ * Prefer createModularCheckpoints() for new code - it splits parent
+ * and timelock stages for independent cache management.
  */
 export function createCheckpoint(ctx: TrackingState): TrackingCheckpoint {
   const completedStages = ctx.stages.filter((s) => s.status !== "NOT_STARTED");

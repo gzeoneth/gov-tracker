@@ -33,7 +33,7 @@ export interface LogFilterOptions {
  */
 export function filterLogs(logs: Log[], options: LogFilterOptions): Log[] {
   return logs.filter((log) => {
-    if (options.topic && log.topics[0] !== options.topic) {
+    if (options.topic && log.topics?.[0] !== options.topic) {
       return false;
     }
     if (options.address && !addressEquals(log.address, options.address)) {

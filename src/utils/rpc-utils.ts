@@ -2,6 +2,7 @@
  * RPC utilities with retry logic and rate limiting
  */
 
+import { ethers } from "ethers";
 import { RetryConfig } from "../types";
 import { DEFAULT_RETRY_CONFIG } from "../constants";
 import { loggers } from "./logger";
@@ -13,6 +14,14 @@ const log = loggers.rpc;
  */
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Extract error message from unknown error type.
+ * Consolidates the common pattern: error instanceof Error ? error.message : String(error)
+ */
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -106,7 +115,7 @@ export function isGasEstimationError(error: unknown): boolean {
     message.includes("execution reverted") ||
     message.includes("out of gas") ||
     message.includes("intrinsic gas too low") ||
-    message.includes("insufficient funds for gas") ||
+    message.includes("insufficient funds") || // Covers "insufficient funds for gas" and wallet balance issues
     message.includes("cannot estimate gas") ||
     message.includes("gas estimation") ||
     message.includes("transaction may fail") ||
@@ -164,4 +173,16 @@ export async function queryWithRetry<T>(
     undefined,
     lastError
   );
+}
+
+/**
+ * Fetch a transaction receipt with retry, returning null if not found.
+ * Consolidates the common pattern of fetching receipts with null checking.
+ */
+export async function getReceiptOrNull(
+  txHash: string,
+  provider: ethers.providers.Provider
+): Promise<ethers.providers.TransactionReceipt | null> {
+  const receipt = await queryWithRetry(() => provider.getTransactionReceipt(txHash));
+  return receipt ?? null;
 }

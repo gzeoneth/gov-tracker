@@ -8,6 +8,7 @@
 import type { TrackingCheckpoint, TrackerStats } from "../types";
 import { areAllStagesComplete } from "../stages/utils";
 import { isElectionGovernor } from "../constants";
+import { isGasEstimationError } from "../utils/rpc-utils";
 
 export const DEFAULT_ERROR_THRESHOLD = 5;
 
@@ -31,17 +32,11 @@ export function createCheckpointMetadata(errorCount = 0): CheckpointMetadata {
 
 /**
  * Increment error count for retry logic
- * Gas errors don't increment the count (transient)
+ * Gas estimation errors don't increment the count (transient)
+ * Uses centralized isGasEstimationError from rpc-utils for consistency
  */
 export function incrementErrorCount(currentCount: number, error: Error | string): number {
-  const isGasError =
-    error instanceof Error
-      ? error.message.includes("insufficient funds") ||
-        error.message.includes("gas required exceeds allowance")
-      : typeof error === "string" &&
-        (error.includes("insufficient funds") || error.includes("gas required exceeds allowance"));
-
-  return isGasError ? currentCount : currentCount + 1;
+  return isGasEstimationError(error) ? currentCount : currentCount + 1;
 }
 
 /**

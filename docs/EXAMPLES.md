@@ -17,22 +17,14 @@ for (const stage of result.stages) {
 }
 ```
 
-### By Governor or Timelock
+### By Timelock Operation ID
+
+For transactions that create multiple timelock operations, specify the operation ID:
 
 ```typescript
-import { ADDRESSES } from "@gzeoneth/gov-tracker";
-
-// From governor
-const result = await tracker.trackFromGovernor(
-  ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-  proposalId
-);
-
-// From timelock
-const result = await tracker.trackFromTimelock(
-  ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
-  { operationId: "0x..." }
-);
+// Track specific operation from multi-operation transaction
+const results = await tracker.trackByTxHash(txHash, "0x..operationId..");
+const result = results[0];
 ```
 
 ---

@@ -142,10 +142,12 @@ export async function getChildToParentMap(cache: CacheAdapter): Promise<Map<stri
   const result = new Map<string, string>();
   const keys = await getCacheKeysAsync(cache);
 
-  for (const key of keys) {
-    const checkpoint = await cache.get<TrackingCheckpoint>(key);
+  const checkpoints = await Promise.all(keys.map((key) => cache.get<TrackingCheckpoint>(key)));
+
+  for (let i = 0; i < keys.length; i++) {
+    const checkpoint = checkpoints[i];
     if (checkpoint?.metadata?.sourceCheckpoint) {
-      result.set(key, checkpoint.metadata.sourceCheckpoint);
+      result.set(keys[i], checkpoint.metadata.sourceCheckpoint);
     }
   }
 
@@ -163,13 +165,15 @@ export async function getChildCheckpoints(
   parentKey: string,
   cache: CacheAdapter
 ): Promise<string[]> {
-  const children: string[] = [];
   const keys = await getCacheKeysAsync(cache);
 
-  for (const key of keys) {
-    const checkpoint = await cache.get<TrackingCheckpoint>(key);
+  const checkpoints = await Promise.all(keys.map((key) => cache.get<TrackingCheckpoint>(key)));
+
+  const children: string[] = [];
+  for (let i = 0; i < keys.length; i++) {
+    const checkpoint = checkpoints[i];
     if (checkpoint?.metadata?.sourceCheckpoint === parentKey) {
-      children.push(key);
+      children.push(keys[i]);
     }
   }
 
@@ -202,20 +206,16 @@ export interface DeduplicationStats {
  * @returns Statistics about checkpoint relationships
  */
 export async function getDeduplicationStats(cache: CacheAdapter): Promise<DeduplicationStats> {
-  const keys = await getCacheKeysAsync(cache);
+  const allKeys = await getCacheKeysAsync(cache);
+  const keys = allKeys.filter((key) => key !== "discovery:watermarks");
 
-  let totalCheckpoints = 0;
+  const checkpoints = await Promise.all(keys.map((key) => cache.get<TrackingCheckpoint>(key)));
+
   let childCheckpoints = 0;
   let fromElections = 0;
   let fromProposals = 0;
 
-  for (const key of keys) {
-    // Skip watermarks
-    if (key === "discovery:watermarks") continue;
-
-    totalCheckpoints++;
-
-    const checkpoint = await cache.get<TrackingCheckpoint>(key);
+  for (const checkpoint of checkpoints) {
     const source = checkpoint?.metadata?.sourceCheckpoint;
 
     if (source) {
@@ -229,8 +229,8 @@ export async function getDeduplicationStats(cache: CacheAdapter): Promise<Dedupl
   }
 
   return {
-    totalCheckpoints,
-    rootCheckpoints: totalCheckpoints - childCheckpoints,
+    totalCheckpoints: keys.length,
+    rootCheckpoints: keys.length - childCheckpoints,
     childCheckpoints,
     parentTypes: {
       fromElections,
@@ -263,10 +263,13 @@ export async function findPotentialParent(
 
   if (isL2ConstitutionalTimelock) {
     // Search completed elections that might have created this
-    for (const key of keys) {
-      if (!key.startsWith("election:")) continue;
+    const electionKeys = keys.filter((key) => key.startsWith("election:"));
+    const electionCheckpoints = await Promise.all(
+      electionKeys.map((key) => cache.get<TrackingCheckpoint>(key))
+    );
 
-      const electionCheckpoint = await cache.get<TrackingCheckpoint>(key);
+    for (let i = 0; i < electionKeys.length; i++) {
+      const electionCheckpoint = electionCheckpoints[i];
       const status = electionCheckpoint?.cachedData?.electionStatus;
 
       // Completed elections with executed member proposals create timelock ops
@@ -274,7 +277,7 @@ export async function findPotentialParent(
         // This election completed and may have created this timelock op
         // Without more detailed tracking of the execution tx, we can't be 100% sure
         // but this is a reasonable heuristic
-        return key;
+        return electionKeys[i];
       }
     }
   }
@@ -295,25 +298,32 @@ export async function findPotentialParent(
  * @returns Number of newly linked checkpoints
  */
 export async function autoLinkOrphanedCheckpoints(cache: CacheAdapter): Promise<number> {
-  const keys = await getCacheKeysAsync(cache);
-  let linkedCount = 0;
+  const allKeys = await getCacheKeysAsync(cache);
+  const txKeys = allKeys.filter((key) => key.startsWith("tx:"));
 
-  for (const key of keys) {
-    if (!key.startsWith("tx:")) continue;
+  const checkpoints = await Promise.all(txKeys.map((key) => cache.get<TrackingCheckpoint>(key)));
 
-    const checkpoint = await cache.get<TrackingCheckpoint>(key);
+  // Filter to orphaned timelock checkpoints
+  const orphanedPairs: { key: string; checkpoint: TrackingCheckpoint }[] = [];
+  for (let i = 0; i < txKeys.length; i++) {
+    const checkpoint = checkpoints[i];
     if (!checkpoint) continue;
-
-    // Skip if already linked
     if (checkpoint.metadata?.sourceCheckpoint) continue;
-
-    // Skip if not a timelock checkpoint
     if (checkpoint.input.type !== "timelock") continue;
+    orphanedPairs.push({ key: txKeys[i], checkpoint });
+  }
 
-    // Try to find a parent
-    const parentKey = await findPotentialParent(checkpoint, cache);
+  // Find parents in parallel
+  const parentResults = await Promise.all(
+    orphanedPairs.map(({ checkpoint }) => findPotentialParent(checkpoint, cache))
+  );
+
+  // Link those with parents found
+  let linkedCount = 0;
+  for (let i = 0; i < orphanedPairs.length; i++) {
+    const parentKey = parentResults[i];
     if (parentKey) {
-      await linkCheckpointToChild(key, parentKey, cache);
+      await linkCheckpointToChild(orphanedPairs[i].key, parentKey, cache);
       linkedCount++;
     }
   }

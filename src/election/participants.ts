@@ -6,24 +6,9 @@ import { loggers } from "../utils/logger";
 import { ElectionContender, ElectionNominee } from "../types";
 import { multicall, buildCallInput } from "../utils/multicall";
 import { getNomineeGovernor, getLogQueryBlockRange } from "./contracts";
+import { parseLogsSafe } from "../utils/log-filters";
 
 const log = loggers.election;
-
-/** Parse logs safely, returning mapped results for successfully parsed logs only */
-function parseLogsWithMapper<T>(
-  logs: ethers.providers.Log[],
-  iface: ethers.utils.Interface,
-  mapper: (parsed: ethers.utils.LogDescription, log: ethers.providers.Log) => T
-): T[] {
-  return logs.flatMap((eventLog) => {
-    try {
-      const parsed = iface.parseLog(eventLog);
-      return [mapper(parsed, eventLog)];
-    } catch {
-      return [];
-    }
-  });
-}
 
 export async function getContenders(
   proposalId: string,
@@ -48,11 +33,14 @@ export async function getContenders(
     })
   );
 
-  const contenders = parseLogsWithMapper(logs, iface, (parsed, eventLog) => ({
-    address: (parsed.args.contender as string).toLowerCase(),
-    registeredAtBlock: eventLog.blockNumber,
-    registrationTxHash: eventLog.transactionHash,
-  }));
+  const contenders = parseLogsSafe(logs, (eventLog) => {
+    const parsed = iface.parseLog(eventLog);
+    return {
+      address: (parsed.args.contender as string).toLowerCase(),
+      registeredAtBlock: eventLog.blockNumber,
+      registrationTxHash: eventLog.transactionHash,
+    };
+  });
 
   log("Found %d contenders for proposal %s", contenders.length, proposalId);
   return contenders;
@@ -122,32 +110,35 @@ export async function getExcludedNominees(
     })
   );
 
-  const parsedLogs = parseLogsWithMapper(logs, iface, (parsed, eventLog) => ({
-    eventLog,
-    nominee: parsed.args.nominee as string,
-  }));
+  const parsedLogs = parseLogsSafe(logs, (eventLog) => {
+    const parsed = iface.parseLog(eventLog);
+    return {
+      eventLog,
+      nominee: parsed.args.nominee as string,
+    };
+  });
 
   if (parsedLogs.length === 0) {
     return [];
   }
 
-  const calls = parsedLogs.map(({ nominee }) =>
+  const calls = parsedLogs.map((item) =>
     buildCallInput<BigNumber>(
       nomineeGovernorAddress,
       nomineeElectionGovernorInterface,
       "votesReceived",
-      [proposalId, nominee]
+      [proposalId, item.nominee]
     )
   );
 
   const results = await multicall(provider, calls);
 
-  const excluded = parsedLogs.map(({ eventLog, nominee }, i) => ({
-    address: nominee.toLowerCase(),
+  const excluded = parsedLogs.map((item, i) => ({
+    address: item.nominee.toLowerCase(),
     votesReceived: (results[i] as BigNumber) ?? BigNumber.from(0),
     isExcluded: true,
-    excludedAtBlock: eventLog.blockNumber,
-    exclusionTxHash: eventLog.transactionHash,
+    excludedAtBlock: item.eventLog.blockNumber,
+    exclusionTxHash: item.eventLog.transactionHash,
   }));
 
   log("Found %d excluded nominees for proposal %s", excluded.length, proposalId);

@@ -105,11 +105,11 @@ export async function getTimelockOperationState(
     buildCallInput<BigNumber>(timelockAddress, timelockInterface, "getTimestamp", [operationId]),
   ]);
 
-  const isOperation = (results[0] as boolean) ?? false;
-  const isPending = (results[1] as boolean) ?? false;
-  const isReady = (results[2] as boolean) ?? false;
-  const isDone = (results[3] as boolean) ?? false;
-  const timestamp = (results[4] as BigNumber) ?? BigNumber.from(0);
+  const isOperation = (results[0] as boolean | undefined) ?? false;
+  const isPending = (results[1] as boolean | undefined) ?? false;
+  const isReady = (results[2] as boolean | undefined) ?? false;
+  const isDone = (results[3] as boolean | undefined) ?? false;
+  const timestamp = (results[4] as BigNumber | undefined) ?? BigNumber.from(0);
 
   // Determine state: priority is DONE > READY > PENDING > UNKNOWN
   const state: TimelockOperationState = !isOperation
@@ -311,48 +311,46 @@ export async function getTimelockState(
     }
   }
 
+  // Validate fromBlock when log search is needed
+  const needsScheduledSearch =
+    !options.skipLogSearch && !state.scheduledData && contractState.isOperation;
+  const needsExecutedSearch =
+    !options.skipLogSearch && !options.skipExecutedSearch && contractState.isDone;
+  if ((needsScheduledSearch || needsExecutedSearch) && options.fromBlock === undefined) {
+    throw new Error("fromBlock is required when searching logs in getTimelockState");
+  }
+
   // SLOW PATH: Only search for logs when needed and not already provided
-  if (!options.skipLogSearch && !state.scheduledData) {
-    // fromBlock is required for log searches
-    if (options.fromBlock === undefined) {
-      throw new Error("fromBlock is required when searching logs in getTimelockState");
-    }
-    const fromBlock = options.fromBlock; // Store validated value for TypeScript
+  if (needsScheduledSearch) {
+    const fromBlock = options.fromBlock!; // Validated above
 
-    // Only search for scheduled data if the operation exists
-    if (contractState.isOperation) {
-      const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
-        startBlock: fromBlock,
-        endBlock: options.toBlock,
-        chunkSize: options.chunkSize,
-      });
-      if (scheduledData) {
-        state.scheduledData = scheduledData;
+    const scheduledData = await findCallScheduledEvent(timelockAddress, operationId, provider, {
+      startBlock: fromBlock,
+      endBlock: options.toBlock,
+      chunkSize: options.chunkSize,
+    });
+    if (scheduledData) {
+      state.scheduledData = scheduledData;
 
-        // Check if this is a batch operation by looking for multiple CallScheduled events
-        // with the SAME operationId (not just any events in the same tx)
-        const allScheduledData = await findAllCallScheduledInTx(
-          scheduledData.txHash,
-          provider,
-          operationId
-        );
-        if (allScheduledData.length > 1) {
-          state.allScheduledData = allScheduledData;
-          state.isBatch = true;
-        }
+      // Check if this is a batch operation by looking for multiple CallScheduled events
+      // with the SAME operationId (not just any events in the same tx)
+      const allScheduledData = await findAllCallScheduledInTx(
+        scheduledData.txHash,
+        provider,
+        operationId
+      );
+      if (allScheduledData.length > 1) {
+        state.allScheduledData = allScheduledData;
+        state.isBatch = true;
       }
     }
   }
 
   // Only search for executed data if the operation is done and caller wants it
   // Note: Caller may skip this to do an optimized search starting after the delay
-  if (!options.skipLogSearch && !options.skipExecutedSearch && contractState.isDone) {
-    // fromBlock is required for log searches
-    if (options.fromBlock === undefined) {
-      throw new Error("fromBlock is required when searching logs in getTimelockState");
-    }
-    // Use scheduledData blockNumber if available, otherwise use fromBlock
-    const executedSearchStart = state.scheduledData?.blockNumber ?? options.fromBlock;
+  if (needsExecutedSearch) {
+    // Use scheduledData blockNumber if available, otherwise use fromBlock (validated above)
+    const executedSearchStart = state.scheduledData?.blockNumber ?? options.fromBlock!;
     const executedData = await findCallExecutedEvent(timelockAddress, operationId, provider, {
       startBlock: executedSearchStart,
       endBlock: options.toBlock,
@@ -398,8 +396,8 @@ export async function findAllCallScheduledInTx(
         parsed !== null && (!operationId || addressEquals(parsed.operationId, operationId))
     );
 
-  // Sort by index to maintain order
-  return results.sort((a, b) => a.index.toNumber() - b.index.toNumber());
+  // Sort by index to maintain order (use BigNumber methods to avoid overflow)
+  return results.sort((a, b) => (a.index.lt(b.index) ? -1 : a.index.gt(b.index) ? 1 : 0));
 }
 
 /** Lookup map: governor address → L2 timelock address */
@@ -447,6 +445,8 @@ export async function discoverTimelockOps(
   const seen = new Set<string>();
   return logs
     .filter((log) => {
+      // CallScheduled events always have operationId as indexed topic[1]
+      if (log.topics.length < 2) return false;
       const operationId = log.topics[1];
       if (seen.has(operationId)) return false;
       seen.add(operationId);

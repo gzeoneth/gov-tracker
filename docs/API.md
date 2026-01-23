@@ -31,11 +31,10 @@ chunkingConfig: {
 
 | Method | Description |
 |--------|-------------|
-| `trackByTxHash(txHash)` | Track by transaction hash (auto-detects type, includes election status) |
-| `trackFromGovernor(address, proposalId)` | Track governor proposal |
-| `trackFromTimelock(address, { operationId })` | Track timelock operation |
+| `trackByTxHash(txHash, operationId?)` | Track by transaction hash (auto-detects type, includes election status) |
 | `trackFromCheckpoint(checkpoint)` | Resume from cached checkpoint |
 | `trackElection(electionIndex)` | Track election by index (returns `ElectionProposalStatus`) |
+| `trackAllElections(options)` | Track all elections with caching |
 
 ```typescript
 const results = await tracker.trackByTxHash("0x...");

@@ -46,6 +46,7 @@ import {
   invalidateBlockInfoCache,
   ElectionProposalStatus,
 } from "../../index";
+import { getErrorMessage } from "../../utils/rpc-utils";
 import { withScope } from "../../utils/logger";
 
 export { isElectionGovernor };
@@ -242,14 +243,26 @@ export function validateCliOptions(opts: CommonCliOptions, command: "run" | "tra
 }
 
 /**
+ * Safely parse an integer from string, returning fallback if invalid.
+ */
+export function safeParseInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+/**
  * Parse gas settings from CLI options
  */
 export function parseGasSettings(opts: { l2MaxFee?: string; l2PriorityFee?: string }): GasSettings {
+  const maxFeePerGas = opts.l2MaxFee ? parseFloat(opts.l2MaxFee) : NaN;
+  const maxPriorityFeePerGas = opts.l2PriorityFee ? parseFloat(opts.l2PriorityFee) : NaN;
+
   return {
-    maxFeePerGas: opts.l2MaxFee ? parseFloat(opts.l2MaxFee) : DEFAULT_L2_GAS_SETTINGS.maxFeePerGas,
-    maxPriorityFeePerGas: opts.l2PriorityFee
-      ? parseFloat(opts.l2PriorityFee)
-      : DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas,
+    maxFeePerGas: isNaN(maxFeePerGas) ? DEFAULT_L2_GAS_SETTINGS.maxFeePerGas : maxFeePerGas,
+    maxPriorityFeePerGas: isNaN(maxPriorityFeePerGas)
+      ? DEFAULT_L2_GAS_SETTINGS.maxPriorityFeePerGas
+      : maxPriorityFeePerGas,
   };
 }
 
@@ -260,8 +273,8 @@ export function parseChunkingConfig(
   opts: { l1ChunkSize?: string; l2ChunkSize?: string },
   delayMs: number
 ): { l1ChunkSize: number; l2ChunkSize: number; novaChunkSize: number; delayBetweenChunks: number } {
-  const l1ChunkSize = parseInt(opts.l1ChunkSize || "0", 10);
-  const l2ChunkSize = parseInt(opts.l2ChunkSize || "0", 10);
+  const l1ChunkSize = safeParseInt(opts.l1ChunkSize, 0);
+  const l2ChunkSize = safeParseInt(opts.l2ChunkSize, 0);
   return {
     l1ChunkSize,
     l2ChunkSize,
@@ -381,7 +394,7 @@ export async function executeTransaction(
 
     return { success: true, txHash: tx.hash };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
 
     // For retryables, check if already redeemed
     if (
@@ -701,7 +714,8 @@ export async function runWithLoop(
       await cycleFn();
       consecutiveErrors = 0;
     } catch (error) {
-      console.error("Cycle error:", (error as Error).message);
+      const errMsg = getErrorMessage(error);
+      console.error("Cycle error:", errMsg);
       consecutiveErrors = Math.min(consecutiveErrors + 1, 10);
       const backoffMs = Math.min(5000 * Math.pow(2, consecutiveErrors - 1), 300000);
       console.log(
@@ -711,13 +725,14 @@ export async function runWithLoop(
     }
 
     if (options.healthCheckUrl) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
         await fetch(options.healthCheckUrl, { method: "GET", signal: controller.signal });
-        clearTimeout(timeoutId);
       } catch {
         // Silently ignore health check errors (including timeouts)
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -755,8 +770,6 @@ export interface MonitorRunOptions {
   targets?: DiscoveryTargets;
   /** Skip discovery and only track elections (faster when only elections needed) */
   electionsOnly?: boolean;
-  /** Force re-track all elections, bypassing cache */
-  forceElections?: boolean;
 }
 
 export interface MonitorRunResult {
@@ -1032,8 +1045,7 @@ export async function runMonitorCycle(
     if (!isShuttingDown()) {
       try {
         // Use tracker's cached method - completed elections use cache (0 RPC calls)
-        // Use forceElections to bypass cache when --force is specified
-        const allElections = await tracker.trackAllElections({ force: options.forceElections });
+        const allElections = await tracker.trackAllElections();
         for (const electionStatus of allElections) {
           elections.push(electionStatus);
           // Print each election
@@ -1161,14 +1173,11 @@ export async function runMonitorCycle(
           await options.onTrack?.({
             key,
             result: null,
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error),
           });
         } catch (callbackError) {
           // Log the callback error but don't let it mask the original error
-          console.error(
-            `Error in onTrack callback for ${key}:`,
-            callbackError instanceof Error ? callbackError.message : String(callbackError)
-          );
+          console.error(`Error in onTrack callback for ${key}:`, getErrorMessage(callbackError));
         }
       }
     });
@@ -1278,7 +1287,7 @@ export async function runMonitorCycle(
   if (shouldTrackElections && !isShuttingDown()) {
     try {
       // Use tracker's cached method - completed elections use cache (0 RPC calls)
-      const allElections = await tracker.trackAllElections({ force: options.forceElections });
+      const allElections = await tracker.trackAllElections();
       for (const electionStatus of allElections) {
         elections.push(electionStatus);
       }

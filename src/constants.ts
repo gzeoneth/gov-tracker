@@ -12,6 +12,7 @@ import type {
   DiscoveryTargets,
   StageTransaction,
 } from "./types";
+import { isAddressIn } from "./utils/chain";
 
 // Contract Addresses
 
@@ -69,11 +70,10 @@ export const ADDRESSES = {
  * and are often filtered separately in monitoring applications.
  */
 export function isElectionGovernor(governorAddress: string): boolean {
-  const addr = governorAddress.toLowerCase();
-  return (
-    addr === ADDRESSES.ELECTION_NOMINEE_GOVERNOR.toLowerCase() ||
-    addr === ADDRESSES.ELECTION_MEMBER_GOVERNOR.toLowerCase()
-  );
+  return isAddressIn(governorAddress, [
+    ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+    ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+  ]);
 }
 
 /**
@@ -231,7 +231,22 @@ export const TIMING = {
   /** Voting extension period in days (for late quorum) */
   VOTING_EXTENSION_DAYS: 2,
 
-  /** Milliseconds in one day */
+  /** Seconds per minute */
+  SEC_PER_MINUTE: 60,
+
+  /** Seconds per hour */
+  SEC_PER_HOUR: 3_600,
+
+  /** Seconds per day */
+  SEC_PER_DAY: 86_400,
+
+  /** Milliseconds per minute */
+  MS_PER_MINUTE: 60 * 1000,
+
+  /** Milliseconds per hour */
+  MS_PER_HOUR: 60 * 60 * 1000,
+
+  /** Milliseconds per day */
   MS_PER_DAY: 24 * 60 * 60 * 1000,
 
   /** Security Council target nominee count per cohort */

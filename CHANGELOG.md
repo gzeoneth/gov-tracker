@@ -11,6 +11,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Lifecycle phase helper** - New `getLifecyclePhase(stages)` function returns a human-readable `LifecyclePhase` representing the current state of a proposal or timelock operation. Phases include: `proposal_created`, `voting`, `queued`, `l2_timelock_pending`, `l2_timelock_executed`, `l2_to_l1_pending`, `l1_timelock_pending`, `l1_timelock_executed`, `retryables_pending`, `completed`, `failed`, `unknown`
 - **Watermark access utilities** - Exported `loadWatermarks()` function and `LoadedWatermarks` type for accessing discovery watermarks from cache
+- **RPC utility helper** - Added `getReceiptOrNull()` to `rpc-utils.ts` for consolidated transaction receipt fetching with retry and null handling
+- **Error message utility** - Added `getErrorMessage()` to `rpc-utils.ts` to consolidate the common `error instanceof Error ? error.message : String(error)` pattern
+
+### Fixed
+
+- **Discovery provider error handling** - Provider errors during watermark verification now return `isValid: false` instead of silently returning `isValid: true`, properly triggering retry on next cycle (`discovery.ts`)
+- **CLI NaN validation** - Added `safeParseInt()` helper for NaN-safe integer parsing in CLI options with proper fallback defaults (`cli/lib/cli.ts`)
+- **CLI election index validation** - Added validation for negative and NaN election indices with user-friendly error message (`cli/cli.ts`)
+- **TUI unsafe array access** - Changed `proposals[0]` to `proposals.at(0)` in useElectionData for safer array access
+- **BigNumber overflow** - Use BigNumber comparison methods (`.gt()`, `.lt()`) instead of `.toNumber()` for index sorting in CallScheduled events (`timelock-discovery.ts`, `timelock.ts`)
+- **CLI JSON parsing** - Added try-catch around `JSON.parse()` in `getPackageVersion()` to prevent crash on malformed package.json
+- **Timeout cleanup** - Fixed potential resource leak where `clearTimeout()` was not called in error paths for API fetch operations (`signature-lookup.ts`, `cli.ts`)
+- **TUI crash** - Fixed potential runtime error from unsafe non-null assertion when L2_TIMELOCK stage is missing (`useProposals.ts`)
+- **Discovery logging** - Added logging for cases where block hash establishment fails during watermark verification (`discovery.ts`)
+- **Retryable ticket decoding** - `decodeRetryableTicket()` now returns null on decode failure instead of throwing, improving robustness when processing malformed calldata
+- **Topics bounds check** - Added bounds check before accessing `log.topics[1]` in timelock operation discovery (`timelock-discovery.ts`)
+- **Simulation decode errors** - `prepareTimelockSimulation()` and `convertScheduleToExecute()` now return null/original on decode failure instead of throwing
+- **CLI gas settings** - `parseGasSettings()` now validates parsed float values with `isNaN()` check, falling back to defaults for invalid input
+- **TUI array cycling** - `cycleArray()` now handles edge case where current value is not in array, returning first element instead of undefined behavior
+- **Unsafe array access** - Added optional chaining for `stage.transactions[0]` access in TUI components (`StageRow.tsx`, `json-state.ts`)
+- **Log topics bounds** - Added optional chaining for `log.topics[0]` access to handle edge case of empty topics array (`log-filters.ts`, `governor-discovery.ts`)
+- **Multicall results validation** - Added undefined fallbacks for multicall results array access to handle partial response failures (`timelock-discovery.ts`, `stages/utils.ts`)
+- **Election status validation** - Added explicit validation for multicall results in `checkElectionStatus()` with descriptive error messages on failure (`election/status.ts`)
+
+### Changed
+
+- **Documentation** - Removed outdated API references to non-existent `trackFromGovernor()` and `trackFromTimelock()` methods in README, API.md, EXAMPLES.md, and `timing.ts` JSDoc
+- **Documentation** - Clarified cache fallback comments to use more descriptive terminology
+- **Documentation** - Fixed incorrect test command names in ARCHITECTURE.md (`test:coverage` → `test:cov`)
+- **Code cleanup** - Removed unused `CallInput` re-export from multicall utilities
+- **Code cleanup** - Consolidated duplicate `parseLogsWithMapper` into shared `parseLogsSafe` utility
+- **Code cleanup** - Removed duplicate `isTimelockOpKey` function, now imports from checkpoint-helpers
+- **Code cleanup** - Removed duplicate block range logic in `params.ts`, now uses shared `getLogQueryBlockRange` from `contracts.ts`
+- **Code cleanup** - Consolidated duplicate SC nonce extraction logic in `getHighestScNonceFromCheckpoints()` to use shared helper
+- **Error handling** - Improved error type safety in election proposal ID lookup, CLI cycle errors, election tracking, and CLI error messages
+- **Logging** - Added debug logging for block range fallback in election contracts and L1→L2 block conversion failures
+- **Type safety** - Changed `RetryableSimulationData.l2Chain` from `Chain` to `L2Chain | "unknown"` to prevent invalid assignments
+- **Performance** - Parallelize election tracking in `trackAllElections()` using Promise.all
+- **Performance** - Parallelize checkpoint loading in `getAllCheckpoints()` and `queryIncompleteCheckpoints()` using Promise.all
+- **Performance** - Parallelize cache lookups and writes in `createPendingCheckpoints()` for faster discovery
+- **Performance** - Parallelize cache reads in deduplication helpers (`deduplication.ts`)
+- **Performance** - Parallelize election proposal ID search with `Promise.allSettled` (`proposal-ids.ts`)
+- **Performance** - Cache SC nonce extraction during checkpoint filtering to avoid redundant computation (`query.ts`)
+- **Performance** - Parallelize checkpoint loading in `getHighestScNonceFromCheckpoints()` using Promise.all (`query.ts`)
+- **Performance** - Parallelize cache deletion in `clearCacheForTx()` method using Promise.all (`tracker.ts`)
+- **Code consolidation** - Centralized time constants (MS_PER_*, SEC_PER_*) in `constants.ts` TIMING object; TUI time.ts now imports from there
+- **Code consolidation** - Updated `isElectionGovernor()` to use `isAddressIn()` utility for consistent address comparison
+- **Code consolidation** - Updated address comparison in `calculateRetryableExecutionValue()` to use `addressEquals()` utility
+- **Performance** - Fetch gas price once per batch in `calculateBatchRetryableValues()` instead of per-item, reducing RPC calls
+- **Robustness** - Added graceful fallback for Arbitrum network detection in `prepareL2ToL1MessageStage()` to match tracking phase behavior
+- **Robustness** - Use `Promise.allSettled` for watermark verification to continue with partial results on failures
+- **Performance** - `--force` now clears cache at session start instead of bypassing cache mid-session, avoiding redundant re-tracking of elections already tracked via proposal tracking (`cli.ts`)
+
+### Refactored
+
+- **Gas error detection** - Consolidated duplicate gas error checking logic into single `isGasEstimationError()` function in `rpc-utils.ts`, now used by `checkpoint-helpers.ts` (`incrementErrorCount`) for consistent error classification across the codebase
+- **fromBlock validation** - Consolidated duplicate validation in `getTimelockState()` to single check at function start
+- **Markdown title extraction** - Extracted `extractMarkdownTitle()` to shared `markdown-parser.ts` utility, removed duplicate in `useProposals.ts`
+- **Type narrowing** - Replaced ad-hoc `stage.data as {...}` type casts with discriminated union narrowing in `StageRow.tsx` and `DescriptionView.tsx`
+- **Title extraction** - Extracted `extractTitle()` helper in `useProposals.ts` to consolidate duplicate title parsing logic from `getTimelockTitle()` and `getProposalInfo()`
+- **Error message handling** - CLI error handlers now use shared `getErrorMessage()` utility (`cli/cli.ts`, `cli/lib/cli.ts`)
+- **Nominee filtering** - Single-pass partition for compliant/excluded nominees instead of two filter calls (`election/details.ts`)
+
+### Removed
+
+- **Public API** - Removed internal TUI utilities `getAllFoldableKeys` and `toggleFoldKey` from public exports (internal to calldata view only)
 
 ## [0.4.0] - 2026-01-19
 

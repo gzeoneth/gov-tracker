@@ -111,7 +111,7 @@ export interface JsonDashboardState {
 // ============================================================================
 
 function stageToJson(stage: TrackedStage): JsonStageStatus {
-  const tx = stage.transactions[0];
+  const tx = stage.transactions?.[0];
   const json: JsonStageStatus = {
     type: stage.type,
     status: stage.status,

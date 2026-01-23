@@ -5,7 +5,7 @@
  * to call Tenderly API themselves.
  */
 
-import type { Chain, ChainId } from "./core";
+import type { Chain, ChainId, L2Chain } from "./core";
 
 /**
  * Type of simulation
@@ -42,7 +42,7 @@ export interface RetryableSimulationData extends BaseSimulationData {
   type: "retryable";
 
   /** Target L2 chain */
-  l2Chain: Chain;
+  l2Chain: L2Chain | "unknown";
   l2ChainId: ChainId;
 
   /** Original L2 target from retryable ticket */

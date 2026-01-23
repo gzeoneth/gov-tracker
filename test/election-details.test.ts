@@ -20,6 +20,7 @@ vi.mock("../src/election/participants", () => ({
 
 vi.mock("../src/utils/rpc-utils", () => ({
   queryWithRetry: vi.fn((fn) => fn()),
+  getErrorMessage: vi.fn((e) => (e instanceof Error ? e.message : String(e))),
 }));
 
 vi.mock("../src/utils/multicall", () => ({

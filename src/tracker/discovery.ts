@@ -26,7 +26,7 @@ import {
   DiscoveredTimelockOp,
 } from "../discovery/timelock-discovery";
 import { loggers, withScope } from "../utils/logger";
-import { queryWithRetry } from "../utils/rpc-utils";
+import { queryWithRetry, getErrorMessage } from "../utils/rpc-utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
 
@@ -377,9 +377,10 @@ export async function discoverAll(
         const { key, blockNumber } = result.value;
         verifiedWatermarks[key] = blockNumber;
       } else {
-        const errMsg =
-          result.reason instanceof Error ? result.reason.message : String(result.reason);
-        logDiscovery("Watermark verification failed, using fallback: %s", errMsg);
+        logDiscovery(
+          "Watermark verification failed, using fallback: %s",
+          getErrorMessage(result.reason)
+        );
       }
     }
     // Ensure all active keys have a watermark (fallback for rejected verifications)

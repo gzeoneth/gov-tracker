@@ -13,6 +13,7 @@ import type { ProposalState } from "../src/types";
 // Mock external dependencies before importing the module under test
 vi.mock("../src/utils/rpc-utils", () => ({
   queryWithRetry: vi.fn((fn: () => Promise<unknown>) => fn()),
+  getErrorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
 vi.mock("../src/utils/timing", () => ({

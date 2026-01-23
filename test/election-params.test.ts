@@ -26,6 +26,7 @@ vi.mock("../src/election/proposal-ids", () => ({
 
 vi.mock("../src/utils/rpc-utils", () => ({
   queryWithRetry: vi.fn((fn) => fn()),
+  getErrorMessage: vi.fn((e) => (e instanceof Error ? e.message : String(e))),
 }));
 
 // Import after mocking

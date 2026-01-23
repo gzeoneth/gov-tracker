@@ -111,9 +111,9 @@ export async function queryIncompleteCheckpoints(
   // Load all checkpoints in parallel (single pass over cache)
   const checkpointResults = await Promise.all(keys.map((key) => getCheckpoint(cache, key)));
 
-  // Build key-checkpoint pairs and extract SC nonces in one pass
+  // Build key-checkpoint pairs for incomplete checkpoints, extract SC nonces from all
   const allScNonces: BigNumber[] = [];
-  const checkpointPairs: Array<{
+  const incompleteCheckpoints: Array<{
     key: string;
     checkpoint: TrackingCheckpoint;
     scNonce: BigNumber | null;
@@ -123,12 +123,15 @@ export async function queryIncompleteCheckpoints(
     const checkpoint = checkpointResults[i];
     if (!checkpoint) continue;
 
-    // Extract SC nonce once and cache it
+    // Extract SC nonce from all checkpoints (needed for highestScNonce calculation)
     const scNonce = extractScNonceFromCheckpoint(checkpoint);
-    checkpointPairs.push({ key: keys[i], checkpoint, scNonce });
-
     if (scNonce) {
       allScNonces.push(scNonce);
+    }
+
+    // Only store incomplete checkpoints for filtering
+    if (!isCheckpointComplete(checkpoint)) {
+      incompleteCheckpoints.push({ key: keys[i], checkpoint, scNonce });
     }
   }
 
@@ -137,12 +140,7 @@ export async function queryIncompleteCheckpoints(
   // Filter incomplete checkpoints with SC nonce handling
   const results: Array<{ key: string; checkpoint: TrackingCheckpoint }> = [];
 
-  for (const { key, checkpoint, scNonce } of checkpointPairs) {
-    // Skip if already complete (works for both proposals and elections)
-    if (isCheckpointComplete(checkpoint)) {
-      continue;
-    }
-
+  for (const { key, checkpoint, scNonce } of incompleteCheckpoints) {
     // Skip if voting failed (terminal state)
     const completedStages = checkpoint.cachedData.completedStages ?? [];
     const votingStage = completedStages.find((s) => s.type === "VOTING_ACTIVE");

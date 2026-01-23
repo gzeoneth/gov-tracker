@@ -1,6 +1,6 @@
 import { ethers, BigNumber } from "ethers";
 import { ADDRESSES } from "../constants";
-import { queryWithRetry } from "../utils/rpc-utils";
+import { queryWithRetry, getErrorMessage } from "../utils/rpc-utils";
 import { NOMINEE_ELECTION_GOVERNOR_ABI, MEMBER_ELECTION_GOVERNOR_ABI } from "../abis";
 import { loggers } from "../utils/logger";
 
@@ -33,8 +33,11 @@ export async function getLogQueryBlockRange(
     const snapshot = await queryWithRetry<BigNumber>(() => governor.proposalSnapshot(proposalId));
     fromBlock = Math.max(0, snapshot.toNumber() - offsetFromSnapshot);
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    log("proposalSnapshot failed for %s, using fallback range: %s", proposalId, errMsg);
+    log(
+      "proposalSnapshot failed for %s, using fallback range: %s",
+      proposalId,
+      getErrorMessage(err)
+    );
     fromBlock = Math.max(0, toBlock - fallbackRange);
   }
   return { fromBlock, toBlock };

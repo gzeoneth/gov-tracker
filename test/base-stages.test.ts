@@ -570,26 +570,18 @@ describe("Stages Base Utilities", () => {
 
   describe("getLifecyclePhase", () => {
     it("should return 'unknown' for empty stages", () => {
-      // #given - empty stages array
-      // #when - getting lifecycle phase
-      // #then - returns unknown
       expect(getLifecyclePhase([])).toBe("unknown");
     });
 
     it("should return 'failed' when any stage has FAILED status", () => {
-      // #given - stages with one FAILED
       const stages: TrackedStage[] = [
         new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
         new StageBuilder("VOTING_ACTIVE", "arb1").status("FAILED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns failed
       expect(getLifecyclePhase(stages)).toBe("failed");
     });
 
-    it("should return 'completed' when all stages are terminal", () => {
-      // #given - all stages COMPLETED/SKIPPED
+    it("should return 'executed' when all stages are terminal", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
         new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
@@ -599,27 +591,28 @@ describe("Stages Base Utilities", () => {
         new StageBuilder("L1_TIMELOCK", "ethereum").status("SKIPPED").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("SKIPPED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns completed
-      expect(getLifecyclePhase(stages)).toBe("completed");
+      expect(getLifecyclePhase(stages)).toBe("executed");
     });
 
     it("should return 'voting' when VOTING_ACTIVE is pending", () => {
-      // #given - stages in voting phase
       const stages: TrackedStage[] = [
         new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
         new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build(),
         new StageBuilder("PROPOSAL_QUEUED", "arb1").status("NOT_STARTED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns voting
       expect(getLifecyclePhase(stages)).toBe("voting");
     });
 
-    it("should return 'l2_timelock_pending' when L2_TIMELOCK is pending/ready", () => {
-      // #given - stages with L2_TIMELOCK pending
+    it("should return 'queued' when PROPOSAL_QUEUED is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("PENDING").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("queued");
+    });
+
+    it("should return 'l2_delay' when L2_TIMELOCK is pending/ready", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
         new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
@@ -627,56 +620,40 @@ describe("Stages Base Utilities", () => {
         new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns l2_timelock_pending
-      expect(getLifecyclePhase(stages)).toBe("l2_timelock_pending");
+      expect(getLifecyclePhase(stages)).toBe("l2_delay");
     });
 
-    it("should return 'l2_timelock_executed' when L2_TIMELOCK is complete but L2_TO_L1 is pending", () => {
-      // #given - stages after L2 timelock executed, waiting for L2→L1 message
+    it("should return 'bridging' when L2_TO_L1_MESSAGE is pending", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("PENDING").build(),
         new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns l2_timelock_executed (L2 timelock has executed, now waiting for L2→L1)
-      expect(getLifecyclePhase(stages)).toBe("l2_timelock_executed");
+      expect(getLifecyclePhase(stages)).toBe("bridging");
     });
 
-    it("should return 'l1_timelock_pending' when L2_TO_L1 is complete", () => {
-      // #given - stages after L2→L1 message confirmed
+    it("should return 'l1_delay' when L1_TIMELOCK is pending", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("COMPLETED").build(),
         new StageBuilder("L1_TIMELOCK", "ethereum").status("PENDING").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns l1_timelock_pending
-      expect(getLifecyclePhase(stages)).toBe("l1_timelock_pending");
+      expect(getLifecyclePhase(stages)).toBe("l1_delay");
     });
 
-    it("should return 'l1_timelock_executed' when L1 timelock is executed but retryables pending", () => {
-      // #given - stages after L1 timelock executed, waiting for retryables
+    it("should return 'finalizing' when RETRYABLE_EXECUTED is pending", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("COMPLETED").build(),
         new StageBuilder("L1_TIMELOCK", "ethereum").status("COMPLETED").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("PENDING").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns l1_timelock_executed (L1 timelock has executed, now waiting for retryables)
-      expect(getLifecyclePhase(stages)).toBe("l1_timelock_executed");
+      expect(getLifecyclePhase(stages)).toBe("finalizing");
     });
 
-    it("should return 'completed' for non-constitutional (L2-only) after L2 timelock", () => {
-      // #given - non-constitutional proposal with skipped L1 stages
+    it("should return 'executed' for non-constitutional (L2-only) after L2 timelock", () => {
       const stages: TrackedStage[] = [
         new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
         new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
@@ -686,24 +663,17 @@ describe("Stages Base Utilities", () => {
         new StageBuilder("L1_TIMELOCK", "ethereum").status("SKIPPED").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("SKIPPED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns completed
-      expect(getLifecyclePhase(stages)).toBe("completed");
+      expect(getLifecyclePhase(stages)).toBe("executed");
     });
 
     it("should work with timelock-only path (no governor stages)", () => {
-      // #given - timelock-only path
       const stages: TrackedStage[] = [
         new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build(),
         new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
         new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
-
-      // #when - getting lifecycle phase
-      // #then - returns l2_timelock_pending
-      expect(getLifecyclePhase(stages)).toBe("l2_timelock_pending");
+      expect(getLifecyclePhase(stages)).toBe("l2_delay");
     });
   });
 });

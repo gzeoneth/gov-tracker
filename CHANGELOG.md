@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase` for proposal/timelock state
+- `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
 - `loadWatermarks()` / `LoadedWatermarks` - Access discovery watermarks from cache
 - `getReceiptOrNull()` / `getErrorMessage()` - Shared RPC and error utilities
 

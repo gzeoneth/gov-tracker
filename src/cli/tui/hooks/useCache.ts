@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { readCacheStatus, getBundledCachePath } from "../../../tracker/cache.js";
 import { computeCacheStats } from "../../../tracker/checkpoint-helpers.js";
+import { getErrorMessage } from "../../../utils/rpc-utils.js";
 import type { CacheData } from "../types.js";
 
 export interface UseCacheResult {
@@ -42,7 +43,7 @@ export function useCache(cachePath?: string): UseCacheResult {
       setData({ checkpoints, elections, stats });
     } catch (err) {
       if (version !== versionRef.current || !mountedRef.current) return;
-      setError(err instanceof Error ? err.message : String(err));
+      setError(getErrorMessage(err));
     } finally {
       if (version === versionRef.current && mountedRef.current) {
         setLoading(false);

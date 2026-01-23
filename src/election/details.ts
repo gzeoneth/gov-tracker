@@ -73,8 +73,11 @@ export async function getNomineeElectionDetails(
     governor.quorum(snapshotBlock.toNumber())
   );
 
-  const compliantNominees = nominees.filter((n) => !n.isExcluded);
-  const excludedNominees = nominees.filter((n) => n.isExcluded);
+  const compliantNominees: typeof nominees = [];
+  const excludedNominees: typeof nominees = [];
+  for (const n of nominees) {
+    (n.isExcluded ? excludedNominees : compliantNominees).push(n);
+  }
 
   return {
     proposalId,
@@ -159,8 +162,9 @@ export async function getMemberElectionDetails(
     }));
   }
 
+  // Sort by weight descending (use BigNumber methods to avoid overflow)
   const nomineeDetails: MemberElectionNominee[] = nomineeWeights
-    .sort((a, b) => (b.weight.gt(a.weight) ? 1 : -1))
+    .sort((a, b) => (a.weight.lt(b.weight) ? 1 : a.weight.gt(b.weight) ? -1 : 0))
     .map((n, i) => ({
       address: n.addr,
       weightReceived: n.weight,

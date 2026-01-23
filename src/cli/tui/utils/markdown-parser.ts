@@ -92,3 +92,18 @@ export function parseMarkdown(text: string, width: number): MarkdownLine[] {
 
   return result;
 }
+
+/**
+ * Extract first markdown heading as title from description text.
+ * Returns null if no heading found or description is empty.
+ */
+export function extractMarkdownTitle(description: string | undefined): string | null {
+  if (!description) return null;
+  for (const line of description.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#")) {
+      return trimmed.replace(/^#+\s*/, "").trim() || null;
+    }
+  }
+  return null;
+}

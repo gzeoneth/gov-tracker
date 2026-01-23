@@ -26,14 +26,11 @@ const tracker = createTracker({
   cachePath: "./gov-tracker-cache.json",
 });
 
-// Track from transaction hash
+// Track from transaction hash (auto-detects proposal type)
 const results = await tracker.trackByTxHash("0x...");
 for (const stage of results[0].stages) {
   console.log(`${stage.type}: ${stage.status}`);
 }
-
-// Or track from governor
-const result = await tracker.trackFromGovernor(ADDRESSES.CONSTITUTIONAL_GOVERNOR, proposalId);
 
 // Execute ready stages
 const readyStage = findExecutableStage(results[0].stages);

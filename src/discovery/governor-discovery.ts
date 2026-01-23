@@ -427,7 +427,7 @@ export async function discoverProposalByTxHash(
   const receipt = await queryWithRetry(() => provider.getTransactionReceipt(txHash));
   if (!receipt) return null;
 
-  const log = receipt.logs.find((l) => l.topics[0] === EVENT_TOPICS.PROPOSAL_CREATED);
+  const log = receipt.logs.find((l) => l.topics?.[0] === EVENT_TOPICS.PROPOSAL_CREATED);
   if (!log) return null;
 
   const parsed = parseProposalCreatedEvent(log);

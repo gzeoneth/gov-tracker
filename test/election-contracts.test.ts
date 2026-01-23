@@ -10,6 +10,7 @@ import { ethers, BigNumber } from "ethers";
 // Mock queryWithRetry to simulate RPC calls
 vi.mock("../src/utils/rpc-utils", () => ({
   queryWithRetry: vi.fn((fn: () => unknown) => fn()),
+  getErrorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
 import {

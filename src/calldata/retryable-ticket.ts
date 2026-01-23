@@ -61,23 +61,27 @@ export function getRetryableChainName(chain: "arb1" | "nova" | "unknown"): strin
  * (address inbox, address l2Target, uint256 l2Value, uint256 gasLimit, uint256 maxFeePerGas, bytes l2Calldata)
  *
  * @param bytes - ABI-encoded retryable ticket bytes
- * @returns Decoded retryable ticket data
+ * @returns Decoded retryable ticket data, or null if decoding fails
  */
-export function decodeRetryableTicket(bytes: string): RetryableTicketData {
-  const decoded = ethers.utils.defaultAbiCoder.decode(
-    ["address", "address", "uint256", "uint256", "uint256", "bytes"],
-    bytes
-  );
+export function decodeRetryableTicket(bytes: string): RetryableTicketData | null {
+  try {
+    const decoded = ethers.utils.defaultAbiCoder.decode(
+      ["address", "address", "uint256", "uint256", "uint256", "bytes"],
+      bytes
+    );
 
-  const chain = detectChainFromInbox(decoded[0] as string);
+    const chain = detectChainFromInbox(decoded[0] as string);
 
-  return {
-    targetInbox: decoded[0],
-    l2Target: decoded[1],
-    l2Value: decoded[2].toString(),
-    gasLimit: decoded[3].toString(),
-    maxFeePerGas: decoded[4].toString(),
-    l2Calldata: decoded[5],
-    chain,
-  };
+    return {
+      targetInbox: decoded[0],
+      l2Target: decoded[1],
+      l2Value: decoded[2].toString(),
+      gasLimit: decoded[3].toString(),
+      maxFeePerGas: decoded[4].toString(),
+      l2Calldata: decoded[5],
+      chain,
+    };
+  } catch {
+    return null;
+  }
 }

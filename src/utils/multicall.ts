@@ -86,5 +86,3 @@ export async function multicall<T extends CallInput<unknown>[]>(
 
   return results as { [K in keyof T]: T[K] extends CallInput<infer U> ? U | undefined : never };
 }
-
-export { CallInput } from "@arbitrum/sdk";

@@ -434,13 +434,14 @@ describe("Retryable Ticket", () => {
 
       const result = decodeRetryableTicket(encoded);
 
-      expect(result.targetInbox.toLowerCase()).toBe(inbox.toLowerCase());
-      expect(result.l2Target.toLowerCase()).toBe(l2Target.toLowerCase());
-      expect(result.l2Value).toBe("1000000000000000000");
-      expect(result.gasLimit).toBe("100000");
-      expect(result.maxFeePerGas).toBe("1000000000");
-      expect(result.l2Calldata).toBe(l2Calldata);
-      expect(result.chain).toBe("arb1");
+      expect(result).not.toBeNull();
+      expect(result!.targetInbox.toLowerCase()).toBe(inbox.toLowerCase());
+      expect(result!.l2Target.toLowerCase()).toBe(l2Target.toLowerCase());
+      expect(result!.l2Value).toBe("1000000000000000000");
+      expect(result!.gasLimit).toBe("100000");
+      expect(result!.maxFeePerGas).toBe("1000000000");
+      expect(result!.l2Calldata).toBe(l2Calldata);
+      expect(result!.chain).toBe("arb1");
     });
 
     it("should decode retryable ticket for Nova", () => {
@@ -458,7 +459,8 @@ describe("Retryable Ticket", () => {
 
       const result = decodeRetryableTicket(encoded);
 
-      expect(result.chain).toBe("nova");
+      expect(result).not.toBeNull();
+      expect(result!.chain).toBe("nova");
     });
 
     it("should return unknown chain for unrecognized inbox", () => {
@@ -476,7 +478,13 @@ describe("Retryable Ticket", () => {
 
       const result = decodeRetryableTicket(encoded);
 
-      expect(result.chain).toBe("unknown");
+      expect(result).not.toBeNull();
+      expect(result!.chain).toBe("unknown");
+    });
+
+    it("should return null for invalid data", () => {
+      const result = decodeRetryableTicket("0x1234");
+      expect(result).toBeNull();
     });
   });
 

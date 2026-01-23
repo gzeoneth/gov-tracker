@@ -228,7 +228,7 @@ const result = await tracker.trackByTxHash(fixture.creationTxHash);
 ### Coverage Commands
 
 ```bash
-yarn test:coverage       # Unit tests only
-yarn test:coverage:fork  # Fork tests (needs archive RPC)
-yarn test:coverage:all   # Merge all coverage
+yarn test:cov            # Unit tests with coverage
+yarn test:cov:fork       # Fork tests with coverage (needs archive RPC)
+yarn test:cov:all        # Both + merge all coverage
 ```

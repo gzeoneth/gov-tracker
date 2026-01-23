@@ -89,7 +89,10 @@ export async function checkElectionStatus(
     ]),
   ]);
 
-  const electionCount = electionCountResult[0] as BigNumber;
+  const electionCount = electionCountResult[0] as BigNumber | undefined;
+  if (!electionCount) {
+    throw new Error("Failed to fetch election count from nominee governor");
+  }
   log("L1 block number from L2: %s", l1BlockNumber.toString());
 
   const l1Block = await queryWithRetry(() => l1Provider.getBlock(l1BlockNumber.toNumber()));
@@ -117,8 +120,11 @@ export async function checkElectionStatus(
     ),
   ]);
 
-  const nextElectionTimestamp = electionResults[0] as BigNumber;
-  const cohort = electionResults[1] as number;
+  const nextElectionTimestamp = electionResults[0] as BigNumber | undefined;
+  const cohort = electionResults[1] as number | undefined;
+  if (!nextElectionTimestamp || cohort === undefined) {
+    throw new Error("Failed to fetch election details from nominee governor");
+  }
   log(
     "electionCount=%s nextTimestamp=%s cohort=%d",
     electionCount.toString(),

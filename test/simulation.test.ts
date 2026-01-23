@@ -141,14 +141,15 @@ describe("Simulation Data Preparation", () => {
       expect(result!.storageOverride).toBeDefined();
     });
 
-    it("should throw for invalid calldata", () => {
+    it("should return null for invalid calldata", () => {
       // #given - invalid (too short) calldata
       const invalidCalldata = "0x12345678";
 
-      // #when/#then - should throw during decode
-      expect(() =>
-        prepareTimelockSimulation(ADDRESSES.L1_TIMELOCK, invalidCalldata, "ethereum")
-      ).toThrow();
+      // #when - attempt to prepare simulation with invalid calldata
+      const result = prepareTimelockSimulation(ADDRESSES.L1_TIMELOCK, invalidCalldata, "ethereum");
+
+      // #then - should return null instead of throwing
+      expect(result).toBeNull();
     });
 
     it("should handle arb1 chain context", () => {

@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import type { TrackedStage, Chain } from "../../../types/index.js";
 import { decodeCalldata, extractCalldataFromStage } from "../../../calldata/index.js";
+import { getErrorMessage } from "../../../utils/rpc-utils.js";
 import type { DecodedCalldata } from "../../../types/calldata.js";
 
 export interface DecodedAction {
@@ -80,7 +81,7 @@ export function useStageCalldata(
           }
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        if (!cancelled) setError(getErrorMessage(err));
       } finally {
         if (!cancelled) setLoading(false);
       }

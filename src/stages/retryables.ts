@@ -23,6 +23,7 @@ import {
   RetryableRedemptionDetail,
   chainToChainId,
 } from "../types";
+import { getErrorMessage } from "../utils/rpc-utils";
 import { getChain, getChainId } from "../utils/chain";
 import { loggers } from "../utils/logger";
 
@@ -227,7 +228,7 @@ export async function trackRetryables(
     const redeemResults = await Promise.all(
       messages.map((message, idx) =>
         queryWithRetry(() => message.getSuccessfulRedeem()).catch((err) => {
-          const errMsg = err instanceof Error ? err.message : String(err);
+          const errMsg = getErrorMessage(err);
           log("Warning: failed to get redeem status for message %d: %s", idx, errMsg);
           return { __fetchError: true, message: errMsg } as FetchError;
         })

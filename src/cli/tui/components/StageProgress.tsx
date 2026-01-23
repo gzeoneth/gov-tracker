@@ -26,7 +26,7 @@ export function StageProgress({
       <Box marginBottom={1}>
         <Text color="gray">Progress: </Text>
         {STAGE_TYPES.map((type, i) => {
-          const stage = stages.find(s => s.type === type);
+          const stage = stages.find((s) => s.type === type);
           const icon = getStatusIcon(stage);
           const color = getStatusColor(stage);
           const isSelected = i === currentIndex;

@@ -19,8 +19,10 @@ interface DescriptionViewProps {
 function getDescription(proposal: ProposalListItem): string {
   const stages = getStages(proposal);
   const createdStage = stages.find((s) => s.type === "PROPOSAL_CREATED");
-  const data = createdStage?.data as { description?: string } | undefined;
-  return data?.description ?? "No description available";
+  if (createdStage?.type === "PROPOSAL_CREATED") {
+    return createdStage.data.description ?? "No description available";
+  }
+  return "No description available";
 }
 
 const RESERVED_LINES = 8;

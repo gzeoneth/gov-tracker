@@ -314,10 +314,11 @@ async function trackTimelock(
       log("%s: Operation uses scheduleBatch", config.logPrefix);
     } else {
       // Try single validation
+      const first = allData[0];
       const isSingle = validateSalt(operationId, {
-        target: allData[0].target,
-        value: allData[0].value,
-        data: allData[0].data,
+        target: first.target,
+        value: first.value,
+        data: first.data,
         predecessor,
         salt,
       });
@@ -565,15 +566,17 @@ export async function trackL1Timelock(
 
 /**
  * Calculate retryable execution value for L1 timelock operations.
+ * @param gasPrice - Optional pre-fetched gas price to avoid redundant RPC calls in batch
  */
 export async function calculateRetryableExecutionValue(
   timelockAddress: string,
   target: string,
   data: string,
-  provider: ethers.providers.Provider
+  provider: ethers.providers.Provider,
+  gasPrice?: BigNumber
 ): Promise<BigNumber | null> {
   void timelockAddress;
-  if (target.toLowerCase() !== ADDRESSES.RETRYABLE_TICKET_MAGIC.toLowerCase()) {
+  if (!addressEquals(target, ADDRESSES.RETRYABLE_TICKET_MAGIC)) {
     return null;
   }
 
@@ -594,11 +597,11 @@ export async function calculateRetryableExecutionValue(
   const innerData = decoded[5] as string;
 
   const inbox = new ethers.Contract(inboxAddress, INBOX_ABI, provider);
-  const gasPrice = await queryWithRetry(() => provider.getGasPrice());
+  const resolvedGasPrice = gasPrice ?? (await queryWithRetry(() => provider.getGasPrice()));
   const dataLength = ethers.utils.hexDataLength(innerData);
 
   const submissionFee = await queryWithRetry<BigNumber>(() =>
-    inbox.callStatic.calculateRetryableSubmissionFee(dataLength, gasPrice)
+    inbox.callStatic.calculateRetryableSubmissionFee(dataLength, resolvedGasPrice)
   );
 
   return submissionFee.mul(2).add(innerGasLimit.mul(innerMaxFeePerGas)).add(innerValue);
@@ -606,6 +609,7 @@ export async function calculateRetryableExecutionValue(
 
 /**
  * Calculate batch retryable values for L1 timelock.
+ * Fetches gas price once and reuses for all retryable calculations.
  */
 export async function calculateBatchRetryableValues(
   timelockAddress: string,
@@ -614,9 +618,12 @@ export async function calculateBatchRetryableValues(
   payloads: string[],
   provider: ethers.providers.Provider
 ): Promise<BigNumber[]> {
+  // Fetch gas price once for the entire batch
+  const gasPrice = await queryWithRetry(() => provider.getGasPrice());
+
   const results = await Promise.all(
     targets.map((target, i) =>
-      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider)
+      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider, gasPrice)
     )
   );
   return results.map((retryableValue, i) => retryableValue ?? values[i]);
@@ -831,7 +838,10 @@ export async function prepareTimelockStage(
   // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)
   const timelockStageData = stage.data as TimelockStageData;
 
-  const sortedData = [...callScheduledData].sort((a, b) => a.index.toNumber() - b.index.toNumber());
+  // Sort by index (use BigNumber methods to avoid overflow)
+  const sortedData = [...callScheduledData].sort((a, b) =>
+    a.index.lt(b.index) ? -1 : a.index.gt(b.index) ? 1 : 0
+  );
   const targets = sortedData.map((d) => d.target);
   const values = sortedData.map((d) => d.value.toString());
   const payloads = sortedData.map((d) => d.data);

@@ -317,8 +317,6 @@ export {
   type FormattedLine,
   formatDecodedCalldata,
   filterVisibleLines,
-  getAllFoldableKeys,
-  toggleFoldKey,
 } from "./utils/formatters";
 
 // ============================================================================

@@ -158,44 +158,49 @@ async function processNestedParams(
         // Check for retryable ticket magic
         if (target && isRetryableTicketMagic(target)) {
           const retryable = decodeRetryableTicket(bytesItem);
-          // Determine L2 chain context for address labeling and nested decoding
-          const l2ChainContext: Chain | undefined =
-            retryable.chain === "nova" || retryable.chain === "arb1" ? retryable.chain : undefined;
+          if (retryable) {
+            // Determine L2 chain context for address labeling and nested decoding
+            const l2ChainContext: Chain | undefined =
+              retryable.chain === "nova" || retryable.chain === "arb1"
+                ? retryable.chain
+                : undefined;
 
-          // Decode l2Calldata with L2 chain context only if chain is known
-          let nestedL2Call: DecodedCalldata | undefined;
-          if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
-            nestedL2Call = await decodeCalldata(
-              retryable.l2Calldata,
-              retryable.l2Target,
-              depth + 1,
-              l2ChainContext
-            );
+            // Decode l2Calldata with L2 chain context only if chain is known
+            let nestedL2Call: DecodedCalldata | undefined;
+            if (l2ChainContext && isLikelyCalldata(retryable.l2Calldata)) {
+              nestedL2Call = await decodeCalldata(
+                retryable.l2Calldata,
+                retryable.l2Target,
+                depth + 1,
+                l2ChainContext
+              );
+            }
+
+            // Create retryable structure with decoded L2 call
+            const retryableDecoded: DecodedCalldata = {
+              selector: "",
+              signature: null,
+              isRetryable: true,
+              parameters: [
+                createParam("inbox", "address", retryable.targetInbox, { chain: "ethereum" }),
+                createParam("l2Target", "address", retryable.l2Target, { chain: l2ChainContext }),
+                createParam("l2Value", "uint256", retryable.l2Value),
+                createParam("gasLimit", "uint256", retryable.gasLimit),
+                createParam("maxFeePerGas", "uint256", retryable.maxFeePerGas),
+                createParam("l2Calldata", "bytes", retryable.l2Calldata, {
+                  isNested: !!nestedL2Call,
+                  nested: nestedL2Call,
+                }),
+              ],
+              raw: bytesItem,
+              decodingSource: "local",
+              targetChain: retryable.chain,
+            };
+
+            nestedArray.push(retryableDecoded);
+            continue;
           }
-
-          // Create retryable structure with decoded L2 call
-          const retryableDecoded: DecodedCalldata = {
-            selector: "",
-            signature: null,
-            isRetryable: true,
-            parameters: [
-              createParam("inbox", "address", retryable.targetInbox, { chain: "ethereum" }),
-              createParam("l2Target", "address", retryable.l2Target, { chain: l2ChainContext }),
-              createParam("l2Value", "uint256", retryable.l2Value),
-              createParam("gasLimit", "uint256", retryable.gasLimit),
-              createParam("maxFeePerGas", "uint256", retryable.maxFeePerGas),
-              createParam("l2Calldata", "bytes", retryable.l2Calldata, {
-                isNested: !!nestedL2Call,
-                nested: nestedL2Call,
-              }),
-            ],
-            raw: bytesItem,
-            decodingSource: "local",
-            targetChain: retryable.chain,
-          };
-
-          nestedArray.push(retryableDecoded);
-          continue;
+          // Fall through to normal calldata decoding if retryable decode fails
         }
 
         // Normal calldata decoding

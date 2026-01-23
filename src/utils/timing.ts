@@ -9,7 +9,7 @@ import { NodeInterface__factory } from "@arbitrum/sdk/dist/lib/abi/factories/Nod
 import { getFirstBlockForL1Block as sdkGetFirstBlockForL1Block } from "@arbitrum/sdk/dist/lib/utils/lib";
 import type { StageType, TrackedStage } from "../types";
 import { BLOCK_TIMES as BLOCK_TIMES_CONST, GOVERNANCE_STAGE_DURATION_DAYS } from "../constants";
-import { queryWithRetry } from "./rpc-utils";
+import { queryWithRetry, getErrorMessage } from "./rpc-utils";
 import { loggers } from "./logger";
 
 const NODE_INTERFACE_ADDRESS = "0x00000000000000000000000000000000000000C8";
@@ -287,8 +287,16 @@ export async function getFirstL2BlockForL1Block(
         Date.now() - start
       );
       return result;
-    } catch {
+    } catch (err) {
       // l2BlockRangeForL1 reverts if no L2 block exists for this L1 block
+      // Log at debug level to aid troubleshooting without being noisy
+      if (offset === 0) {
+        log(
+          "getFirstL2BlockForL1Block: L1=%d no direct mapping, trying nearby blocks: %s",
+          targetL1Block,
+          getErrorMessage(err)
+        );
+      }
     }
   }
 
@@ -499,7 +507,7 @@ export function isStageStale(
  *
  * @example
  * ```typescript
- * const result = await tracker.trackFromGovernor(governor, proposalId);
+ * const result = await tracker.trackByTxHash(creationTxHash);
  * for (let i = 0; i < result.stages.length; i++) {
  *   const stage = result.stages[i];
  *   if (stage.status === "NOT_STARTED") {

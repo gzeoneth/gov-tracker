@@ -59,8 +59,13 @@ function getPackageVersion(): string {
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
-      const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
-      return pkg.version || "unknown";
+      try {
+        const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+        return pkg.version || "unknown";
+      } catch (error) {
+        console.error(`Failed to parse package.json at ${candidate}: ${getErrorMessage(error)}`);
+        return "unknown";
+      }
     }
   }
   return "unknown";
@@ -79,6 +84,7 @@ import {
   PreparedTransaction,
   FileCache,
 } from "../index";
+import { getErrorMessage } from "../utils/rpc-utils";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
@@ -114,6 +120,7 @@ import {
   loopOptions,
   parseGasSettings,
   parseChunkingConfig,
+  safeParseInt,
 } from "./lib/cli";
 import { decodeCalldata, extractCalldataFromStage } from "../calldata";
 import { Chain } from "../types";
@@ -254,7 +261,7 @@ function getDefaultCachePath(): string {
         console.log(`Initialized cache from bundled data (${bundledPath})`);
       } catch (err) {
         // Non-fatal: just start with empty cache
-        console.warn(`Warning: Could not copy bundled cache: ${err}`);
+        console.warn(`Warning: Could not copy bundled cache: ${getErrorMessage(err)}`);
       }
     }
   }
@@ -328,6 +335,14 @@ runCmd
     // --no-cache disables cache entirely; use autoFlush: false for batch writes
     const cachePath = opts.noCache ? undefined : opts.cache;
     const cache = cachePath ? new FileCache(cachePath, { autoFlush: false }) : undefined;
+
+    // If --force is specified, clear cache at start to ensure fresh tracking
+    // This is cleaner than passing force flags through - all tracking methods
+    // work normally with the cache, which starts empty
+    if (opts.force && cache) {
+      await cache.clear();
+    }
+
     const tracker = createTracker({
       ...providers,
       cache,
@@ -336,16 +351,16 @@ runCmd
     });
     const signer = opts.write ? createSigner(opts.privateKey) : null;
 
-    // If --force is specified, clear cache for this run by using a fresh start block
+    // If --force is specified, start from block 0; otherwise use provided startBlock
     const startBlock = opts.force
       ? 0 // Force re-discovery from the beginning
       : opts.startBlock
-        ? parseInt(opts.startBlock, 10)
+        ? safeParseInt(opts.startBlock, 0) || undefined // 0 becomes undefined
         : undefined;
-    const blockLag = parseInt(opts.blockLag, 10);
-    const maxAgeDays = parseInt(opts.maxAgeDays, 10);
-    const intervalMs = parseInt(opts.interval, 10) * 1000;
-    const concurrency = parseInt(opts.concurrency, 10);
+    const blockLag = safeParseInt(opts.blockLag, DEFAULT_BLOCK_LAG);
+    const maxAgeDays = safeParseInt(opts.maxAgeDays, 60);
+    const intervalMs = safeParseInt(opts.interval, 60) * 1000;
+    const concurrency = safeParseInt(opts.concurrency, 1);
 
     const gasSettings: GasSettings = parseGasSettings(opts);
 
@@ -417,7 +432,6 @@ runCmd
           concurrency,
           targets: discoveryTargets,
           electionsOnly,
-          forceElections: opts.force,
           onTrack: async (r): Promise<TrackCallbackReturn> => {
             // Skip showing complete elections
             if (r.result?.isElection && r.result?.isComplete) {
@@ -518,7 +532,7 @@ runCmd
             console.error(`[ELECTION] ${error}`);
           }
         } catch (error) {
-          console.error(`[ELECTION] Check failed: ${(error as Error).message}`);
+          console.error(`[ELECTION] Check failed: ${getErrorMessage(error)}`);
         }
       }
     }
@@ -767,7 +781,7 @@ trackCmd
         }
       }
     } catch (e) {
-      console.error((e as Error).message);
+      console.error(getErrorMessage(e));
       process.exit(1);
     }
   });
@@ -827,9 +841,16 @@ electionCmd
 
     // Create tracker with cache (unless --no-cache)
     const cachePath = opts.noCache ? undefined : opts.cache;
+    const cache = cachePath ? new FileCache(cachePath) : undefined;
+
+    // If --force is specified, clear cache at start to ensure fresh tracking
+    if (opts.force && cache) {
+      await cache.clear();
+    }
+
     const tracker = createTracker({
       ...providers,
-      cachePath,
+      cache,
     });
 
     // Import election tracking functions for detailed queries
@@ -843,8 +864,7 @@ electionCmd
     // --list: Show all elections (uses cached data for completed elections)
     if (opts.list) {
       console.log("Fetching all elections...\n");
-      // Use --force to bypass cache and re-track all elections
-      const elections = await tracker.trackAllElections({ force: opts.force });
+      const elections = await tracker.trackAllElections();
 
       if (elections.length === 0) {
         console.log("No elections found.");
@@ -877,12 +897,16 @@ electionCmd
       return;
     }
 
-    // --track <index>: Track specific election (uses cache unless --force)
+    // --track <index>: Track specific election (uses cache unless --force cleared it)
     if (opts.track !== undefined) {
       const electionIndex = parseInt(opts.track, 10);
+      if (isNaN(electionIndex) || electionIndex < 0) {
+        console.error(`Invalid election index: ${opts.track}`);
+        process.exit(1);
+      }
       console.log(`Tracking election #${electionIndex}...\n`);
 
-      const election = await tracker.trackElection(electionIndex, { force: opts.force });
+      const election = await tracker.trackElection(electionIndex);
 
       // Use shared formatter for consistent output with stages
       console.log(formatElectionResult(election));
@@ -1050,11 +1074,11 @@ electionCmd
           console.error(`[ERROR] ${error}`);
         }
       } catch (error) {
-        console.error("Election check failed:", (error as Error).message);
+        console.error("Election check failed:", getErrorMessage(error));
       }
     }
 
-    const intervalMs = parseInt(opts.interval, 10) * 1000;
+    const intervalMs = safeParseInt(opts.interval, 60) * 1000;
 
     if (opts.loop) {
       console.log(`Running in loop mode, checking every ${opts.interval} seconds...`);

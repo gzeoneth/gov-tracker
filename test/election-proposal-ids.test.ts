@@ -15,6 +15,7 @@ import { ethers, BigNumber } from "ethers";
 // Mock external dependencies
 vi.mock("../src/utils/rpc-utils", () => ({
   queryWithRetry: vi.fn((fn: () => unknown) => fn()),
+  getErrorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
 vi.mock("../src/utils/multicall", () => ({

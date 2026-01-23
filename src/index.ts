@@ -161,6 +161,7 @@ export {
   findAllExecutableStages,
   needsAction,
   getTrackingStatusSummary,
+  getLifecyclePhase,
   getCurrentStage,
   areAllStagesComplete,
   extractOperationId,
@@ -168,6 +169,7 @@ export {
   isConstitutional,
   findStage,
 } from "./stages/utils";
+export type { LifecyclePhase } from "./stages/utils";
 
 // ============================================================================
 // TIER 2: Advanced API - Power user functions
@@ -437,4 +439,5 @@ export {
   TX_KEY_PREFIX,
 } from "./tracker/checkpoint-helpers";
 
-export { WATERMARKS_KEY } from "./tracker/discovery";
+export { WATERMARKS_KEY, loadWatermarks } from "./tracker/discovery";
+export type { LoadedWatermarks } from "./tracker/discovery";

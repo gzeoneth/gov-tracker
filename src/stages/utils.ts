@@ -336,6 +336,105 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
 }
 
 /**
+ * Lifecycle phase representing the current state of a proposal or timelock operation.
+ *
+ * Phases progress through the governance lifecycle:
+ * - Governor proposals: proposal_created → voting → queued → l2_timelock_pending → ...
+ * - Timelock operations: l2_timelock_pending → l2_timelock_executed → ...
+ * - Constitutional (L1 round-trip): ... → l2_to_l1_pending → l1_timelock_pending → retryables_pending → completed
+ * - Non-Constitutional (L2 only): ... → l2_timelock_executed → completed
+ */
+export type LifecyclePhase =
+  | "proposal_created"
+  | "voting"
+  | "queued"
+  | "l2_timelock_pending"
+  | "l2_timelock_executed"
+  | "l2_to_l1_pending"
+  | "l1_timelock_pending"
+  | "l1_timelock_executed"
+  | "retryables_pending"
+  | "completed"
+  | "failed"
+  | "unknown";
+
+/**
+ * Get the current lifecycle phase from tracked stages.
+ *
+ * Returns a human-readable phase that represents where a proposal or timelock
+ * operation is in its lifecycle. Useful for UI display and status filtering.
+ *
+ * @param stages - Array of tracked stages
+ * @returns The current lifecycle phase
+ *
+ * @example
+ * ```typescript
+ * const phase = getLifecyclePhase(result.stages);
+ * if (phase === "l1_timelock_pending") {
+ *   console.log("Waiting for L1 timelock delay...");
+ * }
+ * ```
+ */
+export function getLifecyclePhase(stages: TrackedStage[]): LifecyclePhase {
+  if (stages.length === 0) return "unknown";
+
+  // Check for failure first
+  if (stages.some((s) => s.status === "FAILED")) return "failed";
+
+  // Check if all stages are complete
+  if (areAllStagesComplete(stages)) return "completed";
+
+  // Build a map for quick lookup
+  const stageMap = new Map(stages.map((s) => [s.type, s]));
+
+  // Helper to check stage status
+  const getStatus = (type: StageType) => stageMap.get(type)?.status;
+  const isComplete = (type: StageType) => isStageSuccess(getStatus(type));
+  const isPendingOrReady = (type: StageType) => {
+    const status = getStatus(type);
+    return status === "PENDING" || status === "READY" || status === "NOT_STARTED";
+  };
+
+  // Governor-specific stages (in order)
+  if (stageMap.has("PROPOSAL_CREATED")) {
+    if (!isComplete("PROPOSAL_CREATED")) return "proposal_created";
+    if (isPendingOrReady("VOTING_ACTIVE")) return "voting";
+    if (isPendingOrReady("PROPOSAL_QUEUED")) return "queued";
+  }
+
+  // Timelock path stages (shared by governor and direct timelock entry)
+  if (stageMap.has("L2_TIMELOCK")) {
+    if (isPendingOrReady("L2_TIMELOCK")) return "l2_timelock_pending";
+    if (isComplete("L2_TIMELOCK")) {
+      // Check if this is L2-only (non-constitutional) - remaining stages skipped
+      const l2ToL1 = stageMap.get("L2_TO_L1_MESSAGE");
+      if (l2ToL1?.status === "SKIPPED") return "completed";
+      if (isPendingOrReady("L2_TO_L1_MESSAGE")) return "l2_timelock_executed";
+    }
+  }
+
+  if (stageMap.has("L2_TO_L1_MESSAGE")) {
+    if (isPendingOrReady("L2_TO_L1_MESSAGE")) return "l2_to_l1_pending";
+    if (isComplete("L2_TO_L1_MESSAGE") && isPendingOrReady("L1_TIMELOCK")) {
+      return "l1_timelock_pending";
+    }
+  }
+
+  if (stageMap.has("L1_TIMELOCK")) {
+    if (isPendingOrReady("L1_TIMELOCK")) return "l1_timelock_pending";
+    if (isComplete("L1_TIMELOCK")) {
+      if (isPendingOrReady("RETRYABLE_EXECUTED")) return "l1_timelock_executed";
+    }
+  }
+
+  if (stageMap.has("RETRYABLE_EXECUTED")) {
+    if (isPendingOrReady("RETRYABLE_EXECUTED")) return "retryables_pending";
+  }
+
+  return "unknown";
+}
+
+/**
  * Extract the operationId from tracked stages.
  *
  * The operationId links a governor proposal to its timelock operation.

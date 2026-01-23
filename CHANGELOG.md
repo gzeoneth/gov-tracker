@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Lifecycle phase helper** - New `getLifecyclePhase(stages)` function returns a human-readable `LifecyclePhase` representing the current state of a proposal or timelock operation. Phases include: `proposal_created`, `voting`, `queued`, `l2_timelock_pending`, `l2_timelock_executed`, `l2_to_l1_pending`, `l1_timelock_pending`, `l1_timelock_executed`, `retryables_pending`, `completed`, `failed`, `unknown`
+- **Watermark access utilities** - Exported `loadWatermarks()` function and `LoadedWatermarks` type for accessing discovery watermarks from cache
+
 ## [0.4.0] - 2026-01-19
 
 ### Added

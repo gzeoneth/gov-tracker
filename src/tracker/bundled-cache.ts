@@ -201,6 +201,9 @@ export function getWatermarksFromCache(cache: BundledCache): DiscoveryWatermarks
  *
  * Returns a Map of proposalId -> operationId for all proposals that have
  * been queued in a timelock.
+ *
+ * @param cache - The bundled cache object to extract from
+ * @returns Map of proposalId to operationId for queued proposals
  */
 export function extractOperationIds(cache: BundledCache): Map<string, string> {
   const result = new Map<string, string>();
@@ -225,6 +228,9 @@ export function extractOperationIds(cache: BundledCache): Map<string, string> {
  * Extract TimelockLink from stages array
  *
  * Helper to get timelock link data from completed PROPOSAL_QUEUED stage.
+ *
+ * @param stages - Array of tracked stages from a proposal
+ * @returns TimelockLink if PROPOSAL_QUEUED stage is complete, undefined otherwise
  */
 export function extractTimelockLinkFromStages(stages: TrackedStage[]): TimelockLink | undefined {
   const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
@@ -245,6 +251,9 @@ export function extractTimelockLinkFromStages(stages: TrackedStage[]): TimelockL
  * Get voting data from stages array
  *
  * Extracts typed vote counts and proposal state from VOTING_ACTIVE stage.
+ *
+ * @param stages - Array of tracked stages from a proposal
+ * @returns VotingActiveData if VOTING_ACTIVE stage exists, null otherwise
  *
  * @example
  * ```typescript

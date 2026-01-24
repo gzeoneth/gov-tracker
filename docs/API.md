@@ -113,6 +113,71 @@ if (highestNonce) {
 
 The npm package includes a pre-built cache of completed proposals (~2.4MB, ~95 proposals). See [Bundled Cache Examples](./EXAMPLES.md#bundled-cache-bootstrap) for usage patterns.
 
+#### Cache Extraction Utilities
+
+Type-safe functions to extract data from the bundled cache without parsing checkpoint internals:
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `extractProposals(cache)` | `ExtractedProposal[]` | Extract all governor proposals with metadata |
+| `extractTimelockOps(cache)` | `ExtractedTimelockOp[]` | Extract standalone timelock operations |
+| `extractElections(cache)` | `ExtractedElection[]` | Extract election checkpoints |
+| `extractOperationIds(cache)` | `Map<string, string>` | Get proposalId → operationId mapping |
+| `getWatermarksFromCache(cache)` | `DiscoveryWatermarks \| null` | Get discovery watermarks |
+| `getVotingDataFromStages(stages)` | `VotingActiveData \| null` | Extract vote counts from stages |
+| `extractTimelockLinkFromStages(stages)` | `TimelockLink \| undefined` | Extract timelock link from completed PROPOSAL_QUEUED |
+
+```typescript
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+import { extractProposals, extractOperationIds, getWatermarksFromCache } from "@gzeoneth/gov-tracker";
+
+// Get all proposals with typed metadata
+const proposals = extractProposals(bundledCache);
+for (const p of proposals) {
+  console.log(`${p.proposalId.slice(0, 10)}... - ${p.isComplete ? "Complete" : "Active"}`);
+}
+
+// Get operation IDs for timelock lookups
+const opIds = extractOperationIds(bundledCache);
+const operationId = opIds.get(proposalId);
+
+// Get watermarks for incremental discovery
+const watermarks = getWatermarksFromCache(bundledCache);
+```
+
+**Types:**
+
+```typescript
+interface ExtractedProposal {
+  cacheKey: string;
+  proposalId: string;
+  governorAddress: string;
+  creationTxHash: string;
+  stages: TrackedStage[];
+  isComplete: boolean;
+  timelockLink?: TimelockLink;
+  currentState?: ProposalState;
+  operationId?: string;
+}
+
+interface ExtractedTimelockOp {
+  cacheKey: string;
+  timelockAddress: string;
+  operationId: string;
+  scheduledTxHash: string;
+  stages: TrackedStage[];
+  isComplete: boolean;
+}
+
+interface ExtractedElection {
+  cacheKey: string;
+  electionIndex: number;
+  stages: TrackedStage[];
+  phase?: string;
+  isComplete: boolean;
+}
+```
+
 ---
 
 ### Elections
@@ -437,6 +502,16 @@ interface DeduplicationStats {
 | `getStageData(stage, type)` | Get typed stage data |
 | `extractTimelockLink(stages)` | Extract timelock info from PROPOSAL_QUEUED stage |
 | `prepareGovernorQueue(stage, provider)` | Prepare queue transaction for governor |
+| `getLifecyclePhase(stages)` | Get human-readable lifecycle phase (`voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`) |
+
+### Stage Metadata
+
+| Function | Description |
+|----------|-------------|
+| `getStageMetadata(type)` | Get metadata (title, description, chain, duration) for a stage type |
+| `getAllStageMetadata()` | Get metadata for all stage types (memoized) |
+| `formatStageTitle(type)` | Get human-readable title for stage type |
+| `ALL_STAGE_TYPES` | Array of all stage types in pipeline order |
 
 ### Discovery
 
@@ -662,12 +737,15 @@ interface L2ToL1MessageStageData {
 ### Configuration
 
 ```typescript
+// Providers accept either Provider objects or RPC URL strings
+type ProviderOrUrl = ethers.providers.Provider | string;
+
 interface TrackerOptions {
-  l2Provider: Provider;
-  l1Provider: Provider;
-  novaProvider?: Provider;
-  cachePath?: string;           // File path (Node.js only)
-  cache?: CacheAdapter;         // Custom adapter (browsers/custom backends)
+  l2Provider?: ProviderOrUrl;    // Arb1 provider or RPC URL (defaults to public RPC)
+  l1Provider: ProviderOrUrl;     // Ethereum provider or RPC URL (required)
+  novaProvider?: ProviderOrUrl;  // Nova provider or RPC URL (defaults to public RPC)
+  cachePath?: string;            // File path (Node.js only)
+  cache?: CacheAdapter;          // Custom adapter (browsers/custom backends)
   chunkingConfig?: ChunkingConfig;
   onProgress?: OnProgressCallback;
 }

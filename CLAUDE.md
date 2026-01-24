@@ -118,7 +118,7 @@ src/
 │       ├── components/     # Reusable UI (Header, KeyHelp, ScrollIndicator, etc.)
 │       ├── hooks/          # useCache, useProposals, useNavigation, useElectionData
 │       └── utils/          # Navigation, formatting, shortcuts, clipboard
-├── utils/                  # Timing, log search, operation IDs, etc.
+├── utils/                  # Timing, log search, operation IDs, stage metadata, etc.
 ├── types/                  # TypeScript type definitions
 └── constants.ts            # Addresses, timing constants
 ```

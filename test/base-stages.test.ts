@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for Stages Base Utilities
  *
@@ -5,7 +6,7 @@
  * No RPC calls required.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   extractOperationId,
   findExecutableStage,
@@ -22,12 +23,32 @@ import {
   areAllStagesComplete,
   isTimelockStage,
   failPrepare,
+  checkOperationReady,
 } from "../src/stages/utils";
 import { StageBuilder } from "../src/stages/builder";
 import { ADDRESSES } from "../src/constants";
 import type { TrackedStage } from "../src/types";
 
+vi.mock("../src/utils/multicall", () => ({
+  multicall: vi.fn(),
+  buildCallInput: vi.fn((targetAddr: string, _iface: unknown, method: string, args: unknown[]) => ({
+    targetAddr,
+    method,
+    args,
+  })),
+}));
+
+import { multicall } from "../src/utils/multicall";
+
 describe("Stages Base Utilities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("extractOperationId", () => {
     it("should extract operationId from PROPOSAL_QUEUED stage", () => {
       // #given - stages with operationId in PROPOSAL_QUEUED
@@ -674,6 +695,54 @@ describe("Stages Base Utilities", () => {
         new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
       ];
       expect(getLifecyclePhase(stages)).toBe("l2_delay");
+    });
+  });
+
+  describe("checkOperationReady", () => {
+    const mockProvider = {} as any;
+    const timelockAddress = "0x1234567890123456789012345678901234567890";
+    const operationId = "0xabc123";
+
+    it("should return null when operation is ready", async () => {
+      // #given - multicall returns isReady=true, isDone=false
+      vi.mocked(multicall).mockResolvedValueOnce([true, false]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - null indicates no error, operation is ready
+      expect(result).toBeNull();
+      expect(multicall).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return error when operation is already done", async () => {
+      // #given - multicall returns isReady=false, isDone=true
+      vi.mocked(multicall).mockResolvedValueOnce([false, true]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - returns failure result with "already executed" message
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toBe("Operation already executed");
+      }
+    });
+
+    it("should return error when operation is not ready", async () => {
+      // #given - multicall returns isReady=false, isDone=false
+      vi.mocked(multicall).mockResolvedValueOnce([false, false]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - returns failure result with "not ready" message
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toBe("Operation is not ready for execution");
+      }
     });
   });
 });

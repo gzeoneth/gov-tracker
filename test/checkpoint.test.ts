@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Checkpoint and Resume Tests
  *
@@ -18,7 +19,7 @@ import {
   TrackingCheckpoint,
   CacheAdapter,
 } from "../src";
-import { trimFromStage } from "../src/tracker/checkpoint-helpers";
+import { trimFromStage, computeCacheStats } from "../src/tracker/checkpoint-helpers";
 import { StageBuilder } from "../src/stages/builder";
 import {
   shouldSkipRpc,
@@ -293,6 +294,148 @@ describe("Checkpoint Module (Unit Tests)", () => {
       // #then - should handle gracefully with empty array
       expect(trimmed.cachedData.completedStages?.length).toBe(0);
       expect(trimmed.lastProcessedStage).toBeNull();
+    });
+  });
+
+  describe("computeCacheStats", () => {
+    it("should count election checkpoints from checkpoints map", () => {
+      // #given - checkpoints containing an election input type
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
+
+      checkpoints.set("election:0", {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 0,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - computing stats
+      const stats = computeCacheStats(checkpoints, elections);
+
+      // #then - electionTotal should include election from checkpoints map
+      expect(stats.elections.total).toBe(1);
+      expect(stats.elections.complete).toBe(0);
+    });
+
+    it("should count completed elections from checkpoints map", () => {
+      // #given - a completed election in checkpoints map (phase === "COMPLETED")
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
+
+      checkpoints.set("election:1", {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 1,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          electionStatus: { phase: "COMPLETED" } as any,
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - computing stats
+      const stats = computeCacheStats(checkpoints, elections);
+
+      // #then - electionComplete should count completed election
+      expect(stats.elections.total).toBe(1);
+      expect(stats.elections.complete).toBe(1);
+    });
+
+    it("should not count incomplete elections as complete", () => {
+      // #given - elections in various incomplete states
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
+
+      checkpoints.set("election:0", {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 0,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          electionStatus: { phase: "NOMINEE_SELECTION" } as any,
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      checkpoints.set("election:1", {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 1,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {}, // no electionStatus
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - computing stats
+      const stats = computeCacheStats(checkpoints, elections);
+
+      // #then - both elections counted in total, but none in complete
+      expect(stats.elections.total).toBe(2);
+      expect(stats.elections.complete).toBe(0);
+    });
+
+    it("should aggregate elections from both checkpoints and elections maps", () => {
+      // #given - elections in both maps (checkpoints map has election input type, elections map has separate entries)
+      const checkpoints = new Map<string, TrackingCheckpoint>();
+      const elections = new Map<number, TrackingCheckpoint>();
+
+      // election in checkpoints map (incomplete)
+      checkpoints.set("election:0", {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 0,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          electionStatus: { phase: "MEMBER_ELECTION" } as any,
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // election in elections map (completed)
+      elections.set(1, {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "election",
+          electionIndex: 1,
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          electionStatus: { phase: "COMPLETED" } as any,
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+
+      // #when - computing stats
+      const stats = computeCacheStats(checkpoints, elections);
+
+      // #then - elections from both maps should be aggregated
+      expect(stats.elections.total).toBe(2);
+      expect(stats.elections.complete).toBe(1);
     });
   });
 

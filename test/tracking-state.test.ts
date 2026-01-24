@@ -31,6 +31,17 @@ import {
   getOutboxExecutionTx,
   getL1ExecutionTxHash,
   createCheckpoint,
+  createModularCheckpoints,
+  setTimelockOpKey,
+  getElectionIndex,
+  getNomineeProposalId,
+  getMemberProposalId,
+  getElectionCohort,
+  getCompliantNomineeCount,
+  getTargetNomineeCount,
+  getVettingDeadline,
+  getElectionTimelockOperationId,
+  getTrackingPathFromInput,
   Providers,
 } from "../src/tracker/state";
 import { StageBuilder } from "../src/stages/builder";
@@ -1458,6 +1469,470 @@ describe("TrackingState", () => {
 
       // #then - should return undefined (missing transaction)
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("getTrackingPathFromInput", () => {
+    it("should return timelock for discovery input", () => {
+      // #given - a discovery input type
+      const input: TrackingInput = {
+        type: "discovery",
+        governorAddresses: [],
+        timelockAddresses: [],
+      } as any;
+
+      // #when - getting tracking path
+      const result = getTrackingPathFromInput(input);
+
+      // #then - should default to timelock for discovery inputs
+      expect(result).toBe("timelock");
+    });
+
+    it("should return election for election input", () => {
+      // #given - an election input type
+      const input: TrackingInput = { type: "election", electionIndex: 0 } as any;
+
+      // #when - getting tracking path
+      const result = getTrackingPathFromInput(input);
+
+      // #then - should return election
+      expect(result).toBe("election");
+    });
+  });
+
+  describe("createModularCheckpoints", () => {
+    it("should create parent checkpoint with timelockOpKey", async () => {
+      // #given - a context with completed parent stages and timelockOpKey
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+      ctx = setTimelockOpKey(ctx, "tx:0xabc:op:0xdef");
+
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - creating modular checkpoints
+      const result = createModularCheckpoints(ctx, "test:key");
+
+      // #then - parent checkpoint should contain timelockOpKey
+      expect(result.parentCheckpoint).toBeDefined();
+      expect(result.parentCheckpoint.metadata?.timelockOpKey).toBe("tx:0xabc:op:0xdef");
+      expect(result.timelockOpKey).toBe("tx:0xabc:op:0xdef");
+    });
+
+    it("should return null timelock checkpoint when no timelock progress", async () => {
+      // #given - a context with only parent stages (no timelock progress)
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const stage = new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - creating modular checkpoints
+      const result = createModularCheckpoints(ctx, "test:key");
+
+      // #then - timelock checkpoint should be null
+      expect(result.timelockCheckpoint).toBeNull();
+    });
+
+    it("should create timelock checkpoint when timelock stages have progress", async () => {
+      // #given - a context with timelock progress
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      const proposalQueued = new StageBuilder("PROPOSAL_QUEUED", "arb1")
+        .status("COMPLETED")
+        .data({
+          operationId: "0xop123",
+          timelockAddress: "0x1234567890123456789012345678901234567890",
+        })
+        .tx("0xqueue", 100, "arb1", 42161, { description: "queued" })
+        .build();
+      ctx = await addStage(ctx, proposalQueued);
+
+      const l2Timelock = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("PENDING")
+        .data({ operationId: "0xop123", eta: 1700000000 })
+        .build();
+      ctx = await addStage(ctx, l2Timelock);
+
+      // #when - creating modular checkpoints
+      const result = createModularCheckpoints(ctx, "test:key");
+
+      // #then - timelock checkpoint should be created
+      expect(result.timelockCheckpoint).not.toBeNull();
+      expect(result.timelockCheckpoint?.metadata?.sourceCheckpoint).toBe("test:key");
+    });
+
+    it("should fallback to original input when timelock data incomplete", async () => {
+      // #given - a context with timelock stages but missing operationId/timelockAddress
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      // L2_TIMELOCK stage without required derivation data
+      const l2Timelock = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("PENDING")
+        .data({ eta: 1700000000 }) // missing operationId and timelockAddress
+        .build();
+      ctx = await addStage(ctx, l2Timelock);
+
+      // #when - creating modular checkpoints
+      const result = createModularCheckpoints(ctx, "test:key");
+
+      // #then - timelock checkpoint should use original input as fallback
+      expect(result.timelockCheckpoint).not.toBeNull();
+      expect(result.timelockCheckpoint?.input.type).toBe("governor");
+    });
+  });
+
+  describe("setTimelockOpKey", () => {
+    it("should update timelockOpKey in context", () => {
+      // #given - a fresh context without timelockOpKey
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+      expect(ctx.timelockOpKey).toBeUndefined();
+
+      // #when - setting timelockOpKey
+      const newCtx = setTimelockOpKey(ctx, "tx:0xabc:op:0xdef");
+
+      // #then - new context should have timelockOpKey
+      expect(newCtx.timelockOpKey).toBe("tx:0xabc:op:0xdef");
+      expect(ctx.timelockOpKey).toBeUndefined(); // original unchanged
+    });
+  });
+
+  describe("getElectionIndex", () => {
+    it("should return election index for election input", () => {
+      // #given - an election context
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 5 } as TrackingInput,
+      });
+
+      // #when - getting election index
+      const result = getElectionIndex(ctx);
+
+      // #then - should return the election index
+      expect(result).toBe(5);
+    });
+
+    it("should return undefined for non-election input", () => {
+      // #given - a governor context
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+      });
+
+      // #when - getting election index
+      const result = getElectionIndex(ctx);
+
+      // #then - should return undefined
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe("getNomineeProposalId", () => {
+    it("should return from CREATE_ELECTION stage", async () => {
+      // #given - a context with CREATE_ELECTION stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("CREATE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ nomineeProposalId: "nom123" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting nominee proposal ID
+      const result = getNomineeProposalId(ctx);
+
+      // #then - should return from CREATE_ELECTION
+      expect(result).toBe("nom123");
+    });
+
+    it("should fallback to NOMINEE_ELECTION stage", async () => {
+      // #given - a context with only NOMINEE_ELECTION stage containing nomineeProposalId
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ nomineeProposalId: "nom456" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting nominee proposal ID
+      const result = getNomineeProposalId(ctx);
+
+      // #then - should fallback to NOMINEE_ELECTION
+      expect(result).toBe("nom456");
+    });
+  });
+
+  describe("getMemberProposalId", () => {
+    it("should return from NOMINEE_VETTING stage", async () => {
+      // #given - a context with NOMINEE_VETTING stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_VETTING", "arb1")
+        .status("COMPLETED")
+        .data({ memberProposalId: "mem123" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting member proposal ID
+      const result = getMemberProposalId(ctx);
+
+      // #then - should return from NOMINEE_VETTING
+      expect(result).toBe("mem123");
+    });
+
+    it("should fallback to MEMBER_ELECTION stage", async () => {
+      // #given - a context with only MEMBER_ELECTION stage containing memberProposalId
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("MEMBER_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ memberProposalId: "mem456" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting member proposal ID
+      const result = getMemberProposalId(ctx);
+
+      // #then - should fallback to MEMBER_ELECTION
+      expect(result).toBe("mem456");
+    });
+  });
+
+  describe("getElectionCohort", () => {
+    it("should return cohort from CREATE_ELECTION stage", async () => {
+      // #given - a context with CREATE_ELECTION stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("CREATE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ cohort: 0 })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting election cohort
+      const result = getElectionCohort(ctx);
+
+      // #then - should return cohort
+      expect(result).toBe(0);
+    });
+
+    it("should return undefined when no CREATE_ELECTION stage", () => {
+      // #given - a fresh election context
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      // #when - getting election cohort
+      const result = getElectionCohort(ctx);
+
+      // #then - should return undefined
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe("getCompliantNomineeCount", () => {
+    it("should return from NOMINEE_ELECTION stage", async () => {
+      // #given - a context with NOMINEE_ELECTION stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ compliantNomineeCount: 12 })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting compliant nominee count
+      const result = getCompliantNomineeCount(ctx);
+
+      // #then - should return from NOMINEE_ELECTION
+      expect(result).toBe(12);
+    });
+
+    it("should fallback to NOMINEE_VETTING stage", async () => {
+      // #given - a context with only NOMINEE_VETTING stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_VETTING", "arb1")
+        .status("COMPLETED")
+        .data({ compliantNomineeCount: 8 })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting compliant nominee count
+      const result = getCompliantNomineeCount(ctx);
+
+      // #then - should fallback to NOMINEE_VETTING
+      expect(result).toBe(8);
+    });
+  });
+
+  describe("getTargetNomineeCount", () => {
+    it("should return from NOMINEE_ELECTION stage", async () => {
+      // #given - a context with NOMINEE_ELECTION stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ targetNomineeCount: 6 })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting target nominee count
+      const result = getTargetNomineeCount(ctx);
+
+      // #then - should return target nominee count
+      expect(result).toBe(6);
+    });
+  });
+
+  describe("getVettingDeadline", () => {
+    it("should return from NOMINEE_VETTING stage", async () => {
+      // #given - a context with NOMINEE_VETTING stage
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("NOMINEE_VETTING", "arb1")
+        .status("COMPLETED")
+        .data({ vettingDeadline: 1700000000 })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting vetting deadline
+      const result = getVettingDeadline(ctx);
+
+      // #then - should return vetting deadline
+      expect(result).toBe(1700000000);
+    });
+  });
+
+  describe("getElectionTimelockOperationId", () => {
+    it("should return from MEMBER_ELECTION stage", async () => {
+      // #given - a context with MEMBER_ELECTION stage containing operationId
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("MEMBER_ELECTION", "arb1")
+        .status("COMPLETED")
+        .data({ operationId: "0xelection_op" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting election timelock operation ID
+      const result = getElectionTimelockOperationId(ctx);
+
+      // #then - should return from MEMBER_ELECTION
+      expect(result).toBe("0xelection_op");
+    });
+
+    it("should fallback to getOperationId", async () => {
+      // #given - a context with L2_TIMELOCK stage (no MEMBER_ELECTION operationId)
+      let ctx = createTrackingState({
+        providers: mockProviders,
+        input: { type: "election", electionIndex: 0 } as TrackingInput,
+      });
+
+      const stage = new StageBuilder("L2_TIMELOCK", "arb1")
+        .status("COMPLETED")
+        .data({ operationId: "0xl2_op" })
+        .build();
+      ctx = await addStage(ctx, stage);
+
+      // #when - getting election timelock operation ID
+      const result = getElectionTimelockOperationId(ctx);
+
+      // #then - should fallback to L2_TIMELOCK operationId
+      expect(result).toBe("0xl2_op");
+    });
+  });
+
+  describe("createTrackingState - linkedTimelockCheckpoint", () => {
+    it("should merge linked timelock checkpoint stages", async () => {
+      // #given - a parent checkpoint and a linked timelock checkpoint
+      const parentCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: createGovernorInput(),
+        lastProcessedStage: "PROPOSAL_QUEUED",
+        lastProcessedBlock: { l1: 0, l2: 100, nova: 0 },
+        cachedData: {
+          completedStages: [
+            new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now(), timelockOpKey: "tx:0x:op:0x" },
+      };
+
+      const timelockCheckpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: createTimelockInput(),
+        lastProcessedStage: "L2_TIMELOCK",
+        lastProcessedBlock: { l1: 0, l2: 200, nova: 0 },
+        cachedData: {
+          completedStages: [
+            new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").data({ eta: 123 }).build(),
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when - creating context with linked timelock checkpoint
+      const ctx = createTrackingState({
+        providers: mockProviders,
+        input: createGovernorInput(),
+        checkpoint: parentCheckpoint,
+        linkedTimelockCheckpoint: timelockCheckpoint,
+      });
+
+      // #then - both stages should be restored
+      const proposalCreated = ctx.stages.find((s) => s.type === "PROPOSAL_CREATED");
+      const l2Timelock = ctx.stages.find((s) => s.type === "L2_TIMELOCK");
+      expect(proposalCreated?.status).toBe("COMPLETED");
+      expect(l2Timelock?.status).toBe("PENDING");
+      expect(ctx.timelockOpKey).toBe("tx:0x:op:0x");
     });
   });
 });

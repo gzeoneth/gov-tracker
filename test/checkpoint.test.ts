@@ -18,6 +18,8 @@ import {
   TrackingCheckpoint,
   CacheAdapter,
 } from "../src";
+import { trimFromStage } from "../src/tracker/checkpoint-helpers";
+import { StageBuilder } from "../src/stages/builder";
 import {
   shouldSkipRpc,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
@@ -162,6 +164,135 @@ describe("Checkpoint Module (Unit Tests)", () => {
       expect(expectedKey).toBe(
         "tx:0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
       );
+    });
+  });
+
+  describe("trimFromStage", () => {
+    it("should trim stages from specified index", () => {
+      // #given - a checkpoint with 4 completed stages
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+        },
+        lastProcessedStage: "L2_TIMELOCK",
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          completedStages: [
+            new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+            new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+            new StageBuilder("PROPOSAL_QUEUED", "arb1").status("COMPLETED").build(),
+            new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+          ],
+        },
+        metadata: {
+          errorCount: 3,
+          lastTrackedAt: Date.now() - 10000,
+          timelockOpKey: "tx:0x123:op:0x456",
+        },
+      };
+
+      // #when - trimming to keep only first 2 stages
+      const trimmed = trimFromStage(checkpoint, 2);
+
+      // #then - should have only 2 stages, reset metadata, and clear timelockOpKey
+      expect(trimmed.cachedData.completedStages?.length).toBe(2);
+      expect(trimmed.lastProcessedStage).toBe("VOTING_ACTIVE");
+      expect(trimmed.metadata?.errorCount).toBe(0);
+      expect(trimmed.metadata?.timelockOpKey).toBeUndefined();
+    });
+
+    it("should return null lastProcessedStage when trimming to 0", () => {
+      // #given - a checkpoint with stages
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+        },
+        lastProcessedStage: "PROPOSAL_CREATED",
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          completedStages: [
+            new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when - trimming to keep 0 stages
+      const trimmed = trimFromStage(checkpoint, 0);
+
+      // #then - should have no stages and null lastProcessedStage
+      expect(trimmed.cachedData.completedStages?.length).toBe(0);
+      expect(trimmed.lastProcessedStage).toBeNull();
+    });
+
+    it("should preserve timelockOpKey when stageIndex > 2", () => {
+      // #given - a checkpoint with timelockOpKey and 4 stages
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+        },
+        lastProcessedStage: "L2_TIMELOCK",
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {
+          completedStages: [
+            new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+            new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+            new StageBuilder("PROPOSAL_QUEUED", "arb1").status("COMPLETED").build(),
+            new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+          ],
+        },
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: "tx:0x123:op:0x456",
+        },
+      };
+
+      // #when - trimming to keep 3 stages (stageIndex > 2)
+      const trimmed = trimFromStage(checkpoint, 3);
+
+      // #then - timelockOpKey should be preserved
+      expect(trimmed.metadata?.timelockOpKey).toBe("tx:0x123:op:0x456");
+    });
+
+    it("should handle checkpoint with no stages", () => {
+      // #given - a checkpoint with undefined completedStages
+      const checkpoint: TrackingCheckpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "12345",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "a".repeat(64),
+        },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 100000, l2: 200000 },
+        cachedData: {},
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      };
+
+      // #when - trimming a checkpoint with no stages
+      const trimmed = trimFromStage(checkpoint, 2);
+
+      // #then - should handle gracefully with empty array
+      expect(trimmed.cachedData.completedStages?.length).toBe(0);
+      expect(trimmed.lastProcessedStage).toBeNull();
     });
   });
 

@@ -254,6 +254,32 @@ describe("Simulation Data Preparation", () => {
     // are dead code - unreachable because decodeScheduleBatchParams fails before
     // convertScheduleToExecute is called. The code could be removed or the
     // architecture could be modified to support single schedule calls.
+
+    it("should handle malformed calldata in scheduleBatch gracefully", () => {
+      // #given - calldata with valid selector but corrupted data
+      const corruptedCalldata = TIMELOCK_SELECTORS.scheduleBatch + "abcd".repeat(100);
+
+      // #when - preparing simulation with corrupted calldata
+      const result = prepareTimelockSimulation(
+        ADDRESSES.L1_TIMELOCK,
+        corruptedCalldata,
+        "ethereum"
+      );
+
+      // #then - should return null instead of throwing
+      expect(result).toBeNull();
+    });
+
+    it("should return null for calldata that is too short to decode", () => {
+      // #given - scheduleBatch selector with insufficient data
+      const shortCalldata = TIMELOCK_SELECTORS.scheduleBatch + "00".repeat(10);
+
+      // #when - attempting to prepare simulation
+      const result = prepareTimelockSimulation(ADDRESSES.L1_TIMELOCK, shortCalldata, "ethereum");
+
+      // #then - should return null
+      expect(result).toBeNull();
+    });
   });
 
   describe("prepareCallSimulation", () => {
@@ -576,6 +602,261 @@ describe("Simulation Data Preparation", () => {
         (s) => s.simulation.type === "retryable" && (s.simulation as any).l2Chain === "nova"
       );
       expect(novaSim).toBeDefined();
+    });
+
+    it("should skip retryable when targetChain is unknown", () => {
+      // #given - decoded calldata with retryable ticket but unknown chain
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [
+          {
+            name: "payloads",
+            type: "bytes[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: true,
+            nestedArray: [
+              {
+                selector: "",
+                signature: null,
+                isRetryable: true,
+                targetChain: "unknown", // not arb1 or nova
+                parameters: [
+                  {
+                    name: "l2Target",
+                    type: "address",
+                    displayValue: "0x1234567890123456789012345678901234567890",
+                    rawValue: "0x1234567890123456789012345678901234567890",
+                    isNested: false,
+                  },
+                  {
+                    name: "l2Calldata",
+                    type: "bytes",
+                    displayValue: "0xabcdef",
+                    rawValue: "0xabcdef",
+                    isNested: false,
+                  },
+                ],
+                raw: "0x...",
+                decodingSource: "local",
+              },
+            ],
+          },
+        ],
+        raw: "0x...",
+        decodingSource: "local",
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "ethereum");
+
+      // #then - should not extract retryable simulation for unknown chain
+      const retryableSim = result.find((s) => s.simulation.type === "retryable");
+      expect(retryableSim).toBeUndefined();
+    });
+
+    it("should skip retryable when l2Target parameter is missing", () => {
+      // #given - retryable ticket missing l2Target parameter
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [
+          {
+            name: "payloads",
+            type: "bytes[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: true,
+            nestedArray: [
+              {
+                selector: "",
+                signature: null,
+                isRetryable: true,
+                targetChain: "arb1",
+                parameters: [
+                  // l2Target is missing
+                  {
+                    name: "l2Calldata",
+                    type: "bytes",
+                    displayValue: "0xabcdef",
+                    rawValue: "0xabcdef",
+                    isNested: false,
+                  },
+                ],
+                raw: "0x...",
+                decodingSource: "local",
+              },
+            ],
+          },
+        ],
+        raw: "0x...",
+        decodingSource: "local",
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "ethereum");
+
+      // #then - should not extract retryable simulation when l2Target is missing
+      const retryableSim = result.find((s) => s.simulation.type === "retryable");
+      expect(retryableSim).toBeUndefined();
+    });
+
+    it("should skip generic call when target address is not available", () => {
+      // #given - nested call without corresponding address in targets array
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [
+          {
+            name: "targets",
+            type: "address[]",
+            displayValue: "",
+            rawValue: [], // empty array - no target for index 0
+            isNested: false,
+          },
+          {
+            name: "payloads",
+            type: "bytes[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: true,
+            nestedArray: [
+              {
+                selector: "0xa9059cbb",
+                signature: "transfer(address,uint256)",
+                isRetryable: false,
+                parameters: [],
+                raw: "0xa9059cbb...",
+                decodingSource: "local",
+              },
+            ],
+          },
+        ],
+        raw: "0x...",
+        decodingSource: "local",
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+      // #then - should not extract call simulation when target is undefined
+      const callSim = result.find((s) => s.simulation.type === "call");
+      expect(callSim).toBeUndefined();
+    });
+
+    it("should skip generic call when raw calldata is missing", () => {
+      // #given - nested call without raw calldata
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [
+          {
+            name: "targets",
+            type: "address[]",
+            displayValue: "",
+            rawValue: ["0x1234567890123456789012345678901234567890"],
+            isNested: false,
+          },
+          {
+            name: "payloads",
+            type: "bytes[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: true,
+            nestedArray: [
+              {
+                selector: "0xa9059cbb",
+                signature: "transfer(address,uint256)",
+                isRetryable: false,
+                parameters: [],
+                raw: "", // empty raw calldata
+                decodingSource: "local",
+              },
+            ],
+          },
+        ],
+        raw: "0x...",
+        decodingSource: "local",
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+      // #then - should not extract call simulation when raw is empty
+      const callSim = result.find((s) => s.simulation.type === "call");
+      expect(callSim).toBeUndefined();
+    });
+
+    it("should skip timelock simulation when timelockAddress is not available", () => {
+      // #given - schedule call without decodingTarget and without address parameter
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [
+          // No address parameter that could be used as fallback
+          {
+            name: "values",
+            type: "uint256[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: false,
+          },
+        ],
+        raw: "0x12345678",
+        decodingSource: "local",
+        // decodingTarget is undefined
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+      // #then - should not extract timelock simulation when address unavailable
+      const timelockSim = result.find((s) => s.simulation.type === "timelock");
+      expect(timelockSim).toBeUndefined();
+    });
+
+    it("should use first address param as timelock for non-batch schedule call", () => {
+      // #given - a schedule() (non-batch) decoded calldata without decodingTarget
+      const target = "0x1234567890123456789012345678901234567890";
+      const value = "0";
+      const calldata = "0xabcdef";
+      const predecessor = ethers.constants.HashZero;
+      const salt = ethers.utils.id("test-salt");
+      const delay = 259200;
+
+      // Create a valid scheduleBatch calldata (schedule() has different encoding but
+      // prepareTimelockSimulation uses decodeScheduleBatchParams which expects batch format)
+      // So we still need batch-compatible raw calldata for the simulation to work
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+        [[target], [value], [calldata], predecessor, salt, delay]
+      );
+      const rawCalldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+      const decoded: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.schedule, // non-batch
+        signature: "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+        parameters: [
+          {
+            name: "target",
+            type: "address",
+            displayValue: target,
+            rawValue: target,
+            isNested: false,
+          },
+        ],
+        raw: rawCalldata, // using batch format for decoding
+        decodingSource: "local",
+        // Note: no decodingTarget set
+      };
+
+      // #when - extracting simulations
+      const result = extractAllSimulationsFromDecoded(decoded, "arb1");
+
+      // #then - should extract timelock simulation using first address param
+      const timelockSim = result.find((s) => s.simulation.type === "timelock");
+      expect(timelockSim).toBeDefined();
     });
 
     it("should handle nested param with single nested calldata", () => {

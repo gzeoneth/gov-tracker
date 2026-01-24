@@ -24,6 +24,7 @@ import {
 } from "./tracker/checkpoint-helpers";
 import {
   TrackerOptions,
+  ProviderOrUrl,
   TrackingResult,
   GovernorTrackingInput,
   TimelockTrackingInput,
@@ -198,6 +199,28 @@ export function extractTimelockLink(stages: TrackedStage[]): TimelockLink | unde
 }
 
 /**
+ * Resolve a provider option that can be either a Provider instance or an RPC URL string.
+ * If undefined and a default URL is provided, creates a provider from the default.
+ */
+function resolveProvider(
+  providerOrUrl: ProviderOrUrl | undefined,
+  defaultUrl?: string
+): ethers.providers.Provider {
+  if (!providerOrUrl) {
+    if (!defaultUrl) {
+      throw new Error("Provider or RPC URL is required");
+    }
+    return new ethers.providers.StaticJsonRpcProvider(defaultUrl);
+  }
+
+  if (typeof providerOrUrl === "string") {
+    return new ethers.providers.StaticJsonRpcProvider(providerOrUrl);
+  }
+
+  return providerOrUrl;
+}
+
+/**
  * Main proposal stage tracker class
  *
  * @example
@@ -234,15 +257,10 @@ export class ProposalStageTracker {
   private cache?: CacheAdapter;
 
   constructor(options: TrackerOptions) {
-    if (!options.l1Provider) {
-      throw new Error("l1Provider is required");
-    }
-    this.l1Provider = options.l1Provider;
-    // Use StaticJsonRpcProvider for defaults to avoid automatic chainId detection
-    this.l2Provider =
-      options.l2Provider ?? new ethers.providers.StaticJsonRpcProvider(DEFAULT_RPC_URLS.ARB_ONE);
-    this.novaProvider =
-      options.novaProvider ?? new ethers.providers.StaticJsonRpcProvider(DEFAULT_RPC_URLS.NOVA);
+    this.l1Provider = resolveProvider(options.l1Provider);
+    this.l2Provider = resolveProvider(options.l2Provider, DEFAULT_RPC_URLS.ARB_ONE);
+    this.novaProvider = resolveProvider(options.novaProvider, DEFAULT_RPC_URLS.NOVA);
+
     this.onProgress = options.onProgress;
     this.chunkingConfig = options.chunkingConfig ?? DEFAULT_CHUNKING_CONFIG;
 

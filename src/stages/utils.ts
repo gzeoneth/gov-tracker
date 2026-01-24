@@ -336,6 +336,76 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
 }
 
 /**
+ * Lifecycle phase representing where a proposal or timelock operation is now.
+ *
+ * Phases describe what's currently happening:
+ * - `voting` - Active voting period
+ * - `queued` - Passed voting, entering timelock execution
+ * - `l2_delay` - Waiting for L2 timelock delay
+ * - `bridging` - L2→L1 message in transit
+ * - `l1_delay` - Waiting for L1 timelock delay
+ * - `finalizing` - Retryable tickets pending execution
+ * - `executed` - Complete
+ * - `failed` - Failed at some stage
+ * - `unknown` - Cannot determine phase
+ */
+export type LifecyclePhase =
+  | "voting"
+  | "queued"
+  | "l2_delay"
+  | "bridging"
+  | "l1_delay"
+  | "finalizing"
+  | "executed"
+  | "failed"
+  | "unknown";
+
+/**
+ * Get the current lifecycle phase from tracked stages.
+ *
+ * @param stages - Array of tracked stages
+ * @returns The current lifecycle phase
+ *
+ * @example
+ * ```typescript
+ * const phase = getLifecyclePhase(result.stages);
+ * if (phase === "l1_delay") {
+ *   console.log("Waiting for L1 timelock delay...");
+ * }
+ * ```
+ */
+export function getLifecyclePhase(stages: TrackedStage[]): LifecyclePhase {
+  if (stages.length === 0) return "unknown";
+
+  if (stages.some((s) => s.status === "FAILED")) return "failed";
+  if (areAllStagesComplete(stages)) return "executed";
+
+  const stageMap = new Map(stages.map((s) => [s.type, s]));
+  const isComplete = (type: StageType) => isStageSuccess(stageMap.get(type)?.status);
+  const isWaiting = (type: StageType) => {
+    const status = stageMap.get(type)?.status;
+    return status === "PENDING" || status === "READY" || status === "NOT_STARTED";
+  };
+
+  // Governor path
+  if (stageMap.has("VOTING_ACTIVE") && isWaiting("VOTING_ACTIVE")) return "voting";
+  if (stageMap.has("PROPOSAL_QUEUED") && isWaiting("PROPOSAL_QUEUED")) return "queued";
+
+  // Timelock path
+  if (stageMap.has("L2_TIMELOCK") && isWaiting("L2_TIMELOCK")) return "l2_delay";
+  if (stageMap.has("L2_TO_L1_MESSAGE") && isWaiting("L2_TO_L1_MESSAGE")) return "bridging";
+  if (stageMap.has("L1_TIMELOCK") && isWaiting("L1_TIMELOCK")) return "l1_delay";
+  if (stageMap.has("RETRYABLE_EXECUTED") && isWaiting("RETRYABLE_EXECUTED")) return "finalizing";
+
+  // L2-only path: L2 timelock complete, remaining stages skipped
+  if (isComplete("L2_TIMELOCK") && stageMap.get("L2_TO_L1_MESSAGE")?.status === "SKIPPED") {
+    return "executed";
+  }
+
+  return "unknown";
+}
+
+/**
  * Extract the operationId from tracked stages.
  *
  * The operationId links a governor proposal to its timelock operation.

@@ -4,13 +4,14 @@
  * A lightweight, high-performance library for tracking Arbitrum DAO
  * governance proposal lifecycle stages.
  *
- * @example Basic usage (Node.js)
+ * @example Basic usage with RPC URLs
  * ```typescript
  * import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
  *
+ * // Accepts RPC URLs directly (creates providers internally)
  * const tracker = createTracker({
- *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
- *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
+ *   l2Provider: "https://arb1.arbitrum.io/rpc",
+ *   l1Provider: "https://eth.llamarpc.com",
  * });
  *
  * const results = await tracker.trackByTxHash(proposalCreationTxHash);
@@ -25,8 +26,12 @@
  *
  * @example Browser usage with LocalStorageCache
  * ```typescript
- * import { createTracker, LocalStorageCache } from "@gzeoneth/gov-tracker";
+ * import { createTracker, LocalStorageCache, extractProposals } from "@gzeoneth/gov-tracker";
  * import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+ *
+ * // Extract typed data from bundled cache
+ * const proposals = extractProposals(bundledCache);
+ * console.log(`Loaded ${proposals.length} proposals from cache`);
  *
  * // Initialize cache with bundled data for faster first load
  * const cache = new LocalStorageCache("arb-gov:");
@@ -35,8 +40,8 @@
  * }
  *
  * const tracker = createTracker({
- *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
- *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
+ *   l2Provider: "https://arb1.arbitrum.io/rpc",
+ *   l1Provider: "https://eth.llamarpc.com",
  *   cache, // Updates persist to localStorage
  * });
  * ```
@@ -84,6 +89,7 @@ export type {
   PrepareOptions,
   // Config types
   TrackerOptions,
+  ProviderOrUrl,
   CacheAdapter,
   ChunkingConfig,
   // Governor types
@@ -161,6 +167,7 @@ export {
   findAllExecutableStages,
   needsAction,
   getTrackingStatusSummary,
+  getLifecyclePhase,
   getCurrentStage,
   areAllStagesComplete,
   extractOperationId,
@@ -168,6 +175,7 @@ export {
   isConstitutional,
   findStage,
 } from "./stages/utils";
+export type { LifecyclePhase } from "./stages/utils";
 
 // ============================================================================
 // TIER 2: Advanced API - Power user functions
@@ -284,7 +292,12 @@ export {
 } from "./constants";
 
 // Stage metadata
-export { getStageMetadata, formatStageTitle } from "./utils/stage-metadata";
+export {
+  getStageMetadata,
+  formatStageTitle,
+  getAllStageMetadata,
+  ALL_STAGE_TYPES,
+} from "./utils/stage-metadata";
 export type { StageMetadata } from "./utils/stage-metadata";
 
 // Address utilities
@@ -407,6 +420,23 @@ export {
 
 export { FileCache, LocalStorageCache, MemoryCache, getBundledCachePath } from "./tracker/cache";
 
+// Bundled cache extraction utilities
+export {
+  extractProposals,
+  extractTimelockOps,
+  extractElections,
+  extractOperationIds,
+  extractTimelockLinkFromStages,
+  getWatermarksFromCache,
+  getVotingDataFromStages,
+} from "./tracker/bundled-cache";
+export type {
+  BundledCache,
+  ExtractedProposal,
+  ExtractedTimelockOp,
+  ExtractedElection,
+} from "./tracker/bundled-cache";
+
 // ============================================================================
 // TIER 9: Internal Utilities (for testing)
 // ============================================================================
@@ -430,9 +460,11 @@ export {
   isDiscoveryKey,
   parseElectionKey,
   parseTimelockOpKey,
+  trimFromStage,
   DEFAULT_ERROR_THRESHOLD,
   ELECTION_KEY_PREFIX,
   TX_KEY_PREFIX,
 } from "./tracker/checkpoint-helpers";
 
-export { WATERMARKS_KEY } from "./tracker/discovery";
+export { WATERMARKS_KEY, loadWatermarks } from "./tracker/discovery";
+export type { LoadedWatermarks } from "./tracker/discovery";

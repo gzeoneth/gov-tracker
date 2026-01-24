@@ -139,6 +139,47 @@ export function parseTimelockOpKey(key: string): { txHash: string; operationId: 
 }
 
 /**
+ * Trim checkpoint stages from a specific index for re-tracking.
+ *
+ * Creates a new checkpoint with stages truncated at stageIndex, resetting
+ * the tracking position to allow re-processing from that point.
+ *
+ * @param checkpoint - The checkpoint to trim
+ * @param stageIndex - Index to trim from (0 = keep no stages, 1 = keep first stage, etc.)
+ * @returns New checkpoint with trimmed stages and updated metadata
+ *
+ * @example
+ * ```typescript
+ * // Re-track from PROPOSAL_QUEUED (index 2)
+ * const trimmed = trimFromStage(checkpoint, 2);
+ * const results = await tracker.trackByTxHash(txHash, { checkpoint: trimmed });
+ * ```
+ */
+export function trimFromStage(
+  checkpoint: TrackingCheckpoint,
+  stageIndex: number
+): TrackingCheckpoint {
+  const stages = checkpoint.cachedData?.completedStages ?? [];
+  const trimmedStages = stages.slice(0, stageIndex);
+  const lastStage = trimmedStages[trimmedStages.length - 1];
+
+  return {
+    ...checkpoint,
+    lastProcessedStage: lastStage?.type ?? null,
+    cachedData: {
+      ...checkpoint.cachedData,
+      completedStages: trimmedStages,
+    },
+    metadata: {
+      ...checkpoint.metadata,
+      errorCount: 0,
+      lastTrackedAt: Date.now(),
+      timelockOpKey: stageIndex <= 2 ? undefined : checkpoint.metadata?.timelockOpKey,
+    },
+  };
+}
+
+/**
  * Compute aggregated stats from loaded checkpoints.
  *
  * This is the single source of truth for stats computation. Used by:

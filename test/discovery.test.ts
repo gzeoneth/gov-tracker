@@ -16,12 +16,15 @@ import {
   detectGovernorCapabilities,
   getTimelockAddress,
 } from "../src/discovery/governor-discovery";
+import { vi } from "vitest";
 import {
   isKnownL2Timelock,
   isL1Timelock,
   getL2TimelockForGovernor,
   parseCallScheduledEvent,
   parseCallExecutedEvent,
+  findAllCallScheduledInTx,
+  getTimelockState,
 } from "../src/discovery/timelock-discovery";
 import {
   isSecurityCouncilElectionProposal,
@@ -609,6 +612,165 @@ describe("Timelock Discovery", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("findAllCallScheduledInTx", () => {
+    it("should return empty array when receipt is null", async () => {
+      // #given - mock provider that returns null receipt
+      const mockProvider = {
+        getTransactionReceipt: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - finding CallScheduled events
+      const result = await findAllCallScheduledInTx("0x" + "1".repeat(64), mockProvider);
+
+      // #then - should return empty array
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("getTimelockState", () => {
+    it("should throw error when fromBlock is missing and log search is needed for scheduled data", async () => {
+      // #given - pre-built contract state indicating operation needs log search
+      const mockProvider = {} as unknown as ethers.providers.Provider;
+      const operationId = "0x" + "a".repeat(64);
+      const contractState = {
+        state: "PENDING" as const,
+        isOperation: true,
+        isPending: true,
+        isReady: false,
+        isDone: false,
+        timestamp: BigNumber.from(1700000000),
+      };
+
+      // #when/then - should throw when fromBlock is not provided and log search is needed
+      await expect(
+        getTimelockState(ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK, operationId, mockProvider, {
+          skipLogSearch: false,
+          contractState,
+        })
+      ).rejects.toThrow("fromBlock is required");
+    });
+
+    it("should skip log search when skipLogSearch is true", async () => {
+      // #given - pre-built contract state for pending operation
+      const mockProvider = {} as unknown as ethers.providers.Provider;
+      const operationId = "0x" + "a".repeat(64);
+      const contractState = {
+        state: "PENDING" as const,
+        isOperation: true,
+        isPending: true,
+        isReady: false,
+        isDone: false,
+        timestamp: BigNumber.from(1700000000),
+      };
+
+      // #when - calling with skipLogSearch true (no fromBlock needed)
+      const result = await getTimelockState(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId,
+        mockProvider,
+        { skipLogSearch: true, contractState }
+      );
+
+      // #then - should succeed without requiring fromBlock
+      expect(result.operationId).toBe(operationId);
+      expect(result.state).toBe("PENDING");
+      expect(result.eta).toBe(1700000000);
+    });
+
+    it("should skip executed search when skipExecutedSearch is true", async () => {
+      // #given - pre-built contract state for done operation
+      const mockProvider = {} as unknown as ethers.providers.Provider;
+      const operationId = "0x" + "a".repeat(64);
+      const contractState = {
+        state: "DONE" as const,
+        isOperation: true,
+        isPending: false,
+        isReady: false,
+        isDone: true,
+        timestamp: BigNumber.from(1),
+      };
+
+      // #when - calling with skipExecutedSearch true
+      const result = await getTimelockState(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId,
+        mockProvider,
+        { skipLogSearch: true, skipExecutedSearch: true, contractState }
+      );
+
+      // #then - should succeed without searching for executed data
+      expect(result.operationId).toBe(operationId);
+      expect(result.state).toBe("DONE");
+      expect(result.executedData).toBeUndefined();
+    });
+
+    it("should use pre-provided scheduledData without log search", async () => {
+      // #given - pre-built contract state and scheduled data
+      const mockProvider = {} as unknown as ethers.providers.Provider;
+      const operationId = "0x" + "a".repeat(64);
+      const contractState = {
+        state: "PENDING" as const,
+        isOperation: true,
+        isPending: true,
+        isReady: false,
+        isDone: false,
+        timestamp: BigNumber.from(1700000000),
+      };
+      const scheduledData = {
+        operationId,
+        index: BigNumber.from(0),
+        target: "0x" + "1".repeat(40),
+        value: BigNumber.from(0),
+        data: "0xabcd",
+        predecessor: ethers.constants.HashZero,
+        delay: BigNumber.from(86400),
+        blockNumber: 12345,
+        txHash: "0x" + "c".repeat(64),
+        logIndex: 0,
+        timelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+      };
+
+      // #when - calling with pre-provided scheduledData
+      const result = await getTimelockState(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId,
+        mockProvider,
+        { scheduledData, contractState }
+      );
+
+      // #then - should use provided scheduledData without triggering log search
+      expect(result.scheduledData).toBe(scheduledData);
+      expect(result.operationId).toBe(operationId);
+      expect(result.state).toBe("PENDING");
+    });
+
+    it("should not require fromBlock when operation is not valid", async () => {
+      // #given - pre-built contract state for unknown operation (not in timelock)
+      const mockProvider = {} as unknown as ethers.providers.Provider;
+      const operationId = "0x" + "b".repeat(64);
+      const contractState = {
+        state: "UNKNOWN" as const,
+        isOperation: false,
+        isPending: false,
+        isReady: false,
+        isDone: false,
+        timestamp: BigNumber.from(0),
+      };
+
+      // #when - calling without fromBlock for unknown operation
+      const result = await getTimelockState(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId,
+        mockProvider,
+        { contractState }
+      );
+
+      // #then - should succeed since no log search is needed for unknown operations
+      expect(result.operationId).toBe(operationId);
+      expect(result.state).toBe("UNKNOWN");
+    });
+  });
 });
 
 describe("Security Council Discovery", () => {
@@ -926,6 +1088,66 @@ describe("Tracker Discovery Module", () => {
       expect(result.isValid).toBe(true);
       expect(result.blockNumber).toBe(100000);
     });
+
+    it("should return invalid when block not found without expected hash", async () => {
+      // #given - provider returns null block (block doesn't exist yet)
+      const mockProvider = {
+        getBlock: async () => null,
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark with no expected hash
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        undefined,
+        mockProvider
+      );
+
+      // #then - should return invalid (block not found)
+      expect(result.isValid).toBe(false);
+      expect(result.blockNumber).toBe(100000);
+      expect(result.newHash).toBeUndefined();
+    });
+
+    it("should return invalid on provider error when establishing hash", async () => {
+      // #given - provider that throws when no expected hash
+      const mockProvider = {
+        getBlock: async () => {
+          throw new Error("Provider error");
+        },
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark with no expected hash
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        undefined, // No expected hash - trying to establish
+        mockProvider
+      );
+
+      // #then - should return invalid to trigger retry next cycle
+      expect(result.isValid).toBe(false);
+      expect(result.blockNumber).toBe(100000);
+    });
+
+    it("should roll back when block not found but expected hash exists", async () => {
+      // #given - provider returns null block
+      const mockProvider = {
+        getBlock: async () => null,
+      } as unknown as ethers.providers.Provider;
+
+      // #when - verifying watermark with expected hash
+      const result = await verifyWatermark(
+        "constitutionalGovernor",
+        100000,
+        "0x" + "a".repeat(64), // Has expected hash
+        mockProvider
+      );
+
+      // #then - should roll back
+      expect(result.isValid).toBe(false);
+      expect(result.blockNumber).toBe(100000 - 1000); // Rolled back
+    });
   });
 
   describe("createPendingCheckpoints", () => {
@@ -1052,6 +1274,122 @@ describe("Tracker Discovery Module", () => {
   describe("WATERMARKS_KEY", () => {
     it("should have correct format", () => {
       expect(WATERMARKS_KEY).toBe("discovery:watermarks");
+    });
+  });
+
+  describe("discoverAll watermark verification", () => {
+    it("should use default start block when watermark verification is rejected", async () => {
+      // #given - provider that throws during watermark verification
+      const mockProvider = {
+        getBlock: async () => {
+          throw new Error("Verification failed");
+        },
+        getLogs: async () => [], // No proposals found
+      } as unknown as ethers.providers.Provider;
+
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: false,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: 100000,
+      };
+      const hashes = {
+        constitutionalGovernor: "0x" + "a".repeat(64),
+      };
+
+      // #when - discoverAll with reorg check enabled (verification will be rejected)
+      const result = await discoverAll(targets, 100100, mockProvider, cache, watermarks, hashes, {
+        skipReorgCheck: false,
+      });
+
+      // #then - should complete without throwing
+      expect(result.proposals).toEqual([]);
+      expect(result.timelockOps).toEqual([]);
+      // Watermark should still be updated to toBlock
+      expect(result.watermarks.constitutionalGovernor).toBe(100100);
+    });
+
+    it("should handle multiple verification rejections and use fallback for all", async () => {
+      // #given - provider that throws for all verifications
+      const mockProvider = {
+        getBlock: async () => {
+          throw new Error("Provider unavailable");
+        },
+        getLogs: async () => [],
+      } as unknown as ethers.providers.Provider;
+
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: true,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: 100000,
+        nonConstitutionalGovernor: 200000,
+      };
+      const hashes = {
+        constitutionalGovernor: "0x" + "a".repeat(64),
+        nonConstitutionalGovernor: "0x" + "b".repeat(64),
+      };
+
+      // #when - discoverAll with reorg check enabled
+      const result = await discoverAll(targets, 300000, mockProvider, cache, watermarks, hashes, {
+        skipReorgCheck: false,
+      });
+
+      // #then - should complete successfully using fallback watermarks
+      expect(result.proposals).toEqual([]);
+      expect(result.watermarks.constitutionalGovernor).toBe(300000);
+      expect(result.watermarks.nonConstitutionalGovernor).toBe(300000);
+    });
+
+    it("should proceed with valid watermarks when some verifications succeed", async () => {
+      // #given - provider that succeeds for first call, fails for second
+      let callIndex = 0;
+      const mockProvider = {
+        getBlock: async () => {
+          callIndex++;
+          if (callIndex === 1) {
+            return { hash: "0x" + "c".repeat(64) }; // First verification succeeds
+          }
+          throw new Error("Provider error");
+        },
+        getLogs: async () => [],
+      } as unknown as ethers.providers.Provider;
+
+      const targets = {
+        constitutionalGovernor: true,
+        nonConstitutionalGovernor: true,
+        electionNomineeGovernor: false,
+        electionMemberGovernor: false,
+        l2ConstitutionalTimelock: false,
+        l2NonConstitutionalTimelock: false,
+      };
+      const watermarks = {
+        constitutionalGovernor: 100000,
+        nonConstitutionalGovernor: 200000,
+      };
+      const hashes = {
+        constitutionalGovernor: "0x" + "c".repeat(64), // Will match
+        nonConstitutionalGovernor: "0x" + "d".repeat(64), // Will fail verification
+      };
+
+      // #when - discoverAll with reorg check enabled
+      const result = await discoverAll(targets, 300000, mockProvider, cache, watermarks, hashes, {
+        skipReorgCheck: false,
+      });
+
+      // #then - should complete with both watermarks updated
+      expect(result.watermarks.constitutionalGovernor).toBe(300000);
+      expect(result.watermarks.nonConstitutionalGovernor).toBe(300000);
     });
   });
 });

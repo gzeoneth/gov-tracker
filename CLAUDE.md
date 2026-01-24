@@ -87,7 +87,8 @@ src/
 │   ├── execute.ts          # Transaction preparation (never execution)
 │   ├── query.ts            # Cache query operations
 │   ├── cache.ts            # Cache implementations (FileCache, MemoryCache, etc.)
-│   └── checkpoint-helpers.ts # Shared checkpoint utilities
+│   ├── checkpoint-helpers.ts # Shared checkpoint utilities
+│   └── bundled-cache.ts    # Bundled cache extraction utilities
 ├── stages/                 # Individual stage implementations
 │   ├── utils.ts            # Stage utilities and helpers
 │   ├── builder.ts          # Stage builder functions
@@ -117,7 +118,7 @@ src/
 │       ├── components/     # Reusable UI (Header, KeyHelp, ScrollIndicator, etc.)
 │       ├── hooks/          # useCache, useProposals, useNavigation, useElectionData
 │       └── utils/          # Navigation, formatting, shortcuts, clipboard
-├── utils/                  # Timing, log search, operation IDs, etc.
+├── utils/                  # Timing, log search, operation IDs, stage metadata, etc.
 ├── types/                  # TypeScript type definitions
 └── constants.ts            # Addresses, timing constants
 ```

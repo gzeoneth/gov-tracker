@@ -39,6 +39,8 @@ import {
   isRetryableError,
   isPermanentError,
   isGasEstimationError,
+  getErrorMessage,
+  getReceiptOrNull,
 } from "../src/utils/rpc-utils";
 
 describe("Operation ID Utilities", () => {
@@ -664,6 +666,54 @@ describe("RPC Utilities", () => {
     });
   });
 
+  describe("getErrorMessage", () => {
+    it("should extract message from Error object", () => {
+      // #given - an Error with a message
+      const error = new Error("test error message");
+
+      // #when - getting error message
+      const result = getErrorMessage(error);
+
+      // #then - should return the message
+      expect(result).toBe("test error message");
+    });
+
+    it("should convert string to string", () => {
+      // #given - a plain string
+      // #when - getting error message
+      // #then - should return the string as-is
+      expect(getErrorMessage("plain string")).toBe("plain string");
+    });
+
+    it("should convert number to string", () => {
+      // #given - a number
+      // #when - getting error message
+      // #then - should convert to string representation
+      expect(getErrorMessage(42)).toBe("42");
+    });
+
+    it("should convert null to string", () => {
+      // #given - null value
+      // #when - getting error message
+      // #then - should convert to "null" string
+      expect(getErrorMessage(null)).toBe("null");
+    });
+
+    it("should convert undefined to string", () => {
+      // #given - undefined value
+      // #when - getting error message
+      // #then - should convert to "undefined" string
+      expect(getErrorMessage(undefined)).toBe("undefined");
+    });
+
+    it("should handle object by converting to string", () => {
+      // #given - a plain object
+      // #when - getting error message
+      // #then - should convert via String() to "[object Object]"
+      expect(getErrorMessage({ foo: "bar" })).toBe("[object Object]");
+    });
+  });
+
   describe("isGasEstimationError", () => {
     it("should identify gas required exceeds errors", () => {
       // #given - gas required exceeds error
@@ -762,6 +812,48 @@ describe("RPC Utilities", () => {
       // #then - should identify regardless of case
       expect(isGasEstimationError(new Error("GAS REQUIRED EXCEEDS"))).toBe(true);
       expect(isGasEstimationError(new Error("EXECUTION REVERTED"))).toBe(true);
+    });
+  });
+
+  describe("getReceiptOrNull", () => {
+    it("should return receipt when found", async () => {
+      // #given - mock provider that returns a receipt
+      const mockReceipt = { transactionHash: "0x123" } as ethers.providers.TransactionReceipt;
+      const mockProvider = {
+        getTransactionReceipt: vi.fn().mockResolvedValue(mockReceipt),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - getting receipt
+      const result = await getReceiptOrNull("0x123", mockProvider);
+
+      // #then - should return the receipt
+      expect(result).toEqual(mockReceipt);
+    });
+
+    it("should return null when receipt is null", async () => {
+      // #given - mock provider that returns null
+      const mockProvider = {
+        getTransactionReceipt: vi.fn().mockResolvedValue(null),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - getting receipt
+      const result = await getReceiptOrNull("0x123", mockProvider);
+
+      // #then - should return null
+      expect(result).toBeNull();
+    });
+
+    it("should return null when receipt is undefined", async () => {
+      // #given - mock provider that returns undefined
+      const mockProvider = {
+        getTransactionReceipt: vi.fn().mockResolvedValue(undefined),
+      } as unknown as ethers.providers.Provider;
+
+      // #when - getting receipt
+      const result = await getReceiptOrNull("0x123", mockProvider);
+
+      // #then - should return null
+      expect(result).toBeNull();
     });
   });
 });
@@ -1012,7 +1104,12 @@ describe("Timing Helpers (Test-Only)", () => {
 });
 
 // Stage Metadata Tests
-import { getStageMetadata, formatStageTitle } from "../src/utils/stage-metadata";
+import {
+  getStageMetadata,
+  formatStageTitle,
+  getAllStageMetadata,
+  ALL_STAGE_TYPES,
+} from "../src/utils/stage-metadata";
 
 describe("Stage Metadata Utilities", () => {
   describe("getStageMetadata", () => {
@@ -1074,6 +1171,74 @@ describe("Stage Metadata Utilities", () => {
       expect(formatStageTitle("RETRYABLE_EXECUTED")).toBe("Retryable Executed");
     });
   });
+
+  describe("getAllStageMetadata", () => {
+    it("should return metadata for all stage types", () => {
+      // #given - no preconditions (calling the function)
+      // #when - getting all stage metadata
+      const allMeta = getAllStageMetadata();
+
+      // #then - should return metadata for all stage types
+      expect(Object.keys(allMeta).length).toBe(ALL_STAGE_TYPES.length);
+      for (const stageType of ALL_STAGE_TYPES) {
+        expect(allMeta[stageType]).toBeDefined();
+        expect(allMeta[stageType].title).toBeDefined();
+        expect(allMeta[stageType].description).toBeDefined();
+      }
+    });
+
+    it("should return memoized result on subsequent calls", () => {
+      // #given - no preconditions
+      // #when - calling getAllStageMetadata twice
+      const first = getAllStageMetadata();
+      const second = getAllStageMetadata();
+
+      // #then - should return the same cached object reference
+      expect(first).toBe(second);
+    });
+
+    it("should include both governor and election stage types", () => {
+      // #given - no preconditions
+      // #when - getting all stage metadata
+      const allMeta = getAllStageMetadata();
+
+      // #then - should include governor stages
+      expect(allMeta["PROPOSAL_CREATED"]).toBeDefined();
+      expect(allMeta["VOTING_ACTIVE"]).toBeDefined();
+      expect(allMeta["L2_TIMELOCK"]).toBeDefined();
+      expect(allMeta["RETRYABLE_EXECUTED"]).toBeDefined();
+
+      // #then - should include election stages
+      expect(allMeta["CREATE_ELECTION"]).toBeDefined();
+      expect(allMeta["NOMINEE_ELECTION"]).toBeDefined();
+      expect(allMeta["MEMBER_ELECTION"]).toBeDefined();
+    });
+  });
+
+  describe("ALL_STAGE_TYPES", () => {
+    it("should include all governance and election stage types", () => {
+      // #given - the ALL_STAGE_TYPES constant
+      // #when - checking its contents
+      // #then - should include all expected stage types
+      expect(ALL_STAGE_TYPES).toContain("PROPOSAL_CREATED");
+      expect(ALL_STAGE_TYPES).toContain("VOTING_ACTIVE");
+      expect(ALL_STAGE_TYPES).toContain("PROPOSAL_QUEUED");
+      expect(ALL_STAGE_TYPES).toContain("L2_TIMELOCK");
+      expect(ALL_STAGE_TYPES).toContain("L2_TO_L1_MESSAGE");
+      expect(ALL_STAGE_TYPES).toContain("L1_TIMELOCK");
+      expect(ALL_STAGE_TYPES).toContain("RETRYABLE_EXECUTED");
+      expect(ALL_STAGE_TYPES).toContain("CREATE_ELECTION");
+      expect(ALL_STAGE_TYPES).toContain("NOMINEE_ELECTION");
+      expect(ALL_STAGE_TYPES).toContain("NOMINEE_VETTING");
+      expect(ALL_STAGE_TYPES).toContain("MEMBER_ELECTION");
+    });
+
+    it("should have correct total count", () => {
+      // #given - the ALL_STAGE_TYPES constant
+      // #then - should have 11 stage types (7 governor + 4 election)
+      expect(ALL_STAGE_TYPES.length).toBe(11);
+    });
+  });
 });
 
 // Tracker unit tests (no RPC required)
@@ -1091,7 +1256,7 @@ describe("Tracker Creation (Unit Tests)", () => {
           novaProvider: {} as ethers.providers.Provider,
           l1Provider: undefined,
         } as any)
-      ).toThrow("l1Provider is required");
+      ).toThrow("Provider or RPC URL is required");
     });
 
     it("should create tracker with valid providers", () => {
@@ -1112,6 +1277,33 @@ describe("Tracker Creation (Unit Tests)", () => {
       expect(typeof tracker.trackByTxHash).toBe("function");
       expect(typeof tracker.trackFromCheckpoint).toBe("function");
       expect(typeof tracker.prepareTransaction).toBe("function");
+    });
+
+    it("should create tracker with RPC URLs", () => {
+      // #when - creating tracker with RPC URL strings
+      const tracker = createTracker({
+        l1Provider: "https://eth.llamarpc.com",
+        l2Provider: "https://arb1.arbitrum.io/rpc",
+        novaProvider: "https://nova.arbitrum.io/rpc",
+      });
+
+      // #then - tracker should have all expected methods
+      expect(tracker).toBeDefined();
+      expect(typeof tracker.trackByTxHash).toBe("function");
+    });
+
+    it("should create tracker with mixed providers and URLs", () => {
+      // #given - mock provider for L1
+      const mockL1Provider = { getNetwork: () => Promise.resolve({ chainId: 1 }) };
+
+      // #when - creating tracker with mixed provider types
+      const tracker = createTracker({
+        l1Provider: mockL1Provider as any,
+        l2Provider: "https://arb1.arbitrum.io/rpc",
+      });
+
+      // #then - tracker should be created
+      expect(tracker).toBeDefined();
     });
   });
 });

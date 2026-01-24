@@ -50,6 +50,9 @@ export interface LoadedWatermarks {
  * Load discovery watermarks from cache.
  * Watermarks are stored as a TrackingCheckpoint for unified cache format.
  * Returns empty objects if no watermarks are cached.
+ *
+ * @param cache - Cache adapter to load from, or undefined for no cache
+ * @returns LoadedWatermarks with watermarks and block hashes for reorg detection
  */
 export async function loadWatermarks(cache: CacheAdapter | undefined): Promise<LoadedWatermarks> {
   if (!cache) return { watermarks: {}, hashes: {} };

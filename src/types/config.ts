@@ -81,12 +81,22 @@ export interface RetryConfig {
 
 /**
  * Progress callback for monitoring stage tracking
+ *
+ * Note: During active tracking, the `stage` field contains the stage being
+ * processed. This may be a partial/incomplete stage while tracking is in
+ * progress (e.g., status may be "PENDING" while data is still being fetched).
+ * Only treat stages as final when `isComplete` is true.
  */
 export interface TrackingProgress {
+  /** Current stage being processed (may be partial during tracking) */
   stage: TrackedStage;
+  /** All stages tracked so far */
   stages: TrackedStage[];
+  /** Index of current stage in the full pipeline */
   currentIndex: number;
+  /** Total number of stages in the pipeline */
   totalStages: number;
+  /** Whether tracking has completed (all stages processed) */
   isComplete: boolean;
 }
 
@@ -96,12 +106,39 @@ export interface TrackingProgress {
 export type OnProgressCallback = (progress: TrackingProgress) => void | Promise<void>;
 
 /**
+ * Provider or RPC URL. When a string URL is provided, a StaticJsonRpcProvider is created.
+ */
+export type ProviderOrUrl = ethers.providers.Provider | string;
+
+/**
  * Main tracker options
+ *
+ * Providers can be specified either as ethers Provider objects or as RPC URL strings.
+ * When URL strings are provided, StaticJsonRpcProvider instances are created internally.
+ *
+ * @example Using RPC URLs (recommended for web apps)
+ * ```typescript
+ * const tracker = createTracker({
+ *   l2Provider: "https://arb1.arbitrum.io/rpc",
+ *   l1Provider: "https://eth.llamarpc.com",
+ * });
+ * ```
+ *
+ * @example Using providers
+ * ```typescript
+ * const tracker = createTracker({
+ *   l2Provider: new ethers.providers.StaticJsonRpcProvider(ARB1_RPC),
+ *   l1Provider: new ethers.providers.StaticJsonRpcProvider(ETH_RPC),
+ * });
+ * ```
  */
 export interface TrackerOptions {
-  l2Provider: ethers.providers.Provider;
-  l1Provider: ethers.providers.Provider;
-  novaProvider?: ethers.providers.Provider;
+  /** Arbitrum One provider or RPC URL (required) */
+  l2Provider?: ProviderOrUrl;
+  /** Ethereum mainnet provider or RPC URL (required) */
+  l1Provider: ProviderOrUrl;
+  /** Arbitrum Nova provider or RPC URL (optional, defaults to public RPC) */
+  novaProvider?: ProviderOrUrl;
   chunkingConfig?: ChunkingConfig;
   onProgress?: OnProgressCallback;
   /**

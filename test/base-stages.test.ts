@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for Stages Base Utilities
  *
@@ -5,13 +6,14 @@
  * No RPC calls required.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   extractOperationId,
   findExecutableStage,
   findAllExecutableStages,
   needsAction,
   getTrackingStatusSummary,
+  getLifecyclePhase,
   isConstitutional,
   getStagesForTrackingPath,
   initializeStagesForTrackingPath,
@@ -21,12 +23,32 @@ import {
   areAllStagesComplete,
   isTimelockStage,
   failPrepare,
+  checkOperationReady,
 } from "../src/stages/utils";
 import { StageBuilder } from "../src/stages/builder";
 import { ADDRESSES } from "../src/constants";
 import type { TrackedStage } from "../src/types";
 
+vi.mock("../src/utils/multicall", () => ({
+  multicall: vi.fn(),
+  buildCallInput: vi.fn((targetAddr: string, _iface: unknown, method: string, args: unknown[]) => ({
+    targetAddr,
+    method,
+    args,
+  })),
+}));
+
+import { multicall } from "../src/utils/multicall";
+
 describe("Stages Base Utilities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("extractOperationId", () => {
     it("should extract operationId from PROPOSAL_QUEUED stage", () => {
       // #given - stages with operationId in PROPOSAL_QUEUED
@@ -563,6 +585,163 @@ describe("Stages Base Utilities", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBe("Test error message");
+      }
+    });
+  });
+
+  describe("getLifecyclePhase", () => {
+    it("should return 'unknown' for empty stages", () => {
+      expect(getLifecyclePhase([])).toBe("unknown");
+    });
+
+    it("should return 'failed' when any stage has FAILED status", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("FAILED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("failed");
+    });
+
+    it("should return 'executed' when all stages are terminal", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("SKIPPED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("SKIPPED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("SKIPPED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("executed");
+    });
+
+    it("should return 'voting' when VOTING_ACTIVE is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("NOT_STARTED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("voting");
+    });
+
+    it("should return 'queued' when PROPOSAL_QUEUED is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("PENDING").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("queued");
+    });
+
+    it("should return 'l2_delay' when L2_TIMELOCK is pending/ready", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("l2_delay");
+    });
+
+    it("should return 'bridging' when L2_TO_L1_MESSAGE is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("PENDING").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("bridging");
+    });
+
+    it("should return 'l1_delay' when L1_TIMELOCK is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("PENDING").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("l1_delay");
+    });
+
+    it("should return 'finalizing' when RETRYABLE_EXECUTED is pending", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("COMPLETED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("PENDING").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("finalizing");
+    });
+
+    it("should return 'executed' for non-constitutional (L2-only) after L2 timelock", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("PROPOSAL_QUEUED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("SKIPPED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("SKIPPED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("SKIPPED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("executed");
+    });
+
+    it("should work with timelock-only path (no governor stages)", () => {
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("READY").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
+        new StageBuilder("RETRYABLE_EXECUTED", "ethereum").status("NOT_STARTED").build(),
+      ];
+      expect(getLifecyclePhase(stages)).toBe("l2_delay");
+    });
+  });
+
+  describe("checkOperationReady", () => {
+    const mockProvider = {} as any;
+    const timelockAddress = "0x1234567890123456789012345678901234567890";
+    const operationId = "0xabc123";
+
+    it("should return null when operation is ready", async () => {
+      // #given - multicall returns isReady=true, isDone=false
+      vi.mocked(multicall).mockResolvedValueOnce([true, false]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - null indicates no error, operation is ready
+      expect(result).toBeNull();
+      expect(multicall).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return error when operation is already done", async () => {
+      // #given - multicall returns isReady=false, isDone=true
+      vi.mocked(multicall).mockResolvedValueOnce([false, true]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - returns failure result with "already executed" message
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toBe("Operation already executed");
+      }
+    });
+
+    it("should return error when operation is not ready", async () => {
+      // #given - multicall returns isReady=false, isDone=false
+      vi.mocked(multicall).mockResolvedValueOnce([false, false]);
+
+      // #when
+      const result = await checkOperationReady(timelockAddress, operationId, mockProvider);
+
+      // #then - returns failure result with "not ready" message
+      expect(result).not.toBeNull();
+      expect(result?.success).toBe(false);
+      if (result && !result.success) {
+        expect(result.error).toBe("Operation is not ready for execution");
       }
     });
   });

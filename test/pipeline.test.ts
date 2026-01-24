@@ -24,6 +24,10 @@ import {
 } from "./helpers";
 import { StageBuilder } from "../src/stages/builder";
 import type { TrackingInput } from "../src/types";
+import { trackGovernorPipeline, trackTimelockPipeline } from "../src/tracker/pipeline";
+import { addStage } from "../src/tracker/state";
+import { isConstitutional } from "../src/stages/utils";
+import { ADDRESSES } from "../src/constants";
 
 dotenv.config({ quiet: true });
 
@@ -324,6 +328,436 @@ describe("Pipeline Module", () => {
       expect(timelockPipelineStages[0]).toBe("L2_TIMELOCK");
       expect(timelockPipelineStages.length).toBe(4);
     });
+  });
+});
+
+describe("Pipeline stage guards (unit tests)", () => {
+  describe("trackGovernorPipeline early returns", () => {
+    it("should return early when missing governorAddress", async () => {
+      // #given - a tracking state with empty governor address
+      const mockProviders = createMockProviders();
+      const state = createTrackingState({
+        providers: mockProviders,
+        input: { type: "governor", governorAddress: "", proposalId: "123" } as TrackingInput,
+      });
+
+      // #when - running governor pipeline
+      const result = await trackGovernorPipeline(state);
+
+      // #then - should return state with no COMPLETED stages (all remain NOT_STARTED)
+      const completedStages = result.stages.filter((s) => s.status === "COMPLETED");
+      expect(completedStages.length).toBe(0);
+    });
+
+    it("should return early when missing proposalId", async () => {
+      // #given - a tracking state with empty proposalId
+      const mockProviders = createMockProviders();
+      const state = createTrackingState({
+        providers: mockProviders,
+        input: {
+          type: "governor",
+          governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+          proposalId: "",
+        } as TrackingInput,
+      });
+
+      // #when - running governor pipeline
+      const result = await trackGovernorPipeline(state);
+
+      // #then - should return state with no COMPLETED stages
+      const completedStages = result.stages.filter((s) => s.status === "COMPLETED");
+      expect(completedStages.length).toBe(0);
+    });
+  });
+
+  describe("trackTimelockPipeline early returns", () => {
+    it("should return early when missing timelockAddress", async () => {
+      // #given - a tracking state with no timelock address derivable
+      const mockProviders = createMockProviders();
+      const state = createTrackingState({
+        providers: mockProviders,
+        input: {
+          type: "timelock",
+          timelockAddress: "",
+          operationId: "0x123",
+          scheduledTxHash: "0xabc",
+        } as TrackingInput,
+      });
+
+      // #when - running timelock pipeline
+      const result = await trackTimelockPipeline(state);
+
+      // #then - should return state with no COMPLETED stages
+      const completedStages = result.stages.filter((s) => s.status === "COMPLETED");
+      expect(completedStages.length).toBe(0);
+    });
+
+    it("should return early when missing operationId", async () => {
+      // #given - a tracking state with no operationId
+      const mockProviders = createMockProviders();
+      const state = createTrackingState({
+        providers: mockProviders,
+        input: {
+          type: "timelock",
+          timelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+          operationId: "",
+          scheduledTxHash: "0xabc",
+        } as TrackingInput,
+      });
+
+      // #when - running timelock pipeline
+      const result = await trackTimelockPipeline(state);
+
+      // #then - should return state with no COMPLETED stages
+      const completedStages = result.stages.filter((s) => s.status === "COMPLETED");
+      expect(completedStages.length).toBe(0);
+    });
+  });
+
+  describe("trackElectionPipeline early returns", () => {
+    it("should return early when electionIndex is undefined", async () => {
+      // #given - a governor tracking state (not an election)
+      const mockProviders = createMockProviders();
+      const state = createTrackingState({
+        providers: mockProviders,
+        input: {
+          type: "governor",
+          governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+          proposalId: "123",
+        } as TrackingInput,
+      });
+
+      // #when - running election pipeline (incorrectly called on non-election input)
+      // Note: This tests the guard in CREATE_ELECTION stage
+      // We can't directly test this without mocking RPC, so we test the guard indirectly
+      // by verifying the state path is correctly identified as governor (not election)
+      expect(state.input.type).toBe("governor");
+      expect((state.input as { electionIndex?: number }).electionIndex).toBeUndefined();
+    });
+  });
+});
+
+describe("L2-only path handling (unit tests)", () => {
+  describe("isConstitutional check", () => {
+    it("should return true for Constitutional Governor address", () => {
+      // #given - the Constitutional Governor address
+      const address = ADDRESSES.CONSTITUTIONAL_GOVERNOR;
+
+      // #when - checking if constitutional
+      const result = isConstitutional(address);
+
+      // #then - should be true
+      expect(result).toBe(true);
+    });
+
+    it("should return true for L2 Constitutional Timelock address", () => {
+      // #given - the L2 Constitutional Timelock address
+      const address = ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK;
+
+      // #when - checking if constitutional
+      const result = isConstitutional(address);
+
+      // #then - should be true
+      expect(result).toBe(true);
+    });
+
+    it("should return false for Non-Constitutional Governor address", () => {
+      // #given - the Non-Constitutional Governor address
+      const address = ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR;
+
+      // #when - checking if constitutional
+      const result = isConstitutional(address);
+
+      // #then - should be false (L2-only path)
+      expect(result).toBe(false);
+    });
+
+    it("should return false for L2 Non-Constitutional Timelock address", () => {
+      // #given - the L2 Non-Constitutional Timelock address
+      const address = ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK;
+
+      // #when - checking if constitutional
+      const result = isConstitutional(address);
+
+      // #then - should be false (L2-only path)
+      expect(result).toBe(false);
+    });
+
+    it("should return false for election governor addresses", () => {
+      // #given - election governor addresses
+      const nomineeAddress = ADDRESSES.ELECTION_NOMINEE_GOVERNOR;
+      const memberAddress = ADDRESSES.ELECTION_MEMBER_GOVERNOR;
+
+      // #when - checking if constitutional
+      const nomineeResult = isConstitutional(nomineeAddress);
+      const memberResult = isConstitutional(memberAddress);
+
+      // #then - should be false for both
+      expect(nomineeResult).toBe(false);
+      expect(memberResult).toBe(false);
+    });
+
+    it("should be case-insensitive for address comparison", () => {
+      // #given - Constitutional Governor address in different cases
+      const lowerCase = ADDRESSES.CONSTITUTIONAL_GOVERNOR.toLowerCase();
+      const upperCase = ADDRESSES.CONSTITUTIONAL_GOVERNOR.toUpperCase();
+
+      // #when - checking if constitutional
+      const lowerResult = isConstitutional(lowerCase);
+      const upperResult = isConstitutional(upperCase);
+
+      // #then - should be true for both
+      expect(lowerResult).toBe(true);
+      expect(upperResult).toBe(true);
+    });
+  });
+
+  describe("SKIPPED placeholder creation for L2-only path", () => {
+    it("should correctly identify L2-only stages when checking SKIPPED status", () => {
+      // #given - SKIPPED placeholder stages for L2-only path
+      // Note: Using 'unknown' cast since SKIPPED stages have minimal data shape
+      const skippedStages = [
+        {
+          type: "L2_TO_L1_MESSAGE",
+          status: "SKIPPED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: { reason: "L2-only path" },
+        },
+        {
+          type: "L1_TIMELOCK",
+          status: "SKIPPED",
+          chain: "ethereum",
+          chainId: 1,
+          transactions: [],
+          data: { reason: "L2-only path" },
+        },
+        {
+          type: "RETRYABLE_EXECUTED",
+          status: "SKIPPED",
+          chain: "arb1",
+          chainId: 42161,
+          transactions: [],
+          data: { reason: "L2-only path" },
+        },
+      ] as const;
+
+      // #when - checking each stage status
+      // #then - all L1 roundtrip stages should be SKIPPED
+      for (const stage of skippedStages) {
+        expect(stage.status).toBe("SKIPPED");
+        expect(stage.data.reason).toBe("L2-only path");
+      }
+    });
+  });
+});
+
+describe("getElectionContext additional tests", () => {
+  it("should return context when nomineeProposalId is set in NOMINEE_ELECTION stage", async () => {
+    // #given - a state with NOMINEE_ELECTION stage containing nomineeProposalId
+    const mockProviders = createMockProviders();
+    let ctx = createTrackingState({
+      providers: mockProviders,
+      input: { type: "election", electionIndex: 1 } as TrackingInput,
+    });
+
+    const nomineeStage = new StageBuilder("NOMINEE_ELECTION", "arb1")
+      .status("COMPLETED")
+      .data({ nomineeProposalId: "67890", proposalState: "Executed" })
+      .build();
+    ctx = await addStage(ctx, nomineeStage);
+
+    // #when - getting election context
+    const result = getElectionContext(ctx);
+
+    // #then - should return context with the nomineeProposalId from stage
+    expect(result).not.toBeNull();
+    expect(result?.electionIndex).toBe(1);
+    expect(result?.nomineeProposalId).toBe("67890");
+  });
+
+  it("should prioritize CREATE_ELECTION nomineeProposalId over NOMINEE_ELECTION", async () => {
+    // #given - a state with nomineeProposalId in both stages
+    const mockProviders = createMockProviders();
+    let ctx = createTrackingState({
+      providers: mockProviders,
+      input: { type: "election", electionIndex: 2 } as TrackingInput,
+    });
+
+    const createStage = new StageBuilder("CREATE_ELECTION", "arb1")
+      .status("COMPLETED")
+      .data({ electionIndex: 2, cohort: 0, nomineeProposalId: "first" })
+      .build();
+    ctx = await addStage(ctx, createStage);
+
+    const nomineeStage = new StageBuilder("NOMINEE_ELECTION", "arb1")
+      .status("COMPLETED")
+      .data({ nomineeProposalId: "second", proposalState: "Executed" })
+      .build();
+    ctx = await addStage(ctx, nomineeStage);
+
+    // #when - getting election context
+    const result = getElectionContext(ctx);
+
+    // #then - should return the nomineeProposalId from CREATE_ELECTION (first found)
+    expect(result).not.toBeNull();
+    expect(result?.nomineeProposalId).toBe("first");
+  });
+});
+
+describe("proposalStateToStageStatus edge cases", () => {
+  it("should handle all numeric proposal states consistently", () => {
+    // #given - mapping of proposal states to expected results
+    const testCases: Array<{ state: string; expectedStatus: string; expectedComplete: boolean }> = [
+      { state: "Pending", expectedStatus: "PENDING", expectedComplete: false },
+      { state: "Active", expectedStatus: "PENDING", expectedComplete: false },
+      { state: "Canceled", expectedStatus: "FAILED", expectedComplete: false },
+      { state: "Defeated", expectedStatus: "FAILED", expectedComplete: false },
+      { state: "Succeeded", expectedStatus: "COMPLETED", expectedComplete: true },
+      { state: "Queued", expectedStatus: "COMPLETED", expectedComplete: true },
+      { state: "Expired", expectedStatus: "COMPLETED", expectedComplete: true },
+      { state: "Executed", expectedStatus: "COMPLETED", expectedComplete: true },
+    ];
+
+    for (const { state, expectedStatus, expectedComplete } of testCases) {
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus(state);
+
+      // #then - should match expected values
+      expect(result.status).toBe(expectedStatus);
+      expect(result.complete).toBe(expectedComplete);
+    }
+  });
+
+  it("should treat empty string as unknown state (COMPLETED)", () => {
+    // #given - an empty string proposal state
+    // #when - converting to stage status
+    const result = proposalStateToStageStatus("");
+
+    // #then - should default to COMPLETED with complete=true
+    expect(result.status).toBe("COMPLETED");
+    expect(result.complete).toBe(true);
+  });
+
+  it("should treat arbitrary unknown string as COMPLETED", () => {
+    // #given - arbitrary unknown proposal state strings
+    const unknownStates = ["InvalidState", "random", "PENDING", "active", "DEFEATED"];
+
+    for (const state of unknownStates) {
+      // #when - converting to stage status
+      const result = proposalStateToStageStatus(state);
+
+      // #then - should default to COMPLETED with complete=true
+      expect(result.status).toBe("COMPLETED");
+      expect(result.complete).toBe(true);
+    }
+  });
+});
+
+describe("Stage initialization and state management", () => {
+  it("should initialize governor pipeline with 7 stages", () => {
+    // #given - a new tracking state for governor pipeline
+    const mockProviders = createMockProviders();
+    const state = createTrackingState({
+      providers: mockProviders,
+      input: {
+        type: "governor",
+        governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+        proposalId: "123",
+      } as TrackingInput,
+    });
+
+    // #when - checking initial stages
+    // #then - should have 7 stages all NOT_STARTED
+    expect(state.stages.length).toBe(7);
+    expect(state.stages.every((s) => s.status === "NOT_STARTED")).toBe(true);
+
+    const stageTypes = state.stages.map((s) => s.type);
+    expect(stageTypes).toEqual([
+      "PROPOSAL_CREATED",
+      "VOTING_ACTIVE",
+      "PROPOSAL_QUEUED",
+      "L2_TIMELOCK",
+      "L2_TO_L1_MESSAGE",
+      "L1_TIMELOCK",
+      "RETRYABLE_EXECUTED",
+    ]);
+  });
+
+  it("should initialize timelock pipeline with 4 stages", () => {
+    // #given - a new tracking state for timelock pipeline
+    const mockProviders = createMockProviders();
+    const state = createTrackingState({
+      providers: mockProviders,
+      input: {
+        type: "timelock",
+        timelockAddress: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        operationId: "0x123",
+        scheduledTxHash: "0xabc",
+      } as TrackingInput,
+    });
+
+    // #when - checking initial stages
+    // #then - should have 4 stages all NOT_STARTED
+    expect(state.stages.length).toBe(4);
+    expect(state.stages.every((s) => s.status === "NOT_STARTED")).toBe(true);
+
+    const stageTypes = state.stages.map((s) => s.type);
+    expect(stageTypes).toEqual([
+      "L2_TIMELOCK",
+      "L2_TO_L1_MESSAGE",
+      "L1_TIMELOCK",
+      "RETRYABLE_EXECUTED",
+    ]);
+  });
+
+  it("should initialize election pipeline with 8 stages", () => {
+    // #given - a new tracking state for election pipeline
+    const mockProviders = createMockProviders();
+    const state = createTrackingState({
+      providers: mockProviders,
+      input: { type: "election", electionIndex: 0 } as TrackingInput,
+    });
+
+    // #when - checking initial stages
+    // #then - should have 8 stages all NOT_STARTED
+    expect(state.stages.length).toBe(8);
+    expect(state.stages.every((s) => s.status === "NOT_STARTED")).toBe(true);
+
+    const stageTypes = state.stages.map((s) => s.type);
+    expect(stageTypes).toEqual([
+      "CREATE_ELECTION",
+      "NOMINEE_ELECTION",
+      "NOMINEE_VETTING",
+      "MEMBER_ELECTION",
+      "L2_TIMELOCK",
+      "L2_TO_L1_MESSAGE",
+      "L1_TIMELOCK",
+      "RETRYABLE_EXECUTED",
+    ]);
+  });
+
+  it("should correctly assign chains to stages", () => {
+    // #given - a tracking state with all stages initialized
+    const mockProviders = createMockProviders();
+    const state = createTrackingState({
+      providers: mockProviders,
+      input: {
+        type: "governor",
+        governorAddress: ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+        proposalId: "123",
+      } as TrackingInput,
+    });
+
+    // #when - checking chain assignments
+    const l1Stages = state.stages.filter((s) => s.chain === "ethereum");
+    const l2Stages = state.stages.filter((s) => s.chain === "arb1");
+
+    // #then - L1_TIMELOCK and RETRYABLE_EXECUTED are classified as ethereum chain
+    // (RETRYABLE_EXECUTED is initiated from L1, even though tickets redeem on L2)
+    expect(l1Stages.map((s) => s.type)).toEqual(["L1_TIMELOCK", "RETRYABLE_EXECUTED"]);
+    expect(l2Stages.length).toBe(5);
   });
 });
 

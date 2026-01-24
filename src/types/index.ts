@@ -104,6 +104,7 @@ export {
   TrackingProgress,
   OnProgressCallback,
   TrackerOptions,
+  ProviderOrUrl,
   CacheAdapter,
 } from "./config";
 

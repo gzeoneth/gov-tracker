@@ -1091,7 +1091,7 @@ describe("Tracker Creation (Unit Tests)", () => {
           novaProvider: {} as ethers.providers.Provider,
           l1Provider: undefined,
         } as any)
-      ).toThrow("l1Provider is required");
+      ).toThrow("Provider or RPC URL is required");
     });
 
     it("should create tracker with valid providers", () => {
@@ -1112,6 +1112,33 @@ describe("Tracker Creation (Unit Tests)", () => {
       expect(typeof tracker.trackByTxHash).toBe("function");
       expect(typeof tracker.trackFromCheckpoint).toBe("function");
       expect(typeof tracker.prepareTransaction).toBe("function");
+    });
+
+    it("should create tracker with RPC URLs", () => {
+      // #when - creating tracker with RPC URL strings
+      const tracker = createTracker({
+        l1Provider: "https://eth.llamarpc.com",
+        l2Provider: "https://arb1.arbitrum.io/rpc",
+        novaProvider: "https://nova.arbitrum.io/rpc",
+      });
+
+      // #then - tracker should have all expected methods
+      expect(tracker).toBeDefined();
+      expect(typeof tracker.trackByTxHash).toBe("function");
+    });
+
+    it("should create tracker with mixed providers and URLs", () => {
+      // #given - mock provider for L1
+      const mockL1Provider = { getNetwork: () => Promise.resolve({ chainId: 1 }) };
+
+      // #when - creating tracker with mixed provider types
+      const tracker = createTracker({
+        l1Provider: mockL1Provider as any,
+        l2Provider: "https://arb1.arbitrum.io/rpc",
+      });
+
+      // #then - tracker should be created
+      expect(tracker).toBeDefined();
     });
   });
 });

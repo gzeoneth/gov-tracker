@@ -120,6 +120,48 @@ const tracker = createTracker({
 });
 ```
 
+#### Extracting Data from Bundled Cache
+
+Type-safe helpers for extracting data without parsing checkpoint internals:
+
+```typescript
+import bundledCache from "@gzeoneth/gov-tracker/bundled-cache.json";
+import {
+  extractProposals,
+  extractTimelockOps,
+  extractElections,
+  extractOperationIds,
+  getWatermarksFromCache,
+  getVotingDataFromStages,
+} from "@gzeoneth/gov-tracker";
+
+// Extract all proposals with typed metadata
+const proposals = extractProposals(bundledCache);
+for (const p of proposals) {
+  console.log(`${p.proposalId.slice(0, 10)}... - ${p.isComplete ? "Complete" : "Active"}`);
+  console.log(`  State: ${p.currentState}`);
+  if (p.timelockLink) {
+    console.log(`  Timelock: ${p.timelockLink.operationId.slice(0, 10)}...`);
+  }
+}
+
+// Get all operation IDs as a Map
+const opIds = extractOperationIds(bundledCache);
+const operationId = opIds.get(proposalId);
+
+// Get discovery watermarks for incremental scanning
+const watermarks = getWatermarksFromCache(bundledCache);
+if (watermarks) {
+  console.log("Core Governor scanned to block:", watermarks.constitutionalGovernor);
+}
+
+// Extract vote data from a tracking result
+const votingData = getVotingDataFromStages(result.stages);
+if (votingData) {
+  console.log(`Votes - For: ${votingData.forVotesRaw}, Against: ${votingData.againstVotesRaw}`);
+}
+```
+
 ### Browser (localStorage)
 
 ```typescript

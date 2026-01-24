@@ -15,14 +15,13 @@ yarn add @gzeoneth/gov-tracker ethers@^5.8.0
 ## Quick Start
 
 ```typescript
-import { ethers } from "ethers";
-import { createTracker, findExecutableStage, ADDRESSES } from "@gzeoneth/gov-tracker";
+import { createTracker, findExecutableStage } from "@gzeoneth/gov-tracker";
 
-// Use StaticJsonRpcProvider for better performance
+// Accepts RPC URLs directly (or ethers Provider objects)
 const tracker = createTracker({
-  l2Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ARB1_RPC),
-  l1Provider: new ethers.providers.StaticJsonRpcProvider(process.env.ETH_RPC),
-  novaProvider: new ethers.providers.StaticJsonRpcProvider(process.env.NOVA_RPC),
+  l2Provider: process.env.ARB1_RPC,  // URL string or Provider
+  l1Provider: process.env.ETH_RPC,
+  novaProvider: process.env.NOVA_RPC,
   cachePath: "./gov-tracker-cache.json",
 });
 

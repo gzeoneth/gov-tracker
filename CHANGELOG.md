@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **RPC URL support** - `TrackerOptions` now accepts RPC URLs as strings in addition to Provider objects. `l1Provider`, `l2Provider`, and `novaProvider` all accept either `ethers.providers.Provider` or a URL string
+- **Bundled cache extraction utilities** - Type-safe helpers for extracting data from bundled cache JSON:
+  - `extractProposals()` - Extract proposal metadata from cache
+  - `extractTimelockOps()` - Extract timelock operation metadata
+  - `extractElections()` - Extract election metadata
+  - `extractOperationIds()` - Get Map of proposalId → operationId
+  - `getWatermarksFromCache()` - Get discovery watermarks from cache
+  - `getVotingDataFromStages()` - Extract typed vote data from stages
+  - `extractTimelockLinkFromStages()` - Extract TimelockLink from completed stages
+- `getAllStageMetadata()` - Memoized function returning `Record<StageType, StageMetadata>` for all stage types
+- `ALL_STAGE_TYPES` - Constant array of all stage types in pipeline order
+- `trimFromStage(checkpoint, stageIndex)` - Trim checkpoint stages for re-tracking scenarios
 - `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
 - `loadWatermarks()` / `LoadedWatermarks` - Access discovery watermarks from cache
 - `getReceiptOrNull()` / `getErrorMessage()` - Shared RPC and error utilities

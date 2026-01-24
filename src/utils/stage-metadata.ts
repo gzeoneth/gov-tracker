@@ -8,6 +8,23 @@ import type { StageType, ProposalType, Chain } from "../types";
 import { GOVERNANCE_STAGE_DURATION_DAYS } from "../constants";
 
 /**
+ * All stage types in order (governor path followed by election path)
+ */
+export const ALL_STAGE_TYPES: readonly StageType[] = [
+  "PROPOSAL_CREATED",
+  "VOTING_ACTIVE",
+  "PROPOSAL_QUEUED",
+  "L2_TIMELOCK",
+  "L2_TO_L1_MESSAGE",
+  "L1_TIMELOCK",
+  "RETRYABLE_EXECUTED",
+  "CREATE_ELECTION",
+  "NOMINEE_ELECTION",
+  "NOMINEE_VETTING",
+  "MEMBER_ELECTION",
+] as const;
+
+/**
  * Metadata for a governance stage
  */
 export interface StageMetadata {
@@ -146,4 +163,34 @@ export function getStageMetadata(
  */
 export function formatStageTitle(stageType: StageType): string {
   return BASE_METADATA[stageType].title;
+}
+
+let cachedAllMetadata: Record<StageType, StageMetadata> | null = null;
+
+/**
+ * Get metadata for all stage types (memoized)
+ *
+ * Returns a Record mapping each StageType to its StageMetadata.
+ * The result is cached after first call.
+ *
+ * @example
+ * ```typescript
+ * const allMeta = getAllStageMetadata();
+ * for (const [type, meta] of Object.entries(allMeta)) {
+ *   console.log(`${meta.title}: ${meta.estimatedDays} days`);
+ * }
+ * ```
+ */
+export function getAllStageMetadata(): Record<StageType, StageMetadata> {
+  if (cachedAllMetadata) {
+    return cachedAllMetadata;
+  }
+
+  const result = {} as Record<StageType, StageMetadata>;
+  for (const stageType of ALL_STAGE_TYPES) {
+    result[stageType] = getStageMetadata(stageType);
+  }
+
+  cachedAllMetadata = result;
+  return cachedAllMetadata;
 }

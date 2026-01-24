@@ -19,9 +19,10 @@ const tracker = createTracker({
 **ChunkingConfig:**
 ```typescript
 chunkingConfig: {
-  l1ChunkSize: 10_000,    // Default: 1k blocks
-  l2ChunkSize: 10_000_000, // Default: 10M blocks
-  delayBetweenChunks: 100, // ms between requests
+  l1ChunkSize: 10_000,      // Default: 10k blocks per chunk on L1
+  l2ChunkSize: 10_000_000,  // Default: 10M blocks per chunk on L2
+  novaChunkSize?: number,   // Optional: Nova-specific chunk size (defaults to l2ChunkSize)
+  delayBetweenChunks: 100,  // ms between chunk requests
 }
 ```
 
@@ -532,6 +533,8 @@ interface DeduplicationStats {
 | `chainToChainId(chain)` | Convert chain name to chain ID |
 | `addressEquals(a, b)` | Case-insensitive address comparison |
 | `isAddressIn(address, list)` | Check if address in list |
+| `isKnownChain(chain)` | Type guard for known chain names |
+| `isL2Chain(chain)` | Type guard for L2 chains (arb1, nova) |
 
 ### Timing
 
@@ -540,7 +543,27 @@ interface DeduplicationStats {
 | `calculateEta(blockNumber, provider)` | Calculate ETA timestamp for block |
 | `calculateExpectedEta(currentBlock, delayBlocks, timestamp, blockTime)` | Calculate expected ETA |
 | `calculateRemainingSeconds(eta)` | Calculate seconds remaining until ETA |
+| `estimateTimestampFromBlock(blockNumber, provider)` | Estimate timestamp for a block number |
+| `getL1BlockNumberFromL2(l2Block, l1Provider, l2Provider)` | Convert L2 block to approximate L1 block |
+| `isStageStale(stage, thresholdMs)` | Check if stage data is stale |
 | `invalidateBlockInfoCache()` | Force refresh of cached block info (call at start of monitoring loops) |
+
+### Salt Utilities
+
+| Function | Description |
+|----------|-------------|
+| `saltFromDescription(description)` | Compute salt from proposal description |
+| `generateSecurityCouncilSalt(cohort, nonce)` | Generate Security Council operation salt |
+| `decodeL1TimelockSchedule(calldata)` | Decode L1 timelock schedule calldata |
+
+### Operation ID Utilities
+
+| Function | Description |
+|----------|-------------|
+| `validateSalt(salt)` | Validate salt format (bytes32) |
+| `validateSaltBatch(salts)` | Validate multiple salts |
+| `computeAndValidateOperationHash(targets, values, calldatas, predecessor, salt)` | Compute and validate operation hash |
+| `tryFindSalt(txData, description)` | Attempt to find/compute salt from transaction data |
 
 ### URLs
 
@@ -590,22 +613,48 @@ const isSuperseded = isScOperationSuperseded(BigNumber.from(3), highest); // tru
 ### `ADDRESSES`
 
 ```typescript
-ADDRESSES.CONSTITUTIONAL_GOVERNOR
-ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR
-ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK
-ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK
-ADDRESSES.L1_TIMELOCK
-ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-ADDRESSES.ELECTION_MEMBER_GOVERNOR
+// Governors
+ADDRESSES.CONSTITUTIONAL_GOVERNOR          // Core Governor
+ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR      // Treasury Governor
+ADDRESSES.ELECTION_NOMINEE_GOVERNOR        // Security Council Nominee Election
+ADDRESSES.ELECTION_MEMBER_GOVERNOR         // Security Council Member Election
+
+// Timelocks
+ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK       // 8-day delay
+ADDRESSES.L2_NON_CONSTITUTIONAL_TIMELOCK   // 3-day delay
+ADDRESSES.L1_TIMELOCK                      // L1 3-day delay
+
+// Infrastructure
+ADDRESSES.SECURITY_COUNCIL_MANAGER         // SC management contract
+ADDRESSES.ARB1_DELAYED_INBOX               // Arb1 delayed inbox
+ADDRESSES.NOVA_DELAYED_INBOX               // Nova delayed inbox
+ADDRESSES.ARB1_OUTBOX                      // L1 outbox for Arb1
+ADDRESSES.NOVA_OUTBOX                      // L1 outbox for Nova
+ADDRESSES.ARB_SYS                          // ArbSys precompile
+ADDRESSES.ARB_RETRYABLE_TX                 // Retryable tx precompile
+ADDRESSES.RETRYABLE_TICKET_MAGIC           // Retryable ticket detection
 ```
 
 ### `TIMING`
 
 ```typescript
+// Timelock delays
 TIMING.L2_CONSTITUTIONAL_TIMELOCK_DELAY_SECONDS     // 691,200 (8 days)
 TIMING.L2_NON_CONSTITUTIONAL_TIMELOCK_DELAY_SECONDS // 259,200 (3 days)
 TIMING.L1_TIMELOCK_DELAY_SECONDS                    // 259,200 (3 days)
+TIMING.L1_TIMELOCK_DELAY_BLOCKS_L1                  // 21,600 (~3 days at 12s/block)
+
+// Challenge periods
 TIMING.CHALLENGE_PERIOD_BLOCKS_L1                   // 45,818 (~6.4 days)
+TIMING.MAX_VOTING_PERIOD_BLOCKS_L2                  // 6,500,000 (~14 days)
+
+// Other
+TIMING.RETRYABLE_LIFETIME_SECONDS                   // 604,800 (7 days)
+TIMING.VOTING_EXTENSION_DAYS                        // 2 days (late quorum)
+
+// Time unit constants
+TIMING.SEC_PER_DAY    // 86,400
+TIMING.MS_PER_DAY     // 86,400,000
 ```
 
 ### `CHUNK_SIZES`
@@ -762,6 +811,7 @@ interface CacheAdapter {
   clear(): Promise<void>;
   has(key: string): Promise<boolean>;
   keys(prefix?: string): Promise<string[]> | string[] | IterableIterator<string>;
+  flush?(): Promise<void>;  // Optional: flush writes to persistent storage
 }
 
 interface PrepareResult =

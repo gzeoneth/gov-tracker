@@ -12,20 +12,26 @@
 
 ```
 src/
-├── tracker.ts           # ProposalStageTracker class
-├── tracker/             # Pipeline, state, discovery, execute, query, cache
-├── stages/              # Stage implementations (voting, timelock, etc.)
+├── tracker.ts           # ProposalStageTracker class (public API entry point)
+├── tracker/
+│   ├── pipeline.ts      # Pure stage tracking pipeline
+│   ├── state.ts         # TrackingState creation and management
+│   ├── stage-runner.ts  # Stage execution with caching logic
+│   ├── discovery.ts     # Multi-governor/timelock discovery
+│   ├── execute.ts       # Transaction preparation
+│   ├── query.ts         # Cache query operations
+│   ├── cache.ts         # Cache implementations (File, LocalStorage, Memory)
+│   ├── checkpoint-helpers.ts  # Checkpoint utilities
+│   └── bundled-cache.ts # Bundled cache extraction utilities
+├── stages/              # Individual stage implementations
 ├── election/            # Security Council election tracking (7 files)
-│   ├── contracts.ts     # Governor contract factories
-│   ├── proposal-ids.ts  # ID computation, caching, and lookup
-│   ├── params.ts        # Proposal parameters and tx preparation
-│   ├── participants.ts  # Contenders, nominees
-│   ├── details.ts       # Full election details
-│   └── status.ts        # Phase determination
+├── calldata/            # Calldata decoding and signature lookup
+├── simulation/          # Simulation data preparation (Tenderly, etc.)
 ├── discovery/           # Governor & timelock introspection
-├── utils/               # Timing, log search, operation IDs
+├── deduplication.ts     # Parent/child checkpoint management
+├── utils/               # Timing, operation IDs, stage metadata, etc.
 ├── types/               # Type definitions
-└── constants.ts         # Addresses, timing
+└── constants.ts         # Addresses, timing, block ranges
 ```
 
 ---

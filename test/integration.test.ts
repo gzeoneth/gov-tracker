@@ -22,68 +22,69 @@ import { queryWithRetry } from "../src/utils/rpc-utils";
 describe.skipIf(shouldSkipRpc())("Integration Tests", () => {
   const { getProvider, beforeAllSetup } = createL2OnlyTestSuite();
 
-  beforeAll(() => {
+  // Cached RPC results - populated once in beforeAll
+  let cachedProposal: Awaited<ReturnType<typeof discoverProposalByTxHash>>;
+  let cachedProposalState: string;
+  let cachedCallScheduledEvents: Awaited<ReturnType<typeof findCallScheduledByTxHash>>;
+  let cachedTimelockState: Awaited<ReturnType<typeof getTimelockOperationState>>;
+
+  beforeAll(async () => {
     beforeAllSetup();
-  });
 
-  describe("Governor Discovery", () => {
-    it("should find ProposalCreated event by tx hash", async () => {
-      // #given - a known proposal creation transaction hash
-      // #when - discovering proposal by tx hash
-      const result = await discoverProposalByTxHash(
-        FIXTURES.FULL_ROUNDTRIP.creationTxHash,
-        getProvider()
-      );
-
-      // #then - should return the proposal with matching ID
-      expect(result).not.toBeNull();
-      expect(result!.proposalId).toBe(FIXTURES.FULL_ROUNDTRIP.proposalId);
-    });
-
-    it("should get proposal state", async () => {
-      // #given - a completed proposal's governor address and ID
-      // #when - querying the proposal state
-      const state = await getProposalState(
+    // Cache all RPC results in parallel
+    const [proposal, proposalState, callScheduledEvents, timelockState] = await Promise.all([
+      discoverProposalByTxHash(FIXTURES.FULL_ROUNDTRIP.creationTxHash, getProvider()),
+      getProposalState(
         FIXTURES.FULL_ROUNDTRIP.governorAddress,
         FIXTURES.FULL_ROUNDTRIP.proposalId,
         getProvider()
-      );
+      ),
+      findCallScheduledByTxHash(FIXTURES.FULL_ROUNDTRIP.timelockTxHash, getProvider()),
+      getTimelockOperationState(
+        FIXTURES.FULL_ROUNDTRIP.l2TimelockAddress,
+        FIXTURES.FULL_ROUNDTRIP.operationId,
+        getProvider()
+      ),
+    ]);
+    cachedProposal = proposal;
+    cachedProposalState = proposalState;
+    cachedCallScheduledEvents = callScheduledEvents;
+    cachedTimelockState = timelockState;
+    console.log("✓ Integration test RPC results cached");
+  });
 
+  describe("Governor Discovery", () => {
+    it("should find ProposalCreated event by tx hash", () => {
+      // #given - cached proposal discovery result
+      // #then - should return the proposal with matching ID
+      expect(cachedProposal).not.toBeNull();
+      expect(cachedProposal!.proposalId).toBe(FIXTURES.FULL_ROUNDTRIP.proposalId);
+    });
+
+    it("should get proposal state", () => {
+      // #given - cached proposal state
       // #then - should return "Executed" for a completed proposal
-      expect(state).toBe("Executed");
+      expect(cachedProposalState).toBe("Executed");
     });
   });
 
   describe("Timelock Discovery", () => {
-    it("should find CallScheduled events by tx hash", async () => {
-      // #given - a known timelock transaction hash
-      // #when - finding CallScheduled events by tx hash
-      const results = await findCallScheduledByTxHash(
-        FIXTURES.FULL_ROUNDTRIP.timelockTxHash,
-        getProvider()
-      );
-
+    it("should find CallScheduled events by tx hash", () => {
+      // #given - cached CallScheduled events
       // #then - should return events with matching operation ID
-      expect(results).not.toBeNull();
-      expect(results!.length).toBeGreaterThan(0);
-      expect(results![0].operationId.toLowerCase()).toBe(
+      expect(cachedCallScheduledEvents).not.toBeNull();
+      expect(cachedCallScheduledEvents!.length).toBeGreaterThan(0);
+      expect(cachedCallScheduledEvents![0].operationId.toLowerCase()).toBe(
         FIXTURES.FULL_ROUNDTRIP.operationId.toLowerCase()
       );
     });
 
-    it("should get L2 timelock operation state (completed)", async () => {
-      // #given - a completed L2 timelock operation
-      // #when - querying the operation state
-      const state = await getTimelockOperationState(
-        FIXTURES.FULL_ROUNDTRIP.l2TimelockAddress,
-        FIXTURES.FULL_ROUNDTRIP.operationId,
-        getProvider()
-      );
-
+    it("should get L2 timelock operation state (completed)", () => {
+      // #given - cached timelock operation state
       // #then - should show isDone=true for completed operation
-      expect(state.isDone).toBe(true);
-      expect(state.isReady).toBe(false);
-      expect(state.isPending).toBe(false);
+      expect(cachedTimelockState.isDone).toBe(true);
+      expect(cachedTimelockState.isReady).toBe(false);
+      expect(cachedTimelockState.isPending).toBe(false);
     });
   });
 

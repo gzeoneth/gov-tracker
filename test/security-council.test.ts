@@ -702,7 +702,11 @@ describe.skipIf(shouldSkipRpc())("Security Council Rotation Tracking (RPC)", () 
   let l1Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;
 
-  beforeAll(() => {
+  // Cached results - populated once in beforeAll
+  let cachedReceipt: ethers.providers.TransactionReceipt;
+  let cachedTrackingResults: Awaited<ReturnType<ReturnType<typeof createTracker>["trackByTxHash"]>>;
+
+  beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
     if (!ethRpc) {
       throw new Error("RPC URLs required: Set ETH_RPC environment variables");
@@ -713,25 +717,27 @@ describe.skipIf(shouldSkipRpc())("Security Council Rotation Tracking (RPC)", () 
     l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
     l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
     novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
+
+    // Cache receipt and tracking results once
+    const tracker = createTracker({ l2Provider, l1Provider, novaProvider });
+    const [receipt, results] = await Promise.all([
+      queryWithRetry(() => l2Provider.getTransactionReceipt(SC_ROTATION_TX)),
+      tracker.trackByTxHash(SC_ROTATION_TX),
+    ]);
+    cachedReceipt = receipt;
+    cachedTrackingResults = results;
+    console.log("✓ SC rotation tracking results cached");
+  }, 300000);
+
+  it("should detect SC update in transaction receipt", () => {
+    expect(isSecurityCouncilOperation(cachedReceipt)).toBe(true);
   });
 
-  it("should detect SC update in transaction receipt", async () => {
-    const receipt = await queryWithRetry(() => l2Provider.getTransactionReceipt(SC_ROTATION_TX));
-    expect(isSecurityCouncilOperation(receipt)).toBe(true);
-  });
-
-  it("should track SC rotation operation from tx hash", async () => {
-    const tracker = createTracker({
-      l2Provider,
-      l1Provider,
-      novaProvider,
-    });
-
-    const results = await tracker.trackByTxHash(SC_ROTATION_TX);
-    expect(results.length).toBe(4);
-    const result = results[0];
+  it("should track SC rotation operation from tx hash", () => {
+    expect(cachedTrackingResults.length).toBe(4);
+    const result = cachedTrackingResults[0];
     expect(result.stages.length).toBeGreaterThan(0);
     const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
     expect(l2TimelockStage).toBeDefined();
-  }, 300000);
+  });
 });

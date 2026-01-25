@@ -1411,28 +1411,50 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
   const TEST_FROM_BLOCK = 369_846_188;
   const TEST_TO_BLOCK = 389_241_837;
 
+  // Cached discovery results - populated once in beforeAll
+  let cachedConstitutionalProposals: DiscoveredProposal[];
+  let cachedElectionProposals: DiscoveredProposal[];
+  let cachedTimelockOps: DiscoveredTimelockOp[];
+
   beforeAll(async () => {
     await beforeAllSetup();
     l2Provider = testCache.getProviders().l2Provider;
-  });
+
+    // Cache discovery results once for reuse across tests
+    const [constProposals, electionProposals, timelockOps] = await Promise.all([
+      discoverProposals(
+        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
+        TEST_FROM_BLOCK,
+        TEST_TO_BLOCK,
+        l2Provider
+      ),
+      discoverProposals(
+        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+        TEST_FROM_BLOCK,
+        TEST_TO_BLOCK,
+        l2Provider
+      ),
+      discoverTimelockOps(
+        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+        TEST_FROM_BLOCK,
+        TEST_TO_BLOCK,
+        l2Provider
+      ),
+    ]);
+    cachedConstitutionalProposals = constProposals;
+    cachedElectionProposals = electionProposals;
+    cachedTimelockOps = timelockOps;
+    console.log("✓ Discovery results cached");
+  }, 180000);
 
   beforeEach(() => {
     cache = new MockCache();
   });
 
   describe("discoverProposals", () => {
-    it("should discover constitutional proposals in block range", async () => {
-      // #given a block range with constitutional proposals
-      const fromBlock = TEST_FROM_BLOCK;
-      const toBlock = TEST_TO_BLOCK;
-
-      // #when discovering proposals
-      const proposals = await discoverProposals(
-        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-        fromBlock,
-        toBlock,
-        l2Provider
-      );
+    it("should discover constitutional proposals in block range", () => {
+      // #given cached constitutional proposals from block range
+      const proposals = cachedConstitutionalProposals;
 
       // #then should find at least one proposal
       expect(proposals.length).toBeGreaterThan(0);
@@ -1442,22 +1464,13 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
         );
         expect(proposals[0].proposalId).toBeDefined();
         expect(proposals[0].creationTxHash).toBeDefined();
-        expect(proposals[0].creationBlock).toBeGreaterThan(fromBlock);
+        expect(proposals[0].creationBlock).toBeGreaterThan(TEST_FROM_BLOCK);
       }
-    }, 60000);
+    });
 
-    it("should discover election proposals in block range", async () => {
-      // #given a block range with election proposals
-      const fromBlock = TEST_FROM_BLOCK;
-      const toBlock = TEST_TO_BLOCK;
-
-      // #when discovering proposals from nominee governor
-      const proposals = await discoverProposals(
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-        fromBlock,
-        toBlock,
-        l2Provider
-      );
+    it("should discover election proposals in block range", () => {
+      // #given cached election proposals from block range
+      const proposals = cachedElectionProposals;
 
       // #then may find election proposals
       expect(Array.isArray(proposals)).toBe(true);
@@ -1466,22 +1479,13 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
           ADDRESSES.ELECTION_NOMINEE_GOVERNOR.toLowerCase()
         );
       }
-    }, 60000);
+    });
   });
 
   describe("discoverTimelockOps", () => {
-    it("should discover timelock operations in block range", async () => {
-      // #given a block range with timelock operations
-      const fromBlock = TEST_FROM_BLOCK;
-      const toBlock = TEST_TO_BLOCK;
-
-      // #when discovering timelock ops
-      const ops = await discoverTimelockOps(
-        ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
-        fromBlock,
-        toBlock,
-        l2Provider
-      );
+    it("should discover timelock operations in block range", () => {
+      // #given cached timelock operations from block range
+      const ops = cachedTimelockOps;
 
       // #then should find operations
       expect(Array.isArray(ops)).toBe(true);
@@ -1492,7 +1496,7 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
         expect(ops[0].operationId).toBeDefined();
         expect(ops[0].scheduledTxHash).toBeDefined();
       }
-    }, 60000);
+    });
   });
 
   describe("discoverAll", () => {

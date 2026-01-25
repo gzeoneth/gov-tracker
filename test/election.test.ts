@@ -18,6 +18,7 @@ import {
   prepareElectionCreation,
   ProposalStageTracker,
   ElectionProposalStatus,
+  ElectionStatus,
 } from "../src";
 import { getVettingDeadline } from "./helpers/election-helpers";
 import { shouldSkipRpc, createRpcTestSuite } from "./helpers";
@@ -61,6 +62,7 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   // Cached election tracking results - populated once in beforeAll
   const electionCache = new Map<number, ElectionProposalStatus>();
+  let cachedElectionStatus: ElectionStatus;
 
   beforeAll(async () => {
     await beforeAllSetup();
@@ -68,6 +70,13 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
     l2Provider = providers.l2Provider;
     l1Provider = providers.l1Provider;
     tracker = cache.getTracker();
+
+    // Fetch election status once for reuse
+    cachedElectionStatus = await checkElectionStatus(
+      l2Provider,
+      l1Provider,
+      ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+    );
 
     // Track elections 0-4 once upfront for all tests in this suite
     const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {
@@ -134,16 +143,10 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   describe("getElectionProposalId", () => {
     it("should return proposal ID for past elections", async () => {
-      // Get current election count
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
+      // Use cached election status for election count
+      if (cachedElectionStatus.electionCount > 0) {
         let foundProposalId = false;
-        for (let i = status.electionCount - 1; i >= 0; i--) {
+        for (let i = cachedElectionStatus.electionCount - 1; i >= 0; i--) {
           const proposalId = await getElectionProposalId(i, l2Provider);
           if (proposalId !== null) {
             foundProposalId = true;
@@ -157,19 +160,12 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   describe("Election Proposal Params", () => {
     it("should fetch proposal params for a completed election", async () => {
-      // Get election count
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
-        // Find an election that has a valid proposal ID
+      // Use cached elections - find one with a valid proposal ID
+      if (cachedElectionStatus.electionCount > 0) {
         let foundParams = false;
-        for (let i = status.electionCount - 1; i >= 0; i--) {
-          const proposalId = await getElectionProposalId(i, l2Provider);
-          if (proposalId !== null) {
+        for (let i = cachedElectionStatus.electionCount - 1; i >= 0; i--) {
+          const cachedElection = electionCache.get(i);
+          if (cachedElection?.nomineeProposalId) {
             // Fetch params for this election
             const params = await getElectionProposalParams(i, l2Provider);
 
@@ -191,14 +187,8 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   describe("Member Election Trigger", () => {
     it("should return null when election cannot proceed to member phase", async () => {
-      // Get current election status
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
+      // Use cached election status
+      if (cachedElectionStatus.electionCount > 0) {
         // Use cached election 0 (should be completed and cannot proceed)
         const electionStatus = electionCache.get(0)!;
 

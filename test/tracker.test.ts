@@ -1239,6 +1239,7 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   let l2OnlyResult: TrackingResult;
   let inProgressResult: TrackingResult;
   let timelockResult: TrackingResult;
+  let checkElectionResult: Awaited<ReturnType<ProposalStageTracker["checkElection"]>>;
 
   beforeAll(async () => {
     await beforeAllSetup();
@@ -1262,6 +1263,9 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
     l2OnlyResult = l2Results[0];
     inProgressResult = inProgressResults[0];
     timelockResult = timelockResults[0];
+
+    // Check election status once for reuse across tests
+    checkElectionResult = await tracker.checkElection();
     console.log("✓ All proposals tracked and cached");
   }, 180000); // 3 minute timeout for initial tracking
 
@@ -1720,26 +1724,24 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   });
 
   describe("checkElection", () => {
-    it("should return election status with canCreate flag", async () => {
-      // #when checking election status
-      const result = await tracker.checkElection();
+    // Uses checkElectionResult cached in beforeAll
 
+    it("should return election status with canCreate flag", () => {
       // #then should return valid result with status
-      expect(result).toBeDefined();
-      expect(result.status).toBeDefined();
-      expect(typeof result.canCreate).toBe("boolean");
-      expect(typeof result.canTriggerMember).toBe("boolean");
-      expect(result.prepared).toBeDefined();
+      expect(checkElectionResult).toBeDefined();
+      expect(checkElectionResult.status).toBeDefined();
+      expect(typeof checkElectionResult.canCreate).toBe("boolean");
+      expect(typeof checkElectionResult.canTriggerMember).toBe("boolean");
+      expect(checkElectionResult.prepared).toBeDefined();
     });
 
-    it("should include current election info if elections exist", async () => {
-      // #when checking election status
-      const result = await tracker.checkElection();
-
+    it("should include current election info if elections exist", () => {
       // #then if elections exist, should include current election
-      if (result.status.electionCount > 0) {
-        expect(result.currentElection).toBeDefined();
-        expect(result.currentElection?.electionIndex).toBe(result.status.electionCount - 1);
+      if (checkElectionResult.status.electionCount > 0) {
+        expect(checkElectionResult.currentElection).toBeDefined();
+        expect(checkElectionResult.currentElection?.electionIndex).toBe(
+          checkElectionResult.status.electionCount - 1
+        );
       }
     });
 

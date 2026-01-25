@@ -533,6 +533,9 @@ describe.skipIf(shouldSkipRpc())(
     let l1Provider: ethers.providers.JsonRpcProvider;
     let trackedResult: TrackingResult;
     let l2TimelockExecutionTxHash: string;
+    // Cached L2→L1 message tracking results
+    let cachedL2ToL1MessageResult: Awaited<ReturnType<typeof trackL2ToL1Message>>;
+    let cachedTreasuryL2ToL1MessageResult: Awaited<ReturnType<typeof trackL2ToL1Message>>;
 
     beforeAll(async () => {
       const ethRpc = process.env.ETH_RPC;
@@ -563,20 +566,30 @@ describe.skipIf(shouldSkipRpc())(
       );
       expect(executionTx).toBeDefined();
       l2TimelockExecutionTxHash = executionTx!.hash;
+
+      // Cache L2→L1 message tracking results for reuse
+      const [l2ToL1Result, treasuryResult] = await Promise.all([
+        trackL2ToL1Message(l2TimelockExecutionTxHash, l2Provider, l1Provider),
+        trackL2ToL1Message(
+          NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash,
+          l2Provider,
+          l1Provider
+        ),
+      ]);
+      cachedL2ToL1MessageResult = l2ToL1Result;
+      cachedTreasuryL2ToL1MessageResult = treasuryResult;
     }, 300000);
 
     describe("trackL2ToL1Message", () => {
-      it("should track completed L2→L1 message with outbox execution", async () => {
-        // #when tracking L2→L1 message from L2 timelock execution
-        const result = await trackL2ToL1Message(l2TimelockExecutionTxHash, l2Provider, l1Provider);
-
+      it("should track completed L2→L1 message with outbox execution", () => {
+        // Uses cachedL2ToL1MessageResult from beforeAll
         // #then should return COMPLETED with outbox execution data
-        expect(result.stage.status).toBe("COMPLETED");
-        expect(result.messages.length).toBeGreaterThan(0);
-        expect(result.messagePositions.length).toBeGreaterThan(0);
-        expect(result.isExecuted).toBe(true);
-        expect(result.outboxExecutionTx).toBeDefined();
-        expect(result.outboxExecutionTx?.hash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+        expect(cachedL2ToL1MessageResult.stage.status).toBe("COMPLETED");
+        expect(cachedL2ToL1MessageResult.messages.length).toBeGreaterThan(0);
+        expect(cachedL2ToL1MessageResult.messagePositions.length).toBeGreaterThan(0);
+        expect(cachedL2ToL1MessageResult.isExecuted).toBe(true);
+        expect(cachedL2ToL1MessageResult.outboxExecutionTx).toBeDefined();
+        expect(cachedL2ToL1MessageResult.outboxExecutionTx?.hash).toMatch(/^0x[a-fA-F0-9]{64}$/);
       });
 
       it("should return NOT_STARTED for empty tx hash", async () => {
@@ -592,30 +605,23 @@ describe.skipIf(shouldSkipRpc())(
         expect(result.stage.data.reason).toBeDefined();
       });
 
-      it("should return SKIPPED for Treasury L2 timelock execution (no L2→L1 messages)", async () => {
-        // #given Treasury Governor L2 timelock execution tx (L2-only path, no L1 round-trip)
-        const treasuryL2ExecutionTxHash =
-          NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash;
-
-        // #when tracking L2→L1 message
-        const result = await trackL2ToL1Message(treasuryL2ExecutionTxHash, l2Provider, l1Provider);
-
+      it("should return SKIPPED for Treasury L2 timelock execution (no L2→L1 messages)", () => {
+        // Uses cachedTreasuryL2ToL1MessageResult from beforeAll
         // #then should return SKIPPED status (no L2→L1 messages in transaction)
-        expect(result.stage.status).toBe("SKIPPED");
-        expect(result.messages).toHaveLength(0);
-        expect(result.messagePositions).toHaveLength(0);
-        expect(result.isConfirmed).toBe(false);
-        expect(result.isExecuted).toBe(false);
+        expect(cachedTreasuryL2ToL1MessageResult.stage.status).toBe("SKIPPED");
+        expect(cachedTreasuryL2ToL1MessageResult.messages).toHaveLength(0);
+        expect(cachedTreasuryL2ToL1MessageResult.messagePositions).toHaveLength(0);
+        expect(cachedTreasuryL2ToL1MessageResult.isConfirmed).toBe(false);
+        expect(cachedTreasuryL2ToL1MessageResult.isExecuted).toBe(false);
       });
 
-      it("should include message details in stage data", async () => {
-        const result = await trackL2ToL1Message(l2TimelockExecutionTxHash, l2Provider, l1Provider);
-
-        expect(result.stage.data.messageCount).toBeGreaterThan(0);
-        expect(result.stage.data.l2Block).toBeGreaterThan(0);
-        expect(result.stage.data.l2TxHash).toBe(l2TimelockExecutionTxHash);
-        expect(result.stage.data.messagePositions).toBeDefined();
-        expect(Array.isArray(result.stage.data.messagePositions)).toBe(true);
+      it("should include message details in stage data", () => {
+        // Uses cachedL2ToL1MessageResult from beforeAll
+        expect(cachedL2ToL1MessageResult.stage.data.messageCount).toBeGreaterThan(0);
+        expect(cachedL2ToL1MessageResult.stage.data.l2Block).toBeGreaterThan(0);
+        expect(cachedL2ToL1MessageResult.stage.data.l2TxHash).toBe(l2TimelockExecutionTxHash);
+        expect(cachedL2ToL1MessageResult.stage.data.messagePositions).toBeDefined();
+        expect(Array.isArray(cachedL2ToL1MessageResult.stage.data.messagePositions)).toBe(true);
       });
     });
 

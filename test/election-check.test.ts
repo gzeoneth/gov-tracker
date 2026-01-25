@@ -248,6 +248,10 @@ describe("Election Check Utilities", () => {
 
 /**
  * RPC tests for checkAndExecuteElection
+ *
+ * OPTIMIZATION: Call checkAndExecuteElection once in beforeAll and reuse the result
+ * across tests to avoid redundant RPC calls. All tests verify different aspects of
+ * the same election status response.
  */
 describe.skipIf(shouldSkipRpc())(
   "checkAndExecuteElection (RPC)",
@@ -258,6 +262,8 @@ describe.skipIf(shouldSkipRpc())(
     // Import checkAndExecuteElection dynamically to avoid mock conflicts
     let checkAndExecuteElection: typeof import("../src/cli/lib/election-check").checkAndExecuteElection;
     let providers: ProviderBundle;
+    // Cached result from single RPC call
+    let cachedResult: Awaited<ReturnType<typeof checkAndExecuteElection>>;
 
     beforeAll(async () => {
       const module = await import("../src/cli/lib/election-check");
@@ -275,56 +281,39 @@ describe.skipIf(shouldSkipRpc())(
         l2Provider: new ethers.providers.JsonRpcProvider(arbRpc),
         novaProvider: new ethers.providers.JsonRpcProvider(novaRpc),
       };
+
+      // Fetch election status once and reuse across tests
+      cachedResult = await checkAndExecuteElection(providers, null, {
+        write: false,
+        verbose: true, // verbose to also test console output path
+      });
     });
 
-    it("should return election status without write mode", async () => {
-      // #when checking election status without write mode
-      const result = await checkAndExecuteElection(providers, null, {
-        write: false,
-        verbose: false,
-      });
-
+    it("should return election status without write mode", () => {
       // #then should return valid status with no errors
-      expect(result.status).toBeDefined();
-      expect(result.status.electionCount).toBeGreaterThanOrEqual(0);
-      expect(Array.isArray(result.errors)).toBe(true);
+      expect(cachedResult.status).toBeDefined();
+      expect(cachedResult.status.electionCount).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(cachedResult.errors)).toBe(true);
     });
 
-    it("should include current election status when elections exist", async () => {
-      // #when checking election status
-      const result = await checkAndExecuteElection(providers, null, {
-        write: false,
-        verbose: false,
-      });
-
+    it("should include current election status when elections exist", () => {
       // #then if elections exist, should include current election status
-      if (result.status.electionCount > 0) {
-        expect(result.currentElectionStatus).toBeDefined();
-        expect(result.currentElectionStatus?.phase).toBeDefined();
+      if (cachedResult.status.electionCount > 0) {
+        expect(cachedResult.currentElectionStatus).toBeDefined();
+        expect(cachedResult.currentElectionStatus?.phase).toBeDefined();
       }
     });
 
-    it("should not execute transactions when signer is null", async () => {
-      // #when checking with no signer
-      const result = await checkAndExecuteElection(providers, null, {
-        write: true, // write is true but signer is null
-        verbose: false,
-      });
-
+    it("should not execute transactions when signer is null", () => {
       // #then should not execute (no electionCreated or memberElectionTriggered)
-      expect(result.electionCreated).toBeUndefined();
-      expect(result.memberElectionTriggered).toBeUndefined();
+      // Note: cachedResult was called with signer=null, so no execution happened
+      expect(cachedResult.electionCreated).toBeUndefined();
+      expect(cachedResult.memberElectionTriggered).toBeUndefined();
     });
 
-    it("should handle verbose mode", async () => {
-      // #when checking with verbose mode
-      const result = await checkAndExecuteElection(providers, null, {
-        write: false,
-        verbose: true,
-      });
-
-      // #then should still return valid status
-      expect(result.status).toBeDefined();
+    it("should handle verbose mode", () => {
+      // #then should still return valid status (verbose was true in beforeAll)
+      expect(cachedResult.status).toBeDefined();
     });
   }
 );

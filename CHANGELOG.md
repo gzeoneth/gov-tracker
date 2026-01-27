@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
+  - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)
+  - `normalizeTimeline(stages)` - Sort stages in canonical pipeline order
+  - `splitStages(stages)` - Split into parent and timelock stages (re-exported for convenience)
+- **Simulation extraction by action index** - `extractSimulationsByActionIndex(decodedActions, chain)` returns `IndexedSimulation[]` with `actionIndex` tracking for UI builders
+- **Tenderly payload builders** - Dependency-free utilities for building Tenderly API requests:
+  - `buildTenderlySimRequest(simulation, overrides?)` - Build simulate endpoint payload
+  - `buildTenderlyEncodeStatesRequest(simulations)` - Build encode-states payload for timelock storage overrides
 - **RPC URL support** - `TrackerOptions` now accepts RPC URLs as strings in addition to Provider objects. `l1Provider`, `l2Provider`, and `novaProvider` all accept either `ethers.providers.Provider` or a URL string
 - **Bundled cache extraction utilities** - Type-safe helpers for extracting data from bundled cache JSON:
   - `extractProposals()` - Extract proposal metadata from cache

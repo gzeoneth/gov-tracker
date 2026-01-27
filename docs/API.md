@@ -78,9 +78,35 @@ import { buildDefaultTargets } from "@gzeoneth/gov-tracker";
 
 const { proposals, timelockOps, watermarks } = await tracker.discoverAll(
   buildDefaultTargets(),
-  await l2Provider.getBlockNumber()
+  await tracker.getCurrentL2BlockNumber()
 );
 ```
+
+---
+
+### Provider Access
+
+Providers are exposed as readonly properties for direct access:
+
+```typescript
+// Direct property access (recommended)
+const currentBlock = await tracker.l2Provider.getBlockNumber();
+const l1Block = await tracker.l1Provider.getBlockNumber();
+
+// Convenience method for L2 block number
+const currentBlock = await tracker.getCurrentL2BlockNumber();
+
+// All providers as object (deprecated, use direct access)
+const { l1, l2, nova } = tracker.getProviders();
+```
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `l2Provider` | Arbitrum One provider (readonly) |
+| `l1Provider` | Ethereum mainnet provider (readonly) |
+| `novaProvider` | Arbitrum Nova provider (readonly) |
+| `getCurrentL2BlockNumber()` | Get current Arbitrum One block number |
+| `getProviders()` | Get all providers as object (deprecated) |
 
 ---
 
@@ -504,6 +530,9 @@ interface DeduplicationStats {
 | `extractTimelockLink(stages)` | Extract timelock info from PROPOSAL_QUEUED stage |
 | `prepareGovernorQueue(stage, provider)` | Prepare queue transaction for governor |
 | `getLifecyclePhase(stages)` | Get human-readable lifecycle phase (`voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`) |
+| `mergeStages(primary, secondary)` | Merge stages from two arrays, preferring higher status on duplicates |
+| `normalizeTimeline(stages)` | Sort stages in canonical pipeline order |
+| `splitStages(stages)` | Split into parent (proposal/election) and timelock stages |
 
 ### Stage Metadata
 
@@ -893,6 +922,18 @@ const label = getAddressLabel("0xf07DeD...", "arb1");
 
 Extract simulation-ready data from decoded calldata for integration with simulation tools (Tenderly, Foundry, etc).
 
+### Simulation Functions
+
+| Function | Description |
+|----------|-------------|
+| `extractAllSimulationsFromDecoded(decoded, chain)` | Extract all simulatable calls from decoded calldata |
+| `extractSimulationsByActionIndex(actions, chain)` | Extract simulations with action index tracking (for UI) |
+| `prepareTimelockSimulation(address, calldata, chain)` | Prepare timelock simulation data |
+| `prepareRetryableSimulation(target, calldata, value, chain)` | Prepare retryable ticket simulation data |
+| `prepareCallSimulation(target, calldata, value, chain)` | Prepare generic call simulation data |
+| `buildTenderlySimRequest(simulation, overrides?)` | Build Tenderly simulate API request payload |
+| `buildTenderlyEncodeStatesRequest(simulations)` | Build Tenderly encode-states API request payload |
+
 ### `extractAllSimulationsFromDecoded(decoded, chain)`
 
 Extract all simulatable calls from decoded calldata.
@@ -913,6 +954,42 @@ for (const sim of simulations) {
   console.log(`  To: ${sim.simulation.to}`);
   console.log(`  Input: ${sim.simulation.input}`);
 }
+```
+
+### `extractSimulationsByActionIndex(actions, chain)`
+
+Extract simulations with action index tracking for UI builders:
+
+```typescript
+import { decodeCalldata, extractSimulationsByActionIndex } from "@gzeoneth/gov-tracker";
+
+// Decode all proposal actions
+const decodedActions = await Promise.all(
+  calldatas.map((cd, i) => decodeCalldata(cd, targets[i], 0, "arb1"))
+);
+
+// Extract with action index tracking
+const indexed = extractSimulationsByActionIndex(decodedActions, "arb1");
+
+for (const sim of indexed) {
+  console.log(`Action ${sim.actionIndex}: ${sim.label}`);
+}
+```
+
+### Tenderly Payload Builders
+
+Dependency-free utilities for building Tenderly API request payloads:
+
+```typescript
+import { buildTenderlySimRequest, buildTenderlyEncodeStatesRequest } from "@gzeoneth/gov-tracker";
+
+// Build simulate request
+const simPayload = buildTenderlySimRequest(simulation);
+// { network_id, from, to, input, value, save, save_if_fails, simulation_type }
+
+// Build encode-states request for timelock storage overrides
+const encodePayload = buildTenderlyEncodeStatesRequest(simulations.map(s => s.simulation));
+// { networkID, stateOverrides: { [address]: { value: { "_timestamps[opId]": "1" } } } }
 ```
 
 **Simulation types:**

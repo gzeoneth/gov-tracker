@@ -392,3 +392,52 @@ export function extractAllSimulationsFromDecoded(
 
   return simulations;
 }
+
+/**
+ * Simulation data with action index tracking.
+ * Extends ExtractedSimulation with the proposal action index.
+ */
+export interface IndexedSimulation extends ExtractedSimulation {
+  /** Index of the proposal action this simulation came from (0-based) */
+  actionIndex: number;
+}
+
+/**
+ * Extract simulations from decoded proposal actions with action index tracking.
+ *
+ * This is a convenience wrapper for UI builders that need to map simulations
+ * back to their source proposal action. Each returned simulation includes
+ * the actionIndex indicating which proposal action it originated from.
+ *
+ * @param decodedActions - Array of decoded calldata from proposal actions
+ * @param chain - Chain context for simulation preparation
+ * @returns Array of simulations with action index tracking
+ *
+ * @example
+ * ```typescript
+ * const decodedActions = await Promise.all(
+ *   calldatas.map((cd, i) => decodeCalldata(cd, targets[i], 0, "arb1"))
+ * );
+ * const indexed = extractSimulationsByActionIndex(decodedActions, "arb1");
+ *
+ * // Group by action for UI display
+ * const byAction = Map.groupBy(indexed, s => s.actionIndex);
+ * ```
+ */
+export function extractSimulationsByActionIndex(
+  decodedActions: DecodedCalldata[],
+  chain: Chain = "arb1"
+): IndexedSimulation[] {
+  const results: IndexedSimulation[] = [];
+
+  for (let actionIndex = 0; actionIndex < decodedActions.length; actionIndex++) {
+    const decoded = decodedActions[actionIndex];
+    const sims = extractAllSimulationsFromDecoded(decoded, chain);
+
+    for (const sim of sims) {
+      results.push({ ...sim, actionIndex });
+    }
+  }
+
+  return results;
+}

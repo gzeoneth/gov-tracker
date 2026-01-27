@@ -290,6 +290,38 @@ const tracker = createTracker({
 });
 ```
 
+### Stage Merging for Unified Timelines
+
+Combine stages from governor proposals with their linked timelock checkpoints:
+
+```typescript
+import { mergeStages, normalizeTimeline, extractTimelockLink } from "@gzeoneth/gov-tracker";
+
+// Get stages from governor proposal
+const proposalResult = await tracker.trackByTxHash(proposalTxHash);
+const proposalStages = proposalResult[0].stages;
+
+// Check for linked timelock checkpoint
+const timelockLink = extractTimelockLink(proposalResult[0]);
+if (timelockLink) {
+  // Get stages from linked timelock checkpoint
+  const timelockResult = await tracker.trackByTxHash(
+    timelockLink.txHash,
+    timelockLink.operationId
+  );
+  const timelockStages = timelockResult[0].stages;
+
+  // Merge and normalize for unified timeline view
+  const merged = mergeStages(proposalStages, timelockStages);
+  const timeline = normalizeTimeline(merged);
+
+  // timeline is now a single coherent array in pipeline order
+  for (const stage of timeline) {
+    console.log(`${stage.type}: ${stage.status}`);
+  }
+}
+```
+
 ---
 
 ## Integrations
@@ -383,13 +415,13 @@ for (let i = 0; i < calldatas.length; i++) {
 
 ### Tenderly Simulation Integration
 
-Simulate governance proposal execution using Tenderly API.
+Simulate governance proposal execution using Tenderly API. The SDK provides dependency-free payload builders for easy integration.
 
 ```typescript
-import axios from "axios";
 import {
   decodeCalldata,
-  extractAllSimulationsFromDecoded,
+  extractSimulationsByActionIndex,
+  buildTenderlySimRequest,
 } from "@gzeoneth/gov-tracker";
 
 async function simulateWithTenderly(txHash: string) {
@@ -398,37 +430,25 @@ async function simulateWithTenderly(txHash: string) {
   const stage = results[0].stages[0];
   const { calldatas, targets } = stage.data;
 
-  // 2. Decode and extract simulation data
-  const allSimulations = [];
-  for (let i = 0; i < calldatas.length; i++) {
-    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
-    const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
-    allSimulations.push(...sims);
-  }
+  // 2. Decode and extract simulation data with action index tracking
+  const decodedActions = await Promise.all(
+    calldatas.map((cd, i) => decodeCalldata(cd, targets[i], 0, "arb1"))
+  );
+  const simulations = extractSimulationsByActionIndex(decodedActions, "arb1");
 
-  // 3. Simulate each action with Tenderly
-  for (const sim of allSimulations) {
-    const simulation = sim.simulation;
+  // 3. Simulate each action with Tenderly using SDK payload builders
+  for (const sim of simulations) {
+    // Build Tenderly-compatible request payload (no dependencies)
+    const payload = buildTenderlySimRequest(sim.simulation);
 
-    // Prepare Tenderly simulation request
-    const tenderlyPayload = {
-      network_id: simulation.networkId,
-      from: simulation.from,
-      to: simulation.to,
-      input: simulation.input,
-      value: simulation.value || "0",
-      save: true,
-      save_if_fails: true,
-      simulation_type: "quick", // or "full" for traces
-    };
-
-    console.log(`Simulating: [${simulation.type}] ${sim.label}`);
+    console.log(`Simulating action ${sim.actionIndex}: [${sim.simulation.type}] ${sim.label}`);
 
     try {
-      const response = await axios.post(
+      const response = await fetch(
         `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/simulate`,
-        tenderlyPayload,
         {
+          method: "POST",
+          body: JSON.stringify(payload),
           headers: {
             "X-Access-Key": TENDERLY_API_KEY,
             "Content-Type": "application/json",
@@ -436,18 +456,13 @@ async function simulateWithTenderly(txHash: string) {
         }
       );
 
-      const result = response.data.transaction;
+      const data = await response.json();
+      const result = data.transaction;
       console.log(`  Status: ${result.status ? "✅ Success" : "❌ Failed"}`);
       console.log(`  Gas Used: ${result.gas_used}`);
       console.log(`  Simulation: https://dashboard.tenderly.co/simulator/${result.id}`);
-
-      // Check state changes
-      if (result.state_diff && result.state_diff.length > 0) {
-        console.log(`  State Changes: ${result.state_diff.length} contracts affected`);
-      }
-
     } catch (error) {
-      console.error(`  Simulation failed:`, error.response?.data || error.message);
+      console.error(`  Simulation failed:`, error.message);
     }
   }
 }
@@ -458,13 +473,14 @@ await simulateWithTenderly("0x0625ecb14f56cd385d7838e2c691e0d9cf096fd109fed915ec
 
 ### Tenderly State Overrides for Timelock Simulations
 
-Timelock simulations require state overrides to mark operations as ready to execute. The SDK provides symbolic storage format that can be fed directly into Tenderly's State Encoding API.
+Timelock simulations require state overrides to mark operations as ready to execute. The SDK provides both symbolic storage format and payload builders for Tenderly's APIs.
 
 ```typescript
-import axios from "axios";
 import {
   decodeCalldata,
-  extractAllSimulationsFromDecoded,
+  extractSimulationsByActionIndex,
+  buildTenderlySimRequest,
+  buildTenderlyEncodeStatesRequest,
 } from "@gzeoneth/gov-tracker";
 
 async function simulateWithTenderlyStateAPI(txHash: string) {
@@ -472,65 +488,58 @@ async function simulateWithTenderlyStateAPI(txHash: string) {
   const stage = results[0].stages[0];
   const { calldatas, targets } = stage.data;
 
-  for (let i = 0; i < calldatas.length; i++) {
-    const decoded = await decodeCalldata(calldatas[i], targets[i], 0, "arb1");
-    const sims = extractAllSimulationsFromDecoded(decoded, "arb1");
+  // Decode all actions
+  const decodedActions = await Promise.all(
+    calldatas.map((cd, i) => decodeCalldata(cd, targets[i], 0, "arb1"))
+  );
+  const simulations = extractSimulationsByActionIndex(decodedActions, "arb1");
 
-    for (const sim of sims) {
-      if (sim.simulation.type === "timelock") {
-        const { timelockAddress, storageOverride } = sim.simulation;
+  // Filter to timelock simulations
+  const timelockSims = simulations.filter((s) => s.simulation.type === "timelock");
 
-        // Step 1: Encode state using Tenderly State API
-        // SDK provides symbolic format ready to use
-        const encodeResponse = await axios.post(
-          `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/contracts/encode-states`,
-          {
-            networkID: sim.simulation.networkId,
-            stateOverrides: {
-              [timelockAddress]: {
-                value: storageOverride.symbolic, // Use SDK's symbolic format
-              },
-            },
-          },
-          {
-            headers: {
-              "X-Access-Key": TENDERLY_API_KEY,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+  if (timelockSims.length === 0) return;
 
-        // Step 2: Use encoded state in simulation
-        const encodedState = encodeResponse.data.stateOverrides[timelockAddress].value;
+  // Step 1: Build and call encode-states API using SDK payload builder
+  const encodePayload = buildTenderlyEncodeStatesRequest(timelockSims.map((s) => s.simulation));
+  if (!encodePayload) return;
 
-        const simResponse = await axios.post(
-          `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/simulate`,
-          {
-            network_id: sim.simulation.networkId,
-            from: sim.simulation.from,
-            to: sim.simulation.to,
-            input: sim.simulation.input,
-            value: sim.simulation.value || "0",
-            state_objects: {
-              [timelockAddress]: {
-                storage: encodedState,
-              },
-            },
-            save: true,
-          },
-          {
-            headers: {
-              "X-Access-Key": TENDERLY_API_KEY,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        console.log(`Operation: ${sim.simulation.operationId}`);
-        console.log(`Status: ${simResponse.data.transaction.status ? "✅" : "❌"}`);
-        console.log(`Simulation: https://dashboard.tenderly.co/simulator/${simResponse.data.transaction.id}`);
-      }
+  const encodeResponse = await fetch(
+    `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/contracts/encode-states`,
+    {
+      method: "POST",
+      body: JSON.stringify(encodePayload),
+      headers: { "X-Access-Key": TENDERLY_API_KEY, "Content-Type": "application/json" },
     }
+  );
+  const encodedStates = (await encodeResponse.json()).stateOverrides;
+
+  // Step 2: Simulate each timelock with encoded state overrides
+  for (const sim of timelockSims) {
+    if (sim.simulation.type !== "timelock") continue;
+
+    const { timelockAddress } = sim.simulation;
+    const encodedStorage = encodedStates[timelockAddress]?.value;
+
+    // Build simulation request with state override
+    const simPayload = buildTenderlySimRequest(sim.simulation, {
+      state_objects: encodedStorage
+        ? { [timelockAddress]: { storage: encodedStorage } }
+        : undefined,
+    });
+
+    const simResponse = await fetch(
+      `https://api.tenderly.co/api/v1/account/${TENDERLY_ACCOUNT}/project/${TENDERLY_PROJECT}/simulate`,
+      {
+        method: "POST",
+        body: JSON.stringify(simPayload),
+        headers: { "X-Access-Key": TENDERLY_API_KEY, "Content-Type": "application/json" },
+      }
+    );
+
+    const data = await simResponse.json();
+    console.log(`Operation: ${sim.simulation.operationId}`);
+    console.log(`Status: ${data.transaction.status ? "✅" : "❌"}`);
+    console.log(`Simulation: https://dashboard.tenderly.co/simulator/${data.transaction.id}`);
   }
 }
 ```

@@ -173,6 +173,18 @@ PRIVATE_KEY=0x...  # For execution
 
 The CLI warns when using default public RPCs. For production, set these environment variables.
 
+### RPC Provider Recommendations
+
+For reliable operation, especially during election tracking which makes many RPC calls:
+
+| Chain | Recommended Providers |
+|-------|----------------------|
+| Ethereum | [Alchemy](https://www.alchemy.com/), [Infura](https://infura.io/), [ethereum.publicnode.com](https://ethereum.publicnode.com/) |
+| Arbitrum One | [Alchemy](https://www.alchemy.com/), [arb1.arbitrum.io/rpc](https://arb1.arbitrum.io/rpc), [arbitrum.publicnode.com](https://arbitrum.publicnode.com/) |
+| Arbitrum Nova | [nova.arbitrum.io/rpc](https://nova.arbitrum.io/rpc) |
+
+**Note:** Some public RPCs like `cloudflare-eth.com` may return `-32603` internal errors during high load. If you experience intermittent failures, try switching to a dedicated provider.
+
 ## Security & Privacy
 
 **External API Lookups**: When decoding calldata, unknown function selectors are looked up via [4byte.directory](https://www.4byte.directory/). To disable:

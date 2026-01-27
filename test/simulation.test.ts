@@ -11,6 +11,9 @@ import {
   prepareTimelockSimulation,
   prepareCallSimulation,
   extractAllSimulationsFromDecoded,
+  extractSimulationsByActionIndex,
+  buildTenderlySimRequest,
+  buildTenderlyEncodeStatesRequest,
 } from "../src/simulation";
 import { ADDRESSES, NETWORK_IDS, TIMELOCK_SELECTORS } from "../src/constants";
 import { Address } from "@arbitrum/sdk/dist/lib/dataEntities/address";
@@ -913,6 +916,276 @@ describe("Simulation Data Preparation", () => {
       // #then - should detect inner scheduleBatch as timelock simulation
       const timelockSim = result.find((s) => s.simulation.type === "timelock");
       expect(timelockSim).toBeDefined();
+    });
+  });
+
+  describe("extractSimulationsByActionIndex", () => {
+    it("should track action index for each simulation", () => {
+      // #given - multiple decoded actions with simulations
+      const action0: DecodedCalldata = {
+        selector: "0xa9059cbb",
+        signature: "transfer(address,uint256)",
+        parameters: [],
+        raw: "0xa9059cbb...",
+        decodingSource: "local",
+      };
+
+      const targets = ["0x1234567890123456789012345678901234567890"];
+      const values = ["0"];
+      const calldatas = ["0xabcdef"];
+      const predecessor = ethers.constants.HashZero;
+      const salt = ethers.utils.id("test-salt");
+      const delay = 259200;
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+        [targets, values, calldatas, predecessor, salt, delay]
+      );
+      const rawCalldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+      const action1: DecodedCalldata = {
+        selector: TIMELOCK_SELECTORS.scheduleBatch,
+        signature: "scheduleBatch(address[],uint256[],bytes[],bytes32,bytes32,uint256)",
+        parameters: [],
+        raw: rawCalldata,
+        decodingSource: "local",
+        decodingTarget: ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
+      };
+
+      // #when - extracting with action index
+      const result = extractSimulationsByActionIndex([action0, action1], "arb1");
+
+      // #then - simulations should have correct action index
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      const timelockSim = result.find((s) => s.simulation.type === "timelock");
+      expect(timelockSim).toBeDefined();
+      expect(timelockSim!.actionIndex).toBe(1);
+    });
+
+    it("should handle empty action array", () => {
+      // #given - empty decoded actions array
+
+      // #when - extracting simulations
+      const result = extractSimulationsByActionIndex([], "arb1");
+
+      // #then - should return empty array
+      expect(result).toEqual([]);
+    });
+
+    it("should preserve all simulation properties plus action index", () => {
+      // #given - action with retryable ticket
+      const action: DecodedCalldata = {
+        selector: "0x12345678",
+        signature: "someFunction(bytes[])",
+        parameters: [
+          {
+            name: "payloads",
+            type: "bytes[]",
+            displayValue: "",
+            rawValue: [],
+            isNested: true,
+            nestedArray: [
+              {
+                selector: "",
+                signature: null,
+                isRetryable: true,
+                targetChain: "arb1",
+                parameters: [
+                  {
+                    name: "l2Target",
+                    type: "address",
+                    displayValue: "0x1234567890123456789012345678901234567890",
+                    rawValue: "0x1234567890123456789012345678901234567890",
+                    isNested: false,
+                  },
+                  {
+                    name: "l2Calldata",
+                    type: "bytes",
+                    displayValue: "0xabcdef",
+                    rawValue: "0xabcdef",
+                    isNested: false,
+                  },
+                ],
+                raw: "0x...",
+                decodingSource: "local",
+              },
+            ],
+          },
+        ],
+        raw: "0x...",
+        decodingSource: "local",
+      };
+
+      // #when - extracting with action index
+      const result = extractSimulationsByActionIndex([action], "ethereum");
+
+      // #then - should have label, simulation, batchIndex, and actionIndex
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      const retryableSim = result.find((s) => s.simulation.type === "retryable");
+      expect(retryableSim).toBeDefined();
+      expect(retryableSim!.actionIndex).toBe(0);
+      expect(retryableSim!.label).toContain("Retryable");
+      expect(retryableSim!.batchIndex).toBe(0);
+    });
+  });
+
+  describe("buildTenderlySimRequest", () => {
+    it("should build basic simulation request from retryable data", () => {
+      // #given - retryable simulation data
+      const sim = prepareRetryableSimulation(
+        "0x1234567890123456789012345678901234567890",
+        "0xabcdef",
+        "1000",
+        "arb1"
+      );
+
+      // #when - building Tenderly request
+      const request = buildTenderlySimRequest(sim);
+
+      // #then - should have correct Tenderly API fields
+      expect(request.network_id).toBe(NETWORK_IDS.arb1);
+      expect(request.from).toBe(sim.from);
+      expect(request.to).toBe(sim.to);
+      expect(request.input).toBe(sim.input);
+      expect(request.value).toBe("1000");
+      expect(request.save).toBe(true);
+      expect(request.save_if_fails).toBe(true);
+      expect(request.simulation_type).toBe("quick");
+    });
+
+    it("should allow overrides to be merged", () => {
+      // #given - call simulation data
+      const sim = prepareCallSimulation(
+        "0x1234567890123456789012345678901234567890",
+        "0xabcdef",
+        "0",
+        "ethereum"
+      );
+
+      // #when - building with overrides
+      const request = buildTenderlySimRequest(sim, {
+        simulation_type: "full",
+        save: false,
+      });
+
+      // #then - overrides should take precedence
+      expect(request.simulation_type).toBe("full");
+      expect(request.save).toBe(false);
+      expect(request.save_if_fails).toBe(true); // default preserved
+    });
+
+    it("should handle state_objects override for timelock simulations", () => {
+      // #given - timelock simulation data
+      const targets = ["0x1234567890123456789012345678901234567890"];
+      const values = ["0"];
+      const calldatas = ["0xabcdef"];
+      const predecessor = ethers.constants.HashZero;
+      const salt = ethers.utils.id("test-salt");
+      const delay = 259200;
+
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+        [targets, values, calldatas, predecessor, salt, delay]
+      );
+      const rawCalldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+      const sim = prepareTimelockSimulation(ADDRESSES.L1_TIMELOCK, rawCalldata, "ethereum");
+
+      // #when - building with state_objects override
+      const request = buildTenderlySimRequest(sim!, {
+        state_objects: {
+          [ADDRESSES.L1_TIMELOCK]: {
+            storage: { "0x1234": "0x1" },
+          },
+        },
+      });
+
+      // #then - should include state_objects
+      expect(request.state_objects).toBeDefined();
+      expect(request.state_objects![ADDRESSES.L1_TIMELOCK]).toBeDefined();
+    });
+  });
+
+  describe("buildTenderlyEncodeStatesRequest", () => {
+    // Helper to create valid timelock simulation with unique salt
+    let simCounter = 0;
+    const createTimelockSim = (timelockAddress: string, networkId: string) => {
+      const targets = ["0x1234567890123456789012345678901234567890"];
+      const values = ["0"];
+      const calldatas = ["0xabcdef"];
+      const predecessor = ethers.constants.HashZero;
+      const counter = simCounter++;
+      const salt = ethers.utils.id(`test-salt-${timelockAddress}-${counter}`);
+      const delay = 259200;
+
+      const encoded = ethers.utils.defaultAbiCoder.encode(
+        ["address[]", "uint256[]", "bytes[]", "bytes32", "bytes32", "uint256"],
+        [targets, values, calldatas, predecessor, salt, delay]
+      );
+      const rawCalldata = TIMELOCK_SELECTORS.scheduleBatch + encoded.slice(2);
+
+      const chain = networkId === "1" ? "ethereum" : "arb1";
+      return prepareTimelockSimulation(timelockAddress, rawCalldata, chain);
+    };
+
+    it("should build encode-states request from timelock simulations", () => {
+      // #given - timelock simulation
+      const sim = createTimelockSim(ADDRESSES.L1_TIMELOCK, "1");
+
+      // #when - building encode-states request
+      const request = buildTenderlyEncodeStatesRequest([sim!]);
+
+      // #then - should have correct structure
+      expect(request).not.toBeNull();
+      expect(request!.networkID).toBe("1");
+      expect(request!.stateOverrides).toBeDefined();
+      expect(request!.stateOverrides[ADDRESSES.L1_TIMELOCK]).toBeDefined();
+      expect(request!.stateOverrides[ADDRESSES.L1_TIMELOCK].value).toBeDefined();
+    });
+
+    it("should return null when no timelock simulations provided", () => {
+      // #given - non-timelock simulations only
+      const retryableSim = prepareRetryableSimulation(
+        "0x1234567890123456789012345678901234567890",
+        "0xabcdef",
+        "0",
+        "arb1"
+      );
+      const callSim = prepareCallSimulation(
+        "0x1234567890123456789012345678901234567890",
+        "0xabcdef",
+        "0",
+        "ethereum"
+      );
+
+      // #when - building encode-states request
+      const request = buildTenderlyEncodeStatesRequest([retryableSim, callSim]);
+
+      // #then - should return null
+      expect(request).toBeNull();
+    });
+
+    it("should merge storage overrides for same timelock address", () => {
+      // #given - two timelock simulations for same address
+      const sim1 = createTimelockSim(ADDRESSES.L1_TIMELOCK, "1");
+      const sim2 = createTimelockSim(ADDRESSES.L1_TIMELOCK, "1");
+
+      // #when - building encode-states request
+      const request = buildTenderlyEncodeStatesRequest([sim1!, sim2!]);
+
+      // #then - should have merged overrides
+      expect(request).not.toBeNull();
+      const overrides = request!.stateOverrides[ADDRESSES.L1_TIMELOCK].value;
+      expect(Object.keys(overrides).length).toBe(2);
+    });
+
+    it("should handle empty array", () => {
+      // #given - empty simulations array
+
+      // #when - building encode-states request
+      const request = buildTenderlyEncodeStatesRequest([]);
+
+      // #then - should return null
+      expect(request).toBeNull();
     });
   });
 });

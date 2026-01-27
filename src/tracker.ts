@@ -247,9 +247,12 @@ function resolveProvider(
  * ```
  */
 export class ProposalStageTracker {
-  private l2Provider: ethers.providers.Provider;
-  private l1Provider: ethers.providers.Provider;
-  private novaProvider: ethers.providers.Provider;
+  /** Arbitrum One provider */
+  readonly l2Provider: ethers.providers.Provider;
+  /** Ethereum mainnet provider */
+  readonly l1Provider: ethers.providers.Provider;
+  /** Arbitrum Nova provider */
+  readonly novaProvider: ethers.providers.Provider;
   private onProgress?: OnProgressCallback;
   /** Chunking configuration for log searches */
   readonly chunkingConfig: ChunkingConfig;
@@ -1131,7 +1134,15 @@ export class ProposalStageTracker {
   // Provider Access
 
   /**
-   * Get the current providers
+   * Get all providers as an object.
+   *
+   * @example
+   * ```typescript
+   * const { l1, l2, nova } = tracker.getProviders();
+   * const block = await l2.getBlockNumber();
+   * ```
+   *
+   * @deprecated Use direct property access instead: `tracker.l2Provider`, `tracker.l1Provider`, `tracker.novaProvider`
    */
   getProviders(): {
     l1: ethers.providers.Provider;
@@ -1143,6 +1154,21 @@ export class ProposalStageTracker {
       l2: this.l2Provider,
       nova: this.novaProvider,
     };
+  }
+
+  /**
+   * Get the current L2 block number.
+   *
+   * Convenience method for getting the current Arbitrum One block number.
+   *
+   * @example
+   * ```typescript
+   * const currentBlock = await tracker.getCurrentL2BlockNumber();
+   * const { proposals } = await tracker.discoverAll(targets, currentBlock);
+   * ```
+   */
+  async getCurrentL2BlockNumber(): Promise<number> {
+    return this.l2Provider.getBlockNumber();
   }
 
   // Election Tracking

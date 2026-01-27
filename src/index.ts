@@ -174,6 +174,10 @@ export {
   isTimelockStage,
   isConstitutional,
   findStage,
+  // Stage merging utilities
+  mergeStages,
+  normalizeTimeline,
+  splitStages,
 } from "./stages/utils";
 export type { LifecyclePhase } from "./stages/utils";
 
@@ -412,6 +416,15 @@ export {
   prepareTimelockSimulation,
   prepareCallSimulation,
   extractAllSimulationsFromDecoded,
+  extractSimulationsByActionIndex,
+  // Tenderly payload builders (dependency-free)
+  buildTenderlySimRequest,
+  buildTenderlyEncodeStatesRequest,
+} from "./simulation";
+export type {
+  IndexedSimulation,
+  TenderlySimRequest,
+  TenderlyEncodeStatesRequest,
 } from "./simulation";
 
 // ============================================================================

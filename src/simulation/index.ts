@@ -9,4 +9,9 @@ export {
   prepareTimelockSimulation,
   prepareCallSimulation,
   extractAllSimulationsFromDecoded,
+  extractSimulationsByActionIndex,
 } from "./simulation-data";
+export type { IndexedSimulation } from "./simulation-data";
+
+export { buildTenderlySimRequest, buildTenderlyEncodeStatesRequest } from "./tenderly-payloads";
+export type { TenderlySimRequest, TenderlyEncodeStatesRequest } from "./tenderly-payloads";

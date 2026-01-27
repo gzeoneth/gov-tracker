@@ -536,6 +536,9 @@ describe.skipIf(shouldSkipRpc())(
     // Cached L2→L1 message tracking results
     let cachedL2ToL1MessageResult: Awaited<ReturnType<typeof trackL2ToL1Message>>;
     let cachedTreasuryL2ToL1MessageResult: Awaited<ReturnType<typeof trackL2ToL1Message>>;
+    // Cached getL2ToL1Messages results
+    let cachedMessagesFromL2Timelock: Awaited<ReturnType<typeof getL2ToL1Messages>>;
+    let cachedMessagesFromCreationTx: Awaited<ReturnType<typeof getL2ToL1Messages>>;
 
     beforeAll(async () => {
       const ethRpc = process.env.ETH_RPC;
@@ -568,16 +571,25 @@ describe.skipIf(shouldSkipRpc())(
       l2TimelockExecutionTxHash = executionTx!.hash;
 
       // Cache L2→L1 message tracking results for reuse
-      const [l2ToL1Result, treasuryResult] = await Promise.all([
-        trackL2ToL1Message(l2TimelockExecutionTxHash, l2Provider, l1Provider),
-        trackL2ToL1Message(
-          NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash,
-          l2Provider,
-          l1Provider
-        ),
-      ]);
+      const [l2ToL1Result, treasuryResult, messagesFromL2Timelock, messagesFromCreationTx] =
+        await Promise.all([
+          trackL2ToL1Message(l2TimelockExecutionTxHash, l2Provider, l1Provider),
+          trackL2ToL1Message(
+            NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.expectedStages.L2_TIMELOCK.hash,
+            l2Provider,
+            l1Provider
+          ),
+          getL2ToL1Messages(l2TimelockExecutionTxHash, l2Provider, l1Provider),
+          getL2ToL1Messages(
+            CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash,
+            l2Provider,
+            l1Provider
+          ),
+        ]);
       cachedL2ToL1MessageResult = l2ToL1Result;
       cachedTreasuryL2ToL1MessageResult = treasuryResult;
+      cachedMessagesFromL2Timelock = messagesFromL2Timelock;
+      cachedMessagesFromCreationTx = messagesFromCreationTx;
     }, 300000);
 
     describe("trackL2ToL1Message", () => {
@@ -626,10 +638,9 @@ describe.skipIf(shouldSkipRpc())(
     });
 
     describe("getL2ToL1Messages", () => {
-      it("should get messages from L2 timelock execution tx", async () => {
-        const messages = await getL2ToL1Messages(l2TimelockExecutionTxHash, l2Provider, l1Provider);
-
-        expect(messages.length).toBeGreaterThan(0);
+      it("should get messages from L2 timelock execution tx", () => {
+        // Uses cachedMessagesFromL2Timelock from beforeAll
+        expect(cachedMessagesFromL2Timelock.length).toBeGreaterThan(0);
       });
 
       it("should return empty array for non-existent tx", async () => {
@@ -638,14 +649,9 @@ describe.skipIf(shouldSkipRpc())(
         expect(messages).toHaveLength(0);
       });
 
-      it("should return empty array for tx without L2→L1 messages", async () => {
-        // Use the proposal creation tx (no L2→L1 messages)
-        const messages = await getL2ToL1Messages(
-          CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash,
-          l2Provider,
-          l1Provider
-        );
-        expect(messages).toHaveLength(0);
+      it("should return empty array for tx without L2→L1 messages", () => {
+        // Uses cachedMessagesFromCreationTx from beforeAll (proposal creation tx has no L2→L1 messages)
+        expect(cachedMessagesFromCreationTx).toHaveLength(0);
       });
     });
 

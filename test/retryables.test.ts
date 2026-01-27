@@ -74,6 +74,10 @@ describe.skipIf(shouldSkipRpc())(
     let retryableResult: RetryableTrackingResult;
     let fullProposalResult: TrackingResult;
     let l2OnlyProposalResult: TrackingResult;
+    // Additional cached results
+    let cachedTargetChains: Awaited<ReturnType<typeof detectAllRetryableTargetChains>>;
+    let cachedRetryableWithoutNova: RetryableTrackingResult;
+    let cachedPrepareAllResult: Awaited<ReturnType<typeof prepareAllRetryables>>;
 
     beforeAll(async () => {
       const ethRpc = process.env.ETH_RPC;
@@ -92,26 +96,38 @@ describe.skipIf(shouldSkipRpc())(
 
       // Track retryables and proposals once
       console.log("Tracking retryables and proposals for test suite...");
-      const [retryResult, fullResults, l2Results] = await Promise.all([
+      const [
+        retryResult,
+        fullResults,
+        l2Results,
+        targetChains,
+        retryableWithoutNova,
+        prepareAllResult,
+      ] = await Promise.all([
         trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider }),
         tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
         tracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash),
+        detectAllRetryableTargetChains(L1_TX_WITH_RETRYABLE, l1Provider),
+        trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, { l2Provider, novaProvider: undefined }),
+        prepareAllRetryables(L1_TX_WITH_RETRYABLE, l1Provider, l2Provider),
       ]);
 
       retryableResult = retryResult;
       fullProposalResult = fullResults[0];
       l2OnlyProposalResult = l2Results[0];
+      cachedTargetChains = targetChains;
+      cachedRetryableWithoutNova = retryableWithoutNova;
+      cachedPrepareAllResult = prepareAllResult;
       console.log("✓ All retryables and proposals tracked and cached");
     }, 300000); // 5 minute timeout for initial tracking
 
     describe("detectAllRetryableTargetChains", () => {
-      it("should detect Arb1 as target chain for known retryable", async () => {
-        const targets = await detectAllRetryableTargetChains(L1_TX_WITH_RETRYABLE, l1Provider);
-
-        expect(targets.length).toBeGreaterThan(0);
+      it("should detect Arb1 as target chain for known retryable", () => {
+        // Uses cachedTargetChains from beforeAll
+        expect(cachedTargetChains.length).toBeGreaterThan(0);
 
         // Should include Arb1 (L2 chain type)
-        const arb1Target = targets.find((t) => t.chain === "arb1");
+        const arb1Target = cachedTargetChains.find((t) => t.chain === "arb1");
         expect(arb1Target).toBeDefined();
         if (arb1Target) {
           expect(arb1Target.inboxAddress.toLowerCase()).toBe(
@@ -190,15 +206,11 @@ describe.skipIf(shouldSkipRpc())(
         expect(result.messages.length).toBe(0);
       });
 
-      it("should handle missing Nova provider gracefully", async () => {
-        const result = await trackRetryables(L1_TX_WITH_RETRYABLE, l1Provider, {
-          l2Provider,
-          novaProvider: undefined,
-        });
+      it("should handle missing Nova provider gracefully", () => {
+        // Uses cachedRetryableWithoutNova from beforeAll
+        expect(cachedRetryableWithoutNova.messages.length).toBeGreaterThan(0);
 
-        expect(result.messages.length).toBeGreaterThan(0);
-
-        const data = result.stage.data as RetryableStageData;
+        const data = cachedRetryableWithoutNova.stage.data as RetryableStageData;
         const redemptionDetails = data.redemptionDetails as Array<{
           targetChain: string;
           status: string;
@@ -259,12 +271,9 @@ describe.skipIf(shouldSkipRpc())(
         }
       });
 
-      it("should prepare all retryables from L1 tx", async () => {
-        const { total, results, targetChain } = await prepareAllRetryables(
-          L1_TX_WITH_RETRYABLE,
-          l1Provider,
-          l2Provider
-        );
+      it("should prepare all retryables from L1 tx", () => {
+        // Uses cachedPrepareAllResult from beforeAll
+        const { total, results, targetChain } = cachedPrepareAllResult;
 
         expect(total).toBeGreaterThan(0);
         expect(results.length).toBe(total);

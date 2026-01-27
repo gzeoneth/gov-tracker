@@ -638,29 +638,59 @@ describe.skipIf(shouldSkipRpc())("Security Council Salt Calculation (RPC)", () =
   let receipt: ethers.providers.TransactionReceipt;
   let callScheduledLogs: ethers.providers.Log[];
 
+  // Cached extraction results - populated once in beforeAll
+  let cachedIsScOperation: boolean;
+  let cachedScParams: ReturnType<typeof extractSecurityCouncilParams>;
+  let cachedAllScParams: ReturnType<typeof extractAllSecurityCouncilParams>;
+  // Cached parsed logs and salts for validation - computed in parallel in beforeAll
+  let cachedValidations: Array<{ operationId: string; isValid: boolean }>;
+
   beforeAll(async () => {
     const rpcUrl = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
     provider = new ethers.providers.JsonRpcProvider(rpcUrl);
     receipt = await queryWithRetry(() => provider.getTransactionReceipt(SC_ROTATION_TX));
     callScheduledLogs = receipt.logs.filter((log) => log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED);
+
+    // Cache extraction results
+    cachedIsScOperation = isSecurityCouncilOperation(receipt);
+    cachedScParams = extractSecurityCouncilParams(receipt);
+    cachedAllScParams = extractAllSecurityCouncilParams(receipt);
+
+    // Cache salt validations in parallel (avoids 4 sequential RPC calls in test)
+    const validationPromises = callScheduledLogs.map(async (log) => {
+      const parsed = parseCallScheduledEvent(log)!;
+      const extracted = extractMembersAndNonceFromCallData(parsed.data)!;
+      const computedSalt = await generateSecurityCouncilSalt(
+        extracted.members,
+        extracted.nonce,
+        provider
+      );
+      const validation = computeAndValidateOperationHash(parsed.operationId, {
+        target: parsed.target,
+        value: parsed.value,
+        data: parsed.data,
+        predecessor: parsed.predecessor,
+        salt: computedSalt,
+      });
+      return { operationId: parsed.operationId, isValid: validation.isValid };
+    });
+    cachedValidations = await Promise.all(validationPromises);
   });
 
   it("should detect SC operation", () => {
-    expect(isSecurityCouncilOperation(receipt)).toBe(true);
+    expect(cachedIsScOperation).toBe(true);
   });
 
   it("should extract SC params (returns last operation)", () => {
-    const params = extractSecurityCouncilParams(receipt);
-    expect(params).not.toBeNull();
-    expect(params!.members.length).toBe(12);
-    expect(params!.nonce.toNumber()).toBe(6);
+    expect(cachedScParams).not.toBeNull();
+    expect(cachedScParams!.members.length).toBe(12);
+    expect(cachedScParams!.nonce.toNumber()).toBe(6);
   });
 
   it("should extract all SC operations", () => {
-    const allParams = extractAllSecurityCouncilParams(receipt);
-    expect(allParams).not.toBeNull();
-    expect(allParams!.operations.length).toBe(4);
-    expect(allParams!.operations.map((op) => op.nonce.toNumber())).toEqual([3, 4, 5, 6]);
+    expect(cachedAllScParams).not.toBeNull();
+    expect(cachedAllScParams!.operations.length).toBe(4);
+    expect(cachedAllScParams!.operations.map((op) => op.nonce.toNumber())).toEqual([3, 4, 5, 6]);
   });
 
   it("should extract params for specific operation by ID", () => {
@@ -673,25 +703,10 @@ describe.skipIf(shouldSkipRpc())("Security Council Salt Calculation (RPC)", () =
     }
   });
 
-  it("should validate salt computation for all operations", async () => {
-    for (const log of callScheduledLogs) {
-      const parsed = parseCallScheduledEvent(log)!;
-      const extracted = extractMembersAndNonceFromCallData(parsed.data);
-      expect(extracted).not.toBeNull();
-
-      const computedSalt = await generateSecurityCouncilSalt(
-        extracted!.members,
-        extracted!.nonce,
-        provider
-      );
-      const validation = await computeAndValidateOperationHash(parsed.operationId, {
-        target: parsed.target,
-        value: parsed.value,
-        data: parsed.data,
-        predecessor: parsed.predecessor,
-        salt: computedSalt,
-      });
-
+  it("should validate salt computation for all operations", () => {
+    // Uses cached validation results from beforeAll (4 parallel salt computations)
+    expect(cachedValidations.length).toBe(callScheduledLogs.length);
+    for (const validation of cachedValidations) {
       expect(validation.isValid).toBe(true);
     }
   });

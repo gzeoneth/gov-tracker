@@ -1416,6 +1416,10 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
   let cachedElectionProposals: DiscoveredProposal[];
   let cachedTimelockOps: DiscoveredTimelockOp[];
 
+  // Cached discoverAll results - populated once in beforeAll
+  let allTargetsDiscoverResult: Awaited<ReturnType<typeof discoverAll>>;
+  let constitutionalOnlyDiscoverResult: Awaited<ReturnType<typeof discoverAll>>;
+
   beforeAll(async () => {
     await beforeAllSetup();
     l2Provider = testCache.getProviders().l2Provider;
@@ -1444,6 +1448,62 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
     cachedConstitutionalProposals = constProposals;
     cachedElectionProposals = electionProposals;
     cachedTimelockOps = timelockOps;
+
+    // Cache discoverAll results for different target configurations
+    const allTargets = {
+      constitutionalGovernor: true,
+      nonConstitutionalGovernor: true,
+      electionNomineeGovernor: true,
+      electionMemberGovernor: true,
+      l2ConstitutionalTimelock: true,
+      l2NonConstitutionalTimelock: true,
+    };
+    const allWatermarks = {
+      constitutionalGovernor: TEST_FROM_BLOCK,
+      nonConstitutionalGovernor: TEST_FROM_BLOCK,
+      electionNomineeGovernor: TEST_FROM_BLOCK,
+      electionMemberGovernor: TEST_FROM_BLOCK,
+      l2ConstitutionalTimelock: TEST_FROM_BLOCK,
+      l2NonConstitutionalTimelock: TEST_FROM_BLOCK,
+    };
+    const constOnlyTargets = {
+      constitutionalGovernor: true,
+      nonConstitutionalGovernor: false,
+      electionNomineeGovernor: false,
+      electionMemberGovernor: false,
+      l2ConstitutionalTimelock: false,
+      l2NonConstitutionalTimelock: false,
+    };
+    const constOnlyWatermarks = {
+      constitutionalGovernor: TEST_FROM_BLOCK,
+    };
+
+    const [allResult, constResult] = await Promise.all([
+      discoverAll(
+        allTargets,
+        TEST_TO_BLOCK,
+        l2Provider,
+        new MockCache(),
+        allWatermarks,
+        {},
+        {
+          skipReorgCheck: true,
+        }
+      ),
+      discoverAll(
+        constOnlyTargets,
+        TEST_TO_BLOCK,
+        l2Provider,
+        new MockCache(),
+        constOnlyWatermarks,
+        {},
+        {
+          skipReorgCheck: true,
+        }
+      ),
+    ]);
+    allTargetsDiscoverResult = allResult;
+    constitutionalOnlyDiscoverResult = constResult;
     console.log("✓ Discovery results cached");
   }, 180000);
 
@@ -1500,37 +1560,9 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
   });
 
   describe("discoverAll", () => {
-    it("should discover from all enabled targets", async () => {
-      // #given targets for all governors and timelocks
-      const targets = {
-        constitutionalGovernor: true,
-        nonConstitutionalGovernor: true,
-        electionNomineeGovernor: true,
-        electionMemberGovernor: true,
-        l2ConstitutionalTimelock: true,
-        l2NonConstitutionalTimelock: true,
-      };
-      const watermarks = {
-        constitutionalGovernor: TEST_FROM_BLOCK,
-        nonConstitutionalGovernor: TEST_FROM_BLOCK,
-        electionNomineeGovernor: TEST_FROM_BLOCK,
-        electionMemberGovernor: TEST_FROM_BLOCK,
-        l2ConstitutionalTimelock: TEST_FROM_BLOCK,
-        l2NonConstitutionalTimelock: TEST_FROM_BLOCK,
-      };
-
-      // #when discovering all (with empty hashes, skipping reorg check for this test)
-      const result = await discoverAll(
-        targets,
-        TEST_TO_BLOCK,
-        l2Provider,
-        cache,
-        watermarks,
-        {},
-        {
-          skipReorgCheck: true,
-        }
-      );
+    it("should discover from all enabled targets", () => {
+      // #given cached discoverAll result with all targets enabled
+      const result = allTargetsDiscoverResult;
 
       // #then should return proposals, timelockOps, updated watermarks, and hashes
       expect(result.proposals).toBeDefined();
@@ -1539,75 +1571,32 @@ describe.skipIf(shouldSkipRpc())("Discovery RPC Tests", () => {
       expect(result.hashes).toBeDefined();
       expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
       expect(result.watermarks.nonConstitutionalGovernor).toBe(TEST_TO_BLOCK);
-    }, 120000);
+    });
 
     it("should create pending checkpoints for discovered proposals", async () => {
-      // #given targets for constitutional governor only
-      const targets = {
-        constitutionalGovernor: true,
-        nonConstitutionalGovernor: false,
-        electionNomineeGovernor: false,
-        electionMemberGovernor: false,
-        l2ConstitutionalTimelock: false,
-        l2NonConstitutionalTimelock: false,
-      };
-      const watermarks = {
-        constitutionalGovernor: TEST_FROM_BLOCK,
-      };
+      // #given cached proposals from constitutional governor discovery
+      const proposals = constitutionalOnlyDiscoverResult.proposals;
 
-      // #when discovering (skip reorg check for this test)
-      const result = await discoverAll(
-        targets,
-        TEST_TO_BLOCK,
-        l2Provider,
-        cache,
-        watermarks,
-        {},
-        {
-          skipReorgCheck: true,
-        }
-      );
+      // #when creating pending checkpoints with discovered proposals
+      await createPendingCheckpoints(proposals, [], cache);
 
       // #then if proposals found, pending checkpoints should be created
-      if (result.proposals.length > 0) {
+      if (proposals.length > 0) {
         const keys = await cache.keys();
         const txKeys = keys.filter((k) => k.startsWith("tx:"));
         expect(txKeys.length).toBeGreaterThan(0);
       }
-    }, 60000);
+    });
 
-    it("should skip disabled targets", async () => {
-      // #given only constitutional governor enabled
-      const targets = {
-        constitutionalGovernor: true,
-        nonConstitutionalGovernor: false,
-        electionNomineeGovernor: false,
-        electionMemberGovernor: false,
-        l2ConstitutionalTimelock: false,
-        l2NonConstitutionalTimelock: false,
-      };
-      const watermarks = {
-        constitutionalGovernor: TEST_FROM_BLOCK,
-      };
-
-      // #when discovering (skip reorg check for this test)
-      const result = await discoverAll(
-        targets,
-        TEST_TO_BLOCK,
-        l2Provider,
-        cache,
-        watermarks,
-        {},
-        {
-          skipReorgCheck: true,
-        }
-      );
+    it("should skip disabled targets", () => {
+      // #given cached discoverAll result with only constitutional governor enabled
+      const result = constitutionalOnlyDiscoverResult;
 
       // #then only constitutional watermark should be updated
       expect(result.watermarks.constitutionalGovernor).toBe(TEST_TO_BLOCK);
       expect(result.watermarks.nonConstitutionalGovernor).toBeUndefined();
       expect(result.watermarks.l2ConstitutionalTimelock).toBeUndefined();
-    }, 60000);
+    });
 
     it("should work with empty watermarks (start from default)", async () => {
       // #given empty watermarks - will use GOVERNANCE_START_BLOCKS

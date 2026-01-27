@@ -206,6 +206,13 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
   const electionCache = new Map<number, ElectionProposalStatus>();
   let cachedElectionStatus: ElectionStatus;
 
+  // Cached vetting check results - populated once in beforeAll
+  let cachedNomineeHasVetting: boolean;
+  let cachedCoreHasVetting: boolean;
+  let cachedCoreVettingPeriod: Awaited<ReturnType<typeof checkVettingPeriod>>;
+  let cachedCoreVettingDeadline: Awaited<ReturnType<typeof getVettingDeadline>>;
+  let cachedNomineeVettingDeadline: Awaited<ReturnType<typeof getVettingDeadline>>;
+
   beforeAll(async () => {
     await beforeAllSetup();
     const providers = cache.getProviders();
@@ -225,61 +232,63 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
       const status = await tracker.trackElection(i);
       electionCache.set(i, status);
     });
-    await Promise.all(trackingPromises);
+
+    // Cache vetting check results in parallel with election tracking
+    const [
+      nomineeHasVetting,
+      coreHasVetting,
+      coreVettingPeriod,
+      coreVettingDeadline,
+      nomineeVettingDeadline,
+    ] = await Promise.all([
+      hasVettingPeriod(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, l2Provider),
+      hasVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, l2Provider),
+      checkVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, "0", l2Provider),
+      getVettingDeadline(ADDRESSES.CONSTITUTIONAL_GOVERNOR, "0", l2Provider),
+      getVettingDeadline(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, "0", l2Provider),
+      ...trackingPromises,
+    ]);
+    cachedNomineeHasVetting = nomineeHasVetting;
+    cachedCoreHasVetting = coreHasVetting;
+    cachedCoreVettingPeriod = coreVettingPeriod;
+    cachedCoreVettingDeadline = coreVettingDeadline;
+    cachedNomineeVettingDeadline = nomineeVettingDeadline;
   }, 180000); // 3 minutes - tracks 5 elections with multiple RPC calls
 
   describe("hasVettingPeriod", () => {
-    it("should detect nominee election governor has vetting", async () => {
-      const hasVetting = await hasVettingPeriod(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, l2Provider);
-      expect(hasVetting).toBe(true);
+    it("should detect nominee election governor has vetting", () => {
+      // #given cached vetting check result
+      expect(cachedNomineeHasVetting).toBe(true);
     });
 
-    it("should detect core governor does not have vetting", async () => {
-      const hasVetting = await hasVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, l2Provider);
-      expect(hasVetting).toBe(false);
+    it("should detect core governor does not have vetting", () => {
+      // #given cached vetting check result
+      expect(cachedCoreHasVetting).toBe(false);
     });
   });
 
   describe("checkVettingPeriod", () => {
-    it("should check vetting period for non-vetting governor", async () => {
-      // Core governor doesn't have vetting
-      const result = await checkVettingPeriod(
-        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-        "0", // Dummy proposal ID
-        l2Provider
-      );
-
-      expect(result.hasVettingPeriod).toBe(false);
-      expect(result.vettingDeadline).toBeNull();
-      expect(result.isVettingActive).toBe(false);
+    it("should check vetting period for non-vetting governor", () => {
+      // #given cached vetting period result for core governor
+      expect(cachedCoreVettingPeriod.hasVettingPeriod).toBe(false);
+      expect(cachedCoreVettingPeriod.vettingDeadline).toBeNull();
+      expect(cachedCoreVettingPeriod.isVettingActive).toBe(false);
     });
   });
 
   describe("getVettingDeadline", () => {
-    it("should return undefined for non-vetting governor", async () => {
-      // Core governor doesn't have vetting deadline
-      const deadline = await getVettingDeadline(
-        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-        "0", // Dummy proposal ID
-        l2Provider
-      );
-
-      expect(deadline).toBeUndefined();
+    it("should return undefined for non-vetting governor", () => {
+      // #given cached vetting deadline result for core governor
+      expect(cachedCoreVettingDeadline).toBeUndefined();
     });
 
-    it("should return a value for nominee election governor (vetting period check succeeds)", async () => {
+    it("should return a value for nominee election governor (vetting period check succeeds)", () => {
+      // #given cached vetting deadline result for nominee governor
       // Nominee election governor has proposalVettingDeadline function
       // For any proposal ID, it calculates: proposalDeadline + vettingDuration
       // The function succeeds even for proposal ID 0 (returns calculated value)
-      const deadline = await getVettingDeadline(
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-        "0",
-        l2Provider
-      );
-
-      // Should return a BigNumber - the function call succeeds on nominee governors
-      expect(deadline).toBeDefined();
-      expect(deadline?.toNumber()).toBeGreaterThanOrEqual(0);
+      expect(cachedNomineeVettingDeadline).toBeDefined();
+      expect(cachedNomineeVettingDeadline?.toNumber()).toBeGreaterThanOrEqual(0);
     });
   });
 

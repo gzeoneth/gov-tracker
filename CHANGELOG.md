@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
-- **`getCurrentL2BlockNumber()`** - Convenience method for getting the current Arbitrum One block number
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
   - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)
   - `normalizeTimeline(stages)` - Sort stages in canonical pipeline order

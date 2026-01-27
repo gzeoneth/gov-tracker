@@ -1239,6 +1239,8 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   let l2OnlyResult: TrackingResult;
   let inProgressResult: TrackingResult;
   let timelockResult: TrackingResult;
+  let failedVotingResult: TrackingResult;
+  let checkElectionResult: Awaited<ReturnType<ProposalStageTracker["checkElection"]>>;
 
   beforeAll(async () => {
     await beforeAllSetup();
@@ -1249,19 +1251,25 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
     novaProvider = providers.novaProvider;
     tracker = cache.getTracker();
 
-    // Track all proposals once
+    // Track all proposals once (including failed voting for complete coverage)
     console.log("Tracking proposals for test suite...");
-    const [fullResults, l2Results, inProgressResults, timelockResults] = await Promise.all([
-      tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
-      tracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash),
-      tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_IN_PROGRESS.creationTxHash),
-      tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash),
-    ]);
+    const [fullResults, l2Results, inProgressResults, timelockResults, failedVotingResults] =
+      await Promise.all([
+        tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
+        tracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash),
+        tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_IN_PROGRESS.creationTxHash),
+        tracker.trackByTxHash(DIRECT_TIMELOCK_OPERATION.timelockTxHash),
+        tracker.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FAILED_VOTING.creationTxHash),
+      ]);
 
     fullRoundtripResult = fullResults[0];
     l2OnlyResult = l2Results[0];
     inProgressResult = inProgressResults[0];
     timelockResult = timelockResults[0];
+    failedVotingResult = failedVotingResults[0];
+
+    // Check election status once for reuse across tests
+    checkElectionResult = await tracker.checkElection();
     console.log("✓ All proposals tracked and cached");
   }, 180000); // 3 minute timeout for initial tracking
 
@@ -1720,26 +1728,24 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
   });
 
   describe("checkElection", () => {
-    it("should return election status with canCreate flag", async () => {
-      // #when checking election status
-      const result = await tracker.checkElection();
+    // Uses checkElectionResult cached in beforeAll
 
+    it("should return election status with canCreate flag", () => {
       // #then should return valid result with status
-      expect(result).toBeDefined();
-      expect(result.status).toBeDefined();
-      expect(typeof result.canCreate).toBe("boolean");
-      expect(typeof result.canTriggerMember).toBe("boolean");
-      expect(result.prepared).toBeDefined();
+      expect(checkElectionResult).toBeDefined();
+      expect(checkElectionResult.status).toBeDefined();
+      expect(typeof checkElectionResult.canCreate).toBe("boolean");
+      expect(typeof checkElectionResult.canTriggerMember).toBe("boolean");
+      expect(checkElectionResult.prepared).toBeDefined();
     });
 
-    it("should include current election info if elections exist", async () => {
-      // #when checking election status
-      const result = await tracker.checkElection();
-
+    it("should include current election info if elections exist", () => {
       // #then if elections exist, should include current election
-      if (result.status.electionCount > 0) {
-        expect(result.currentElection).toBeDefined();
-        expect(result.currentElection?.electionIndex).toBe(result.status.electionCount - 1);
+      if (checkElectionResult.status.electionCount > 0) {
+        expect(checkElectionResult.currentElection).toBeDefined();
+        expect(checkElectionResult.currentElection?.electionIndex).toBe(
+          checkElectionResult.status.electionCount - 1
+        );
       }
     });
 
@@ -1754,81 +1760,65 @@ describe.skipIf(shouldSkipRpc())("ProposalStageTracker", () => {
       expect(result.status).toBeDefined();
     });
   });
-});
 
-/**
- * Tests for proposals that FAILED voting
- * Covers pipeline early exit path when voting is not successful
- */
-describe.skipIf(shouldSkipRpc())("Failed Voting Proposals", () => {
-  const { cache, beforeAllSetup } = createRpcTestSuite();
-  let failedVotingResult: TrackingResult;
+  /**
+   * Tests for proposals that FAILED voting
+   * Covers pipeline early exit path when voting is not successful
+   */
+  describe("Failed Voting Proposals", () => {
+    it("should track proposal with FAILED voting status", () => {
+      // #given a proposal that failed voting (cached in beforeAll)
+      const result = failedVotingResult;
 
-  beforeAll(async () => {
-    await beforeAllSetup();
-    const tracker = cache.getTracker();
+      // #then should have correct structure
+      expect(result).toBeDefined();
+      expect(result.input.type).toBe("governor");
+      expect(result.proposalType).toBe("CONSTITUTIONAL");
+    });
 
-    // Track failed voting proposal once
-    console.log("Tracking FAILED voting proposal...");
-    const results = await tracker.trackByTxHash(
-      CONSTITUTIONAL_GOVERNOR_FAILED_VOTING.creationTxHash
-    );
-    failedVotingResult = results[0];
-    console.log("✓ FAILED voting proposal tracked");
-  }, 120000);
+    it("should have COMPLETED PROPOSAL_CREATED stage", () => {
+      // #given tracked result
+      const createdStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_CREATED");
 
-  it("should track proposal with FAILED voting status", async () => {
-    // #given a proposal that failed voting
-    const result = failedVotingResult;
+      // #then should be completed
+      expect(createdStage).toBeDefined();
+      expect(createdStage!.status).toBe("COMPLETED");
+    });
 
-    // #then should have correct structure
-    expect(result).toBeDefined();
-    expect(result.input.type).toBe("governor");
-    expect(result.proposalType).toBe("CONSTITUTIONAL");
-  });
+    it("should have FAILED VOTING_ACTIVE stage", () => {
+      // #given tracked result
+      const votingStage = failedVotingResult.stages.find((s) => s.type === "VOTING_ACTIVE");
 
-  it("should have COMPLETED PROPOSAL_CREATED stage", async () => {
-    // #given tracked result
-    const createdStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_CREATED");
+      // #then should be FAILED (defeated)
+      expect(votingStage).toBeDefined();
+      expect(votingStage!.status).toBe("FAILED");
+    });
 
-    // #then should be completed
-    expect(createdStage).toBeDefined();
-    expect(createdStage!.status).toBe("COMPLETED");
-  });
+    it("should stop at FAILED voting - no PROPOSAL_QUEUED stage completed", () => {
+      // #given proposal failed voting
+      const queuedStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_QUEUED");
 
-  it("should have FAILED VOTING_ACTIVE stage", async () => {
-    // #given tracked result
-    const votingStage = failedVotingResult.stages.find((s) => s.type === "VOTING_ACTIVE");
+      // #then PROPOSAL_QUEUED should not be completed (voting failed)
+      if (queuedStage) {
+        expect(queuedStage.status).not.toBe("COMPLETED");
+      }
+    });
 
-    // #then should be FAILED (defeated)
-    expect(votingStage).toBeDefined();
-    expect(votingStage!.status).toBe("FAILED");
-  });
+    it("should not have L2_TIMELOCK stage completed when voting fails", () => {
+      // #given proposal failed voting
+      const l2TimelockStage = failedVotingResult.stages.find((s) => s.type === "L2_TIMELOCK");
 
-  it("should stop at FAILED voting - no PROPOSAL_QUEUED stage completed", async () => {
-    // #given proposal failed voting
-    const queuedStage = failedVotingResult.stages.find((s) => s.type === "PROPOSAL_QUEUED");
+      // #then L2_TIMELOCK should not be completed
+      if (l2TimelockStage) {
+        expect(l2TimelockStage.status).not.toBe("COMPLETED");
+      }
+    });
 
-    // #then PROPOSAL_QUEUED should not be completed (voting failed)
-    if (queuedStage) {
-      expect(queuedStage.status).not.toBe("COMPLETED");
-    }
-  });
-
-  it("should not have L2_TIMELOCK stage completed when voting fails", async () => {
-    // #given proposal failed voting
-    const l2TimelockStage = failedVotingResult.stages.find((s) => s.type === "L2_TIMELOCK");
-
-    // #then L2_TIMELOCK should not be completed
-    if (l2TimelockStage) {
-      expect(l2TimelockStage.status).not.toBe("COMPLETED");
-    }
-  });
-
-  it("should mark proposal as not complete when voting fails", async () => {
-    // #given proposal failed voting
-    // #then should not be complete
-    expect(failedVotingResult.isComplete).toBe(false);
+    it("should mark proposal as not complete when voting fails", () => {
+      // #given proposal failed voting
+      // #then should not be complete
+      expect(failedVotingResult.isComplete).toBe(false);
+    });
   });
 });
 

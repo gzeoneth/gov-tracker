@@ -7,6 +7,8 @@
  *
  * NOTE: These tests require ARB1_ARCHIVE_RPC to be set in .env.
  * They use small block ranges to avoid slow log queries.
+ *
+ * Optimized: Tests are grouped by block number to share fork instances.
  */
 
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
@@ -28,11 +30,15 @@ const TEST_L2_BLOCKS = {
   ELECTION_POKE: 379_398_080,
 };
 
-describe("Election Fork Tests", () => {
+/**
+ * Tests at CONSISTENT block (200_000_000)
+ * Fork started once, shared across all tests in this block
+ */
+describe("Election Fork Tests - CONSISTENT Block", () => {
   let forks: DualForkResult | null = null;
   let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const urls = getTestRpcUrls();
     if (!urls) {
       throw new Error(
@@ -40,6 +46,13 @@ describe("Election Fork Tests", () => {
       );
     }
     rpcUrls = urls;
+
+    // Start fork once for all tests in this block
+    forks = await startDualForksAtL2Block({
+      l1Url: rpcUrls.l1,
+      l2Url: rpcUrls.l2Archive,
+      l2BlockNumber: TEST_L2_BLOCKS.CONSISTENT,
+    });
   });
 
   afterAll(async () => {
@@ -50,15 +63,9 @@ describe("Election Fork Tests", () => {
 
   describe("checkElectionStatus", () => {
     it("should check election status at a historical block", async () => {
-      forks = await startDualForksAtL2Block({
-        l1Url: rpcUrls!.l1,
-        l2Url: rpcUrls!.l2Archive,
-        l2BlockNumber: TEST_L2_BLOCKS.CONSISTENT,
-      });
-
       const status = await checkElectionStatus(
-        forks.l2.provider,
-        forks.l1.provider,
+        forks!.l2.provider,
+        forks!.l1.provider,
         ADDRESSES.ELECTION_NOMINEE_GOVERNOR
       );
 
@@ -90,22 +97,66 @@ describe("Election Fork Tests", () => {
 
       // Verify election index matches status
       expect(electionIndex).toBe(status.electionCount);
-
-      await forks.stopAll();
-      forks = null;
     });
+  });
 
-    it("should detect election ready to be created (poke scenario)", async () => {
-      // Fork at block just before election creation tx 0x82a0baf3...
-      forks = await startDualForksAtL2Block({
-        l1Url: rpcUrls!.l1,
-        l2Url: rpcUrls!.l2Archive,
-        l2BlockNumber: TEST_L2_BLOCKS.ELECTION_POKE,
-      });
+  describe("Fork Infrastructure", () => {
+    it("should start and stop anvil forks", async () => {
+      // Verify both forks are running at the expected blocks
+      const l1Block = await forks!.l1.provider.getBlockNumber();
+      const l2Block = await forks!.l2.provider.getBlockNumber();
 
+      // L2 block should match our target
+      expect(l2Block).toBe(TEST_L2_BLOCKS.CONSISTENT);
+      // L1 block was auto-detected from L2, should be a reasonable historical block
+      expect(l1Block).toBeGreaterThan(19_000_000); // Reasonable L1 block for L2 200M
+
+      // Verify we can query the chains
+      const l1Network = await forks!.l1.provider.getNetwork();
+      const l2Network = await forks!.l2.provider.getNetwork();
+
+      expect(l1Network.chainId).toBe(1);
+      expect(l2Network.chainId).toBe(42161);
+    });
+  });
+});
+
+/**
+ * Tests at ELECTION_POKE block (379_398_080)
+ * Fork started once, shared across all tests in this block
+ */
+describe("Election Fork Tests - ELECTION_POKE Block", () => {
+  let forks: DualForkResult | null = null;
+  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+
+  beforeAll(async () => {
+    const urls = getTestRpcUrls();
+    if (!urls) {
+      throw new Error(
+        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
+      );
+    }
+    rpcUrls = urls;
+
+    // Start fork once for all tests in this block
+    forks = await startDualForksAtL2Block({
+      l1Url: rpcUrls.l1,
+      l2Url: rpcUrls.l2Archive,
+      l2BlockNumber: TEST_L2_BLOCKS.ELECTION_POKE,
+    });
+  });
+
+  afterAll(async () => {
+    if (forks) {
+      await forks.stopAll();
+    }
+  });
+
+  describe("checkElectionStatus - poke scenario", () => {
+    it("should detect election ready to be created", async () => {
       const status = await checkElectionStatus(
-        forks.l2.provider,
-        forks.l1.provider,
+        forks!.l2.provider,
+        forks!.l1.provider,
         ADDRESSES.ELECTION_NOMINEE_GOVERNOR
       );
 
@@ -117,46 +168,15 @@ describe("Election Fork Tests", () => {
       const { transaction } = prepareElectionCreation(status);
       expect(transaction.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
       expect(transaction.description).toContain("createElection()");
-
-      await forks.stopAll();
-      forks = null;
     });
-  });
-});
-
-describe("Election Proposal Tracking with Forks", () => {
-  let forks: DualForkResult | null = null;
-  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
-
-  beforeAll(() => {
-    const urls = getTestRpcUrls();
-    if (!urls) {
-      throw new Error(
-        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
-      );
-    }
-    rpcUrls = urls;
-  });
-
-  afterAll(async () => {
-    if (forks) {
-      await forks.stopAll();
-    }
   });
 
   describe("trackElection (via tracker)", () => {
     it("should track election proposal status at historical block", async () => {
-      // Use the ELECTION_POKE block which is known to have elections
-      forks = await startDualForksAtL2Block({
-        l1Url: rpcUrls!.l1,
-        l2Url: rpcUrls!.l2Archive,
-        l2BlockNumber: TEST_L2_BLOCKS.ELECTION_POKE,
-      });
-
       // Get the current election count to track a past election
       const status = await checkElectionStatus(
-        forks.l2.provider,
-        forks.l1.provider,
+        forks!.l2.provider,
+        forks!.l1.provider,
         ADDRESSES.ELECTION_NOMINEE_GOVERNOR
       );
 
@@ -164,9 +184,9 @@ describe("Election Proposal Tracking with Forks", () => {
       if (status.electionCount > 0) {
         // Use the unified pipeline via tracker
         const tracker = createTracker({
-          l1Provider: forks.l1.provider,
-          l2Provider: forks.l2.provider,
-          novaProvider: forks.l2.provider,
+          l1Provider: forks!.l1.provider,
+          l2Provider: forks!.l2.provider,
+          novaProvider: forks!.l2.provider,
         });
 
         const electionStatus = await tracker.trackElection(0); // First election
@@ -179,102 +199,29 @@ describe("Election Proposal Tracking with Forks", () => {
         // But if NOT_STARTED, it means the proposal wasn't found - this is acceptable for fork state
         expect(["COMPLETED", "NOT_STARTED"]).toContain(electionStatus.phase);
       }
-
-      await forks.stopAll();
-      forks = null;
     });
   });
-});
 
-describe("Tracker checkElection Integration", () => {
-  let forks: DualForkResult | null = null;
-  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
+  describe("Tracker checkElection Integration", () => {
+    it("should prepare createElection transaction when canCreateElection is true", async () => {
+      // Create tracker with forked providers
+      const tracker = createTracker({
+        l1Provider: forks!.l1.provider,
+        l2Provider: forks!.l2.provider,
+        novaProvider: forks!.l2.provider, // Use L2 provider for nova (not used in election check)
+      });
 
-  beforeAll(() => {
-    const urls = getTestRpcUrls();
-    if (!urls) {
-      throw new Error(
-        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
-      );
-    }
-    rpcUrls = urls;
-  });
+      // #when checking election through tracker
+      const result = await tracker.checkElection();
 
-  afterAll(async () => {
-    if (forks) {
-      await forks.stopAll();
-    }
-  });
+      // #then should have canCreate=true and prepared transaction
+      expect(result.canCreate).toBe(true);
+      expect(result.prepared.createElection).toBeDefined();
+      expect(result.prepared.createElection!.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+      expect(result.prepared.createElection!.description).toContain("createElection()");
 
-  it("should prepare createElection transaction when canCreateElection is true", async () => {
-    // #given Fork at block where election can be created
-    forks = await startDualForksAtL2Block({
-      l1Url: rpcUrls!.l1,
-      l2Url: rpcUrls!.l2Archive,
-      l2BlockNumber: TEST_L2_BLOCKS.ELECTION_POKE,
+      // Should also have current election info since electionCount > 0
+      expect(result.currentElection).toBeDefined();
     });
-
-    // Create tracker with forked providers
-    const tracker = createTracker({
-      l1Provider: forks.l1.provider,
-      l2Provider: forks.l2.provider,
-      novaProvider: forks.l2.provider, // Use L2 provider for nova (not used in election check)
-    });
-
-    // #when checking election through tracker
-    const result = await tracker.checkElection();
-
-    // #then should have canCreate=true and prepared transaction
-    expect(result.canCreate).toBe(true);
-    expect(result.prepared.createElection).toBeDefined();
-    expect(result.prepared.createElection!.to).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
-    expect(result.prepared.createElection!.description).toContain("createElection()");
-
-    // Should also have current election info since electionCount > 0
-    expect(result.currentElection).toBeDefined();
-
-    await forks.stopAll();
-    forks = null;
-  });
-});
-
-describe("Fork Infrastructure Tests", () => {
-  let rpcUrls: NonNullable<ReturnType<typeof getTestRpcUrls>>;
-
-  beforeAll(() => {
-    const urls = getTestRpcUrls();
-    if (!urls) {
-      throw new Error(
-        "Archive RPC URLs required for fork tests. Set ARB1_ARCHIVE_RPC and ETH_RPC environment variables."
-      );
-    }
-    rpcUrls = urls;
-  });
-
-  it("should start and stop anvil forks", async () => {
-    const forks = await startDualForksAtL2Block({
-      l1Url: rpcUrls!.l1,
-      l2Url: rpcUrls!.l2Archive,
-      l2BlockNumber: TEST_L2_BLOCKS.CONSISTENT,
-    });
-
-    // Verify both forks are running at the expected blocks
-    const l1Block = await forks.l1.provider.getBlockNumber();
-    const l2Block = await forks.l2.provider.getBlockNumber();
-
-    // L2 block should match our target
-    expect(l2Block).toBe(TEST_L2_BLOCKS.CONSISTENT);
-    // L1 block was auto-detected from L2, should be a reasonable historical block
-    expect(l1Block).toBeGreaterThan(19_000_000); // Reasonable L1 block for L2 200M
-
-    // Verify we can query the chains
-    const l1Network = await forks.l1.provider.getNetwork();
-    const l2Network = await forks.l2.provider.getNetwork();
-
-    expect(l1Network.chainId).toBe(1);
-    expect(l2Network.chainId).toBe(42161);
-
-    // Clean up
-    await forks.stopAll();
   });
 });

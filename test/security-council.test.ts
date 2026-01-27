@@ -4,24 +4,34 @@
  * Tests for extractAllSecurityCouncilParams, extractSecurityCouncilParamsForOperation,
  * and extractSecurityCouncilParams.
  *
- * Note: checkVettingPeriod requires RPC and is tested in integration tests.
+ * Includes RPC integration tests for salt calculation validation.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { ethers, BigNumber } from "ethers";
+import * as dotenv from "dotenv";
 
 import {
   extractAllSecurityCouncilParams,
   extractSecurityCouncilParamsForOperation,
   extractSecurityCouncilParams,
+  isSecurityCouncilOperation,
 } from "../src/discovery/security-council";
+import { parseCallScheduledEvent } from "../src/discovery/timelock-discovery";
 import {
   timelockInterface,
   arbSysInterface,
   upgradeExecutorInterface,
   memberSyncActionInterface,
 } from "../src/abis";
-import { ADDRESSES, EVENT_TOPICS } from "../src/constants";
+import { ADDRESSES, EVENT_TOPICS, DEFAULT_RPC_URLS } from "../src/constants";
+import { queryWithRetry } from "../src/utils/rpc-utils";
+import { generateSecurityCouncilSalt } from "../src/utils/salt-computation";
+import { computeAndValidateOperationHash } from "../src/utils/operation-id";
+import { createTracker } from "../src";
+import { shouldSkipRpc } from "./helpers";
+
+dotenv.config({ quiet: true });
 
 describe("security-council", () => {
   describe("extractAllSecurityCouncilParams", () => {
@@ -585,5 +595,164 @@ describe("security-council", () => {
       expect(result).not.toBeNull();
       expect(result!.operationId).toBe("0x" + "a".repeat(64));
     });
+  });
+});
+
+/**
+ * Security Council Salt Calculation Integration Tests
+ *
+ * Validates that the SDK's salt calculation logic correctly handles
+ * Security Council rotation operations using real RPC data.
+ */
+const SC_ROTATION_TX = "0xa0d5366b53fc16ad524446a74f19cad23de4c96a939dfcd64555b3b12036c700";
+
+const ARB_SYS_ABI = ["function sendTxToL1(address, bytes) payable returns (uint256)"];
+const TIMELOCK_ABI = [
+  "function scheduleBatch(address[], uint256[], bytes[], bytes32, bytes32, uint256)",
+];
+const UPGRADE_EXECUTOR_ABI = ["function execute(address, bytes)"];
+const MEMBER_SYNC_ACTION_ABI = ["function perform(address, address[], uint256) returns (bool)"];
+
+function extractMembersAndNonceFromCallData(
+  data: string
+): { members: string[]; nonce: BigNumber } | null {
+  const arbSysIface = new ethers.utils.Interface(ARB_SYS_ABI);
+  const timelockIface = new ethers.utils.Interface(TIMELOCK_ABI);
+  const upExecIface = new ethers.utils.Interface(UPGRADE_EXECUTOR_ABI);
+  const actionIface = new ethers.utils.Interface(MEMBER_SYNC_ACTION_ABI);
+
+  try {
+    const sendTxDecoded = arbSysIface.decodeFunctionData("sendTxToL1", data);
+    const scheduleBatch = timelockIface.decodeFunctionData("scheduleBatch", sendTxDecoded[1]);
+    const payloads = scheduleBatch[2] as string[];
+    const executeData = upExecIface.decodeFunctionData("execute", payloads[0]);
+    const performData = actionIface.decodeFunctionData("perform", executeData[1]);
+    return { members: performData[1] as string[], nonce: performData[2] as BigNumber };
+  } catch {
+    return null;
+  }
+}
+
+describe.skipIf(shouldSkipRpc())("Security Council Salt Calculation (RPC)", () => {
+  let provider: ethers.providers.JsonRpcProvider;
+  let receipt: ethers.providers.TransactionReceipt;
+  let callScheduledLogs: ethers.providers.Log[];
+
+  // Cached extraction results - populated once in beforeAll
+  let cachedIsScOperation: boolean;
+  let cachedScParams: ReturnType<typeof extractSecurityCouncilParams>;
+  let cachedAllScParams: ReturnType<typeof extractAllSecurityCouncilParams>;
+  // Cached parsed logs and salts for validation - computed in parallel in beforeAll
+  let cachedValidations: Array<{ operationId: string; isValid: boolean }>;
+
+  beforeAll(async () => {
+    const rpcUrl = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    receipt = await queryWithRetry(() => provider.getTransactionReceipt(SC_ROTATION_TX));
+    callScheduledLogs = receipt.logs.filter((log) => log.topics[0] === EVENT_TOPICS.CALL_SCHEDULED);
+
+    // Cache extraction results
+    cachedIsScOperation = isSecurityCouncilOperation(receipt);
+    cachedScParams = extractSecurityCouncilParams(receipt);
+    cachedAllScParams = extractAllSecurityCouncilParams(receipt);
+
+    // Cache salt validations in parallel (avoids 4 sequential RPC calls in test)
+    const validationPromises = callScheduledLogs.map(async (log) => {
+      const parsed = parseCallScheduledEvent(log)!;
+      const extracted = extractMembersAndNonceFromCallData(parsed.data)!;
+      const computedSalt = await generateSecurityCouncilSalt(
+        extracted.members,
+        extracted.nonce,
+        provider
+      );
+      const validation = computeAndValidateOperationHash(parsed.operationId, {
+        target: parsed.target,
+        value: parsed.value,
+        data: parsed.data,
+        predecessor: parsed.predecessor,
+        salt: computedSalt,
+      });
+      return { operationId: parsed.operationId, isValid: validation.isValid };
+    });
+    cachedValidations = await Promise.all(validationPromises);
+  });
+
+  it("should detect SC operation", () => {
+    expect(cachedIsScOperation).toBe(true);
+  });
+
+  it("should extract SC params (returns last operation)", () => {
+    expect(cachedScParams).not.toBeNull();
+    expect(cachedScParams!.members.length).toBe(12);
+    expect(cachedScParams!.nonce.toNumber()).toBe(6);
+  });
+
+  it("should extract all SC operations", () => {
+    expect(cachedAllScParams).not.toBeNull();
+    expect(cachedAllScParams!.operations.length).toBe(4);
+    expect(cachedAllScParams!.operations.map((op) => op.nonce.toNumber())).toEqual([3, 4, 5, 6]);
+  });
+
+  it("should extract params for specific operation by ID", () => {
+    for (let i = 0; i < callScheduledLogs.length; i++) {
+      const parsed = parseCallScheduledEvent(callScheduledLogs[i])!;
+      const params = extractSecurityCouncilParamsForOperation(receipt, parsed.operationId);
+      expect(params).not.toBeNull();
+      const expected = extractMembersAndNonceFromCallData(parsed.data);
+      expect(params!.nonce.eq(expected!.nonce)).toBe(true);
+    }
+  });
+
+  it("should validate salt computation for all operations", () => {
+    // Uses cached validation results from beforeAll (4 parallel salt computations)
+    expect(cachedValidations.length).toBe(callScheduledLogs.length);
+    for (const validation of cachedValidations) {
+      expect(validation.isValid).toBe(true);
+    }
+  });
+});
+
+describe.skipIf(shouldSkipRpc())("Security Council Rotation Tracking (RPC)", () => {
+  let l2Provider: ethers.providers.JsonRpcProvider;
+  let l1Provider: ethers.providers.JsonRpcProvider;
+  let novaProvider: ethers.providers.JsonRpcProvider;
+
+  // Cached results - populated once in beforeAll
+  let cachedReceipt: ethers.providers.TransactionReceipt;
+  let cachedTrackingResults: Awaited<ReturnType<ReturnType<typeof createTracker>["trackByTxHash"]>>;
+
+  beforeAll(async () => {
+    const ethRpc = process.env.ETH_RPC;
+    if (!ethRpc) {
+      throw new Error("RPC URLs required: Set ETH_RPC environment variables");
+    }
+    const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+
+    l2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
+    l1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
+    novaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
+
+    // Cache receipt and tracking results once
+    const tracker = createTracker({ l2Provider, l1Provider, novaProvider });
+    const [receipt, results] = await Promise.all([
+      queryWithRetry(() => l2Provider.getTransactionReceipt(SC_ROTATION_TX)),
+      tracker.trackByTxHash(SC_ROTATION_TX),
+    ]);
+    cachedReceipt = receipt;
+    cachedTrackingResults = results;
+    console.log("✓ SC rotation tracking results cached");
+  }, 300000);
+
+  it("should detect SC update in transaction receipt", () => {
+    expect(isSecurityCouncilOperation(cachedReceipt)).toBe(true);
+  });
+
+  it("should track SC rotation operation from tx hash", () => {
+    expect(cachedTrackingResults.length).toBe(4);
+    const result = cachedTrackingResults[0];
+    expect(result.stages.length).toBeGreaterThan(0);
+    const l2TimelockStage = result.stages.find((s) => s.type === "L2_TIMELOCK");
+    expect(l2TimelockStage).toBeDefined();
   });
 });

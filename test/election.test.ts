@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { BigNumber, ethers } from "ethers";
 import * as dotenv from "dotenv";
+import * as election from "../src/election/index";
 import {
   ADDRESSES,
   checkElectionStatus,
@@ -18,6 +19,7 @@ import {
   prepareElectionCreation,
   ProposalStageTracker,
   ElectionProposalStatus,
+  ElectionStatus,
 } from "../src";
 import { getVettingDeadline } from "./helpers/election-helpers";
 import { shouldSkipRpc, createRpcTestSuite } from "./helpers";
@@ -52,38 +54,144 @@ describe("Election Module", () => {
     });
   });
 
-  describe("Election Types", () => {
-    // Test type definitions by creating valid objects
+  describe("Election Module Exports", () => {
+    describe("contract factories", () => {
+      it("should export getNomineeGovernor", () => {
+        expect(election.getNomineeGovernor).toBeDefined();
+        expect(typeof election.getNomineeGovernor).toBe("function");
+      });
 
-    it("should accept valid ElectionProposalStatus", () => {
-      const status = {
-        phase: "NOMINEE_SELECTION" as const,
-        currentNomineeCount: 10,
-        maxNominees: 12,
-        nomineeDeadline: BigNumber.from(1700000000),
-        canAdvance: true,
-      };
-
-      expect(status.phase).toBe("NOMINEE_SELECTION");
-      expect(status.canAdvance).toBe(true);
+      it("should export getMemberGovernor", () => {
+        expect(election.getMemberGovernor).toBeDefined();
+        expect(typeof election.getMemberGovernor).toBe("function");
+      });
     });
 
-    it("should accept valid cohort types", () => {
-      const marchCohort = "MARCH";
-      const septemberCohort = "SEPTEMBER";
+    describe("proposal ID functions", () => {
+      it("should export clearElectionCache", () => {
+        expect(election.clearElectionCache).toBeDefined();
+        expect(typeof election.clearElectionCache).toBe("function");
+      });
 
-      expect(["MARCH", "SEPTEMBER"]).toContain(marchCohort);
-      expect(["MARCH", "SEPTEMBER"]).toContain(septemberCohort);
+      it("should export getElectionProposalId", () => {
+        expect(election.getElectionProposalId).toBeDefined();
+        expect(typeof election.getElectionProposalId).toBe("function");
+      });
+
+      it("should export getMemberElectionProposalId", () => {
+        expect(election.getMemberElectionProposalId).toBeDefined();
+        expect(typeof election.getMemberElectionProposalId).toBe("function");
+      });
     });
-  });
 
-  describe("Election Proposal Types", () => {
-    it("should have valid election proposal types", () => {
-      // Election governors are distinct from regular governance
-      const electionTypes = ["ELECTION_NOMINEE", "ELECTION_MEMBER"];
+    describe("proposal params functions", () => {
+      it("should export getElectionProposalParams", () => {
+        expect(election.getElectionProposalParams).toBeDefined();
+        expect(typeof election.getElectionProposalParams).toBe("function");
+      });
 
-      expect(electionTypes).toContain("ELECTION_NOMINEE");
-      expect(electionTypes).toContain("ELECTION_MEMBER");
+      it("should export getMemberElectionProposalParams", () => {
+        expect(election.getMemberElectionProposalParams).toBeDefined();
+        expect(typeof election.getMemberElectionProposalParams).toBe("function");
+      });
+    });
+
+    describe("participants functions", () => {
+      it("should export getContenders", () => {
+        expect(election.getContenders).toBeDefined();
+        expect(typeof election.getContenders).toBe("function");
+      });
+
+      it("should export getNomineesWithVotes", () => {
+        expect(election.getNomineesWithVotes).toBeDefined();
+        expect(typeof election.getNomineesWithVotes).toBe("function");
+      });
+
+      it("should export getExcludedNominees", () => {
+        expect(election.getExcludedNominees).toBeDefined();
+        expect(typeof election.getExcludedNominees).toBe("function");
+      });
+    });
+
+    describe("details functions", () => {
+      it("should export getNomineeElectionDetails", () => {
+        expect(election.getNomineeElectionDetails).toBeDefined();
+        expect(typeof election.getNomineeElectionDetails).toBe("function");
+      });
+
+      it("should export getMemberElectionDetails", () => {
+        expect(election.getMemberElectionDetails).toBeDefined();
+        expect(typeof election.getMemberElectionDetails).toBe("function");
+      });
+    });
+
+    describe("prepare functions", () => {
+      it("should export prepareElectionCreation", () => {
+        expect(election.prepareElectionCreation).toBeDefined();
+        expect(typeof election.prepareElectionCreation).toBe("function");
+      });
+
+      it("should export prepareMemberElectionTrigger", () => {
+        expect(election.prepareMemberElectionTrigger).toBeDefined();
+        expect(typeof election.prepareMemberElectionTrigger).toBe("function");
+      });
+
+      it("should export prepareMemberElectionExecution", () => {
+        expect(election.prepareMemberElectionExecution).toBeDefined();
+        expect(typeof election.prepareMemberElectionExecution).toBe("function");
+      });
+    });
+
+    describe("status functions", () => {
+      it("should export checkElectionStatus", () => {
+        expect(election.checkElectionStatus).toBeDefined();
+        expect(typeof election.checkElectionStatus).toBe("function");
+      });
+
+      it("should export hasVettingPeriod", () => {
+        expect(election.hasVettingPeriod).toBeDefined();
+        expect(typeof election.hasVettingPeriod).toBe("function");
+      });
+
+      it("should export determineElectionPhase", () => {
+        expect(election.determineElectionPhase).toBeDefined();
+        expect(typeof election.determineElectionPhase).toBe("function");
+      });
+    });
+
+    describe("tracking functions", () => {
+      it("should export getElectionIndexForProposalId", () => {
+        expect(election.getElectionIndexForProposalId).toBeDefined();
+        expect(typeof election.getElectionIndexForProposalId).toBe("function");
+      });
+    });
+
+    describe("type exports", () => {
+      it("should be usable with correct parameter types", () => {
+        const params: election.ElectionProposalParams = {
+          targets: ["0x123"],
+          values: [],
+          calldatas: ["0x"],
+          description: "test",
+          descriptionHash: "0x123",
+        };
+        expect(params.targets).toHaveLength(1);
+      });
+
+      it("should provide PreparedElectionCreation type", () => {
+        const prepared: election.PreparedElectionCreation = {
+          transaction: {
+            to: "0x123",
+            data: "0x",
+            value: "0",
+            chain: "arb1",
+            chainId: 42161,
+            description: "test",
+          },
+          electionIndex: 0,
+        };
+        expect(prepared.electionIndex).toBe(0);
+      });
     });
   });
 });
@@ -96,6 +204,14 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   // Cached election tracking results - populated once in beforeAll
   const electionCache = new Map<number, ElectionProposalStatus>();
+  let cachedElectionStatus: ElectionStatus;
+
+  // Cached vetting check results - populated once in beforeAll
+  let cachedNomineeHasVetting: boolean;
+  let cachedCoreHasVetting: boolean;
+  let cachedCoreVettingPeriod: Awaited<ReturnType<typeof checkVettingPeriod>>;
+  let cachedCoreVettingDeadline: Awaited<ReturnType<typeof getVettingDeadline>>;
+  let cachedNomineeVettingDeadline: Awaited<ReturnType<typeof getVettingDeadline>>;
 
   beforeAll(async () => {
     await beforeAllSetup();
@@ -104,81 +220,84 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
     l1Provider = providers.l1Provider;
     tracker = cache.getTracker();
 
+    // Fetch election status once for reuse
+    cachedElectionStatus = await checkElectionStatus(
+      l2Provider,
+      l1Provider,
+      ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+    );
+
     // Track elections 0-4 once upfront for all tests in this suite
     const trackingPromises = [0, 1, 2, 3, 4].map(async (i) => {
       const status = await tracker.trackElection(i);
       electionCache.set(i, status);
     });
-    await Promise.all(trackingPromises);
+
+    // Cache vetting check results in parallel with election tracking
+    const [
+      nomineeHasVetting,
+      coreHasVetting,
+      coreVettingPeriod,
+      coreVettingDeadline,
+      nomineeVettingDeadline,
+    ] = await Promise.all([
+      hasVettingPeriod(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, l2Provider),
+      hasVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, l2Provider),
+      checkVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, "0", l2Provider),
+      getVettingDeadline(ADDRESSES.CONSTITUTIONAL_GOVERNOR, "0", l2Provider),
+      getVettingDeadline(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, "0", l2Provider),
+      ...trackingPromises,
+    ]);
+    cachedNomineeHasVetting = nomineeHasVetting;
+    cachedCoreHasVetting = coreHasVetting;
+    cachedCoreVettingPeriod = coreVettingPeriod;
+    cachedCoreVettingDeadline = coreVettingDeadline;
+    cachedNomineeVettingDeadline = nomineeVettingDeadline;
   }, 180000); // 3 minutes - tracks 5 elections with multiple RPC calls
 
   describe("hasVettingPeriod", () => {
-    it("should detect nominee election governor has vetting", async () => {
-      const hasVetting = await hasVettingPeriod(ADDRESSES.ELECTION_NOMINEE_GOVERNOR, l2Provider);
-      expect(hasVetting).toBe(true);
+    it("should detect nominee election governor has vetting", () => {
+      // #given cached vetting check result
+      expect(cachedNomineeHasVetting).toBe(true);
     });
 
-    it("should detect core governor does not have vetting", async () => {
-      const hasVetting = await hasVettingPeriod(ADDRESSES.CONSTITUTIONAL_GOVERNOR, l2Provider);
-      expect(hasVetting).toBe(false);
+    it("should detect core governor does not have vetting", () => {
+      // #given cached vetting check result
+      expect(cachedCoreHasVetting).toBe(false);
     });
   });
 
   describe("checkVettingPeriod", () => {
-    it("should check vetting period for non-vetting governor", async () => {
-      // Core governor doesn't have vetting
-      const result = await checkVettingPeriod(
-        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-        "0", // Dummy proposal ID
-        l2Provider
-      );
-
-      expect(result.hasVettingPeriod).toBe(false);
-      expect(result.vettingDeadline).toBeNull();
-      expect(result.isVettingActive).toBe(false);
+    it("should check vetting period for non-vetting governor", () => {
+      // #given cached vetting period result for core governor
+      expect(cachedCoreVettingPeriod.hasVettingPeriod).toBe(false);
+      expect(cachedCoreVettingPeriod.vettingDeadline).toBeNull();
+      expect(cachedCoreVettingPeriod.isVettingActive).toBe(false);
     });
   });
 
   describe("getVettingDeadline", () => {
-    it("should return undefined for non-vetting governor", async () => {
-      // Core governor doesn't have vetting deadline
-      const deadline = await getVettingDeadline(
-        ADDRESSES.CONSTITUTIONAL_GOVERNOR,
-        "0", // Dummy proposal ID
-        l2Provider
-      );
-
-      expect(deadline).toBeUndefined();
+    it("should return undefined for non-vetting governor", () => {
+      // #given cached vetting deadline result for core governor
+      expect(cachedCoreVettingDeadline).toBeUndefined();
     });
 
-    it("should return a value for nominee election governor (vetting period check succeeds)", async () => {
+    it("should return a value for nominee election governor (vetting period check succeeds)", () => {
+      // #given cached vetting deadline result for nominee governor
       // Nominee election governor has proposalVettingDeadline function
       // For any proposal ID, it calculates: proposalDeadline + vettingDuration
       // The function succeeds even for proposal ID 0 (returns calculated value)
-      const deadline = await getVettingDeadline(
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
-        "0",
-        l2Provider
-      );
-
-      // Should return a BigNumber - the function call succeeds on nominee governors
-      expect(deadline).toBeDefined();
-      expect(deadline?.toNumber()).toBeGreaterThanOrEqual(0);
+      expect(cachedNomineeVettingDeadline).toBeDefined();
+      expect(cachedNomineeVettingDeadline?.toNumber()).toBeGreaterThanOrEqual(0);
     });
   });
 
   describe("getElectionProposalId", () => {
     it("should return proposal ID for past elections", async () => {
-      // Get current election count
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
+      // Use cached election status for election count
+      if (cachedElectionStatus.electionCount > 0) {
         let foundProposalId = false;
-        for (let i = status.electionCount - 1; i >= 0; i--) {
+        for (let i = cachedElectionStatus.electionCount - 1; i >= 0; i--) {
           const proposalId = await getElectionProposalId(i, l2Provider);
           if (proposalId !== null) {
             foundProposalId = true;
@@ -192,19 +311,12 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   describe("Election Proposal Params", () => {
     it("should fetch proposal params for a completed election", async () => {
-      // Get election count
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
-        // Find an election that has a valid proposal ID
+      // Use cached elections - find one with a valid proposal ID
+      if (cachedElectionStatus.electionCount > 0) {
         let foundParams = false;
-        for (let i = status.electionCount - 1; i >= 0; i--) {
-          const proposalId = await getElectionProposalId(i, l2Provider);
-          if (proposalId !== null) {
+        for (let i = cachedElectionStatus.electionCount - 1; i >= 0; i--) {
+          const cachedElection = electionCache.get(i);
+          if (cachedElection?.nomineeProposalId) {
             // Fetch params for this election
             const params = await getElectionProposalParams(i, l2Provider);
 
@@ -226,14 +338,8 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
 
   describe("Member Election Trigger", () => {
     it("should return null when election cannot proceed to member phase", async () => {
-      // Get current election status
-      const status = await checkElectionStatus(
-        l2Provider,
-        l1Provider,
-        ADDRESSES.ELECTION_NOMINEE_GOVERNOR
-      );
-
-      if (status.electionCount > 0) {
+      // Use cached election status
+      if (cachedElectionStatus.electionCount > 0) {
         // Use cached election 0 (should be completed and cannot proceed)
         const electionStatus = electionCache.get(0)!;
 
@@ -277,29 +383,11 @@ describe.skipIf(shouldSkipRpc())("Election Integration Tests", () => {
       4: "0x59b7e93c50a31204ee62b7a881a78b49046ccb10a5a770b9cf4fbdbcefbba2fb",
     };
 
-    it("should find creation tx hash for election #0", () => {
-      const electionStatus = electionCache.get(0)!;
-      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[0]);
-    });
-
-    it("should find creation tx hash for election #1", () => {
-      const electionStatus = electionCache.get(1)!;
-      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[1]);
-    });
-
-    it("should find creation tx hash for election #2", () => {
-      const electionStatus = electionCache.get(2)!;
-      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[2]);
-    });
-
-    it("should find creation tx hash for election #3", () => {
-      const electionStatus = electionCache.get(3)!;
-      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[3]);
-    });
-
-    it("should find creation tx hash for election #4", () => {
-      const electionStatus = electionCache.get(4)!;
-      expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[4]);
+    it("should find creation tx hash for all elections", () => {
+      for (let i = 0; i < 5; i++) {
+        const electionStatus = electionCache.get(i)!;
+        expect(electionStatus.creationTxHash).toBe(KNOWN_ELECTION_TX_HASHES[i]);
+      }
     });
 
     it("should have creation tx in stages for tracked elections", () => {
@@ -453,167 +541,6 @@ describe("Election Module - Mocked Tests", () => {
 
       // #then - should use custom address
       expect(result.transaction.to).toBe(customAddress);
-    });
-  });
-});
-
-describe("Election Data Types", () => {
-  describe("ElectionContender", () => {
-    it("should accept valid contender structure", () => {
-      // #given - a valid contender object
-      const contender = {
-        address: "0x1234567890123456789012345678901234567890",
-        registeredAtBlock: 12345678,
-        registrationTxHash: "0xabc123def456abc123def456abc123def456abc123def456abc123def456abc1",
-      };
-
-      // #then - structure should be valid
-      expect(contender.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
-      expect(typeof contender.registeredAtBlock).toBe("number");
-      expect(contender.registrationTxHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
-    });
-  });
-
-  describe("ElectionNominee", () => {
-    it("should accept valid nominee structure", () => {
-      // #given - a valid nominee object
-      const nominee = {
-        address: "0x1234567890123456789012345678901234567890",
-        votesReceived: BigNumber.from("1000000000000000000"),
-        isExcluded: false,
-      };
-
-      // #then - structure should be valid
-      expect(nominee.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
-      expect(nominee.votesReceived._isBigNumber).toBe(true);
-      expect(typeof nominee.isExcluded).toBe("boolean");
-    });
-
-    it("should accept excluded nominee with exclusion details", () => {
-      // #given - an excluded nominee
-      const excludedNominee = {
-        address: "0x1234567890123456789012345678901234567890",
-        votesReceived: BigNumber.from("500000000000000000"),
-        isExcluded: true,
-        excludedAtBlock: 12345678,
-        exclusionTxHash: "0xabc123def456abc123def456abc123def456abc123def456abc123def456abc1",
-      };
-
-      // #then - should have exclusion details
-      expect(excludedNominee.isExcluded).toBe(true);
-      expect(excludedNominee.excludedAtBlock).toBeDefined();
-      expect(excludedNominee.exclusionTxHash).toBeDefined();
-    });
-  });
-
-  describe("MemberElectionNominee", () => {
-    it("should accept valid member election nominee structure", () => {
-      // #given - a valid member election nominee
-      const nominee = {
-        address: "0x1234567890123456789012345678901234567890",
-        weightReceived: BigNumber.from("5000000000000000000000"),
-        isWinner: true,
-        rank: 1,
-      };
-
-      // #then - structure should be valid
-      expect(nominee.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
-      expect(nominee.weightReceived._isBigNumber).toBe(true);
-      expect(typeof nominee.isWinner).toBe("boolean");
-      expect(typeof nominee.rank).toBe("number");
-      expect(nominee.rank).toBeGreaterThan(0);
-    });
-  });
-
-  describe("NomineeElectionDetails", () => {
-    it("should accept valid nominee election details structure", () => {
-      // #given - valid nominee election details
-      const details = {
-        proposalId: "123456789012345678901234567890",
-        electionIndex: 5,
-        contenders: [],
-        nominees: [],
-        compliantNominees: [],
-        excludedNominees: [],
-        quorumThreshold: BigNumber.from("100000000000000000000000"),
-        targetNomineeCount: 6,
-      };
-
-      // #then - structure should be valid
-      expect(typeof details.proposalId).toBe("string");
-      expect(typeof details.electionIndex).toBe("number");
-      expect(Array.isArray(details.contenders)).toBe(true);
-      expect(Array.isArray(details.nominees)).toBe(true);
-      expect(Array.isArray(details.compliantNominees)).toBe(true);
-      expect(Array.isArray(details.excludedNominees)).toBe(true);
-      expect(details.quorumThreshold._isBigNumber).toBe(true);
-      expect(details.targetNomineeCount).toBe(6);
-    });
-
-    it("should validate that compliant + excluded equals total nominees", () => {
-      // #given - nominee details with both compliant and excluded
-      const compliantNominees = [
-        {
-          address: "0x1111111111111111111111111111111111111111",
-          votesReceived: BigNumber.from(1),
-          isExcluded: false,
-        },
-        {
-          address: "0x2222222222222222222222222222222222222222",
-          votesReceived: BigNumber.from(2),
-          isExcluded: false,
-        },
-      ];
-      const excludedNominees = [
-        {
-          address: "0x3333333333333333333333333333333333333333",
-          votesReceived: BigNumber.from(1),
-          isExcluded: true,
-        },
-      ];
-      const allNominees = [...compliantNominees, ...excludedNominees];
-
-      // #then - counts should match
-      expect(compliantNominees.length + excludedNominees.length).toBe(allNominees.length);
-    });
-  });
-
-  describe("MemberElectionDetails", () => {
-    it("should accept valid member election details structure", () => {
-      // #given - valid member election details
-      const details = {
-        proposalId: "987654321098765432109876543210",
-        electionIndex: 5,
-        nominees: [],
-        winners: [
-          "0x1111111111111111111111111111111111111111",
-          "0x2222222222222222222222222222222222222222",
-          "0x3333333333333333333333333333333333333333",
-          "0x4444444444444444444444444444444444444444",
-          "0x5555555555555555555555555555555555555555",
-          "0x6666666666666666666666666666666666666666",
-        ],
-        fullWeightDeadline: 1700000000,
-        proposalDeadline: 1701000000,
-      };
-
-      // #then - structure should be valid
-      expect(typeof details.proposalId).toBe("string");
-      expect(typeof details.electionIndex).toBe("number");
-      expect(Array.isArray(details.nominees)).toBe(true);
-      expect(Array.isArray(details.winners)).toBe(true);
-      expect(details.winners.length).toBe(6);
-      expect(typeof details.fullWeightDeadline).toBe("number");
-      expect(typeof details.proposalDeadline).toBe("number");
-    });
-
-    it("should have fullWeightDeadline before proposalDeadline", () => {
-      // #given - member election with valid deadlines
-      const fullWeightDeadline = 1700000000;
-      const proposalDeadline = 1701000000;
-
-      // #then - full weight should end before proposal deadline
-      expect(fullWeightDeadline).toBeLessThan(proposalDeadline);
     });
   });
 });

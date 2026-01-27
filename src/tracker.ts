@@ -1156,6 +1156,21 @@ export class ProposalStageTracker {
     };
   }
 
+  /**
+   * Get the current L2 block number.
+   *
+   * Convenience method for getting the current Arbitrum One block number.
+   *
+   * @example
+   * ```typescript
+   * const currentBlock = await tracker.getCurrentL2BlockNumber();
+   * const { proposals } = await tracker.discoverAll(targets, currentBlock);
+   * ```
+   */
+  async getCurrentL2BlockNumber(): Promise<number> {
+    return this.l2Provider.getBlockNumber();
+  }
+
   // Election Tracking
 
   /**

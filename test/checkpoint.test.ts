@@ -539,6 +539,11 @@ describe.skipIf(shouldSkipRpc())("Checkpoint Integration Tests", () => {
   let l2Provider: ethers.providers.JsonRpcProvider;
   let novaProvider: ethers.providers.JsonRpcProvider;
 
+  // Cached RPC results - populated once in beforeAll
+  let cachedResumedResult: TrackingResult;
+  let cachedCacheEnabledResults: TrackingResult[];
+  let cachedPersistenceCheckpoint: TrackingCheckpoint | null;
+
   beforeAll(async () => {
     const ethRpc = process.env.ETH_RPC;
     if (!ethRpc) {
@@ -559,6 +564,41 @@ describe.skipIf(shouldSkipRpc())("Checkpoint Integration Tests", () => {
       CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
     );
     initialResult = results[0];
+
+    // Cache resume result and cache-enabled tracking result
+    const checkpoint = initialResult.checkpoint;
+    const cacheKey = `tx:${CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash.toLowerCase()}`;
+    await cache.set(cacheKey, checkpoint);
+
+    const trackerWithCache = createTracker({
+      l1Provider,
+      l2Provider,
+      novaProvider,
+      cache,
+    });
+
+    const [resumed, cacheEnabledResults] = await Promise.all([
+      tracker.trackFromCheckpoint(checkpoint),
+      trackerWithCache.trackByTxHash(CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash),
+    ]);
+
+    cachedResumedResult = resumed;
+    cachedCacheEnabledResults = cacheEnabledResults;
+
+    // Cache persistence test data
+    const persistenceCache = new MemoryCache();
+    const persistenceTracker = createTracker({
+      l1Provider,
+      l2Provider,
+      novaProvider,
+      cache: persistenceCache,
+    });
+    await persistenceTracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash);
+    const persistenceCacheKey = `tx:${NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash.toLowerCase()}`;
+    cachedPersistenceCheckpoint =
+      await persistenceCache.get<TrackingCheckpoint>(persistenceCacheKey);
+
+    console.log("✓ Checkpoint integration test RPC results cached");
   }, 180000);
 
   describe("Checkpoint generation", () => {
@@ -600,73 +640,35 @@ describe.skipIf(shouldSkipRpc())("Checkpoint Integration Tests", () => {
   });
 
   describe("Resume from checkpoint", () => {
-    it("should resume tracking from checkpoint", async () => {
-      // #given - a checkpoint from the initial tracking result
+    it("should resume tracking from checkpoint", () => {
+      // #given - cached resume result from beforeAll
       const checkpoint = initialResult.checkpoint;
 
-      // #when - resuming tracking from the checkpoint
-      const resumed = await tracker.trackFromCheckpoint(checkpoint);
-
+      // #when - using the cached resumed result
       // #then - resumed result should have same input type and stages
-      expect(resumed).toBeDefined();
-      expect(resumed.input.type).toBe(checkpoint.input.type);
-      expect(resumed.stages.length).toBeGreaterThan(0);
+      expect(cachedResumedResult).toBeDefined();
+      expect(cachedResumedResult.input.type).toBe(checkpoint.input.type);
+      expect(cachedResumedResult.stages.length).toBeGreaterThan(0);
     });
 
-    it("should use cached stages when resuming", async () => {
-      // #given - a checkpoint stored in the cache
-      const checkpoint = initialResult.checkpoint;
-      const cacheKey = `tx:${CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash.toLowerCase()}`;
-      await cache.set(cacheKey, checkpoint);
+    it("should use cached stages when resuming", () => {
+      // #given - cached cache-enabled tracking result from beforeAll
 
-      // #when - tracking with a cache-enabled tracker
-      const trackerWithCache = createTracker({
-        l1Provider,
-        l2Provider,
-        novaProvider,
-        cache,
-      });
-      const results = await trackerWithCache.trackByTxHash(
-        CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP.creationTxHash
-      );
-
+      // #when - using the cached result
       // #then - tracking should complete using cached data
-      expect(results.length).toBe(1);
-      expect(results[0].isComplete).toBe(true);
+      expect(cachedCacheEnabledResults.length).toBe(1);
+      expect(cachedCacheEnabledResults[0].isComplete).toBe(true);
     });
   });
 
   describe("Cache persistence", () => {
-    it("should store checkpoint in cache after tracking", async () => {
-      // #given - a fresh tracker with an empty cache
-      const ethRpc = process.env.ETH_RPC;
-      if (!ethRpc) {
-        throw new Error("ETH_RPC environment variable required");
-      }
-      const arbRpc = process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
-      const novaRpc = process.env.NOVA_RPC || DEFAULT_RPC_URLS.NOVA;
+    it("should store checkpoint in cache after tracking", () => {
+      // #given - cached persistence test results from beforeAll
 
-      const newCache = new MemoryCache();
-      const newL1Provider = new ethers.providers.JsonRpcProvider(ethRpc);
-      const newL2Provider = new ethers.providers.JsonRpcProvider(arbRpc);
-      const newNovaProvider = new ethers.providers.JsonRpcProvider(novaRpc);
-
-      const newTracker = createTracker({
-        l1Provider: newL1Provider,
-        l2Provider: newL2Provider,
-        novaProvider: newNovaProvider,
-        cache: newCache,
-      });
-
-      // #when - tracking a proposal by transaction hash
-      await newTracker.trackByTxHash(NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash);
-
+      // #when - verifying the cached checkpoint from the persistence test
       // #then - checkpoint should be automatically stored in the cache
-      const cacheKey = `tx:${NON_CONSTITUTIONAL_GOVERNOR_L2_ONLY.creationTxHash.toLowerCase()}`;
-      const stored = await newCache.get<TrackingCheckpoint>(cacheKey);
-
-      expect(stored).not.toBeNull();
-      expect(stored!.input.type).toBe("governor");
+      expect(cachedPersistenceCheckpoint).not.toBeNull();
+      expect(cachedPersistenceCheckpoint!.input.type).toBe("governor");
     });
   });
 });

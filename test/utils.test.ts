@@ -24,6 +24,8 @@ import {
   calculateRemainingSeconds,
 } from "../src";
 
+import { proposalStateToString } from "../src/constants";
+
 // Internal imports (for testing internal functions)
 import {
   hashOperation,
@@ -1412,5 +1414,30 @@ describe("URL Utilities", () => {
       // #then - should return Nova Arbiscan URL
       expect(url).toBe("https://nova.arbiscan.io/tx/0x789");
     });
+  });
+});
+
+describe("proposalStateToString", () => {
+  it("should convert state number to string", () => {
+    expect(proposalStateToString(1)).toBe("Active");
+  });
+
+  it("should handle all valid states", () => {
+    expect(proposalStateToString(0)).toBe("Pending");
+    expect(proposalStateToString(1)).toBe("Active");
+    expect(proposalStateToString(2)).toBe("Canceled");
+    expect(proposalStateToString(3)).toBe("Defeated");
+    expect(proposalStateToString(4)).toBe("Succeeded");
+    expect(proposalStateToString(5)).toBe("Queued");
+    expect(proposalStateToString(6)).toBe("Expired");
+    expect(proposalStateToString(7)).toBe("Executed");
+  });
+
+  it("should throw for invalid state number", () => {
+    expect(() => proposalStateToString(99)).toThrow("Unknown proposal state");
+  });
+
+  it("should throw for negative state number", () => {
+    expect(() => proposalStateToString(-1)).toThrow("Unknown proposal state");
   });
 });

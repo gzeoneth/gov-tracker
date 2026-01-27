@@ -78,9 +78,31 @@ import { buildDefaultTargets } from "@gzeoneth/gov-tracker";
 
 const { proposals, timelockOps, watermarks } = await tracker.discoverAll(
   buildDefaultTargets(),
-  await l2Provider.getBlockNumber()
+  await tracker.l2Provider.getBlockNumber()
 );
 ```
+
+---
+
+### Provider Access
+
+Providers are exposed as readonly properties for direct access:
+
+```typescript
+// Direct property access (recommended)
+const currentBlock = await tracker.l2Provider.getBlockNumber();
+const l1Block = await tracker.l1Provider.getBlockNumber();
+
+// All providers as object (deprecated, use direct access)
+const { l1, l2, nova } = tracker.getProviders();
+```
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `l2Provider` | Arbitrum One provider (readonly) |
+| `l1Provider` | Ethereum mainnet provider (readonly) |
+| `novaProvider` | Arbitrum Nova provider (readonly) |
+| `getProviders()` | Get all providers as object (deprecated) |
 
 ---
 

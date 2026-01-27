@@ -287,7 +287,7 @@ describe.skipIf(shouldSkipRpc())(
         write: false,
         verbose: true, // verbose to also test console output path
       });
-    });
+    }, 180000); // Match describe-level timeout for RPC calls to L1, L2, and Nova
 
     it("should return election status without write mode", () => {
       // #then should return valid status with no errors

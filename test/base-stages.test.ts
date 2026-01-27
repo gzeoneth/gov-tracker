@@ -24,6 +24,9 @@ import {
   isTimelockStage,
   failPrepare,
   checkOperationReady,
+  mergeStages,
+  normalizeTimeline,
+  splitStages,
 } from "../src/stages/utils";
 import { StageBuilder } from "../src/stages/builder";
 import { ADDRESSES } from "../src/constants";
@@ -743,6 +746,152 @@ describe("Stages Base Utilities", () => {
       if (result && !result.success) {
         expect(result.error).toBe("Operation is not ready for execution");
       }
+    });
+  });
+
+  describe("mergeStages", () => {
+    it("should merge stages from two arrays without duplicates", () => {
+      // #given - governor stages and timelock stages
+      const governorStages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("NOT_STARTED").build(),
+      ];
+      const timelockStages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("L2_TO_L1_MESSAGE", "arb1").status("NOT_STARTED").build(),
+      ];
+
+      // #when - merging stages
+      const merged = mergeStages(governorStages, timelockStages);
+
+      // #then - should have 4 unique stages
+      expect(merged).toHaveLength(4);
+      expect(merged.map((s) => s.type)).toContain("PROPOSAL_CREATED");
+      expect(merged.map((s) => s.type)).toContain("VOTING_ACTIVE");
+      expect(merged.map((s) => s.type)).toContain("L2_TIMELOCK");
+      expect(merged.map((s) => s.type)).toContain("L2_TO_L1_MESSAGE");
+    });
+
+    it("should prefer stage with higher status priority on duplicate", () => {
+      // #given - overlapping stages with different statuses
+      const primary: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("NOT_STARTED").build(),
+      ];
+      const secondary: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+      ];
+
+      // #when - merging stages
+      const merged = mergeStages(primary, secondary);
+
+      // #then - should use the COMPLETED stage
+      expect(merged).toHaveLength(1);
+      expect(merged[0].status).toBe("COMPLETED");
+    });
+
+    it("should prefer stage with more transactions if same status", () => {
+      // #given - overlapping stages with same status but different transaction counts
+      const primary: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("COMPLETED").build(),
+      ];
+      const secondary: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1")
+          .status("COMPLETED")
+          .tx("0xabc", 100, "arb1", 42161)
+          .build(),
+      ];
+
+      // #when - merging stages
+      const merged = mergeStages(primary, secondary);
+
+      // #then - should use the stage with transactions
+      expect(merged).toHaveLength(1);
+      expect(merged[0].transactions).toHaveLength(1);
+    });
+
+    it("should handle empty arrays", () => {
+      // #given - one empty array
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+      ];
+
+      // #when - merging with empty array
+      const merged = mergeStages(stages, []);
+
+      // #then - should return original stages
+      expect(merged).toHaveLength(1);
+    });
+  });
+
+  describe("normalizeTimeline", () => {
+    it("should sort stages in canonical pipeline order", () => {
+      // #given - stages in random order
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+      ];
+
+      // #when - normalizing timeline
+      const normalized = normalizeTimeline(stages);
+
+      // #then - should be in correct order
+      expect(normalized[0].type).toBe("PROPOSAL_CREATED");
+      expect(normalized[1].type).toBe("VOTING_ACTIVE");
+      expect(normalized[2].type).toBe("L2_TIMELOCK");
+    });
+
+    it("should handle election stages before timelock stages", () => {
+      // #given - mixed election and timelock stages
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("CREATE_ELECTION", "arb1").status("COMPLETED").build(),
+        new StageBuilder("MEMBER_ELECTION", "arb1").status("COMPLETED").build(),
+      ];
+
+      // #when - normalizing timeline
+      const normalized = normalizeTimeline(stages);
+
+      // #then - election stages come before timelock stages
+      expect(normalized[0].type).toBe("CREATE_ELECTION");
+      expect(normalized[1].type).toBe("MEMBER_ELECTION");
+      expect(normalized[2].type).toBe("L2_TIMELOCK");
+    });
+
+    it("should not mutate original array", () => {
+      // #given - stages array
+      const stages: TrackedStage[] = [
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+      ];
+
+      // #when - normalizing timeline
+      normalizeTimeline(stages);
+
+      // #then - original array unchanged
+      expect(stages[0].type).toBe("L2_TIMELOCK");
+    });
+  });
+
+  describe("splitStages", () => {
+    it("should split into parent and timelock stages", () => {
+      // #given - full proposal pipeline stages
+      const stages: TrackedStage[] = [
+        new StageBuilder("PROPOSAL_CREATED", "arb1").status("COMPLETED").build(),
+        new StageBuilder("VOTING_ACTIVE", "arb1").status("COMPLETED").build(),
+        new StageBuilder("L2_TIMELOCK", "arb1").status("PENDING").build(),
+        new StageBuilder("L1_TIMELOCK", "ethereum").status("NOT_STARTED").build(),
+      ];
+
+      // #when - splitting stages
+      const { parentStages, timelockStages } = splitStages(stages);
+
+      // #then - correctly separated
+      expect(parentStages).toHaveLength(2);
+      expect(timelockStages).toHaveLength(2);
+      expect(parentStages.map((s) => s.type)).toEqual(["PROPOSAL_CREATED", "VOTING_ACTIVE"]);
+      expect(timelockStages.map((s) => s.type)).toEqual(["L2_TIMELOCK", "L1_TIMELOCK"]);
     });
   });
 });

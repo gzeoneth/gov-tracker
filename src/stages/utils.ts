@@ -207,6 +207,98 @@ export function splitStages(stages: TrackedStage[]): {
 }
 
 /**
+ * Canonical stage ordering for normalization.
+ * Matches the natural flow: election/governor → timelock path.
+ */
+const STAGE_ORDER: Record<StageType, number> = {
+  // Election path
+  CREATE_ELECTION: 0,
+  NOMINEE_ELECTION: 1,
+  NOMINEE_VETTING: 2,
+  MEMBER_ELECTION: 3,
+  // Governor path
+  PROPOSAL_CREATED: 10,
+  VOTING_ACTIVE: 11,
+  PROPOSAL_QUEUED: 12,
+  // Shared timelock path
+  L2_TIMELOCK: 20,
+  L2_TO_L1_MESSAGE: 21,
+  L1_TIMELOCK: 22,
+  RETRYABLE_EXECUTED: 23,
+};
+
+/**
+ * Merge stages from different sources into a single array.
+ *
+ * Useful for combining stages from a governor proposal checkpoint
+ * with its linked timelock checkpoint into a unified timeline.
+ *
+ * When duplicates exist (same type), prefers the stage with more progress:
+ * 1. Higher status priority (COMPLETED > READY > PENDING > NOT_STARTED)
+ * 2. More transactions recorded
+ *
+ * @param primaryStages - Primary stage array (typically from governor/election)
+ * @param secondaryStages - Secondary stages to merge (typically from timelock)
+ * @returns Merged array with duplicates resolved
+ */
+export function mergeStages(
+  primaryStages: TrackedStage[],
+  secondaryStages: TrackedStage[]
+): TrackedStage[] {
+  const STATUS_PRIORITY: Record<StageStatus, number> = {
+    COMPLETED: 5,
+    FAILED: 4,
+    CANCELED: 4,
+    READY: 3,
+    PENDING: 2,
+    SKIPPED: 1,
+    NOT_STARTED: 0,
+  };
+
+  const stageMap = new Map<StageType, TrackedStage>();
+
+  // Add primary stages first
+  for (const stage of primaryStages) {
+    stageMap.set(stage.type, stage);
+  }
+
+  // Merge secondary stages, keeping the one with more progress
+  for (const stage of secondaryStages) {
+    const existing = stageMap.get(stage.type);
+    if (!existing) {
+      stageMap.set(stage.type, stage);
+      continue;
+    }
+
+    const existingPriority = STATUS_PRIORITY[existing.status];
+    const newPriority = STATUS_PRIORITY[stage.status];
+
+    // Prefer higher status, or more transactions if same status
+    if (
+      newPriority > existingPriority ||
+      (newPriority === existingPriority && stage.transactions.length > existing.transactions.length)
+    ) {
+      stageMap.set(stage.type, stage);
+    }
+  }
+
+  return Array.from(stageMap.values());
+}
+
+/**
+ * Normalize stages into canonical pipeline order.
+ *
+ * Sorts stages by their natural execution order in the governance pipeline.
+ * Useful after merging stages from multiple sources.
+ *
+ * @param stages - Array of stages in any order
+ * @returns Stages sorted in canonical order
+ */
+export function normalizeTimeline(stages: TrackedStage[]): TrackedStage[] {
+  return [...stages].sort((a, b) => STAGE_ORDER[a.type] - STAGE_ORDER[b.type]);
+}
+
+/**
  * Check if stages have any timelock progress (for determining if we need linked checkpoint).
  * Returns true if any timelock path stage has been started.
  */

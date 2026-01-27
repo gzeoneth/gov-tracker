@@ -131,6 +131,10 @@ export function buildTenderlyEncodeStatesRequest(
   // Use the first timelock's network ID (they should all be same network)
   const networkID = timelockSims[0].networkId;
 
+  // Validate that all timelock simulations use the same network ID
+  if (!timelockSims.every((s) => s.networkId === networkID)) {
+    throw new Error("All timelock simulations must use the same network");
+  }
   // Build state overrides from all timelock simulations
   const stateOverrides: Record<string, { value: Record<string, string> }> = {};
 

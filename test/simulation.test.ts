@@ -1113,7 +1113,8 @@ describe("Simulation Data Preparation", () => {
       const values = ["0"];
       const calldatas = ["0xabcdef"];
       const predecessor = ethers.constants.HashZero;
-      const salt = ethers.utils.id("test-salt-" + timelockAddress + "-" + simCounter++);
+      const counter = simCounter++;
+      const salt = ethers.utils.id(`test-salt-${timelockAddress}-${counter}`);
       const delay = 259200;
 
       const encoded = ethers.utils.defaultAbiCoder.encode(

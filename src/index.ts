@@ -326,7 +326,6 @@ export {
   safeStringify,
   formatValue,
   formatDate,
-  CHAIN_TO_CHAIN_ID,
   type StageDataItem,
   formatStageData,
   getTxHash,

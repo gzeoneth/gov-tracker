@@ -12,8 +12,6 @@ import type {
   DecodedParameter,
   CohortType,
 } from "../types/index.js";
-import { chainToChainId } from "../types/index.js";
-import type { Chain } from "../types/index.js";
 
 // ============================================================================
 // Election Utilities
@@ -93,14 +91,6 @@ export function formatDate(timestamp: number | null): string {
 // ============================================================================
 // Stage Formatting
 // ============================================================================
-
-/**
- * Chain to chain ID mapping.
- * @deprecated Use `chainToChainId` from types instead. Note: "unknown" maps to 0 (not Ethereum).
- */
-export const CHAIN_TO_CHAIN_ID: Record<Chain, number> = Object.fromEntries(
-  (["ethereum", "arb1", "nova", "unknown"] as const).map((c) => [c, chainToChainId(c)])
-) as Record<Chain, number>;
 
 /**
  * Priority fields shown first in stage data
@@ -328,7 +318,7 @@ export function filterVisibleLines(
  * Get all foldable keys from lines
  */
 export function getAllFoldableKeys(lines: FormattedLine[]): string[] {
-  return lines.filter((l) => l.foldable && l.foldKey).map((l) => l.foldKey!);
+  return lines.flatMap((l) => (l.foldable && l.foldKey ? [l.foldKey] : []));
 }
 
 /**

@@ -42,7 +42,6 @@ import {
   isPermanentError,
   isGasEstimationError,
   getErrorMessage,
-  getReceiptOrNull,
 } from "../src/utils/rpc-utils";
 
 describe("Operation ID Utilities", () => {
@@ -814,48 +813,6 @@ describe("RPC Utilities", () => {
       // #then - should identify regardless of case
       expect(isGasEstimationError(new Error("GAS REQUIRED EXCEEDS"))).toBe(true);
       expect(isGasEstimationError(new Error("EXECUTION REVERTED"))).toBe(true);
-    });
-  });
-
-  describe("getReceiptOrNull", () => {
-    it("should return receipt when found", async () => {
-      // #given - mock provider that returns a receipt
-      const mockReceipt = { transactionHash: "0x123" } as ethers.providers.TransactionReceipt;
-      const mockProvider = {
-        getTransactionReceipt: vi.fn().mockResolvedValue(mockReceipt),
-      } as unknown as ethers.providers.Provider;
-
-      // #when - getting receipt
-      const result = await getReceiptOrNull("0x123", mockProvider);
-
-      // #then - should return the receipt
-      expect(result).toEqual(mockReceipt);
-    });
-
-    it("should return null when receipt is null", async () => {
-      // #given - mock provider that returns null
-      const mockProvider = {
-        getTransactionReceipt: vi.fn().mockResolvedValue(null),
-      } as unknown as ethers.providers.Provider;
-
-      // #when - getting receipt
-      const result = await getReceiptOrNull("0x123", mockProvider);
-
-      // #then - should return null
-      expect(result).toBeNull();
-    });
-
-    it("should return null when receipt is undefined", async () => {
-      // #given - mock provider that returns undefined
-      const mockProvider = {
-        getTransactionReceipt: vi.fn().mockResolvedValue(undefined),
-      } as unknown as ethers.providers.Provider;
-
-      // #when - getting receipt
-      const result = await getReceiptOrNull("0x123", mockProvider);
-
-      // #then - should return null
-      expect(result).toBeNull();
     });
   });
 });

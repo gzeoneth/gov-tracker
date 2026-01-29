@@ -11,7 +11,7 @@ import type {
   DecodedCalldata,
   DecodedParameter,
 } from "../types/index.js";
-import { CHAIN_IDS } from "../constants.js";
+import { chainToChainId } from "../types/index.js";
 import type { Chain } from "../types/index.js";
 
 // ============================================================================
@@ -84,14 +84,12 @@ export function formatDate(timestamp: number | null): string {
 // ============================================================================
 
 /**
- * Chain to chain ID mapping
+ * Chain to chain ID mapping.
+ * @deprecated Use `chainToChainId` from types instead. Note: "unknown" maps to 0 (not Ethereum).
  */
-export const CHAIN_TO_CHAIN_ID: Record<Chain, number> = {
-  ethereum: CHAIN_IDS.ETHEREUM,
-  arb1: CHAIN_IDS.ARB_ONE,
-  nova: CHAIN_IDS.NOVA,
-  unknown: CHAIN_IDS.ETHEREUM,
-};
+export const CHAIN_TO_CHAIN_ID: Record<Chain, number> = Object.fromEntries(
+  (["ethereum", "arb1", "nova", "unknown"] as const).map((c) => [c, chainToChainId(c)])
+) as Record<Chain, number>;
 
 /**
  * Priority fields shown first in stage data

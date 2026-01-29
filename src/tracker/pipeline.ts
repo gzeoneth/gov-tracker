@@ -664,43 +664,39 @@ const ELECTION_STAGES: StageConfig[] = [
 // Pipeline Exports
 // ============================================================================
 
-/**
- * Track governor proposal pipeline (stages 1-7).
- */
-export async function trackGovernorPipeline(state: TrackingState): Promise<TrackingState> {
-  logTracker("running governor pipeline");
-  state = await runPipeline(state, GOVERNOR_STAGES);
+/** Gate stage type whose COMPLETED status triggers continuation into TIMELOCK_STAGES. */
+type TimelockGate = "PROPOSAL_QUEUED" | "MEMBER_ELECTION";
 
-  // Continue with timelock if proposal was queued
-  const queued = state.stages.find((s) => s.type === "PROPOSAL_QUEUED");
-  if (queued?.status === "COMPLETED") {
-    return runPipeline(state, TIMELOCK_STAGES);
+async function runTrackerPipeline(
+  state: TrackingState,
+  name: string,
+  stages: StageConfig[],
+  timelockGate?: TimelockGate
+): Promise<TrackingState> {
+  logTracker(`running ${name} pipeline`);
+  state = await runPipeline(state, stages);
+
+  if (timelockGate) {
+    const gate = state.stages.find((s) => s.type === timelockGate);
+    if (gate?.status === "COMPLETED") {
+      return runPipeline(state, TIMELOCK_STAGES);
+    }
   }
 
   return state;
 }
 
-/**
- * Track timelock pipeline (stages 4-7).
- * Used by governor pipeline, election pipeline, and direct timelock tracking.
- */
-export async function trackTimelockPipeline(state: TrackingState): Promise<TrackingState> {
-  logTracker("running timelock pipeline");
-  return runPipeline(state, TIMELOCK_STAGES);
+/** Track governor proposal pipeline (stages 1-7). */
+export function trackGovernorPipeline(state: TrackingState): Promise<TrackingState> {
+  return runTrackerPipeline(state, "governor", GOVERNOR_STAGES, "PROPOSAL_QUEUED");
 }
 
-/**
- * Track election pipeline (stages 1-8).
- */
-export async function trackElectionPipeline(state: TrackingState): Promise<TrackingState> {
-  logTracker("running election pipeline");
-  state = await runPipeline(state, ELECTION_STAGES);
+/** Track timelock pipeline (stages 4-7). */
+export function trackTimelockPipeline(state: TrackingState): Promise<TrackingState> {
+  return runTrackerPipeline(state, "timelock", TIMELOCK_STAGES);
+}
 
-  // Continue with timelock if member election was executed
-  const memberStage = state.stages.find((s) => s.type === "MEMBER_ELECTION");
-  if (memberStage?.status === "COMPLETED") {
-    return runPipeline(state, TIMELOCK_STAGES);
-  }
-
-  return state;
+/** Track election pipeline (stages 1-8). */
+export function trackElectionPipeline(state: TrackingState): Promise<TrackingState> {
+  return runTrackerPipeline(state, "election", ELECTION_STAGES, "MEMBER_ELECTION");
 }

@@ -393,33 +393,19 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
   failed: number;
   skipped: number;
 } {
-  let completed = 0,
-    pending = 0,
-    ready = 0,
-    failed = 0,
-    skipped = 0;
-
-  for (const stage of stages) {
-    switch (stage.status) {
-      case "COMPLETED":
-        completed++;
-        break;
-      case "PENDING":
-        pending++;
-        break;
-      case "READY":
-        ready++;
-        break;
-      case "FAILED":
-        failed++;
-        break;
-      case "SKIPPED":
-        skipped++;
-        break;
-    }
+  const counts = { completed: 0, pending: 0, ready: 0, failed: 0, skipped: 0 };
+  const statusKey: Record<string, keyof typeof counts> = {
+    COMPLETED: "completed",
+    PENDING: "pending",
+    READY: "ready",
+    FAILED: "failed",
+    SKIPPED: "skipped",
+  };
+  for (const { status } of stages) {
+    const key = statusKey[status];
+    if (key) counts[key]++;
   }
-
-  return { total: stages.length, completed, pending, ready, failed, skipped };
+  return { total: stages.length, ...counts };
 }
 
 /**

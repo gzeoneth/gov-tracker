@@ -44,6 +44,50 @@ import { arbSysInterface, outboxInterface, outboxExecuteInterface } from "../abi
 
 const ARB_SYS_ADDRESS = ADDRESSES.ARB_SYS;
 
+// ============================================================================
+// SDK Internal Access Helpers
+// ============================================================================
+// The Arbitrum SDK's ChildToParentMessageReader wraps a NitroReader internally.
+// We access private fields for two reasons:
+// 1. Extract the L2ToL1Tx event (needed for salt computation)
+// 2. Cache sendProps between tracking and preparation to avoid ~3-4s redundant RPC
+//
+// Assumptions (documented as HACKs):
+// - sendRootSize/sendRootHash are immutable once the message is included
+// - SDK field names (sendRootSize, sendRootHash, sendRootConfirmed) are stable
+// - The SDK's check `if (this.sendRootConfirmed !== undefined)` skips getSendProps
+//
+// If SDK internals change, these optimizations silently stop working (not break).
+// ============================================================================
+
+/** Extract the NitroReader from an SDK ChildToParentMessageReader. */
+function getNitroReader(message: ChildToParentMessageReader): ChildToParentMessageReaderNitro {
+  // SDK v4 wraps NitroReader as a private field; fall back to the message itself for direct Nitro readers
+  const msg = message as unknown as Record<string, unknown>;
+  return (msg.nitroReader ?? message) as ChildToParentMessageReaderNitro;
+}
+
+/** Extract cached sendProps from a NitroReader after status() has populated them. */
+function extractSendProps(
+  reader: ChildToParentMessageReaderNitro
+): { sendRootSize: string; sendRootHash: string } | undefined {
+  const r = reader as any;
+  return r.sendRootSize && r.sendRootHash
+    ? { sendRootSize: r.sendRootSize.toString(), sendRootHash: r.sendRootHash }
+    : undefined;
+}
+
+/** Inject cached sendProps into a NitroReader to skip redundant getSendProps RPC calls. */
+function injectSendProps(
+  reader: ChildToParentMessageReaderNitro,
+  sendProps: { sendRootSize: string; sendRootHash: string }
+): void {
+  const r = reader as any;
+  r.sendRootSize = BigNumber.from(sendProps.sendRootSize);
+  r.sendRootHash = sendProps.sendRootHash;
+  r.sendRootConfirmed = true;
+}
+
 /**
  * Determine aggregate status from individual message statuses.
  * Priority: all EXECUTED > any UNCONFIRMED > all CONFIRMED/EXECUTED > first message's status
@@ -257,8 +301,7 @@ export async function trackL2ToL1Message(
     };
   }
 
-  // Store the L2ToL1Tx event for downstream salt computation
-  const l2ToL1TxEvent = ((messages[0] as any).nitroReader as ChildToParentMessageReaderNitro).event;
+  const l2ToL1TxEvent = getNitroReader(messages[0]).event;
 
   const l2Timestamp = await getBlockTimestamp(receipt.blockNumber, l2Provider);
 
@@ -286,43 +329,14 @@ export async function trackL2ToL1Message(
   // Check status of ALL messages - they may have different states
   const messageStatuses: ChildToParentMessageStatus[] = [];
 
-  // ============================================================================
-  // PERFORMANCE OPTIMIZATION: Cache sendProps from tracking for preparation phase
-  // ============================================================================
-  // The Arbitrum SDK's status() and getOutboxProof() both call getSendProps(),
-  // which performs expensive RPC calls (~3-4s each) to find the assertion
-  // containing this message. By extracting sendProps after status() and caching
-  // them in stage.data, we can inject them during preparation to skip redundant work.
-  //
-  // This is a HACK that accesses SDK private fields. Assumptions:
-  // 1. sendRootSize/sendRootHash are immutable once found - the Arbitrum rollup's
-  //    sendCount is monotonically increasing, so once position < sendRootSize,
-  //    this invariant holds forever
-  // 2. SDK internal field names (sendRootSize, sendRootHash, sendRootConfirmed)
-  //    remain stable across SDK versions
-  // 3. The SDK's cache check: `if (this.sendRootConfirmed !== undefined)` continues
-  //    to skip getSendProps when these fields are pre-populated
-  //
-  // If SDK internals change, this optimization will silently stop working (not break).
-  // ============================================================================
   let cachedSendProps: { sendRootSize: string; sendRootHash: string } | undefined;
 
   for (const [i, message] of messages.entries()) {
     const status = await queryWithRetry(() => message.status(l2Provider));
     messageStatuses.push(status);
 
-    // Extract sendProps from first message after status() populates the SDK's internal cache
     if (i === 0) {
-      // Use nitroReader when available (Nitro-style networks), otherwise the message itself
-      const reader = (message as any).nitroReader ?? message;
-      const sendRootSize = reader.sendRootSize;
-      const sendRootHash = reader.sendRootHash;
-      if (sendRootSize && sendRootHash) {
-        cachedSendProps = {
-          sendRootSize: sendRootSize.toString(),
-          sendRootHash: sendRootHash,
-        };
-      }
+      cachedSendProps = extractSendProps(getNitroReader(message));
     }
   }
 
@@ -469,34 +483,9 @@ export async function prepareL2ToL1Message(
 ): Promise<PrepareResult> {
   logExecution("Preparing L2→L1 message execution");
 
-  // ============================================================================
-  // PERFORMANCE OPTIMIZATION: Inject cached sendProps to skip redundant RPC calls
-  // ============================================================================
-  // This is a HACK that injects values into SDK private fields. The SDK's
-  // getOutboxProof() calls getSendProps() internally, which checks:
-  //   `if (this.sendRootConfirmed !== undefined) return cached`
-  //
-  // By pre-populating these fields with values cached during tracking phase,
-  // we skip ~3-4 seconds of redundant RPC calls. This is safe because:
-  // - sendRootSize/sendRootHash are immutable once the message is included
-  // - We set sendRootConfirmed=true to trigger the SDK's cache hit path
-  //
-  // Why this matters for different paths:
-  // - READY stage (CONFIRMED message): Nice-to-have. Without hack, status() would
-  //   populate the cache and getOutboxProof() would use it. Hack saves ~3-4s by
-  //   skipping the status() call entirely.
-  // - PENDING stage (UNCONFIRMED message, --prepare-pending): ESSENTIAL. Without
-  //   hack, status() sets sendRootConfirmed=undefined, so getOutboxProof() calls
-  //   getSendProps() again (~3-4s wasted). Hack saves ~3-4s of duplicate work.
-  //
-  // See trackL2ToL1Message() for assumptions and risks of this approach.
-  // ============================================================================
   if (options.cachedSendProps) {
-    const { sendRootSize, sendRootHash } = options.cachedSendProps;
-    (reader as any).sendRootSize = BigNumber.from(sendRootSize);
-    (reader as any).sendRootHash = sendRootHash;
-    (reader as any).sendRootConfirmed = true;
-    logExecution("Using cached sendProps: size=%s", sendRootSize);
+    injectSendProps(reader, options.cachedSendProps);
+    logExecution("Using cached sendProps: size=%s", options.cachedSendProps.sendRootSize);
   }
 
   // Only check status if we need to validate (not in prepareCompleted mode)
@@ -612,11 +601,7 @@ export async function prepareL2ToL1MessageStage(
   const prepareOptions = { ...options, outboxAddress, cachedSendProps };
   const results = await Promise.all(
     readers.map((reader) =>
-      prepareL2ToL1Message(
-        (reader as any).nitroReader as ChildToParentMessageReaderNitro,
-        l2Provider,
-        prepareOptions
-      )
+      prepareL2ToL1Message(getNitroReader(reader), l2Provider, prepareOptions)
     )
   );
 

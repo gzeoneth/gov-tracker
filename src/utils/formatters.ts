@@ -10,9 +10,20 @@ import type {
   TrackingInput,
   DecodedCalldata,
   DecodedParameter,
+  CohortType,
 } from "../types/index.js";
 import { chainToChainId } from "../types/index.js";
 import type { Chain } from "../types/index.js";
+
+// ============================================================================
+// Election Utilities
+// ============================================================================
+
+const COHORT_NAMES: Record<CohortType, string> = { 0: "First", 1: "Second" };
+
+export function getCohortName(cohort: CohortType): string {
+  return COHORT_NAMES[cohort];
+}
 
 // ============================================================================
 // Text Utilities

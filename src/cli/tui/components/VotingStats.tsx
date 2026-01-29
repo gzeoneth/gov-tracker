@@ -4,6 +4,7 @@
 
 import { React, Box, Text } from "../ink-wrapper.js";
 import type { VotingActiveData } from "../../../types/stages.js";
+import { getProposalStateColor } from "../utils/index.js";
 
 interface VotingStatsProps {
   data: VotingActiveData;
@@ -86,7 +87,7 @@ export function VotingStats({ data, compact = false }: VotingStatsProps): React.
       {data.proposalState && (
         <Box marginTop={1}>
           <Text color="gray">State: </Text>
-          <Text bold color={data.proposalState === "Succeeded" ? "green" : data.proposalState === "Defeated" ? "red" : "yellow"}>
+          <Text bold color={getProposalStateColor(data.proposalState)}>
             {data.proposalState}
           </Text>
         </Box>

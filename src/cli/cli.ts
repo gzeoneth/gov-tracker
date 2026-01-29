@@ -85,6 +85,7 @@ import {
   FileCache,
 } from "../index";
 import { getErrorMessage } from "../utils/rpc-utils";
+import { getCohortName } from "../utils/formatters";
 import type { ExtractedSimulation } from "../types/simulation";
 import { buildDashboardState, writeDashboardState } from "./lib/json-state";
 import { checkAndExecuteElection, formatElectionStatus } from "./lib/election-check";
@@ -873,7 +874,7 @@ electionCmd
 
       console.log(`=== Security Council Elections (${elections.length} total) ===\n`);
       for (const election of elections) {
-        const cohortName = election.cohort === 0 ? "First" : "Second";
+        const cohortName = getCohortName(election.cohort);
         console.log(`Election #${election.electionIndex}`);
         console.log(`  Phase: ${election.phase}`);
         console.log(`  Cohort: ${cohortName} (${election.cohort})`);

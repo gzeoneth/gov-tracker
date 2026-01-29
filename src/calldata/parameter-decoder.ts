@@ -9,51 +9,39 @@
 import { ethers } from "ethers";
 import type { DecodedParameter, DecodedCalldata } from "../types/calldata";
 import type { Chain } from "../types";
+import { ADDRESSES } from "../constants";
+
+const A = ADDRESSES;
 
 /**
- * Known addresses registry organized by chain
+ * Known addresses registry organized by chain.
+ * Addresses shared with constants.ts are referenced via ADDRESSES to avoid duplication.
  */
 const KNOWN_ADDRESSES: Record<Exclude<Chain, "unknown">, Record<string, string>> = {
   arb1: {
-    // Governors
-    "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9": "Core Governor",
-    "0x789fC99093B09aD01C34DC7251D0C89ce743e5a4": "Treasury Governor",
-    "0x8a1cDA8dee421cD06023470608605934c16A05a0": "Nominee Election Governor",
-    "0x467923B9AE90BDB36BA88eCA11604D45F13b712C": "Member Election Governor",
-
-    // Timelocks
-    "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0": "L2 Core Timelock",
-    "0xbFc1FECa8B09A5c5D3EFfE7429eBE24b9c09EF58": "L2 Treasury Timelock",
-
-    // Other contracts
+    [A.CONSTITUTIONAL_GOVERNOR]: "Core Governor",
+    [A.NON_CONSTITUTIONAL_GOVERNOR]: "Treasury Governor",
+    [A.ELECTION_NOMINEE_GOVERNOR]: "Nominee Election Governor",
+    [A.ELECTION_MEMBER_GOVERNOR]: "Member Election Governor",
+    [A.L2_CONSTITUTIONAL_TIMELOCK]: "L2 Core Timelock",
+    [A.L2_NON_CONSTITUTIONAL_TIMELOCK]: "L2 Treasury Timelock",
+    [A.SECURITY_COUNCIL_MANAGER]: "Security Council Manager",
+    [A.ARB_SYS]: "ArbSys",
+    [A.ARB_RETRYABLE_TX]: "ArbRetryableTx",
     "0x912CE59144191C1204E64559FE8253a0e49E6548": "ARB Token",
     "0xCF57572261c7c2BCF21ffD220ea7d1a27D40A827": "Arb1 UpgradeExecutor",
-    "0xD509E5f5aEe2A205F554f36E8a7d56094494eDFC": "Security Council Manager",
-
-    // Precompiles
-    "0x0000000000000000000000000000000000000064": "ArbSys",
-    "0x000000000000000000000000000000000000006E": "ArbRetryableTx",
   },
   nova: {
     "0x86a02dD71363c440b21F4c0E5B2Ad01Ffe1A7482": "Nova UpgradeExecutor",
   },
   ethereum: {
-    // Timelock
-    "0xE6841D92B0C345144506576eC13ECf5103aC7f49": "L1 Timelock",
-
-    // UpgradeExecutor
+    [A.L1_TIMELOCK]: "L1 Timelock",
+    [A.ARB1_DELAYED_INBOX]: "Arb1 Delayed Inbox",
+    [A.NOVA_DELAYED_INBOX]: "Nova Delayed Inbox",
+    [A.RETRYABLE_TICKET_MAGIC]: "Retryable Ticket Magic",
+    [A.ARB1_OUTBOX]: "Arb1 Outbox",
+    [A.NOVA_OUTBOX]: "Nova Outbox",
     "0x3ffFbAdAF827559da092217e474760E2b2c3CeDd": "L1 UpgradeExecutor",
-
-    // Delayed Inboxes
-    "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f": "Arb1 Delayed Inbox",
-    "0xc4448b71118c9071Bcb9734A0EAc55D18A153949": "Nova Delayed Inbox",
-
-    // Special addresses
-    "0xa723C008e76E379c55599D2E4d93879BeaFDa79C": "Retryable Ticket Magic",
-
-    // Outboxes
-    "0x0B9857ae2D4A3DBe74ffE1d7DF045bb7F96E4840": "Arb1 Outbox",
-    "0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58": "Nova Outbox",
   },
 };
 

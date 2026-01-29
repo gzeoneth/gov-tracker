@@ -67,11 +67,18 @@ function getNitroReader(message: ChildToParentMessageReader): ChildToParentMessa
   return (msg.nitroReader ?? message) as ChildToParentMessageReaderNitro;
 }
 
+/** Bypass SDK's protected access to cache NitroReader send-root state (SDK v4 internals). */
+interface NitroReaderCache {
+  sendRootSize?: BigNumber;
+  sendRootHash?: string;
+  sendRootConfirmed?: boolean;
+}
+
 /** Extract cached sendProps from a NitroReader after status() has populated them. */
 function extractSendProps(
   reader: ChildToParentMessageReaderNitro
 ): { sendRootSize: string; sendRootHash: string } | undefined {
-  const r = reader as any;
+  const r = reader as unknown as NitroReaderCache;
   return r.sendRootSize && r.sendRootHash
     ? { sendRootSize: r.sendRootSize.toString(), sendRootHash: r.sendRootHash }
     : undefined;
@@ -82,7 +89,7 @@ function injectSendProps(
   reader: ChildToParentMessageReaderNitro,
   sendProps: { sendRootSize: string; sendRootHash: string }
 ): void {
-  const r = reader as any;
+  const r = reader as unknown as NitroReaderCache;
   r.sendRootSize = BigNumber.from(sendProps.sendRootSize);
   r.sendRootHash = sendProps.sendRootHash;
   r.sendRootConfirmed = true;

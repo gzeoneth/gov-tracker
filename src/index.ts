@@ -159,7 +159,9 @@ export {
   TIMELOCK_SELECTORS,
   isElectionGovernor,
   buildDefaultTargets,
+  VOTE_SUPPORT,
 } from "./constants";
+export type { VoteSupport } from "./constants";
 
 // ABIs (for consumers that need direct contract interaction)
 export { ERC20_VOTES_ABI } from "./abis";
@@ -247,6 +249,8 @@ export type { DecodedTimelockSchedule } from "./utils/salt-computation";
 
 // Operation ID utilities
 export {
+  hashOperation,
+  hashOperationBatch,
   validateSalt,
   validateSaltBatch,
   computeAndValidateOperationHash,
@@ -381,6 +385,17 @@ export type {
   AddContenderTypedData,
   PreparedContenderRegistration,
 } from "./election";
+
+// ============================================================================
+// TIER 5b: Governance Write Actions
+// ============================================================================
+
+export {
+  prepareCastVote,
+  prepareCastVoteWithReason,
+  prepareCastVoteWithReasonAndParams,
+} from "./governance";
+export type { GovernorTarget } from "./governance";
 
 // Checkpoint deduplication helpers
 export {

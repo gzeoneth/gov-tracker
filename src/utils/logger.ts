@@ -80,6 +80,7 @@ export const loggers = {
   tracker: scopedLog("gov-tracker:tracker"),
   execution: scopedLog("gov-tracker:execution"),
   election: scopedLog("gov-tracker:election"),
+  governance: scopedLog("gov-tracker:governance"),
   rpc: scopedLog("gov-tracker:rpc"),
   retryables: scopedLog("gov-tracker:retryables"),
   discovery: scopedLog("gov-tracker:discovery"),

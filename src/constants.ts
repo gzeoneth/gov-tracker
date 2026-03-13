@@ -403,6 +403,19 @@ export const PROPOSAL_STATE = {
 } as const;
 
 /**
+ * OpenZeppelin Governor vote support values (Governor.CountingSimple)
+ *
+ * @see https://docs.openzeppelin.com/contracts/4.x/api/governance#IGovernor-COUNTING_MODE--
+ */
+export const VOTE_SUPPORT = {
+  AGAINST: 0,
+  FOR: 1,
+  ABSTAIN: 2,
+} as const;
+
+export type VoteSupport = (typeof VOTE_SUPPORT)[keyof typeof VOTE_SUPPORT];
+
+/**
  * Convert proposal state number to human-readable string
  *
  * @param state - The numeric state from governor.state()

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Governance vote preparation** - Prepare-only functions for voting on Core/Treasury Governor proposals:
+  - `prepareCastVote(proposalId, support)` - Simple vote (For/Against/Abstain)
+  - `prepareCastVoteWithReason(proposalId, support, reason)` - Vote with on-chain reason
+  - `prepareCastVoteWithReasonAndParams(proposalId, support, reason, params)` - Vote with custom params
+  - `VOTE_SUPPORT` enum: `AGAINST` (0), `FOR` (1), `ABSTAIN` (2)
+  - Governor shorthand: pass `"constitutional"` or `"non-constitutional"` instead of addresses
+- **Operation ID hashing (public)** - `hashOperation()` and `hashOperationBatch()` now exported from public API (previously internal-only)
+- **Governor voting ABI** - Added `castVote`, `castVoteWithReason`, `castVoteWithReasonAndParams`, `castVoteBySig`, `getVotes` to `GOVERNOR_ABI`
 - **Election write actions** - Prepare-only functions for election participation (contender registration, vote casting):
   - `encodeElectionVoteParams()` / `decodeElectionVoteParams()` - ABI encode/decode `(address, uint256)` vote params
   - `getAddContenderTypedData()` - Build EIP-712 typed data for contender registration signing

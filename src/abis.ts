@@ -30,6 +30,13 @@ export const GOVERNOR_ABI = [
   // Queue and execute functions
   "function queue(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) returns (uint256)",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
+  // Voting functions
+  "function castVote(uint256 proposalId, uint8 support) returns (uint256)",
+  "function castVoteWithReason(uint256 proposalId, uint8 support, string reason) returns (uint256)",
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function castVoteBySig(uint256 proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
+  // Read: get votes at snapshot
+  "function getVotes(address account, uint256 blockNumber) view returns (uint256)",
 ];
 
 /**

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Election write actions** - Prepare-only functions for election participation (contender registration, vote casting):
+  - `encodeElectionVoteParams()` / `decodeElectionVoteParams()` - ABI encode/decode `(address, uint256)` vote params
+  - `getAddContenderTypedData()` - Build EIP-712 typed data for contender registration signing
+  - `prepareAddContender()` - Prepare `addContender(proposalId, signature)` transaction
+  - `prepareContenderRegistration()` - Two-phase API: returns typed data for signing + `buildTransaction(signature)` for submission
+  - `prepareNomineeElectionVote()` / `prepareMemberElectionVote()` - Prepare `castVoteWithReasonAndParams` transactions
+  - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
+- **ERC20 Votes ABI** - `ERC20_VOTES_ABI` export for consumers needing `getPastVotes()` access
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
   - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)
@@ -62,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Internal TUI utilities `getAllFoldableKeys` and `toggleFoldKey` from public exports
+- Unused `erc20VotesInterface` export (only the ABI array `ERC20_VOTES_ABI` is needed)
 
 ## [0.4.0] - 2026-01-19
 

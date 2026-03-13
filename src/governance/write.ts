@@ -15,7 +15,7 @@ import { BigNumber } from "ethers";
 import { ADDRESSES, CHAIN_IDS, VOTE_SUPPORT } from "../constants";
 import type { VoteSupport } from "../constants";
 import { governorInterface } from "../abis";
-import { PreparedTransaction } from "../types";
+import { PreparedTransaction, chainIdToChain } from "../types";
 import { loggers } from "../utils/logger";
 
 const log = loggers.governance;
@@ -76,7 +76,7 @@ export function prepareCastVote(
     to,
     data,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `castVote(${supportLabel(support)}) on proposal ${proposalId}`,
   };
@@ -113,7 +113,7 @@ export function prepareCastVoteWithReason(
     to,
     data,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `castVoteWithReason(${supportLabel(support)}) on proposal ${proposalId}`,
   };
@@ -154,7 +154,7 @@ export function prepareCastVoteWithReasonAndParams(
     to,
     data,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `castVoteWithReasonAndParams(${supportLabel(support)}) on proposal ${proposalId}`,
   };

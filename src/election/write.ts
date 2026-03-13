@@ -12,7 +12,7 @@
 import { ethers, BigNumber } from "ethers";
 import { ADDRESSES, CHAIN_IDS } from "../constants";
 import { nomineeElectionGovernorInterface, memberElectionGovernorInterface } from "../abis";
-import { PreparedTransaction } from "../types";
+import { PreparedTransaction, chainIdToChain } from "../types";
 import { loggers } from "../utils/logger";
 
 const log = loggers.election;
@@ -155,7 +155,7 @@ export function prepareAddContender(
     to: governorAddress,
     data: calldata,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `addContender(${proposalId}) on NomineeElectionGovernor`,
   };
@@ -226,7 +226,7 @@ export function prepareNomineeElectionVote(
     to: governorAddress,
     data: calldata,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `castVoteWithReasonAndParams on NomineeElectionGovernor for ${target}`,
   };
@@ -264,7 +264,7 @@ export function prepareMemberElectionVote(
     to: governorAddress,
     data: calldata,
     value: "0",
-    chain: "arb1",
+    chain: chainIdToChain(chainId),
     chainId,
     description: `castVoteWithReasonAndParams on MemberElectionGovernor for ${target}`,
   };

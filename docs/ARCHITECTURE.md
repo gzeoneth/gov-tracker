@@ -173,11 +173,9 @@ All write-action modules follow the same pattern: encode transaction calldata an
 | `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage` | L2/L1 Timelocks |
 | `stages/proposal-queued.ts` | `prepareGovernorQueue` | Core/Treasury Governor |
 
-### Known Limitation: `chain` field is hardcoded
+### Chain derivation
 
-All write-action functions hardcode `chain: "arb1"` in `PreparedTransaction` regardless of the `chainId` parameter. This is intentional: the Arbitrum DAO governors and timelocks only exist on Arbitrum One (42161). The `chainId` parameter is an escape hatch for testnets and Anvil forks, where the `chain` label is not used for provider routing.
-
-If future deployments target other chains, a `chainIdToChain()` lookup should replace the hardcoded value across all write-action modules.
+Write-action functions that accept a `chainId` parameter derive the `chain` field via `chainIdToChain(chainId)` rather than hardcoding it. Functions without a `chainId` parameter (e.g., `prepareElectionCreation`, `prepareGovernorQueue`) use `chain: "arb1"` and `chainId: 42161` inline since they are Arbitrum One-specific.
 
 ---
 

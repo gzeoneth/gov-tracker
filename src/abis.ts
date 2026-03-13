@@ -144,6 +144,12 @@ export const NOMINEE_ELECTION_GOVERNOR_ABI = [
   "function votesReceived(uint256 proposalId, address contender) view returns (uint256)",
   "function isExcluded(uint256 proposalId, address nominee) view returns (bool)",
   "function quorum(uint256 blockNumber) view returns (uint256)",
+  // Write actions
+  "function name() view returns (string)",
+  "function addContender(uint256 proposalId, bytes signature) external",
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function isContender(uint256 proposalId, address possibleContender) view returns (bool)",
+  "function votesUsed(uint256 proposalId, address account) view returns (uint256)",
   // Events
   "event ContenderAdded(uint256 indexed proposalId, address indexed contender)",
   "event NewNominee(uint256 indexed proposalId, address indexed nominee)",
@@ -166,9 +172,21 @@ export const MEMBER_ELECTION_GOVERNOR_ABI = [
   "function topNominees(uint256 proposalId) view returns (address[])",
   "function fullWeightVotingDeadline(uint256 proposalId) view returns (uint256)",
   "function fullWeightDuration() view returns (uint256)",
+  // Write actions
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function votesUsed(uint256 proposalId, address account) view returns (uint256)",
   // Events
   "event VoteCastForNominee(address indexed voter, uint256 indexed proposalId, address indexed nominee, uint256 votes, uint256 weight, uint256 totalUsedVotes, uint256 usableVotes, uint256 weightReceived)",
 ];
+
+/**
+ * ERC20Votes ABI (for reading voting power at snapshot blocks)
+ */
+export const ERC20_VOTES_ABI = [
+  "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",
+];
+
+export const erc20VotesInterface = new ethers.utils.Interface(ERC20_VOTES_ABI);
 
 /**
  * ProposalCreated event signature for parsing

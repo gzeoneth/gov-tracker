@@ -161,6 +161,9 @@ export {
   buildDefaultTargets,
 } from "./constants";
 
+// ABIs (for consumers that need direct contract interaction)
+export { ERC20_VOTES_ABI } from "./abis";
+
 // Stage utilities
 export {
   findExecutableStage,
@@ -363,8 +366,21 @@ export {
   // Election details serialization
   serializeNomineeDetails,
   serializeMemberDetails,
+  // Election write actions (prepare-only)
+  encodeElectionVoteParams,
+  decodeElectionVoteParams,
+  getAddContenderTypedData,
+  prepareAddContender,
+  prepareContenderRegistration,
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
 } from "./election";
-export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
+export type {
+  PreparedElectionCreation,
+  ElectionProposalParams,
+  AddContenderTypedData,
+  PreparedContenderRegistration,
+} from "./election";
 
 // Checkpoint deduplication helpers
 export {

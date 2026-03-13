@@ -179,6 +179,7 @@ export {
 
 // ABIs — JSON format for wagmi/viem (full useReadContract/useWriteContract type inference)
 export {
+  // Full ABIs
   governorAbi,
   governorWithVetterAbi,
   timelockAbi,
@@ -187,6 +188,15 @@ export {
   nomineeElectionGovernorAbi,
   memberElectionGovernorAbi,
   erc20VotesAbi,
+  // Curated read/write subsets (use when full ABI exceeds viem type inference limits)
+  governorReadAbi,
+  governorWriteAbi,
+  nomineeElectionGovernorReadAbi,
+  nomineeElectionGovernorWriteAbi,
+  memberElectionGovernorReadAbi,
+  memberElectionGovernorWriteAbi,
+  timelockReadAbi,
+  timelockWriteAbi,
 } from "./abis-json";
 
 // Stage utilities

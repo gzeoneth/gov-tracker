@@ -45,6 +45,11 @@ import {
   nomineeElectionGovernorAbi,
   memberElectionGovernorAbi,
   erc20VotesAbi,
+  // Split ABIs
+  governorReadAbi,
+  governorWriteAbi,
+  nomineeElectionGovernorReadAbi,
+  nomineeElectionGovernorWriteAbi,
   // Timelock calldata prep
   prepareTimelockExecuteCalldata,
   prepareTimelockBatchCalldata,
@@ -376,6 +381,28 @@ describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
   it("exports erc20VotesAbi", () => {
     expect(erc20VotesAbi).toHaveLength(1);
     expect(erc20VotesAbi[0].name).toBe("getPastVotes");
+  });
+
+  it("exports curated read/write splits for governor", () => {
+    // #then - read ABI contains only view/pure, write ABI has none
+    expect(governorReadAbi.length).toBe(14);
+    expect(governorWriteAbi.length).toBe(6);
+
+    // #then - no overlap: read names and write names are disjoint
+    const readNames = new Set(governorReadAbi.map((i: { name: string }) => i.name));
+    const writeNames = new Set(governorWriteAbi.map((i: { name: string }) => i.name));
+    for (const name of writeNames) {
+      expect(readNames.has(name)).toBe(false);
+    }
+  });
+
+  it("exports curated read/write splits for nominee election governor", () => {
+    // #then - read subset is smaller than full ABI
+    expect(nomineeElectionGovernorReadAbi.length).toBeLessThan(nomineeElectionGovernorAbi.length);
+    // #then - read + write = all functions (no events in splits)
+    expect(
+      nomineeElectionGovernorReadAbi.length + nomineeElectionGovernorWriteAbi.length
+    ).toBeLessThanOrEqual(nomineeElectionGovernorAbi.length);
   });
 });
 

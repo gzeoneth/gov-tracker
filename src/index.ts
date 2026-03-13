@@ -163,8 +163,9 @@ export {
   PROPOSAL_STATE,
   PROPOSAL_STATE_MAP,
   PROPOSAL_STATE_LABEL,
+  isProposalState,
 } from "./constants";
-export type { VoteSupport } from "./constants";
+export type { VoteSupport, ProposalStateValue } from "./constants";
 
 // ABIs — human-readable format (ethers v5 compatible, `as const` for abitype)
 export {
@@ -231,6 +232,7 @@ export {
   getTimelockAddress,
   getProposalState,
   discoverProposalByTxHash,
+  queryProposalCreatedEvents,
 } from "./discovery/governor-discovery";
 export type { DiscoveredProposal } from "./discovery/governor-discovery";
 
@@ -436,8 +438,19 @@ export {
   prepareCastVote,
   prepareCastVoteWithReason,
   prepareCastVoteWithReasonAndParams,
+  // Read helpers (wagmi useReadContract / useReadContracts compatible)
+  readProposalState,
+  readProposalVotes,
+  readProposalSnapshot,
+  readProposalDeadline,
+  readQuorum,
+  readVotingPower,
+  readGetVotes,
+  readNomineeElectionState,
+  readMemberElectionState,
+  readElectionCount,
 } from "./governance";
-export type { GovernorTarget } from "./governance";
+export type { GovernorTarget, ReadContractParameters } from "./governance";
 
 // Checkpoint deduplication helpers
 export {

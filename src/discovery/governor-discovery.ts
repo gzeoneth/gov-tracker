@@ -454,3 +454,32 @@ export async function discoverProposalByTxHash(
       }
     : null;
 }
+
+/**
+ * Query all ProposalCreated events from a governor in a block range.
+ *
+ * Simpler alternative to the full tracking pipeline for consumers
+ * that just need raw proposal data.
+ *
+ * @param provider - L2 provider
+ * @param governorAddress - Governor contract address
+ * @param fromBlock - Start block (default: governance deployment block)
+ * @param toBlock - End block (default: latest)
+ */
+export async function queryProposalCreatedEvents(
+  provider: ethers.providers.Provider,
+  governorAddress: string,
+  fromBlock: number = GOVERNANCE_START_BLOCKS.L2,
+  toBlock?: number
+): Promise<ProposalData[]> {
+  const resolvedTo = toBlock ?? (await getCurrentBlockInfo(provider)).blockNumber;
+
+  const result = await searchLogsInChunks(provider, {
+    address: governorAddress,
+    topics: [EVENT_TOPICS.PROPOSAL_CREATED],
+    fromBlock,
+    toBlock: resolvedTo,
+  });
+
+  return result.logs.map(parseProposalCreatedEvent).filter((d): d is ProposalData => d !== null);
+}

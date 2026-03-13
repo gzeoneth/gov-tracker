@@ -406,6 +406,18 @@ export const PROPOSAL_STATE = {
 } as const;
 
 /**
+ * Numeric proposal state value type (0-7) for exhaustive switch checking.
+ */
+export type ProposalStateValue = (typeof PROPOSAL_STATE)[keyof typeof PROPOSAL_STATE];
+
+/**
+ * Type guard — narrows `number` to `ProposalStateValue` (0-7).
+ */
+export function isProposalState(n: number): n is ProposalStateValue {
+  return n >= 0 && n <= 7 && Number.isInteger(n);
+}
+
+/**
  * Lowercase proposal state labels, keyed by numeric state.
  *
  * Same as PROPOSAL_STATE_MAP but lowercase — matches the convention

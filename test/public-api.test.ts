@@ -54,6 +54,14 @@ import {
   // Timelock calldata prep
   prepareTimelockExecuteCalldata,
   prepareTimelockBatchCalldata,
+  // Read helpers
+  readProposalState,
+  readProposalVotes,
+  readVotingPower,
+  readQuorum,
+  readElectionCount,
+  // State type
+  isProposalState,
   // Utilities
   addressEquals,
   isAddressIn,
@@ -475,5 +483,64 @@ describe("Public API: Sync timelock calldata prep", () => {
     expect(tx.to).toBe(timelockAddr);
     expect(tx.data).toMatch(/^0x/);
     expect(tx.value).toBe("100"); // sum of values
+  });
+});
+
+describe("Public API: Read helpers (wagmi useReadContract)", () => {
+  it("readProposalState returns wagmi-compatible params", () => {
+    // #when
+    const params = readProposalState("12345");
+
+    // #then
+    expect(params.address).toBe(ADDRESSES.CONSTITUTIONAL_GOVERNOR);
+    expect(params.functionName).toBe("state");
+    expect(params.args).toEqual([BigInt("12345")]);
+    expect(params.chainId).toBe(CHAIN_IDS.ARB_ONE);
+    expect(Array.isArray(params.abi)).toBe(true);
+  });
+
+  it("readProposalState accepts governor shorthand", () => {
+    const params = readProposalState("1", "non-constitutional");
+    expect(params.address).toBe(ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readProposalVotes returns correct functionName", () => {
+    const params = readProposalVotes("12345");
+    expect(params.functionName).toBe("proposalVotes");
+  });
+
+  it("readVotingPower uses ARB_TOKEN by default", () => {
+    const params = readVotingPower("0x" + "aa".repeat(20), 100);
+    expect(params.address).toBe(ADDRESSES.ARB_TOKEN);
+    expect(params.functionName).toBe("getPastVotes");
+    expect(params.args).toEqual(["0x" + "aa".repeat(20), BigInt(100)]);
+  });
+
+  it("readQuorum accepts number or bigint blockNumber", () => {
+    const p1 = readQuorum(100);
+    const p2 = readQuorum(BigInt(100));
+    expect(p1.args).toEqual([BigInt(100)]);
+    expect(p2.args).toEqual([BigInt(100)]);
+  });
+
+  it("readElectionCount returns nominee governor params", () => {
+    const params = readElectionCount();
+    expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(params.functionName).toBe("electionCount");
+    expect(params.args).toEqual([]);
+  });
+});
+
+describe("Public API: ProposalStateValue type guard", () => {
+  it("isProposalState returns true for valid states 0-7", () => {
+    for (let i = 0; i <= 7; i++) {
+      expect(isProposalState(i)).toBe(true);
+    }
+  });
+
+  it("isProposalState returns false for invalid values", () => {
+    expect(isProposalState(-1)).toBe(false);
+    expect(isProposalState(8)).toBe(false);
+    expect(isProposalState(1.5)).toBe(false);
   });
 });

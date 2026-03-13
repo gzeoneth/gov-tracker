@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`), `PROPOSAL_STATE_MAP` (PascalCase reverse lookup), and `PROPOSAL_STATE_LABEL` (lowercase reverse lookup) now exported for consumers tracking proposal lifecycle
 - **ARB_TOKEN address** - `ADDRESSES.ARB_TOKEN` (`0x912C...6548`) exported — the last governance address consumers had to hardcode locally
 - **RPC utilities (public)** - `queryWithRetry`, `isPermanentError`, `isRetryableError`, `getErrorMessage` now exported for consumers building retry logic around the SDK
+- **Read helpers for wagmi** - `readProposalState`, `readProposalVotes`, `readProposalSnapshot`, `readProposalDeadline`, `readQuorum`, `readVotingPower`, `readGetVotes`, `readNomineeElectionState`, `readMemberElectionState`, `readElectionCount` — pure functions returning `{ address, abi, functionName, args }` for `useReadContract` / `useReadContracts` (multicall). Abstracts contract knowledge entirely
+- **Event query API** - `queryProposalCreatedEvents(provider, governorAddress, fromBlock, toBlock?)` returns `ProposalData[]` without the full tracking pipeline
+- **ProposalStateValue type** - Numeric union type (`0 | 1 | ... | 7`) derived from `PROPOSAL_STATE`, with `isProposalState()` type guard for exhaustive switch checking
 - **BigNumber sorting** - `compareBigNumbers` exported for sorting `CallScheduledData` arrays by index
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:

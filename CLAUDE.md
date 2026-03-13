@@ -106,6 +106,9 @@ src/
 │   ├── participants.ts     # Contenders, nominees, and vote tracking
 │   ├── details.ts          # Detailed election information
 │   └── status.ts           # Election status and phase determination
+├── governance/             # Governance proposal vote preparation
+│   ├── index.ts            # Module exports (public API)
+│   └── write.ts            # Vote transaction preparation (castVote variants)
 ├── calldata/               # Calldata decoding module
 ├── simulation/             # Simulation data preparation
 ├── discovery/              # Governor and timelock introspection

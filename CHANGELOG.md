@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **AddContenderTypedData compatibility** - `types.AddContenderMessage` field changed from `readonly` tuple with literal types to `Array<{ name: string; type: string }>`, fixing assignability errors with ethers v5 `signer._signTypedData()` and ethers v6 `signer.signTypedData()`
 - **BigNumber overflow** - Use `.gt()`/`.lt()` instead of `.toNumber()` for CallScheduled index sorting
 - **Discovery errors** - Provider errors during watermark verification now return `isValid: false`
 - **Decode errors** - `decodeRetryableTicket()`, `prepareTimelockSimulation()`, `convertScheduleToExecute()` return null on failure instead of throwing

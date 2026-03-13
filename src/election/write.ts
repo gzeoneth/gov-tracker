@@ -38,7 +38,7 @@ export interface AddContenderTypedData {
     verifyingContract: string;
   };
   types: {
-    AddContenderMessage: readonly [{ name: "proposalId"; type: "uint256" }];
+    AddContenderMessage: Array<{ name: string; type: string }>;
   };
   primaryType: "AddContenderMessage";
   message: {
@@ -121,7 +121,7 @@ export function getAddContenderTypedData(
       verifyingContract: governorAddress,
     },
     types: {
-      AddContenderMessage: [{ name: "proposalId", type: "uint256" }] as const,
+      AddContenderMessage: [{ name: "proposalId", type: "uint256" }],
     },
     primaryType: "AddContenderMessage",
     message: {

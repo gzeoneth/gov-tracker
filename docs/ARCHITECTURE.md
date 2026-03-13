@@ -25,6 +25,7 @@ src/
 │   └── bundled-cache.ts # Bundled cache extraction utilities
 ├── stages/              # Individual stage implementations
 ├── election/            # Security Council election tracking (7 files)
+├── governance/          # Governance proposal vote preparation
 ├── calldata/            # Calldata decoding and signature lookup
 ├── simulation/          # Simulation data preparation (Tenderly, etc.)
 ├── discovery/           # Governor & timelock introspection
@@ -155,6 +156,28 @@ L1: Outbox.execute() → L1 Timelock → creates retryables
                           ↓
 L2 (Arb1/Nova): ArbRetryableTx.redeem()
 ```
+
+---
+
+## Write Actions (Prepare-Only)
+
+All write-action modules follow the same pattern: encode transaction calldata and return a `PreparedTransaction`, but never execute. The caller handles signing and sending.
+
+### Modules
+
+| Module | Functions | Target Contracts |
+|--------|-----------|------------------|
+| `governance/write.ts` | `prepareCastVote`, `prepareCastVoteWithReason`, `prepareCastVoteWithReasonAndParams` | Core/Treasury Governor |
+| `election/write.ts` | `prepareAddContender`, `prepareContenderRegistration`, `prepareNomineeElectionVote`, `prepareMemberElectionVote` | Election Governors |
+| `election/params.ts` | `prepareElectionCreation`, `prepareMemberElectionTrigger`, `prepareMemberElectionExecution` | Election Governors |
+| `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage` | L2/L1 Timelocks |
+| `stages/proposal-queued.ts` | `prepareGovernorQueue` | Core/Treasury Governor |
+
+### Known Limitation: `chain` field is hardcoded
+
+All write-action functions hardcode `chain: "arb1"` in `PreparedTransaction` regardless of the `chainId` parameter. This is intentional: the Arbitrum DAO governors and timelocks only exist on Arbitrum One (42161). The `chainId` parameter is an escape hatch for testnets and Anvil forks, where the `chain` label is not used for provider routing.
+
+If future deployments target other chains, a `chainIdToChain()` lookup should replace the hardcoded value across all write-action modules.
 
 ---
 

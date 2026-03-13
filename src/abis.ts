@@ -186,8 +186,6 @@ export const ERC20_VOTES_ABI = [
   "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",
 ];
 
-export const erc20VotesInterface = new ethers.utils.Interface(ERC20_VOTES_ABI);
-
 /**
  * ProposalCreated event signature for parsing
  */

@@ -879,3 +879,104 @@ export async function prepareTimelockStage(
     options
   );
 }
+
+/**
+ * Standalone timelock execution preparation.
+ *
+ * Unlike `prepareTimelockStage` (which requires a `TrackedStage` from the
+ * tracking pipeline), this function queries the chain directly given only
+ * an address, operation ID, and salt.
+ *
+ * @param timelockAddress - The timelock contract address
+ * @param operationId - The bytes32 operation ID
+ * @param salt - The bytes32 salt used when the operation was scheduled
+ * @param provider - Provider for the chain where the timelock is deployed
+ * @param options - Standard prepare options plus optional fromBlock hint
+ */
+export async function prepareExecuteTimelock(
+  timelockAddress: string,
+  operationId: string,
+  salt: string,
+  provider: ethers.providers.Provider,
+  options: PrepareOptions & { fromBlock?: number } = {}
+): Promise<PrepareResult> {
+  logExecution("prepareExecuteTimelock %s on %s", operationId, timelockAddress);
+
+  const operationState = await getTimelockOperationState(timelockAddress, operationId, provider);
+
+  if (!operationState.isOperation) {
+    return failPrepare(`Operation ${operationId} not found on timelock ${timelockAddress}`);
+  }
+
+  if (!options.prepareCompleted && !operationState.isReady) {
+    return failPrepare(
+      `Operation ${operationId} is not ready for execution (state: ${operationState.state})`
+    );
+  }
+
+  const timelockState = await getTimelockState(timelockAddress, operationId, provider, {
+    fromBlock: options.fromBlock ?? 0,
+    skipExecutedSearch: true,
+    contractState: operationState,
+  });
+
+  const allData = collectAllScheduledData(timelockState);
+  if (allData.length === 0) {
+    return failPrepare(`No CallScheduled events found for operation ${operationId}`);
+  }
+
+  const sorted = [...allData].sort((a, b) => compareBigNumbers(a.index, b.index));
+  const predecessor = options.predecessor ?? sorted[0].predecessor ?? ethers.constants.HashZero;
+
+  const targets = sorted.map((d) => d.target);
+  const values = sorted.map((d) => d.value);
+  const payloads = sorted.map((d) => d.data);
+
+  const stageData: TimelockStageData = {
+    operationId,
+    timelockAddress,
+    salt,
+    predecessor,
+    callScheduledData: serializeCallScheduledDataArray(sorted),
+  };
+
+  const isBatch = validateSaltBatch(operationId, {
+    targets,
+    values,
+    payloads,
+    predecessor,
+    salt,
+  });
+
+  if (isBatch) {
+    return prepareTimelockBatch(
+      timelockAddress,
+      { targets, values, payloads, predecessor, salt: "" },
+      operationId,
+      stageData,
+      provider,
+      { ...options, salt }
+    );
+  }
+
+  const isSingle = validateSalt(operationId, {
+    target: targets[0],
+    value: values[0],
+    data: payloads[0],
+    predecessor,
+    salt,
+  });
+
+  if (!isSingle) {
+    return saltValidationError(operationId, salt);
+  }
+
+  return prepareTimelockOperation(
+    timelockAddress,
+    { target: targets[0], value: values[0], data: payloads[0], predecessor, salt: "" },
+    operationId,
+    stageData,
+    provider,
+    { ...options, salt }
+  );
+}

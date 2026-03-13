@@ -164,7 +164,16 @@ export {
 export type { VoteSupport } from "./constants";
 
 // ABIs (for consumers that need direct contract interaction)
-export { ERC20_VOTES_ABI } from "./abis";
+// Exported with `as const` for wagmi/viem compatibility — consumers can use
+// abitype's `parseAbi()` or viem's `parseAbi()` for full type inference.
+export {
+  GOVERNOR_ABI,
+  TIMELOCK_ABI,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  MEMBER_ELECTION_GOVERNOR_ABI,
+  SECURITY_COUNCIL_MANAGER_ABI,
+  ERC20_VOTES_ABI,
+} from "./abis";
 
 // Stage utilities
 export {
@@ -266,6 +275,7 @@ export {
   prepareTimelockOperation,
   prepareTimelockBatch,
   prepareTimelockStage,
+  prepareExecuteTimelock,
   calculateRetryableExecutionValue,
   calculateBatchRetryableValues,
 } from "./stages/timelock";

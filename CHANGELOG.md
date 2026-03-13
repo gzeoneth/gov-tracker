@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `prepareContenderRegistration()` - Two-phase API: returns typed data for signing + `buildTransaction(signature)` for submission
   - `prepareNomineeElectionVote()` / `prepareMemberElectionVote()` - Prepare `castVoteWithReasonAndParams` transactions
   - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
+- **Wagmi/viem-compatible ABI exports** - All exported ABI constants now use `as const` for full type inference with `abitype`/`parseAbi()`. Newly exported: `GOVERNOR_ABI`, `TIMELOCK_ABI`, `NOMINEE_ELECTION_GOVERNOR_ABI`, `MEMBER_ELECTION_GOVERNOR_ABI`, `SECURITY_COUNCIL_MANAGER_ABI`
+- **Standalone timelock execution** - `prepareExecuteTimelock(timelockAddress, operationId, salt, provider)` prepares a timelock `execute`/`executeBatch` transaction without requiring the full tracking pipeline. Auto-detects single vs batch operations from on-chain `CallScheduled` events
 - **ERC20 Votes ABI** - `ERC20_VOTES_ABI` export for consumers needing `getPastVotes()` access
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:

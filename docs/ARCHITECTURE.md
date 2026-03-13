@@ -170,7 +170,7 @@ All write-action modules follow the same pattern: encode transaction calldata an
 | `governance/write.ts` | `prepareCastVote`, `prepareCastVoteWithReason`, `prepareCastVoteWithReasonAndParams` | Core/Treasury Governor |
 | `election/write.ts` | `prepareAddContender`, `prepareContenderRegistration`, `prepareNomineeElectionVote`, `prepareMemberElectionVote` | Election Governors |
 | `election/params.ts` | `prepareElectionCreation`, `prepareMemberElectionTrigger`, `prepareMemberElectionExecution` | Election Governors |
-| `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage` | L2/L1 Timelocks |
+| `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage`, `prepareExecuteTimelock` | L2/L1 Timelocks |
 | `stages/proposal-queued.ts` | `prepareGovernorQueue` | Core/Treasury Governor |
 
 ### Chain derivation

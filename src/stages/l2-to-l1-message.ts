@@ -541,8 +541,8 @@ export async function prepareL2ToL1Message(
   return {
     success: true,
     prepared: {
-      to: outboxAddress,
-      data: calldata,
+      to: outboxAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: "0",
       chain: "ethereum",
       chainId: 1,

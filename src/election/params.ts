@@ -69,8 +69,8 @@ export function buildExecuteTransaction(
   ]);
 
   return {
-    to: governorAddress,
-    data: calldata,
+    to: governorAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
     value: "0",
     chain: "arb1",
     chainId: 42161,
@@ -138,8 +138,8 @@ export function prepareElectionCreation(
 
   return {
     transaction: {
-      to: nomineeGovernorAddress,
-      data: calldata,
+      to: nomineeGovernorAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: "0",
       chain: "arb1",
       chainId: 42161,

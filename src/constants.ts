@@ -61,6 +61,9 @@ export const ADDRESSES = {
   // L1ArbitrumTimelock magic address for retryable ticket detection
   // When a timelock operation's target is this address, the call is a retryable ticket
   RETRYABLE_TICKET_MAGIC: "0xa723C008e76E379c55599D2E4d93879BeaFDa79C",
+
+  // ARB governance token
+  ARB_TOKEN: "0x912CE59144191C1204E64559FE8253a0e49E6548",
 } as const;
 
 /**
@@ -401,6 +404,23 @@ export const PROPOSAL_STATE = {
   EXPIRED: 6,
   EXECUTED: 7,
 } as const;
+
+/**
+ * Lowercase proposal state labels, keyed by numeric state.
+ *
+ * Same as PROPOSAL_STATE_MAP but lowercase — matches the convention
+ * used by most governance UIs.
+ */
+export const PROPOSAL_STATE_LABEL: Record<number, string> = {
+  0: "pending",
+  1: "active",
+  2: "canceled",
+  3: "defeated",
+  4: "succeeded",
+  5: "queued",
+  6: "expired",
+  7: "executed",
+};
 
 /**
  * OpenZeppelin Governor vote support values (Governor.CountingSimple)

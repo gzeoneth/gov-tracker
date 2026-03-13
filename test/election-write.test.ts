@@ -100,7 +100,7 @@ describe("election/write", () => {
       expect(result.primaryType).toBe("AddContenderMessage");
       expect(result.types.AddContenderMessage).toEqual([{ name: "proposalId", type: "uint256" }]);
 
-      expect(result.message.proposalId).toBe("12345");
+      expect(result.message.proposalId).toBe(BigInt("12345"));
     });
 
     it("should accept custom governor address and chain ID", () => {

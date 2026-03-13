@@ -35,14 +35,14 @@ export interface AddContenderTypedData {
     name: string;
     version: string;
     chainId: number;
-    verifyingContract: string;
+    verifyingContract: `0x${string}`;
   };
   types: {
     AddContenderMessage: Array<{ name: string; type: string }>;
   };
   primaryType: "AddContenderMessage";
   message: {
-    proposalId: string;
+    proposalId: bigint;
   };
 }
 
@@ -118,14 +118,14 @@ export function getAddContenderTypedData(
       name: governorName,
       version: "1",
       chainId,
-      verifyingContract: governorAddress,
+      verifyingContract: governorAddress as `0x${string}`,
     },
     types: {
       AddContenderMessage: [{ name: "proposalId", type: "uint256" }],
     },
     primaryType: "AddContenderMessage",
     message: {
-      proposalId,
+      proposalId: BigInt(proposalId),
     },
   };
 }
@@ -152,8 +152,8 @@ export function prepareAddContender(
   ]);
 
   return {
-    to: governorAddress,
-    data: calldata,
+    to: governorAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,
@@ -223,8 +223,8 @@ export function prepareNomineeElectionVote(
   );
 
   return {
-    to: governorAddress,
-    data: calldata,
+    to: governorAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,
@@ -261,8 +261,8 @@ export function prepareMemberElectionVote(
   );
 
   return {
-    to: governorAddress,
-    data: calldata,
+    to: governorAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,

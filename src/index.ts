@@ -162,12 +162,11 @@ export {
   VOTE_SUPPORT,
   PROPOSAL_STATE,
   PROPOSAL_STATE_MAP,
+  PROPOSAL_STATE_LABEL,
 } from "./constants";
 export type { VoteSupport } from "./constants";
 
-// ABIs (for consumers that need direct contract interaction)
-// Exported with `as const` for wagmi/viem compatibility — consumers can use
-// abitype's `parseAbi()` or viem's `parseAbi()` for full type inference.
+// ABIs — human-readable format (ethers v5 compatible, `as const` for abitype)
 export {
   GOVERNOR_ABI,
   GOVERNOR_WITH_VETTER_ABI,
@@ -177,6 +176,18 @@ export {
   SECURITY_COUNCIL_MANAGER_ABI,
   ERC20_VOTES_ABI,
 } from "./abis";
+
+// ABIs — JSON format for wagmi/viem (full useReadContract/useWriteContract type inference)
+export {
+  governorAbi,
+  governorWithVetterAbi,
+  timelockAbi,
+  securityCouncilManagerAbi,
+  inboxAbi,
+  nomineeElectionGovernorAbi,
+  memberElectionGovernorAbi,
+  erc20VotesAbi,
+} from "./abis-json";
 
 // Stage utilities
 export {
@@ -279,6 +290,8 @@ export {
   prepareTimelockBatch,
   prepareTimelockStage,
   prepareExecuteTimelock,
+  prepareTimelockExecuteCalldata,
+  prepareTimelockBatchCalldata,
   calculateRetryableExecutionValue,
   calculateBatchRetryableValues,
 } from "./stages/timelock";

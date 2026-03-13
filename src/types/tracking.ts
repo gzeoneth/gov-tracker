@@ -30,8 +30,8 @@ export type PrepareResult =
   | { success: false; error: string };
 
 export interface PreparedTransaction {
-  to: string;
-  data: string;
+  to: `0x${string}`;
+  data: `0x${string}`;
   value: string;
   chain: Chain;
   chainId: ChainId;

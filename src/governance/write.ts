@@ -30,12 +30,12 @@ export type GovernorTarget = "constitutional" | "non-constitutional";
 // Internals
 // ============================================================================
 
-function resolveGovernorAddress(governorAddressOrTarget?: string): string {
+function resolveGovernorAddress(governorAddressOrTarget?: string): `0x${string}` {
   if (!governorAddressOrTarget) return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
   if (governorAddressOrTarget === "constitutional") return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
   if (governorAddressOrTarget === "non-constitutional")
     return ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR;
-  return governorAddressOrTarget;
+  return governorAddressOrTarget as `0x${string}`;
 }
 
 function supportLabel(support: VoteSupport): string {
@@ -74,7 +74,7 @@ export function prepareCastVote(
 
   return {
     to,
-    data,
+    data: data as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,
@@ -111,7 +111,7 @@ export function prepareCastVoteWithReason(
 
   return {
     to,
-    data,
+    data: data as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,
@@ -152,7 +152,7 @@ export function prepareCastVoteWithReasonAndParams(
 
   return {
     to,
-    data,
+    data: data as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
     chainId,

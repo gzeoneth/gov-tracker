@@ -24,9 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `prepareContenderRegistration()` - Two-phase API: returns typed data for signing + `buildTransaction(signature)` for submission
   - `prepareNomineeElectionVote()` / `prepareMemberElectionVote()` - Prepare `castVoteWithReasonAndParams` transactions
   - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
+- **JSON ABI exports for wagmi/viem** - New `governorAbi`, `timelockAbi`, `nomineeElectionGovernorAbi`, `memberElectionGovernorAbi`, `erc20VotesAbi` (and more) exported as JSON `as const` for full `useReadContract`/`useWriteContract` type inference. Eliminates need for consumer-maintained ABI files
 - **Wagmi/viem-compatible ABI exports** - All exported ABI constants now use `as const` for full type inference with `abitype`/`parseAbi()`. Newly exported: `GOVERNOR_ABI`, `TIMELOCK_ABI`, `NOMINEE_ELECTION_GOVERNOR_ABI`, `MEMBER_ELECTION_GOVERNOR_ABI`, `SECURITY_COUNCIL_MANAGER_ABI`
 - **Standalone timelock execution** - `prepareExecuteTimelock(timelockAddress, operationId, salt, provider)` prepares a timelock `execute`/`executeBatch` transaction without requiring the full tracking pipeline. Auto-detects single vs batch operations from on-chain `CallScheduled` events
-- **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`) and `PROPOSAL_STATE_MAP` (reverse lookup) now exported for consumers tracking proposal lifecycle
+- **Sync timelock calldata prep** - `prepareTimelockExecuteCalldata()` and `prepareTimelockBatchCalldata()` encode timelock execution calldata without a provider, for consumers that already have operation params from tracking
+- **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`), `PROPOSAL_STATE_MAP` (PascalCase reverse lookup), and `PROPOSAL_STATE_LABEL` (lowercase reverse lookup) now exported for consumers tracking proposal lifecycle
+- **ARB_TOKEN address** - `ADDRESSES.ARB_TOKEN` (`0x912C...6548`) exported — the last governance address consumers had to hardcode locally
 - **RPC utilities (public)** - `queryWithRetry`, `isPermanentError`, `isRetryableError`, `getErrorMessage` now exported for consumers building retry logic around the SDK
 - **BigNumber sorting** - `compareBigNumbers` exported for sorting `CallScheduledData` arrays by index
 - **ERC20 Votes ABI** - `ERC20_VOTES_ABI` and `GOVERNOR_WITH_VETTER_ABI` exports for consumers needing direct contract interaction
@@ -57,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **PreparedTransaction typed hex fields** - `to` and `data` are now typed as `` `0x${string}` `` instead of `string`, eliminating consumer-side casts for wagmi/viem integration
+- **AddContenderTypedData wagmi compatibility** - `message.proposalId` is now `bigint` (was `string`), matching wagmi's `useSignTypedData` expectation. `domain.verifyingContract` is now `` `0x${string}` ``
 - **AddContenderTypedData compatibility** - `types.AddContenderMessage` field changed from `readonly` tuple with literal types to `Array<{ name: string; type: string }>`, fixing assignability errors with ethers v5 `signer._signTypedData()` and ethers v6 `signer.signTypedData()`
 - **PreparedTransaction chain/chainId consistency** - Write-action functions that accept `chainId` now derive `chain` via `chainIdToChain(chainId)` instead of hardcoding `"arb1"`, preventing misrouted transactions when targeting non-42161 deployments
 - **BigNumber overflow** - Use `.gt()`/`.lt()` instead of `.toNumber()` for CallScheduled index sorting

@@ -36,8 +36,18 @@ import {
   DEFAULT_RPC_URLS,
   PROPOSAL_STATE,
   PROPOSAL_STATE_MAP,
-  // ABIs
+  PROPOSAL_STATE_LABEL,
+  // ABIs — human-readable
   GOVERNOR_WITH_VETTER_ABI,
+  // ABIs — JSON (wagmi/viem)
+  governorAbi,
+  timelockAbi,
+  nomineeElectionGovernorAbi,
+  memberElectionGovernorAbi,
+  erc20VotesAbi,
+  // Timelock calldata prep
+  prepareTimelockExecuteCalldata,
+  prepareTimelockBatchCalldata,
   // Utilities
   addressEquals,
   isAddressIn,
@@ -336,5 +346,93 @@ describe("Public API: BigNumber Utilities", () => {
     expect(compareBigNumbers(a, b)).toBe(-1);
     expect(compareBigNumbers(b, a)).toBe(1);
     expect(compareBigNumbers(a, c)).toBe(0);
+  });
+});
+
+describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
+  it("exports governorAbi in JSON format with correct structure", () => {
+    // #then - should be a non-empty array of objects (not strings)
+    expect(governorAbi.length).toBeGreaterThan(0);
+    expect(typeof governorAbi[0]).toBe("object");
+    // #then - should have standard JSON ABI fields
+    const stateFunc = governorAbi.find((item: { name?: string }) => item.name === "state") as any;
+    expect(stateFunc).toBeDefined();
+    expect(stateFunc!.type).toBe("function");
+    expect(stateFunc!.stateMutability).toBe("view");
+    expect(stateFunc!.inputs).toHaveLength(1);
+    expect(stateFunc!.inputs[0].type).toBe("uint256");
+  });
+
+  it("exports timelockAbi with events", () => {
+    const events = timelockAbi.filter((item: { type: string }) => item.type === "event");
+    expect(events.length).toBeGreaterThan(0);
+  });
+
+  it("exports election ABIs", () => {
+    expect(nomineeElectionGovernorAbi.length).toBeGreaterThan(0);
+    expect(memberElectionGovernorAbi.length).toBeGreaterThan(0);
+  });
+
+  it("exports erc20VotesAbi", () => {
+    expect(erc20VotesAbi).toHaveLength(1);
+    expect(erc20VotesAbi[0].name).toBe("getPastVotes");
+  });
+});
+
+describe("Public API: ARB_TOKEN address", () => {
+  it("exports ARB governance token address", () => {
+    expect(ADDRESSES.ARB_TOKEN).toBe("0x912CE59144191C1204E64559FE8253a0e49E6548");
+  });
+});
+
+describe("Public API: Lowercase proposal state labels", () => {
+  it("exports PROPOSAL_STATE_LABEL with lowercase values", () => {
+    expect(PROPOSAL_STATE_LABEL[0]).toBe("pending");
+    expect(PROPOSAL_STATE_LABEL[1]).toBe("active");
+    expect(PROPOSAL_STATE_LABEL[7]).toBe("executed");
+    expect(Object.keys(PROPOSAL_STATE_LABEL)).toHaveLength(8);
+  });
+});
+
+describe("Public API: Sync timelock calldata prep", () => {
+  it("prepareTimelockExecuteCalldata encodes execute() without provider", () => {
+    // #given
+    const timelockAddr = "0x" + "aa".repeat(20);
+    const params = {
+      target: "0x" + "bb".repeat(20),
+      value: BigNumber.from(0),
+      data: "0xdeadbeef",
+      predecessor: "0x" + "00".repeat(32),
+      salt: "0x" + "cc".repeat(32),
+    };
+
+    // #when
+    const tx = prepareTimelockExecuteCalldata(timelockAddr, params, "0x" + "dd".repeat(32));
+
+    // #then
+    expect(tx.to).toBe(timelockAddr);
+    expect(tx.data).toMatch(/^0x/);
+    expect(tx.chain).toBe("arb1");
+    expect(tx.operationId).toBe("0x" + "dd".repeat(32));
+  });
+
+  it("prepareTimelockBatchCalldata encodes executeBatch() without provider", () => {
+    // #given
+    const timelockAddr = "0x" + "aa".repeat(20);
+    const params = {
+      targets: ["0x" + "bb".repeat(20), "0x" + "cc".repeat(20)],
+      values: [BigNumber.from(0), BigNumber.from(100)],
+      payloads: ["0xdead", "0xbeef"],
+      predecessor: "0x" + "00".repeat(32),
+      salt: "0x" + "11".repeat(32),
+    };
+
+    // #when
+    const tx = prepareTimelockBatchCalldata(timelockAddr, params, "0x" + "ee".repeat(32));
+
+    // #then
+    expect(tx.to).toBe(timelockAddr);
+    expect(tx.data).toMatch(/^0x/);
+    expect(tx.value).toBe("100"); // sum of values
   });
 });

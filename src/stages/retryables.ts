@@ -381,8 +381,8 @@ export async function prepareRetryableRedemption(
   return {
     success: true,
     prepared: {
-      to: ADDRESSES.ARB_RETRYABLE_TX,
-      data: calldata,
+      to: ADDRESSES.ARB_RETRYABLE_TX as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: "0",
       chain: targetChain,
       chainId: targetChainId,

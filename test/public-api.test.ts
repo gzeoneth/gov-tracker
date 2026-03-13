@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { BigNumber } from "ethers";
+import { ethers, BigNumber } from "ethers";
 
 // Import all public types to verify they're exported
 import type {
@@ -38,6 +38,7 @@ import {
   PROPOSAL_STATE_MAP,
   PROPOSAL_STATE_LABEL,
   // ABIs — human-readable
+  GOVERNOR_ABI,
   GOVERNOR_WITH_VETTER_ABI,
   // ABIs — JSON (wagmi/viem)
   governorAbi,
@@ -305,9 +306,22 @@ describe("Public API: Proposal State", () => {
 
 describe("Public API: ABI Exports", () => {
   it("exports GOVERNOR_WITH_VETTER_ABI for Security Council vetting", () => {
-    // #then - should contain vetter-specific functions
     expect(GOVERNOR_WITH_VETTER_ABI).toContain("function vetter() view returns (address)");
     expect(GOVERNOR_WITH_VETTER_ABI.length).toBe(3);
+  });
+
+  it("creates ethers v5 Interface from as-const human-readable ABIs", () => {
+    // #given - GOVERNOR_ABI exported with `as const`
+    const iface = new ethers.utils.Interface(GOVERNOR_ABI);
+
+    // #then - can look up functions and encode/decode round-trip
+    expect(iface.getFunction("state")).toBeDefined();
+    expect(iface.getFunction("castVote")).toBeDefined();
+
+    const data = iface.encodeFunctionData("castVote", [BigNumber.from("12345"), 1]);
+    const decoded = iface.decodeFunctionData("castVote", data);
+    expect(decoded.proposalId.toString()).toBe("12345");
+    expect(decoded.support).toBe(1);
   });
 });
 

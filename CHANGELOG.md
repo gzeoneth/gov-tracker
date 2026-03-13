@@ -24,15 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `prepareContenderRegistration()` - Two-phase API: returns typed data for signing + `buildTransaction(signature)` for submission
   - `prepareNomineeElectionVote()` / `prepareMemberElectionVote()` - Prepare `castVoteWithReasonAndParams` transactions
   - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
-- **JSON ABI exports for wagmi/viem** - New `governorAbi`, `timelockAbi`, `nomineeElectionGovernorAbi`, `memberElectionGovernorAbi`, `erc20VotesAbi` (and more) exported as JSON `as const` for full `useReadContract`/`useWriteContract` type inference. Curated read/write subsets (`governorReadAbi`, `governorWriteAbi`, `nomineeElectionGovernorReadAbi`, etc.) for large ABIs that exceed viem's type inference limits. Eliminates need for consumer-maintained ABI files
-- **Wagmi/viem-compatible ABI exports** - All exported ABI constants now use `as const` for full type inference with `abitype`/`parseAbi()`. Newly exported: `GOVERNOR_ABI`, `TIMELOCK_ABI`, `NOMINEE_ELECTION_GOVERNOR_ABI`, `MEMBER_ELECTION_GOVERNOR_ABI`, `SECURITY_COUNCIL_MANAGER_ABI`
+- **ABI exports** - All governance ABIs now publicly exported in two formats: human-readable `as const` (`GOVERNOR_ABI`, `TIMELOCK_ABI`, etc.) for ethers v5 and abitype, and JSON `as const` (`governorAbi`, `timelockAbi`, etc.) for wagmi/viem `useReadContract`/`useWriteContract` type inference. Curated read/write subsets (`governorReadAbi`, `governorWriteAbi`, `nomineeElectionGovernorReadAbi`, etc.) for large ABIs that exceed viem's type inference limits
 - **Standalone timelock execution** - `prepareExecuteTimelock(timelockAddress, operationId, salt, provider)` prepares a timelock `execute`/`executeBatch` transaction without requiring the full tracking pipeline. Auto-detects single vs batch operations from on-chain `CallScheduled` events
 - **Sync timelock calldata prep** - `prepareTimelockExecuteCalldata()` and `prepareTimelockBatchCalldata()` encode timelock execution calldata without a provider, for consumers that already have operation params from tracking
 - **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`), `PROPOSAL_STATE_MAP` (PascalCase reverse lookup), and `PROPOSAL_STATE_LABEL` (lowercase reverse lookup) now exported for consumers tracking proposal lifecycle
 - **ARB_TOKEN address** - `ADDRESSES.ARB_TOKEN` (`0x912C...6548`) exported — the last governance address consumers had to hardcode locally
 - **RPC utilities (public)** - `queryWithRetry`, `isPermanentError`, `isRetryableError`, `getErrorMessage` now exported for consumers building retry logic around the SDK
 - **BigNumber sorting** - `compareBigNumbers` exported for sorting `CallScheduledData` arrays by index
-- **ERC20 Votes ABI** - `ERC20_VOTES_ABI` and `GOVERNOR_WITH_VETTER_ABI` exports for consumers needing direct contract interaction
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
   - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)

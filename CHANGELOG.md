@@ -26,7 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
 - **Wagmi/viem-compatible ABI exports** - All exported ABI constants now use `as const` for full type inference with `abitype`/`parseAbi()`. Newly exported: `GOVERNOR_ABI`, `TIMELOCK_ABI`, `NOMINEE_ELECTION_GOVERNOR_ABI`, `MEMBER_ELECTION_GOVERNOR_ABI`, `SECURITY_COUNCIL_MANAGER_ABI`
 - **Standalone timelock execution** - `prepareExecuteTimelock(timelockAddress, operationId, salt, provider)` prepares a timelock `execute`/`executeBatch` transaction without requiring the full tracking pipeline. Auto-detects single vs batch operations from on-chain `CallScheduled` events
-- **ERC20 Votes ABI** - `ERC20_VOTES_ABI` export for consumers needing `getPastVotes()` access
+- **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`) and `PROPOSAL_STATE_MAP` (reverse lookup) now exported for consumers tracking proposal lifecycle
+- **RPC utilities (public)** - `queryWithRetry`, `isPermanentError`, `isRetryableError`, `getErrorMessage` now exported for consumers building retry logic around the SDK
+- **BigNumber sorting** - `compareBigNumbers` exported for sorting `CallScheduledData` arrays by index
+- **ERC20 Votes ABI** - `ERC20_VOTES_ABI` and `GOVERNOR_WITH_VETTER_ABI` exports for consumers needing direct contract interaction
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
   - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)

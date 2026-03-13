@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { BigNumber } from "ethers";
 
 // Import all public types to verify they're exported
 import type {
@@ -33,9 +34,19 @@ import {
   NETWORK_IDS,
   TIMELOCK_SELECTORS,
   DEFAULT_RPC_URLS,
+  PROPOSAL_STATE,
+  PROPOSAL_STATE_MAP,
+  // ABIs
+  GOVERNOR_WITH_VETTER_ABI,
   // Utilities
   addressEquals,
   isAddressIn,
+  compareBigNumbers,
+  // RPC utilities
+  isPermanentError,
+  isRetryableError,
+  getErrorMessage,
+  queryWithRetry,
 } from "../src";
 
 describe("Public API: Types", () => {
@@ -253,5 +264,77 @@ describe("Public API: Address Utilities", () => {
     expect(isAddressIn(addr, addrs)).toBe(true);
     // #then - address not in array should return false
     expect(isAddressIn("0x0000000000000000000000000000000000000000", addrs)).toBe(false);
+  });
+});
+
+describe("Public API: Proposal State", () => {
+  it("exports PROPOSAL_STATE with OpenZeppelin Governor state values", () => {
+    // #then - numeric state values should match OpenZeppelin Governor spec
+    expect(PROPOSAL_STATE.PENDING).toBe(0);
+    expect(PROPOSAL_STATE.ACTIVE).toBe(1);
+    expect(PROPOSAL_STATE.CANCELED).toBe(2);
+    expect(PROPOSAL_STATE.DEFEATED).toBe(3);
+    expect(PROPOSAL_STATE.SUCCEEDED).toBe(4);
+    expect(PROPOSAL_STATE.QUEUED).toBe(5);
+    expect(PROPOSAL_STATE.EXPIRED).toBe(6);
+    expect(PROPOSAL_STATE.EXECUTED).toBe(7);
+  });
+
+  it("exports PROPOSAL_STATE_MAP for numeric-to-string conversion", () => {
+    // #then - reverse mapping should produce correct state names
+    expect(PROPOSAL_STATE_MAP[0]).toBe("Pending");
+    expect(PROPOSAL_STATE_MAP[7]).toBe("Executed");
+    expect(Object.keys(PROPOSAL_STATE_MAP)).toHaveLength(8);
+  });
+});
+
+describe("Public API: ABI Exports", () => {
+  it("exports GOVERNOR_WITH_VETTER_ABI for Security Council vetting", () => {
+    // #then - should contain vetter-specific functions
+    expect(GOVERNOR_WITH_VETTER_ABI).toContain("function vetter() view returns (address)");
+    expect(GOVERNOR_WITH_VETTER_ABI.length).toBe(3);
+  });
+});
+
+describe("Public API: RPC Utilities", () => {
+  it("exports error classification functions", () => {
+    // #given - a non-error value and a revert error
+    const revertError = new Error("execution reverted");
+    const timeoutError = new Error("ETIMEDOUT");
+
+    // #then - revert errors are permanent (won't succeed on retry)
+    expect(isPermanentError(revertError)).toBe(true);
+    expect(isRetryableError(revertError)).toBe(false);
+
+    // #then - timeout errors are retryable
+    expect(isPermanentError(timeoutError)).toBe(false);
+    expect(isRetryableError(timeoutError)).toBe(true);
+  });
+
+  it("exports getErrorMessage for safe error extraction", () => {
+    // #then - extracts message from Error objects
+    expect(getErrorMessage(new Error("test"))).toBe("test");
+    // #then - converts non-Error values to string
+    expect(getErrorMessage("raw string")).toBe("raw string");
+    expect(getErrorMessage(42)).toBe("42");
+  });
+
+  it("exports queryWithRetry as a function", () => {
+    // #then - queryWithRetry should be a function
+    expect(typeof queryWithRetry).toBe("function");
+  });
+});
+
+describe("Public API: BigNumber Utilities", () => {
+  it("exports compareBigNumbers for sorting", () => {
+    // #given
+    const a = BigNumber.from(1);
+    const b = BigNumber.from(2);
+    const c = BigNumber.from(1);
+
+    // #then
+    expect(compareBigNumbers(a, b)).toBe(-1);
+    expect(compareBigNumbers(b, a)).toBe(1);
+    expect(compareBigNumbers(a, c)).toBe(0);
   });
 });

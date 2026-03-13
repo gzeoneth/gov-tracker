@@ -160,6 +160,8 @@ export {
   isElectionGovernor,
   buildDefaultTargets,
   VOTE_SUPPORT,
+  PROPOSAL_STATE,
+  PROPOSAL_STATE_MAP,
 } from "./constants";
 export type { VoteSupport } from "./constants";
 
@@ -168,6 +170,7 @@ export type { VoteSupport } from "./constants";
 // abitype's `parseAbi()` or viem's `parseAbi()` for full type inference.
 export {
   GOVERNOR_ABI,
+  GOVERNOR_WITH_VETTER_ABI,
   TIMELOCK_ABI,
   NOMINEE_ELECTION_GOVERNOR_ABI,
   MEMBER_ELECTION_GOVERNOR_ABI,
@@ -321,12 +324,18 @@ export {
 } from "./utils/stage-metadata";
 export type { StageMetadata } from "./utils/stage-metadata";
 
-// Address utilities
-export { addressEquals, isAddressIn, getChain } from "./utils/chain";
+// Chain and address utilities
+export { addressEquals, isAddressIn, getChain, compareBigNumbers } from "./utils/chain";
 export { chainIdToChain, chainToChainId, getChainDisplayName } from "./types";
 
-// Error classification
-export { isGasEstimationError } from "./utils/rpc-utils";
+// Error classification and RPC utilities
+export {
+  isGasEstimationError,
+  isPermanentError,
+  isRetryableError,
+  getErrorMessage,
+  queryWithRetry,
+} from "./utils/rpc-utils";
 
 // Security utilities
 export {

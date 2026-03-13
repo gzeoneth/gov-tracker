@@ -71,6 +71,9 @@ export interface PreparedContenderRegistration {
  * @returns ABI-encoded bytes string
  */
 export function encodeElectionVoteParams(target: string, votes: string | BigNumber): string {
+  if (!ethers.utils.isAddress(target)) {
+    throw new Error(`Invalid target address: ${target}`);
+  }
   const votesBN = BigNumber.isBigNumber(votes) ? votes : BigNumber.from(votes);
   return ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [target, votesBN]);
 }

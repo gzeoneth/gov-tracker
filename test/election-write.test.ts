@@ -47,6 +47,10 @@ describe("election/write", () => {
       expect(encoded.length).toBe(2 + 128);
     });
 
+    it("should reject invalid address", () => {
+      expect(() => encodeElectionVoteParams("invalid", "1000")).toThrow("Invalid target address");
+    });
+
     it("should handle zero votes", () => {
       const target = "0x" + "ab".repeat(20);
 

@@ -144,6 +144,15 @@ export const DEFAULT_RPC_URLS = {
   NOVA: "https://nova.arbitrum.io/rpc",
 } as const;
 
+/**
+ * Pre-configured ElectionConfig for Arbitrum One mainnet.
+ */
+export const MAINNET_ELECTION_CONFIG = {
+  nomineeGovernorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+  chainId: CHAIN_IDS.ARB_ONE,
+} as const;
+
 // Event Topics (Pre-computed keccak256 hashes)
 
 /**

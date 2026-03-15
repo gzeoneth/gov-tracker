@@ -1,13 +1,21 @@
 import { ethers, BigNumber } from "ethers";
-import { ADDRESSES } from "../constants";
+import { ADDRESSES, MAINNET_ELECTION_CONFIG, PROPOSAL_STATE_MAP } from "../constants";
 import { formatDuration } from "../utils/formatters";
 import { queryWithRetry } from "../utils/rpc-utils";
-import { CohortType, ElectionPhase, ElectionStatus, ProposalState } from "../types";
+import {
+  CohortType,
+  ElectionConfig,
+  ElectionPhase,
+  ElectionStatus,
+  ElectionStatusWithPhase,
+  ProposalState,
+} from "../types";
 import { getL1BlockNumberFromL2 } from "../utils/timing";
 import { loggers } from "../utils/logger";
 import { nomineeElectionGovernorInterface } from "../abis";
-import { getNomineeGovernor } from "./contracts";
+import { getNomineeGovernor, getMemberGovernor } from "./contracts";
 import { multicall, buildCallInput } from "../utils/multicall";
+import { getElectionProposalIds } from "./proposal-ids";
 
 const log = loggers.election;
 
@@ -160,4 +168,86 @@ export async function hasVettingPeriod(
   } catch {
     return false;
   }
+}
+
+/**
+ * Combined status + phase lookup for a specific election.
+ *
+ * Returns both the global election creation status (from `checkElectionStatus`)
+ * and the lifecycle phase of the specified `electionIndex`. The `status` field
+ * describes whether a new election can be created; the `phase` field describes
+ * where the specified election is in its lifecycle.
+ *
+ * @param l2Provider - L2 provider
+ * @param l1Provider - L1 provider
+ * @param electionIndex - The election index to check (0-based)
+ * @param config - Deployment config with contract addresses (defaults to mainnet)
+ */
+export async function getElectionStatus(
+  l2Provider: ethers.providers.Provider,
+  l1Provider: ethers.providers.Provider,
+  electionIndex: number,
+  config: ElectionConfig = MAINNET_ELECTION_CONFIG
+): Promise<ElectionStatusWithPhase> {
+  const { nomineeGovernorAddress, memberGovernorAddress } = config;
+
+  const [status, proposalIds] = await Promise.all([
+    checkElectionStatus(l2Provider, l1Provider, nomineeGovernorAddress),
+    getElectionProposalIds(electionIndex, l2Provider, {
+      nomineeGovernorAddress,
+      memberGovernorAddress,
+    }),
+  ]);
+
+  const { nomineeProposalId, memberProposalId } = proposalIds;
+
+  let nomineeProposalState: ProposalState | null = null;
+  let memberProposalState: ProposalState | null = null;
+  let isInVettingPeriod = false;
+
+  if (nomineeProposalId) {
+    const nominee = getNomineeGovernor(nomineeGovernorAddress, l2Provider);
+    const stateNum = await queryWithRetry<number>(() => nominee.state(nomineeProposalId));
+    nomineeProposalState = proposalStateToString(stateNum);
+
+    if (nomineeProposalState === "Succeeded") {
+      try {
+        const deadline = await queryWithRetry<BigNumber>(() =>
+          nominee.proposalVettingDeadline(nomineeProposalId)
+        );
+        const l1BlockNumber = await getL1BlockNumberFromL2(l2Provider);
+        isInVettingPeriod = l1BlockNumber.lte(deadline);
+      } catch {
+        // No vetting period on this governor
+      }
+    }
+  }
+
+  if (memberProposalId) {
+    const member = getMemberGovernor(memberGovernorAddress, l2Provider);
+    const stateNum = await queryWithRetry<number>(() => member.state(memberProposalId));
+    memberProposalState = proposalStateToString(stateNum);
+  }
+
+  const phase = determineElectionPhase(
+    nomineeProposalState,
+    memberProposalId,
+    memberProposalState,
+    isInVettingPeriod
+  );
+
+  return {
+    status,
+    phase,
+    nomineeProposalId,
+    memberProposalId,
+    nomineeProposalState,
+    memberProposalState,
+  };
+}
+
+function proposalStateToString(state: number): ProposalState {
+  const name = PROPOSAL_STATE_MAP[state];
+  if (!name) throw new Error(`Unknown proposal state: ${state}`);
+  return name;
 }

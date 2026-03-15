@@ -115,6 +115,8 @@ export type {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
+  ElectionStatusWithPhase,
+  ElectionConfig,
   ElectionCheckResult,
   // Election participant types
   ElectionContender,
@@ -164,6 +166,7 @@ export {
   PROPOSAL_STATE_MAP,
   PROPOSAL_STATE_LABEL,
   isProposalState,
+  MAINNET_ELECTION_CONFIG,
 } from "./constants";
 export type { VoteSupport, ProposalStateValue } from "./constants";
 
@@ -395,6 +398,8 @@ export {
   getElectionCount,
   checkElectionStatus,
   hasVettingPeriod,
+  determineElectionPhase,
+  getElectionStatus,
   // Election tracking utilities
   getElectionIndexForProposalId,
   // Election proposal IDs

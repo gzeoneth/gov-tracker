@@ -444,6 +444,92 @@ describe("getElectionProposalIds", () => {
     expect(result.memberProposalId).toBeNull();
   });
 
+  it("should return null for member when multicall returns undefined (real SDK revert behavior)", async () => {
+    // #given — SDK's multiCall returns undefined (not null) for reverted calls
+    const mockProvider = {} as ethers.providers.Provider;
+    const nomineeProposalId = BigNumber.from("333");
+    const memberProposalId = BigNumber.from("444");
+
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(nomineeProposalId),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(memberProposalId),
+    };
+
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([1, undefined]); // SDK returns undefined for reverts
+
+    // #when
+    const result = await getElectionProposalIds(4, mockProvider, { skipCache: true });
+
+    // #then
+    expect(result.nomineeProposalId).toBe(nomineeProposalId.toString());
+    expect(result.memberProposalId).toBeNull();
+  });
+
+  it("should return null for nominee when multicall returns undefined (real SDK revert behavior)", async () => {
+    // #given
+    const mockProvider = {} as ethers.providers.Provider;
+    const nomineeProposalId = BigNumber.from("333");
+    const memberProposalId = BigNumber.from("444");
+
+    const mockNomineeGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x1111111111111111111111111111111111111111"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Nominee",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(nomineeProposalId),
+    };
+    const mockMemberGovernor = {
+      getProposeArgs: vi
+        .fn()
+        .mockResolvedValue([
+          ["0x2222222222222222222222222222222222222222"],
+          [BigNumber.from(0)],
+          ["0x"],
+          "Member",
+        ]),
+      hashProposal: vi.fn().mockResolvedValue(memberProposalId),
+    };
+
+    vi.mocked(getNomineeGovernor).mockReturnValue(
+      mockNomineeGovernor as unknown as ethers.Contract
+    );
+    vi.mocked(getMemberGovernor).mockReturnValue(mockMemberGovernor as unknown as ethers.Contract);
+    vi.mocked(multicall).mockResolvedValue([undefined, 1]); // SDK returns undefined for reverts
+
+    // #when
+    const result = await getElectionProposalIds(4, mockProvider, { skipCache: true });
+
+    // #then
+    expect(result.nomineeProposalId).toBeNull();
+    expect(result.memberProposalId).toBe(memberProposalId.toString());
+  });
+
   it("should use cached result on second call for same election index", async () => {
     // #given
     const mockProvider = {} as ethers.providers.Provider;

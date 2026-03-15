@@ -116,8 +116,8 @@ export async function getElectionProposalIds(
   ]);
 
   const result: ElectionProposalIds = {
-    nomineeProposalId: nomineeState !== null ? nomineeProposalId : null,
-    memberProposalId: memberState !== null ? computedMemberProposalId : null,
+    nomineeProposalId: nomineeState != null ? nomineeProposalId : null,
+    memberProposalId: memberState != null ? computedMemberProposalId : null,
   };
 
   electionProposalIdsCache.set(electionIndex, result, blockNumber);

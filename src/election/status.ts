@@ -204,7 +204,8 @@ export async function getElectionStatus(
     queryWithRetry<number>(() => nominee.electionIndexToCohort(electionIndex)),
   ]);
 
-  const { nomineeProposalId, memberProposalId } = proposalIds;
+  const { nomineeProposalId } = proposalIds;
+  let { memberProposalId } = proposalIds;
   const cohort = cohortRaw as CohortType;
 
   let nomineeProposalState: ProposalState | null = null;
@@ -240,8 +241,12 @@ export async function getElectionStatus(
 
   if (memberProposalId) {
     const member = getMemberGovernor(memberGovernorAddress, l2Provider);
-    const stateNum = await queryWithRetry<number>(() => member.state(memberProposalId));
-    memberProposalState = proposalStateToString(stateNum);
+    try {
+      const stateNum = await queryWithRetry<number>(() => member.state(memberProposalId));
+      memberProposalState = proposalStateToString(stateNum);
+    } catch {
+      memberProposalId = null;
+    }
   }
 
   const phase = determineElectionPhase(

@@ -855,6 +855,30 @@ describe("election/status", () => {
       expect(result.phase).toBe("PENDING_EXECUTION");
     });
 
+    it("should handle member state revert for early-phase elections", async () => {
+      // #given — member proposal ID computed via hashProposal but not yet created on-chain
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: "0xComputedButNotOnChain",
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(0), // Pending=0 (contender submission)
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(0)),
+      });
+      vi.mocked(getMemberGovernor).mockReturnValue({
+        state: vi.fn().mockRejectedValue(new Error("Governor: unknown proposal id")),
+      } as any);
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then — should not crash, memberProposalId nulled out
+      expect(result.memberProposalId).toBeNull();
+      expect(result.memberProposalState).toBeNull();
+      expect(result.phase).toBe("CONTENDER_SUBMISSION");
+    });
+
     it("should pass config addresses to dependent functions", async () => {
       // #given
       mockBaseElectionCalls();

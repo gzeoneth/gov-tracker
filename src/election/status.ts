@@ -1,5 +1,5 @@
 import { ethers, BigNumber } from "ethers";
-import { ADDRESSES, MAINNET_ELECTION_CONFIG, PROPOSAL_STATE_MAP } from "../constants";
+import { ADDRESSES, MAINNET_ELECTION_CONFIG, proposalStateToString } from "../constants";
 import { formatDuration } from "../utils/formatters";
 import { queryWithRetry } from "../utils/rpc-utils";
 import {
@@ -302,10 +302,4 @@ export async function getAllElectionStatuses(
   );
 
   return results.filter((r): r is ElectionProposalStatus => r !== null);
-}
-
-function proposalStateToString(state: number): ProposalState {
-  const name = PROPOSAL_STATE_MAP[state];
-  if (!name) throw new Error(`Unknown proposal state: ${state}`);
-  return name;
 }

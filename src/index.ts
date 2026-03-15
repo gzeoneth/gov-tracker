@@ -115,7 +115,6 @@ export type {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
-  ElectionStatusWithPhase,
   ElectionConfig,
   ElectionCheckResult,
   // Election participant types
@@ -400,6 +399,7 @@ export {
   hasVettingPeriod,
   determineElectionPhase,
   getElectionStatus,
+  getAllElectionStatuses,
   // Election tracking utilities
   getElectionIndexForProposalId,
   // Election proposal IDs

@@ -150,6 +150,7 @@ export const DEFAULT_RPC_URLS = {
 export const MAINNET_ELECTION_CONFIG = {
   nomineeGovernorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
   memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+  tokenAddress: ADDRESSES.ARB_TOKEN,
   chainId: CHAIN_IDS.ARB_ONE,
 } as const;
 

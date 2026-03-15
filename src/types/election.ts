@@ -238,20 +238,8 @@ export interface ElectionStatus {
 export interface ElectionConfig {
   nomineeGovernorAddress: `0x${string}`;
   memberGovernorAddress: `0x${string}`;
+  tokenAddress?: `0x${string}`;
   chainId: number;
-}
-
-/**
- * Combined election status with phase determination.
- * Returned by `getElectionStatus()`.
- */
-export interface ElectionStatusWithPhase {
-  status: ElectionStatus;
-  phase: ElectionPhase;
-  nomineeProposalId: string | null;
-  memberProposalId: string | null;
-  nomineeProposalState: ProposalState | null;
-  memberProposalState: ProposalState | null;
 }
 
 /**

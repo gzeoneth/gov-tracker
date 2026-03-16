@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trimFromStage(checkpoint, stageIndex)` - Trim checkpoint stages for re-tracking scenarios
 - `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
 - `loadWatermarks()` / `LoadedWatermarks` - Access discovery watermarks from cache
-- `getReceiptOrNull()` / `getErrorMessage()` - Shared RPC and error utilities
+- `getErrorMessage()` - Shared error message extraction utility
 
 ### Fixed
 

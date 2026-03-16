@@ -24,8 +24,8 @@ src/
 │   ├── checkpoint-helpers.ts  # Checkpoint utilities
 │   └── bundled-cache.ts # Bundled cache extraction utilities
 ├── stages/              # Individual stage implementations
-├── election/            # Security Council election tracking (7 files)
-├── governance/          # Governance proposal vote preparation
+├── election/            # Security Council election tracking (8 files)
+├── governance/          # Governance vote preparation + wagmi read helpers
 ├── calldata/            # Calldata decoding and signature lookup
 ├── simulation/          # Simulation data preparation (Tenderly, etc.)
 ├── discovery/           # Governor & timelock introspection
@@ -168,6 +168,7 @@ All write-action modules follow the same pattern: encode transaction calldata an
 | Module | Functions | Target Contracts |
 |--------|-----------|------------------|
 | `governance/write.ts` | `prepareCastVote`, `prepareCastVoteWithReason`, `prepareCastVoteWithReasonAndParams` | Core/Treasury Governor |
+| `governance/read.ts` | `readProposalState`, `readProposalVotes`, `readVotingPower`, etc. | Core/Treasury Governor, ARB token |
 | `election/write.ts` | `prepareAddContender`, `prepareContenderRegistration`, `prepareNomineeElectionVote`, `prepareMemberElectionVote` | Election Governors |
 | `election/params.ts` | `prepareElectionCreation`, `prepareMemberElectionTrigger`, `prepareMemberElectionExecution` | Election Governors |
 | `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage`, `prepareExecuteTimelock` | L2/L1 Timelocks |

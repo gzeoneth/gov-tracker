@@ -284,9 +284,8 @@ export async function getElectionStatus(
 /**
  * Batch fetch status for all elections.
  *
- * Fetches the election count, then queries each election in parallel.
- * More efficient than calling `getElectionStatus` in a loop since it
- * shares the `checkElectionStatus` call.
+ * Fetches the election count once, then queries each election in parallel
+ * via `getElectionStatus`. Individual failures are logged and skipped.
  *
  * @param l2Provider - L2 provider
  * @param config - Deployment config (defaults to mainnet)

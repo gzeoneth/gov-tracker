@@ -767,3 +767,153 @@ async function monitorElections() {
 // Run every 5 minutes
 setInterval(monitorElections, 5 * 60 * 1000);
 ```
+
+---
+
+## Governance Voting
+
+### Cast a Vote
+
+```typescript
+import { prepareCastVote, prepareCastVoteWithReason, VOTE_SUPPORT } from "@gzeoneth/gov-tracker";
+
+// Simple for vote on constitutional governor
+const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
+await signer.sendTransaction(tx);
+
+// Vote against with reason on treasury governor
+const tx2 = prepareCastVoteWithReason(
+  proposalId,
+  VOTE_SUPPORT.AGAINST,
+  "Insufficient specification for treasury spend",
+  "non-constitutional"
+);
+await signer.sendTransaction(tx2);
+```
+
+### Read Proposal Data (wagmi)
+
+```typescript
+import {
+  readProposalState,
+  readProposalVotes,
+  readVotingPower,
+  readQuorum,
+} from "@gzeoneth/gov-tracker";
+
+// Single read
+const { data: state } = useReadContract(readProposalState(proposalId));
+
+// Batch reads via multicall
+const { data } = useReadContracts({
+  contracts: [
+    readProposalVotes(proposalId),
+    readQuorum(snapshotBlock),
+    ...delegates.map(d => readVotingPower(d, snapshotBlock)),
+  ],
+});
+```
+
+---
+
+## Election Participation
+
+### Register as Contender
+
+```typescript
+import { prepareContenderRegistration } from "@gzeoneth/gov-tracker";
+
+// Two-phase: sign typed data, then submit transaction
+const reg = prepareContenderRegistration(governorName, proposalId);
+
+// Step 1: Sign (ethers v5)
+const signature = await signer._signTypedData(
+  reg.typedData.domain,
+  reg.typedData.types,
+  reg.typedData.message
+);
+
+// Step 2: Submit
+const tx = reg.buildTransaction(signature);
+await signer.sendTransaction(tx);
+```
+
+### Vote in Election
+
+```typescript
+import {
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
+  encodeElectionVoteParams,
+  decodeElectionVoteParams,
+} from "@gzeoneth/gov-tracker";
+
+// Vote for a contender in nominee phase
+const tx = prepareNomineeElectionVote(proposalId, contenderAddress, votesInWei);
+await signer.sendTransaction(tx);
+
+// Vote for a nominee in member phase
+const tx2 = prepareMemberElectionVote(proposalId, nomineeAddress, votesInWei);
+await signer.sendTransaction(tx2);
+
+// Encode/decode vote params manually
+const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
+const { target, votes } = decodeElectionVoteParams(encoded);
+```
+
+### Query Election Status
+
+```typescript
+import { getElectionStatus, getAllElectionStatuses } from "@gzeoneth/gov-tracker";
+
+// Single election
+const status = await getElectionStatus(l2Provider, 0);
+console.log(`Phase: ${status.phase}, Cohort: ${status.cohort}`);
+console.log(`Compliant nominees: ${status.compliantNomineeCount}`);
+console.log(`Can proceed to member: ${status.canProceedToMemberPhase}`);
+
+// All elections at once
+const all = await getAllElectionStatuses(l2Provider);
+const active = all.filter(e => e.phase !== "COMPLETED");
+```
+
+---
+
+## Standalone Timelock Execution
+
+Execute a timelock operation without tracking the full proposal lifecycle:
+
+```typescript
+import { prepareExecuteTimelock } from "@gzeoneth/gov-tracker";
+
+// Auto-detects single vs batch from on-chain CallScheduled events
+const prep = await prepareExecuteTimelock(timelockAddress, operationId, salt, provider);
+if (prep.success) {
+  await signer.sendTransaction(prep.prepared);
+}
+```
+
+---
+
+## ABI Usage with wagmi/viem
+
+```typescript
+import { governorReadAbi, timelockWriteAbi } from "@gzeoneth/gov-tracker";
+
+// Full type inference with useReadContract
+const { data } = useReadContract({
+  address: governorAddress,
+  abi: governorReadAbi,
+  functionName: "state", // TypeScript auto-completes
+  args: [proposalId],
+});
+
+// Write with useWriteContract
+const { writeContract } = useWriteContract();
+writeContract({
+  address: timelockAddress,
+  abi: timelockWriteAbi,
+  functionName: "execute",
+  args: [target, value, data, predecessor, salt],
+});
+```

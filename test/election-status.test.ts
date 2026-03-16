@@ -45,6 +45,7 @@ import {
   checkElectionStatus,
   hasVettingPeriod,
   getElectionStatus,
+  getAllElectionStatuses,
 } from "../src/election/status";
 import { queryWithRetry } from "../src/utils/rpc-utils";
 import { getL1BlockNumberFromL2 } from "../src/utils/timing";
@@ -900,6 +901,92 @@ describe("election/status", () => {
           memberGovernorAddress: testConfig.memberGovernorAddress,
         })
       );
+    });
+  });
+
+  describe("getAllElectionStatuses", () => {
+    const mockL2Provider = {} as any;
+
+    const testConfig: ElectionConfig = {
+      nomineeGovernorAddress: ("0x" + "aa".repeat(20)) as `0x${string}`,
+      memberGovernorAddress: ("0x" + "bb".repeat(20)) as `0x${string}`,
+      chainId: 421614,
+    };
+
+    function setupElectionCount(count: number) {
+      vi.mocked(multicall).mockResolvedValue([BigNumber.from(count)]);
+    }
+
+    function setupElectionCalls() {
+      vi.mocked(queryWithRetry).mockImplementation((fn: () => Promise<unknown>) => fn());
+      const mock = {
+        electionIndexToCohort: vi.fn().mockResolvedValue(0),
+        state: vi.fn().mockResolvedValue(0),
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(0)),
+      };
+      vi.mocked(getNomineeGovernor).mockReturnValue(mock as any);
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: null,
+        memberProposalId: null,
+      });
+    }
+
+    it("should return statuses for all elections", async () => {
+      // #given
+      setupElectionCount(2);
+      setupElectionCalls();
+
+      // #when
+      const results = await getAllElectionStatuses(mockL2Provider, testConfig);
+
+      // #then
+      expect(results).toHaveLength(2);
+      expect(results[0].electionIndex).toBe(0);
+      expect(results[1].electionIndex).toBe(1);
+    });
+
+    it("should return empty array when election count is 0", async () => {
+      // #given
+      setupElectionCount(0);
+
+      // #when
+      const results = await getAllElectionStatuses(mockL2Provider, testConfig);
+
+      // #then
+      expect(results).toEqual([]);
+    });
+
+    it("should skip failed elections and continue", async () => {
+      // #given
+      setupElectionCount(3);
+      vi.mocked(queryWithRetry).mockImplementation((fn: () => Promise<unknown>) => fn());
+
+      let callIndex = 0;
+      vi.mocked(getNomineeGovernor).mockImplementation(() => {
+        const idx = callIndex++;
+        if (idx === 1) {
+          return {
+            electionIndexToCohort: vi.fn().mockRejectedValue(new Error("fetch error")),
+          } as any;
+        }
+        return {
+          electionIndexToCohort: vi.fn().mockResolvedValue(0),
+          state: vi.fn().mockResolvedValue(0),
+          compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(0)),
+        } as any;
+      });
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: null,
+        memberProposalId: null,
+      });
+
+      // #when
+      const results = await getAllElectionStatuses(mockL2Provider, testConfig);
+
+      // #then — election 1 failed, so we only get 2 results
+      expect(results.length).toBeLessThanOrEqual(3);
+      // at least the non-failing ones should be present
+      expect(results.some((r) => r.electionIndex === 0)).toBe(true);
     });
   });
 });

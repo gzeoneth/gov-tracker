@@ -57,8 +57,13 @@ import {
   // Read helpers
   readProposalState,
   readProposalVotes,
+  readProposalSnapshot,
+  readProposalDeadline,
   readVotingPower,
   readQuorum,
+  readGetVotes,
+  readNomineeElectionState,
+  readMemberElectionState,
   readElectionCount,
   // State type
   isProposalState,
@@ -502,6 +507,52 @@ describe("Public API: Read helpers (wagmi useReadContract)", () => {
     const p2 = readQuorum(BigInt(100));
     expect(p1.args).toEqual([BigInt(100)]);
     expect(p2.args).toEqual([BigInt(100)]);
+  });
+
+  it("readProposalSnapshot returns correct functionName and args", () => {
+    const params = readProposalSnapshot("99999");
+    expect(params.functionName).toBe("proposalSnapshot");
+    expect(params.args).toEqual([BigInt("99999")]);
+    expect(params.address).toBe(ADDRESSES.CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readProposalDeadline returns correct functionName and args", () => {
+    const params = readProposalDeadline("99999");
+    expect(params.functionName).toBe("proposalDeadline");
+    expect(params.args).toEqual([BigInt("99999")]);
+  });
+
+  it("readProposalDeadline accepts governor shorthand", () => {
+    const params = readProposalDeadline("1", "non-constitutional");
+    expect(params.address).toBe(ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readGetVotes returns correct functionName and args", () => {
+    const account = "0x" + "bb".repeat(20);
+    const params = readGetVotes(account, 500);
+    expect(params.functionName).toBe("getVotes");
+    expect(params.args).toEqual([account, BigInt(500)]);
+    expect(params.address).toBe(ADDRESSES.CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readNomineeElectionState returns nominee governor params", () => {
+    const params = readNomineeElectionState("777");
+    expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(params.functionName).toBe("state");
+    expect(params.args).toEqual([BigInt("777")]);
+  });
+
+  it("readNomineeElectionState accepts custom address", () => {
+    const custom = "0x" + "cc".repeat(20);
+    const params = readNomineeElectionState("1", custom);
+    expect(params.address).toBe(custom);
+  });
+
+  it("readMemberElectionState returns member governor params", () => {
+    const params = readMemberElectionState("888");
+    expect(params.address).toBe(ADDRESSES.ELECTION_MEMBER_GOVERNOR);
+    expect(params.functionName).toBe("state");
+    expect(params.args).toEqual([BigInt("888")]);
   });
 
   it("readElectionCount returns nominee governor params", () => {

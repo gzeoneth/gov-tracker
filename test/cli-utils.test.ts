@@ -1335,6 +1335,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1375,6 +1376,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1414,6 +1416,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1450,6 +1453,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1500,6 +1504,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1546,6 +1551,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1573,6 +1579,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1618,6 +1625,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn().mockResolvedValue({ success: true, prepared: preparedTx }),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1673,6 +1681,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1723,6 +1732,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1758,6 +1768,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1815,6 +1826,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn(),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1874,6 +1886,7 @@ describe("CLI Utilities", () => {
         trackFromCheckpoint: vi.fn().mockResolvedValue(mockTrackingResult),
         prepareTransaction: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1941,6 +1954,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -1976,6 +1990,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2030,6 +2045,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2093,6 +2109,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2156,6 +2173,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2219,6 +2237,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2282,6 +2301,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 
@@ -2345,6 +2365,7 @@ describe("CLI Utilities", () => {
         prepareTransaction: vi.fn(),
         saveElectionCheckpoint: vi.fn(),
         loadWatermarks: vi.fn().mockResolvedValue({ watermarks: {}, hashes: {} }),
+        trackAllElections: vi.fn().mockResolvedValue([]),
       };
       const providers = createMockProviders();
 

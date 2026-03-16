@@ -10,9 +10,18 @@ import type {
   TrackingInput,
   DecodedCalldata,
   DecodedParameter,
+  CohortType,
 } from "../types/index.js";
-import { CHAIN_IDS } from "../constants.js";
-import type { Chain } from "../types/index.js";
+
+// ============================================================================
+// Election Utilities
+// ============================================================================
+
+const COHORT_NAMES: Record<CohortType, string> = { 0: "First", 1: "Second" };
+
+export function getCohortName(cohort: CohortType): string {
+  return COHORT_NAMES[cohort];
+}
 
 // ============================================================================
 // Text Utilities
@@ -82,16 +91,6 @@ export function formatDate(timestamp: number | null): string {
 // ============================================================================
 // Stage Formatting
 // ============================================================================
-
-/**
- * Chain to chain ID mapping
- */
-export const CHAIN_TO_CHAIN_ID: Record<Chain, number> = {
-  ethereum: CHAIN_IDS.ETHEREUM,
-  arb1: CHAIN_IDS.ARB_ONE,
-  nova: CHAIN_IDS.NOVA,
-  unknown: CHAIN_IDS.ETHEREUM,
-};
 
 /**
  * Priority fields shown first in stage data
@@ -319,7 +318,7 @@ export function filterVisibleLines(
  * Get all foldable keys from lines
  */
 export function getAllFoldableKeys(lines: FormattedLine[]): string[] {
-  return lines.filter((l) => l.foldable && l.foldKey).map((l) => l.foldKey!);
+  return lines.flatMap((l) => (l.foldable && l.foldKey ? [l.foldKey] : []));
 }
 
 /**

@@ -10,14 +10,13 @@ import type {
   ViewType,
   SortType,
 } from "../types.js";
-import { clamp, cycleArray } from "../utils/navigation.js";
+import { clamp, cycleArray, PAGE_SIZE } from "../utils/navigation.js";
 
 export const MAX_STAGE_INDEX = 6;
 export const STAGE_COUNT = 7;
 
 const FILTER_ORDER: FilterType[] = ["all", "active", "complete", "timelocks"];
 const SORT_ORDER: SortType[] = ["newest", "oldest", "progress", "status"];
-const PAGE_SIZE = 10;
 const SCROLLABLE_VIEWS: ViewType[] = ["calldata", "stage", "description"];
 
 const INITIAL_STATE: NavigationState = {

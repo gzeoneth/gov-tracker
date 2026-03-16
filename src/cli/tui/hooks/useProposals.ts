@@ -86,8 +86,8 @@ function getProposalInfo(checkpoint: TrackingCheckpoint) {
   if (votingData?.proposalState === "Defeated" || votingData?.proposalState === "Canceled") {
     status = "failed";
   } else if (
-    stages.length === 7 &&
-    (stages[6]?.status === "COMPLETED" || stages[6]?.status === "SKIPPED")
+    stages.length > 0 &&
+    stages.every((s) => s.status === "COMPLETED" || s.status === "SKIPPED")
   ) {
     status = "complete";
   } else if ((checkpoint.metadata?.errorCount ?? 0) >= 5) {

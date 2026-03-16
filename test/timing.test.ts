@@ -426,7 +426,7 @@ describe("Timing Utilities", () => {
 
       // #when / #then - should throw
       await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
-        "Could not get L1 block number for L2 block 12345"
+        "Could not get L1 block number from L2 block 12345"
       );
     });
 
@@ -438,7 +438,7 @@ describe("Timing Utilities", () => {
 
       // #when / #then - should throw
       await expect(getL1BlockForL2Block(mockProvider, 12345)).rejects.toThrow(
-        "Could not get L1 block number for L2 block 12345"
+        "Could not get L1 block number from L2 block 12345"
       );
     });
   });

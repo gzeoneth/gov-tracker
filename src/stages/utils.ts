@@ -103,33 +103,33 @@ function createStage(
   } as TrackedStage;
 }
 
-/** Common timelock stages shared by all paths */
-const COMMON_TIMELOCK_STAGES: StageType[] = [
+/** Common timelock stages shared by all paths (single source of truth) */
+const COMMON_TIMELOCK_STAGES: readonly StageType[] = [
   "L2_TIMELOCK",
   "L2_TO_L1_MESSAGE",
   "L1_TIMELOCK",
   "RETRYABLE_EXECUTED",
-];
+] as const;
 
 /** Full proposal stages (from governor proposal) */
-const FULL_PROPOSAL_STAGES: StageType[] = [
+const FULL_PROPOSAL_STAGES: readonly StageType[] = [
   "PROPOSAL_CREATED",
   "VOTING_ACTIVE",
   "PROPOSAL_QUEUED",
   ...COMMON_TIMELOCK_STAGES,
-];
+] as const;
 
 /** Timelock-only stages (direct timelock entry) */
-const TIMELOCK_ONLY_STAGES: StageType[] = COMMON_TIMELOCK_STAGES;
+const TIMELOCK_ONLY_STAGES: readonly StageType[] = COMMON_TIMELOCK_STAGES;
 
 /** Election stages (full election lifecycle) */
-const ELECTION_STAGES: StageType[] = [
+const ELECTION_STAGES: readonly StageType[] = [
   "CREATE_ELECTION",
   "NOMINEE_ELECTION",
   "NOMINEE_VETTING",
   "MEMBER_ELECTION",
   ...COMMON_TIMELOCK_STAGES,
-];
+] as const;
 
 /**
  * Tracking path types for stage initialization
@@ -140,7 +140,7 @@ export type TrackingPath = "governor" | "timelock" | "election";
  * Get stage types for a tracking path.
  * @param path - The tracking path type: "governor", "timelock", or "election"
  */
-export function getStagesForTrackingPath(path: TrackingPath): StageType[] {
+export function getStagesForTrackingPath(path: TrackingPath): readonly StageType[] {
   switch (path) {
     case "governor":
       return FULL_PROPOSAL_STAGES;
@@ -172,13 +172,8 @@ export function initializeStagesForTrackingPath(path: TrackingPath): TrackedStag
 // Modular Caching: Stage Splitting
 // ============================================================================
 
-/** All timelock path stages for modular caching (full path, not just executable) */
-const TIMELOCK_PATH_STAGES: Set<StageType> = new Set([
-  "L2_TIMELOCK",
-  "L2_TO_L1_MESSAGE",
-  "L1_TIMELOCK",
-  "RETRYABLE_EXECUTED",
-]);
+/** Timelock path stages as a Set (derived from COMMON_TIMELOCK_STAGES) */
+const TIMELOCK_PATH_STAGES: ReadonlySet<StageType> = new Set(COMMON_TIMELOCK_STAGES);
 
 /**
  * Check if a stage type is part of the timelock path (for modular caching).
@@ -398,33 +393,19 @@ export function getTrackingStatusSummary(stages: TrackedStage[]): {
   failed: number;
   skipped: number;
 } {
-  let completed = 0,
-    pending = 0,
-    ready = 0,
-    failed = 0,
-    skipped = 0;
-
-  for (const stage of stages) {
-    switch (stage.status) {
-      case "COMPLETED":
-        completed++;
-        break;
-      case "PENDING":
-        pending++;
-        break;
-      case "READY":
-        ready++;
-        break;
-      case "FAILED":
-        failed++;
-        break;
-      case "SKIPPED":
-        skipped++;
-        break;
-    }
+  const counts = { completed: 0, pending: 0, ready: 0, failed: 0, skipped: 0 };
+  const statusKey: Record<string, keyof typeof counts> = {
+    COMPLETED: "completed",
+    PENDING: "pending",
+    READY: "ready",
+    FAILED: "failed",
+    SKIPPED: "skipped",
+  };
+  for (const { status } of stages) {
+    const key = statusKey[status];
+    if (key) counts[key]++;
   }
-
-  return { total: stages.length, completed, pending, ready, failed, skipped };
+  return { total: stages.length, ...counts };
 }
 
 /**

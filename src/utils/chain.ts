@@ -2,7 +2,7 @@
  * Chain and address utilities
  */
 
-import { ethers } from "ethers";
+import { ethers, BigNumber } from "ethers";
 import { Chain, ChainId, chainIdToChain } from "../types";
 
 /**
@@ -34,4 +34,11 @@ export function addressEquals(a: string, b: string): boolean {
 export function isAddressIn(address: string, addresses: readonly string[]): boolean {
   const normalized = address.toLowerCase();
   return addresses.some((a) => a.toLowerCase() === normalized);
+}
+
+/**
+ * Compare two BigNumber values for sorting (-1, 0, 1).
+ */
+export function compareBigNumbers(a: BigNumber, b: BigNumber): number {
+  return a.lt(b) ? -1 : a.gt(b) ? 1 : 0;
 }

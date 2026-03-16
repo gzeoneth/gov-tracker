@@ -295,33 +295,19 @@ export const GOVERNANCE_STAGE_DURATION_DAYS = {
  *
  * @see https://docs.arbitrum.foundation/concepts/security-council
  */
+const days = (n: number) => n * 24 * 60 * 60;
+
 export const ELECTION_TIMING = {
-  /** Contender submission phase: 7 days (implemented as voting delay) */
-  CONTENDER_SUBMISSION_SECONDS: 7 * 24 * 60 * 60,
-  /** Contender submission phase in days */
+  CONTENDER_SUBMISSION_SECONDS: days(7),
   CONTENDER_SUBMISSION_DAYS: 7,
-
-  /** Nominee selection phase: 7 days */
-  NOMINEE_SELECTION_SECONDS: 7 * 24 * 60 * 60,
-  /** Nominee selection phase in days */
+  NOMINEE_SELECTION_SECONDS: days(7),
   NOMINEE_SELECTION_DAYS: 7,
-
-  /** Vetting period: 14 days (compliance process) */
-  VETTING_PERIOD_SECONDS: 14 * 24 * 60 * 60,
-  /** Vetting period in days */
+  VETTING_PERIOD_SECONDS: days(14),
   VETTING_PERIOD_DAYS: 14,
-
-  /** Member election phase: 21 days */
-  MEMBER_ELECTION_SECONDS: 21 * 24 * 60 * 60,
-  /** Member election phase in days */
+  MEMBER_ELECTION_SECONDS: days(21),
   MEMBER_ELECTION_DAYS: 21,
-
-  /** Total election duration: 49 days (7 + 7 + 14 + 21) */
-  TOTAL_ELECTION_SECONDS: 49 * 24 * 60 * 60,
-  /** Total election duration in days */
+  TOTAL_ELECTION_SECONDS: days(49),
   TOTAL_ELECTION_DAYS: 49,
-
-  /** Voting delay for elections: 7 days in L1 blocks (contender submission period) */
   VOTING_DELAY_L1_BLOCKS: 7 * 24 * 60 * 5, // 50400 blocks at 12s/block
 } as const;
 

@@ -83,16 +83,18 @@ export function isElectionProposal(proposalType: ProposalType): boolean {
   return proposalType === "ELECTION_NOMINEE" || proposalType === "ELECTION_MEMBER";
 }
 
-/**
- * Check if a governor has a timelock() function
- *
- * Governors with timelock route proposals through L2 timelock before execution.
- */
+function getGovernorContract(
+  address: string,
+  provider: ethers.providers.Provider
+): ethers.Contract {
+  return new ethers.Contract(address, GOVERNOR_ABI, provider);
+}
+
 async function hasTimelock(
   governorAddress: string,
   provider: ethers.providers.Provider
 ): Promise<boolean> {
-  const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
+  const governor = getGovernorContract(governorAddress, provider);
   try {
     await queryWithRetry(() => governor.timelock());
     return true;
@@ -139,9 +141,7 @@ export async function getTimelockAddress(
   governorAddress: string,
   provider: ethers.providers.Provider
 ): Promise<string> {
-  const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
-
-  return queryWithRetry(() => governor.timelock());
+  return queryWithRetry(() => getGovernorContract(governorAddress, provider).timelock());
 }
 
 /**
@@ -152,8 +152,7 @@ export async function getProposalState(
   proposalId: string,
   provider: ethers.providers.Provider
 ): Promise<ProposalState> {
-  const governor = new ethers.Contract(governorAddress, GOVERNOR_ABI, provider);
-
+  const governor = getGovernorContract(governorAddress, provider);
   const stateNum = (await queryWithRetry(() => governor.state(BigNumber.from(proposalId)))) as
     | number
     | BigNumber;

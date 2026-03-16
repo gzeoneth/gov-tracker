@@ -48,6 +48,7 @@ import {
 } from "../../index";
 import { getErrorMessage } from "../../utils/rpc-utils";
 import { withScope } from "../../utils/logger";
+import { getCohortName } from "../../utils/formatters";
 
 export { isElectionGovernor };
 
@@ -567,7 +568,7 @@ export function formatCacheStatus(
  */
 export function formatElectionResult(election: ElectionProposalStatus): string {
   const lines: string[] = [];
-  const cohortName = election.cohort === 0 ? "First" : "Second";
+  const cohortName = getCohortName(election.cohort);
   const phaseName = election.phase.replace(/_/g, " ");
 
   lines.push(`[Election #${election.electionIndex}]`);
@@ -628,7 +629,7 @@ export function formatElectionResult(election: ElectionProposalStatus): string {
 export function displayTrackingResult(result: TrackingResult, label?: string): void {
   if (result.isElection && result.electionStatus) {
     const election = result.electionStatus;
-    const cohortName = election.cohort === 0 ? "First" : "Second";
+    const cohortName = getCohortName(election.cohort);
     console.log(`=== Election #${election.electionIndex} ===`);
     console.log(`Phase: ${election.phase}`);
     console.log(`Cohort: ${cohortName} (${election.cohort})`);

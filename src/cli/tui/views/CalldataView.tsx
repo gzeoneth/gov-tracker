@@ -48,8 +48,9 @@ export function CalldataView({
   function handleToggleFold(): void {
     const safeIdx = Math.max(0, Math.min(state.scrollOffset, displayLines.length - 1));
     const currentLine = displayLines[safeIdx];
-    if (currentLine?.foldable && currentLine.foldKey) {
-      setExpandedKeys((prev) => toggleFoldKey(prev, currentLine.foldKey!));
+    const key = currentLine?.foldable ? currentLine.foldKey : undefined;
+    if (key) {
+      setExpandedKeys((prev) => toggleFoldKey(prev, key));
     }
   }
 

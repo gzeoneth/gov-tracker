@@ -9,7 +9,12 @@ export {
   toggleFoldKey,
 } from "../../../utils/formatters.js";
 export type { FormattedLine } from "../../../utils/formatters.js";
-export { safeStringify, formatValue, formatStageData } from "../../../utils/formatters.js";
+export {
+  safeStringify,
+  formatValue,
+  formatStageData,
+  getCohortName,
+} from "../../../utils/formatters.js";
 export type { StageDataItem } from "../../../utils/formatters.js";
 export { parseMarkdown, extractMarkdownTitle } from "./markdown-parser.js";
 export type { MarkdownLine, MarkdownLineType } from "./markdown-parser.js";
@@ -36,6 +41,9 @@ export {
   getStatusColor,
   ELECTION_PHASE_COLORS,
   ELECTION_PHASE_ICONS,
+  getElectionStageIcon,
+  getElectionStageColor,
+  getProposalStateColor,
 } from "./stage-status.js";
 export {
   MS_PER_MINUTE,

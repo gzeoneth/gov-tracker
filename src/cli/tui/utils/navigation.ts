@@ -21,7 +21,7 @@ export const SORT_LABELS_SHORT: Record<SortType, string> = {
   status: "Status",
 };
 
-const PAGE_SIZE = 10;
+export const PAGE_SIZE = 10;
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

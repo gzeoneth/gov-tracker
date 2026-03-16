@@ -18,7 +18,7 @@ import {
 import type { ElectionStatus, ElectionProposalStatus } from "../../../types/index.js";
 import { useElectionData } from "../hooks/useElectionData.js";
 import { getTxUrl, CHAIN_IDS } from "../../../constants.js";
-import { formatDate, ELECTION_PHASE_COLORS, ELECTION_PHASE_ICONS } from "../utils/index.js";
+import { formatDate, ELECTION_PHASE_COLORS, ELECTION_PHASE_ICONS, getElectionStageIcon, getElectionStageColor, getCohortName } from "../utils/index.js";
 
 interface ElectionViewProps {
   navigation: UseNavigationResult;
@@ -34,11 +34,9 @@ interface DisplayLine {
 
 function buildStatusLines(status: ElectionStatus): DisplayLine[] {
   const lines: DisplayLine[] = [];
-  const cohortName = status.cohort === 0 ? "FIRST" : "SECOND";
-
   lines.push({ text: "Security Council Election Status", bold: true });
   lines.push({ text: `  Election Count: ${status.electionCount}` });
-  lines.push({ text: `  Current Cohort: ${cohortName}`, color: status.cohort === 0 ? "cyan" : "magenta" });
+  lines.push({ text: `  Current Cohort: ${getCohortName(status.cohort).toUpperCase()}`, color: status.cohort === 0 ? "cyan" : "magenta" });
   lines.push({ text: `  Can Create: ${status.canCreateElection ? "Yes" : "No"}`, color: status.canCreateElection ? "green" : "gray" });
 
   if (!status.canCreateElection && status.nextElectionTimestamp > 0) {
@@ -59,10 +57,8 @@ function buildListLines(proposals: ElectionProposalStatus[], selectedIndex: numb
     const phaseColor = ELECTION_PHASE_COLORS[election.phase] ?? "gray";
     const prefix = isSelected ? "> " : "  ";
     const phaseName = election.phase.replace(/_/g, " ");
-    const cohortName = election.cohort === 0 ? "First" : "Second";
-
     lines.push({
-      text: `${prefix}${icon} Election #${election.electionIndex} (${cohortName} Cohort) - ${phaseName}`,
+      text: `${prefix}${icon} Election #${election.electionIndex} (${getCohortName(election.cohort)} Cohort) - ${phaseName}`,
       color: isSelected ? "cyan" : phaseColor,
       bold: isSelected,
     });
@@ -98,11 +94,9 @@ function buildDetailLines(election: ElectionProposalStatus): DisplayLine[] {
   const icon = ELECTION_PHASE_ICONS[election.phase] ?? "○";
   const phaseColor = ELECTION_PHASE_COLORS[election.phase] ?? "gray";
   const phaseName = election.phase.replace(/_/g, " ");
-  const cohortName = election.cohort === 0 ? "FIRST" : "SECOND";
-
   lines.push({ text: `${icon} Election #${election.electionIndex} - ${phaseName}`, color: phaseColor, bold: true });
   lines.push({ text: "" });
-  lines.push({ text: `  Cohort: ${cohortName}` });
+  lines.push({ text: `  Cohort: ${getCohortName(election.cohort).toUpperCase()}` });
   lines.push({ text: `  Compliant Nominees: ${election.compliantNomineeCount}/${election.targetNomineeCount}` });
 
   if (election.creationTxHash) {
@@ -138,10 +132,8 @@ function buildDetailLines(election: ElectionProposalStatus): DisplayLine[] {
     lines.push({ text: "" });
     lines.push({ text: "  Stage Progress", color: "blue", bold: true });
     for (const stage of election.stages) {
-      const stageIcon = stage.status === "COMPLETED" ? "✓" : stage.status === "READY" ? "●" : "○";
-      const color = stage.status === "COMPLETED" ? "green" : stage.status === "READY" ? "yellow" : "gray";
       const stageName = stage.type.replace(/_/g, " ");
-      lines.push({ text: `    ${stageIcon} ${stageName}: ${stage.status}`, color });
+      lines.push({ text: `    ${getElectionStageIcon(stage)} ${stageName}: ${stage.status}`, color: getElectionStageColor(stage) });
     }
   }
 

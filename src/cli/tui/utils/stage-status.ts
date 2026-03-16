@@ -44,6 +44,52 @@ export function getStatusColor(stage: TrackedStage | undefined): string {
   return STATUS_COLORS[stage.status] ?? "gray";
 }
 
+const ELECTION_STAGE_ICONS: Record<StageStatus, string> = {
+  COMPLETED: "✓",
+  READY: "●",
+  PENDING: "◐",
+  FAILED: "✗",
+  SKIPPED: "○",
+  NOT_STARTED: "○",
+  CANCELED: "✗",
+};
+
+const ELECTION_STAGE_COLORS: Record<StageStatus, string> = {
+  COMPLETED: "green",
+  READY: "yellow",
+  PENDING: "yellow",
+  FAILED: "red",
+  SKIPPED: "gray",
+  NOT_STARTED: "gray",
+  CANCELED: "red",
+};
+
+export function getElectionStageIcon(stage: TrackedStage | undefined): string {
+  if (!stage) return "○";
+  return ELECTION_STAGE_ICONS[stage.status] ?? "○";
+}
+
+export function getElectionStageColor(stage: TrackedStage | undefined): string {
+  if (!stage) return "gray";
+  return ELECTION_STAGE_COLORS[stage.status] ?? "gray";
+}
+
+export const PROPOSAL_STATE_COLORS: Record<string, string> = {
+  Succeeded: "green",
+  Executed: "green",
+  Queued: "yellow",
+  Active: "yellow",
+  Pending: "yellow",
+  Defeated: "red",
+  Expired: "red",
+  Canceled: "red",
+};
+
+export function getProposalStateColor(state: string | undefined): string {
+  if (!state) return "gray";
+  return PROPOSAL_STATE_COLORS[state] ?? "yellow";
+}
+
 export const ELECTION_PHASE_COLORS: Record<string, string> = {
   COMPLETED: "green",
   MEMBER_ELECTION: "yellow",

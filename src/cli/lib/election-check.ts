@@ -19,6 +19,7 @@ import {
   ElectionCheckResult,
 } from "../../index";
 import { executeTransaction, formatDryRun, ProviderBundle } from "./cli";
+import { getCohortName } from "../../utils/formatters";
 
 // ============================================================================
 // Types
@@ -159,7 +160,7 @@ export function formatElectionStatus(
 
   lines.push(`=== Security Council Election Status ===`);
   lines.push(`Election Count: ${status.electionCount}`);
-  lines.push(`Cohort: ${status.cohort === 0 ? "First (0)" : "Second (1)"}`);
+  lines.push(`Cohort: ${getCohortName(status.cohort)} (${status.cohort})`);
   lines.push(`Next Election: ${new Date(status.nextElectionTimestamp * 1000).toISOString()}`);
   lines.push(`Current L1 Time: ${new Date(status.currentL1Timestamp * 1000).toISOString()}`);
   lines.push(`Can Create Election: ${status.canCreateElection ? "YES" : "NO"}`);

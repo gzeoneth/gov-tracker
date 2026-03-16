@@ -311,26 +311,27 @@ export class ProposalStageTracker {
    */
   async clearTxCacheEntries(txHash: string): Promise<number> {
     if (!this.cache) return 0;
+    const cache = this.cache;
 
     const baseCacheKey = txHashCacheKey(txHash);
     const prefix = `${baseCacheKey}:op:`;
     let cleared = 0;
 
     // Clear the base tx key
-    if (await this.cache.has(baseCacheKey)) {
-      await this.cache.delete(baseCacheKey);
+    if (await cache.has(baseCacheKey)) {
+      await cache.delete(baseCacheKey);
       logTracker("cleared cache entry: %s", baseCacheKey);
       cleared++;
     }
 
     // Clear all operation-specific keys for this tx in parallel
-    const allKeys = await this.cache.keys(prefix);
+    const allKeys = await cache.keys(prefix);
     const keys = Array.isArray(allKeys) ? allKeys : Array.from(allKeys as Iterable<string>);
     const keysToDelete = keys.filter((key) => key.startsWith(prefix));
 
     await Promise.all(
       keysToDelete.map(async (key) => {
-        await this.cache!.delete(key);
+        await cache.delete(key);
         logTracker("cleared cache entry: %s", key);
       })
     );

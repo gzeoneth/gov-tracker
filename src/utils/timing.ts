@@ -206,37 +206,15 @@ export async function getL1BlockNumberFromL2(
 }
 
 /**
- * Get the corresponding L1 block number for an L2 block.
+ * Get the corresponding L1 block number for an L2 block (as a plain number).
  *
- * Arbitrum L2 blocks include the L1 block number at the time they were created.
- * This is exposed via the `l1BlockNumber` field in the raw block data.
- *
- * This is useful for determining search ranges when looking for L1 events
- * that correspond to L2 actions.
- *
- * Note: This relies on Arbitrum-specific block metadata and requires a
- * JsonRpcProvider that supports the `send` method for raw RPC calls.
+ * Delegates to getL1BlockNumberFromL2 which handles caching and RPC calls.
  */
 export async function getL1BlockForL2Block(
   l2Provider: ethers.providers.Provider,
   l2BlockNumber: number
 ): Promise<number> {
-  const jsonRpcProvider = l2Provider as ethers.providers.JsonRpcProvider;
-  if (typeof jsonRpcProvider.send !== "function") {
-    throw new Error("Provider does not support direct RPC calls (send method required)");
-  }
-
-  const rawBlock = await queryWithRetry(() =>
-    jsonRpcProvider.send("eth_getBlockByNumber", ["0x" + l2BlockNumber.toString(16), false])
-  );
-
-  if (!rawBlock || !rawBlock.l1BlockNumber) {
-    throw new Error(`Could not get L1 block number for L2 block ${l2BlockNumber}`);
-  }
-
-  // Use BigNumber.from for consistent parsing (handles both hex and decimal)
-  // This matches getL1BlockNumberFromL2's approach
-  const l1Block = BigNumber.from(rawBlock.l1BlockNumber);
+  const l1Block = await getL1BlockNumberFromL2(l2Provider, l2BlockNumber);
   return l1Block.toNumber();
 }
 

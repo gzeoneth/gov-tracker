@@ -33,7 +33,7 @@ import { validateSalt, validateSaltBatch } from "../utils/operation-id";
 import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-computation";
 import { INBOX_ABI, timelockInterface } from "../abis";
 import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
-import { getChain, addressEquals } from "../utils/chain";
+import { getChain, addressEquals, compareBigNumbers } from "../utils/chain";
 import {
   getBlockTimestamp,
   checkOperationReady,
@@ -569,13 +569,11 @@ export async function trackL1Timelock(
  * @param gasPrice - Optional pre-fetched gas price to avoid redundant RPC calls in batch
  */
 export async function calculateRetryableExecutionValue(
-  timelockAddress: string,
   target: string,
   data: string,
   provider: ethers.providers.Provider,
   gasPrice?: BigNumber
 ): Promise<BigNumber | null> {
-  void timelockAddress;
   if (!addressEquals(target, ADDRESSES.RETRYABLE_TICKET_MAGIC)) {
     return null;
   }
@@ -612,7 +610,6 @@ export async function calculateRetryableExecutionValue(
  * Fetches gas price once and reuses for all retryable calculations.
  */
 export async function calculateBatchRetryableValues(
-  timelockAddress: string,
   targets: string[],
   values: BigNumber[],
   payloads: string[],
@@ -623,24 +620,45 @@ export async function calculateBatchRetryableValues(
 
   const results = await Promise.all(
     targets.map((target, i) =>
-      calculateRetryableExecutionValue(timelockAddress, target, payloads[i], provider, gasPrice)
+      calculateRetryableExecutionValue(target, payloads[i], provider, gasPrice)
     )
   );
   return results.map((retryableValue, i) => retryableValue ?? values[i]);
 }
 
 /**
- * Helper: Get salt from cached stage data or user override
+ * Shared pre-checks for timelock prepare functions.
+ * Returns salt, predecessor, and any early error result.
  */
-function getSalt(stageData: TimelockStageData, options: PrepareOptions): string {
-  return options.salt ?? stageData.salt ?? ethers.constants.HashZero;
+async function timelockPreparePreChecks(
+  timelockAddress: string,
+  operationId: string,
+  stageData: TimelockStageData,
+  provider: ethers.providers.Provider,
+  options: PrepareOptions
+): Promise<{ salt: string; predecessor: string; error?: PrepareResult }> {
+  const salt = options.salt ?? stageData.salt ?? ethers.constants.HashZero;
+  const predecessor = options.predecessor ?? stageData.predecessor ?? ethers.constants.HashZero;
+
+  if (!options.prepareCompleted) {
+    const stateError = await checkOperationReady(timelockAddress, operationId, provider);
+    if (stateError) return { salt, predecessor, error: stateError };
+  }
+
+  return { salt, predecessor };
 }
 
-/**
- * Helper: Get predecessor from cached stage data or user override
- */
-function getPredecessor(stageData: TimelockStageData, options: PrepareOptions): string {
-  return options.predecessor ?? stageData.predecessor ?? ethers.constants.HashZero;
+function saltValidationError(
+  operationId: string,
+  salt: string,
+  label = "operation"
+): PrepareResult {
+  return failPrepare(
+    `Salt validation failed for ${label} ${operationId}. ` +
+      `Cached salt ${salt} does not produce the expected operation ID. ` +
+      `This may indicate incorrect salt computation during tracking. ` +
+      `Override with options.salt if needed.`
+  );
 }
 
 /**
@@ -656,15 +674,15 @@ export async function prepareTimelockOperation(
 ): Promise<PrepareResult> {
   logExecution("Preparing timelock operation %s", operationId);
 
-  const salt = getSalt(stageData, options);
-  const predecessor = getPredecessor(stageData, options);
+  const { salt, predecessor, error } = await timelockPreparePreChecks(
+    timelockAddress,
+    operationId,
+    stageData,
+    provider,
+    options
+  );
+  if (error) return error;
 
-  if (!options.prepareCompleted) {
-    const stateError = await checkOperationReady(timelockAddress, operationId, provider);
-    if (stateError) return stateError;
-  }
-
-  // Validate the cached salt (unless skipped)
   if (!options.skipSaltValidation) {
     const isValid = validateSalt(operationId, {
       target: params.target,
@@ -673,19 +691,11 @@ export async function prepareTimelockOperation(
       predecessor,
       salt,
     });
-
-    if (!isValid) {
-      return failPrepare(
-        `Salt validation failed for operation ${operationId}. ` +
-          `Cached salt ${salt} does not produce the expected operation ID. ` +
-          `This may indicate incorrect salt computation during tracking. ` +
-          `Override with options.salt if needed.`
-      );
-    }
+    if (!isValid) return saltValidationError(operationId, salt);
   }
 
   const retryableValue = !options.skipRetryableValueCalculation
-    ? await calculateRetryableExecutionValue(timelockAddress, params.target, params.data, provider)
+    ? await calculateRetryableExecutionValue(params.target, params.data, provider)
     : null;
   const executionValue = retryableValue ?? params.value;
 
@@ -698,8 +708,6 @@ export async function prepareTimelockOperation(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain);
-
   return {
     success: true,
     prepared: {
@@ -707,7 +715,7 @@ export async function prepareTimelockOperation(
       data: calldata,
       value: executionValue.toString(),
       chain,
-      chainId,
+      chainId: chainToChainId(chain),
       description: `execute() on ${chain} timelock`,
       operationId,
     },
@@ -737,15 +745,15 @@ export async function prepareTimelockBatch(
     return failPrepare("Array length mismatch in batch params");
   }
 
-  const salt = getSalt(stageData, options);
-  const predecessor = getPredecessor(stageData, options);
+  const { salt, predecessor, error } = await timelockPreparePreChecks(
+    timelockAddress,
+    operationId,
+    stageData,
+    provider,
+    options
+  );
+  if (error) return error;
 
-  if (!options.prepareCompleted) {
-    const stateError = await checkOperationReady(timelockAddress, operationId, provider);
-    if (stateError) return stateError;
-  }
-
-  // Validate the cached salt (unless skipped)
   if (!options.skipSaltValidation) {
     const isValid = validateSaltBatch(operationId, {
       targets: params.targets,
@@ -754,21 +762,12 @@ export async function prepareTimelockBatch(
       predecessor,
       salt,
     });
-
-    if (!isValid) {
-      return failPrepare(
-        `Salt validation failed for batch operation ${operationId}. ` +
-          `Cached salt ${salt} does not produce the expected operation ID. ` +
-          `This may indicate incorrect salt computation during tracking. ` +
-          `Override with options.salt if needed.`
-      );
-    }
+    if (!isValid) return saltValidationError(operationId, salt, "batch operation");
   }
 
   let executionValues = params.values;
   if (!options.skipRetryableValueCalculation) {
     executionValues = await calculateBatchRetryableValues(
-      timelockAddress,
       params.targets,
       params.values,
       params.payloads,
@@ -786,8 +785,6 @@ export async function prepareTimelockBatch(
     salt,
   ]);
 
-  const chainId = chainToChainId(chain);
-
   return {
     success: true,
     prepared: {
@@ -795,7 +792,7 @@ export async function prepareTimelockBatch(
       data: calldata,
       value: totalValue.toString(),
       chain,
-      chainId,
+      chainId: chainToChainId(chain),
       description: `executeBatch() on ${chain} timelock`,
       operationId,
     },
@@ -838,10 +835,7 @@ export async function prepareTimelockStage(
   // Get full stage data for salt/predecessor (cast - we verified it's a timelock stage)
   const timelockStageData = stage.data as TimelockStageData;
 
-  // Sort by index (use BigNumber methods to avoid overflow)
-  const sortedData = [...callScheduledData].sort((a, b) =>
-    a.index.lt(b.index) ? -1 : a.index.gt(b.index) ? 1 : 0
-  );
+  const sortedData = [...callScheduledData].sort((a, b) => compareBigNumbers(a.index, b.index));
   const targets = sortedData.map((d) => d.target);
   const values = sortedData.map((d) => d.value.toString());
   const payloads = sortedData.map((d) => d.data);

@@ -17,8 +17,14 @@ export {
   readQuorum,
   readVotingPower,
   readGetVotes,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
   readNomineeElectionState,
   readMemberElectionState,
   readElectionCount,
+  readVotesUsed,
+  readIsContender,
+  readGovernorName,
 } from "./read";
 export type { ReadContractParameters } from "./read";

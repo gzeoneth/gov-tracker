@@ -143,6 +143,46 @@ export function readGetVotes(
   };
 }
 
+export function readHasVoted(
+  proposalId: bigint | string,
+  account: `0x${string}` | string,
+  governor?: GovernorAddress
+): ReadContractParameters {
+  return {
+    address: resolveGovernorAddress(governor),
+    abi: governorReadAbi,
+    functionName: "hasVoted",
+    args: [BigInt(proposalId), account],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
+export function readCurrentVotingPower(
+  account: `0x${string}` | string,
+  tokenAddress: `0x${string}` | string = ADDRESSES.ARB_TOKEN
+): ReadContractParameters {
+  return {
+    address: tokenAddress as `0x${string}`,
+    abi: erc20VotesAbi,
+    functionName: "getVotes",
+    args: [account],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
+export function readDelegate(
+  account: `0x${string}` | string,
+  tokenAddress: `0x${string}` | string = ADDRESSES.ARB_TOKEN
+): ReadContractParameters {
+  return {
+    address: tokenAddress as `0x${string}`,
+    abi: erc20VotesAbi,
+    functionName: "delegates",
+    args: [account],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
 // ============================================================================
 // Election reads
 // ============================================================================
@@ -180,6 +220,46 @@ export function readElectionCount(
     address: governorAddress as `0x${string}`,
     abi: nomineeElectionGovernorReadAbi,
     functionName: "electionCount",
+    args: [],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
+export function readVotesUsed(
+  proposalId: bigint | string,
+  account: `0x${string}` | string,
+  governorAddress: `0x${string}` | string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): ReadContractParameters {
+  return {
+    address: governorAddress as `0x${string}`,
+    abi: nomineeElectionGovernorReadAbi,
+    functionName: "votesUsed",
+    args: [BigInt(proposalId), account],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
+export function readIsContender(
+  proposalId: bigint | string,
+  account: `0x${string}` | string,
+  governorAddress: `0x${string}` | string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): ReadContractParameters {
+  return {
+    address: governorAddress as `0x${string}`,
+    abi: nomineeElectionGovernorReadAbi,
+    functionName: "isContender",
+    args: [BigInt(proposalId), account],
+    chainId: CHAIN_IDS.ARB_ONE,
+  };
+}
+
+export function readGovernorName(
+  governorAddress: `0x${string}` | string = ADDRESSES.ELECTION_NOMINEE_GOVERNOR
+): ReadContractParameters {
+  return {
+    address: governorAddress as `0x${string}`,
+    abi: nomineeElectionGovernorReadAbi,
+    functionName: "name",
     args: [],
     chainId: CHAIN_IDS.ARB_ONE,
   };

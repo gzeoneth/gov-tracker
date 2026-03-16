@@ -527,11 +527,17 @@ const { data } = useReadContracts({
 | `readProposalSnapshot(id, governor?)` | Snapshot block number |
 | `readProposalDeadline(id, governor?)` | Voting deadline block |
 | `readQuorum(blockNumber, governor?)` | Quorum at block |
-| `readVotingPower(account, block, token?)` | Voting power via `getPastVotes` |
+| `readVotingPower(account, block, token?)` | Voting power at block via `getPastVotes` |
+| `readCurrentVotingPower(account, token?)` | Current voting power via `getVotes` (no block number needed) |
 | `readGetVotes(account, block, governor?)` | Votes via governor `getVotes` |
+| `readHasVoted(id, account, governor?)` | Check if address has voted on proposal |
+| `readDelegate(account, token?)` | Resolve who an address delegates to |
 | `readNomineeElectionState(id, governor?)` | Nominee election proposal state |
 | `readMemberElectionState(id, governor?)` | Member election proposal state |
 | `readElectionCount(governor?)` | Total election count |
+| `readVotesUsed(id, account, governor?)` | Election vote balance used |
+| `readIsContender(id, account, governor?)` | Check if address is registered contender |
+| `readGovernorName(governor?)` | Governor name (needed for EIP-712 typed data) |
 
 ---
 

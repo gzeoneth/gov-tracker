@@ -62,9 +62,15 @@ import {
   readVotingPower,
   readQuorum,
   readGetVotes,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
   readNomineeElectionState,
   readMemberElectionState,
   readElectionCount,
+  readVotesUsed,
+  readIsContender,
+  readGovernorName,
   // State type
   isProposalState,
   // Utilities
@@ -387,13 +393,16 @@ describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
   });
 
   it("exports erc20VotesAbi", () => {
-    expect(erc20VotesAbi).toHaveLength(1);
-    expect(erc20VotesAbi[0].name).toBe("getPastVotes");
+    expect(erc20VotesAbi).toHaveLength(3);
+    const names = erc20VotesAbi.map((i: { name: string }) => i.name);
+    expect(names).toContain("getPastVotes");
+    expect(names).toContain("getVotes");
+    expect(names).toContain("delegates");
   });
 
   it("exports curated read/write splits for governor", () => {
     // #then - read ABI contains only view/pure, write ABI has none
-    expect(governorReadAbi.length).toBe(14);
+    expect(governorReadAbi.length).toBe(15);
     expect(governorWriteAbi.length).toBe(6);
 
     // #then - no overlap: read names and write names are disjoint
@@ -560,6 +569,76 @@ describe("Public API: Read helpers (wagmi useReadContract)", () => {
     expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
     expect(params.functionName).toBe("electionCount");
     expect(params.args).toEqual([]);
+  });
+
+  it("readHasVoted returns correct functionName and args", () => {
+    const account = "0x" + "dd".repeat(20);
+    const params = readHasVoted("12345", account);
+    expect(params.functionName).toBe("hasVoted");
+    expect(params.args).toEqual([BigInt("12345"), account]);
+    expect(params.address).toBe(ADDRESSES.CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readHasVoted accepts governor shorthand", () => {
+    const params = readHasVoted("1", "0x" + "aa".repeat(20), "non-constitutional");
+    expect(params.address).toBe(ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR);
+  });
+
+  it("readCurrentVotingPower uses ARB_TOKEN by default", () => {
+    const account = "0x" + "ee".repeat(20);
+    const params = readCurrentVotingPower(account);
+    expect(params.address).toBe(ADDRESSES.ARB_TOKEN);
+    expect(params.functionName).toBe("getVotes");
+    expect(params.args).toEqual([account]);
+  });
+
+  it("readCurrentVotingPower accepts custom token address", () => {
+    const custom = "0x" + "ff".repeat(20);
+    const params = readCurrentVotingPower("0x" + "aa".repeat(20), custom);
+    expect(params.address).toBe(custom);
+  });
+
+  it("readDelegate returns correct functionName and args", () => {
+    const account = "0x" + "cc".repeat(20);
+    const params = readDelegate(account);
+    expect(params.address).toBe(ADDRESSES.ARB_TOKEN);
+    expect(params.functionName).toBe("delegates");
+    expect(params.args).toEqual([account]);
+  });
+
+  it("readVotesUsed returns nominee governor params", () => {
+    const account = "0x" + "aa".repeat(20);
+    const params = readVotesUsed("999", account);
+    expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(params.functionName).toBe("votesUsed");
+    expect(params.args).toEqual([BigInt("999"), account]);
+  });
+
+  it("readVotesUsed accepts custom governor address", () => {
+    const custom = "0x" + "bb".repeat(20);
+    const params = readVotesUsed("1", "0x" + "aa".repeat(20), custom);
+    expect(params.address).toBe(custom);
+  });
+
+  it("readIsContender returns nominee governor params", () => {
+    const account = "0x" + "aa".repeat(20);
+    const params = readIsContender("777", account);
+    expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(params.functionName).toBe("isContender");
+    expect(params.args).toEqual([BigInt("777"), account]);
+  });
+
+  it("readGovernorName returns nominee governor params", () => {
+    const params = readGovernorName();
+    expect(params.address).toBe(ADDRESSES.ELECTION_NOMINEE_GOVERNOR);
+    expect(params.functionName).toBe("name");
+    expect(params.args).toEqual([]);
+  });
+
+  it("readGovernorName accepts custom address", () => {
+    const custom = "0x" + "dd".repeat(20);
+    const params = readGovernorName(custom);
+    expect(params.address).toBe(custom);
   });
 });
 

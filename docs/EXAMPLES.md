@@ -799,6 +799,9 @@ import {
   readProposalVotes,
   readVotingPower,
   readQuorum,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
 } from "@gzeoneth/gov-tracker";
 
 // Single read
@@ -812,6 +815,17 @@ const { data } = useReadContracts({
     ...delegates.map(d => readVotingPower(d, snapshotBlock)),
   ],
 });
+
+// Check which delegates have not voted (multicall batch)
+const { data: voteStatus } = useReadContracts({
+  contracts: delegates.map(d => readHasVoted(proposalId, d)),
+});
+
+// Live voting power (no block number needed)
+const { data: power } = useReadContract(readCurrentVotingPower(account));
+
+// Resolve delegate
+const { data: delegatee } = useReadContract(readDelegate(account));
 ```
 
 ---
@@ -821,7 +835,10 @@ const { data } = useReadContracts({
 ### Register as Contender
 
 ```typescript
-import { prepareContenderRegistration } from "@gzeoneth/gov-tracker";
+import { prepareContenderRegistration, readGovernorName } from "@gzeoneth/gov-tracker";
+
+// Fetch governor name for EIP-712 (wagmi)
+const { data: governorName } = useReadContract(readGovernorName());
 
 // Two-phase: sign typed data, then submit transaction
 const reg = prepareContenderRegistration(governorName, proposalId);
@@ -859,6 +876,11 @@ await signer.sendTransaction(tx2);
 // Encode/decode vote params manually
 const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
 const { target, votes } = decodeElectionVoteParams(encoded);
+
+// Check remaining vote balance and contender status (wagmi)
+import { readVotesUsed, readIsContender } from "@gzeoneth/gov-tracker";
+const { data: used } = useReadContract(readVotesUsed(proposalId, account));
+const { data: isContender } = useReadContract(readIsContender(proposalId, account));
 ```
 
 ### Query Election Status

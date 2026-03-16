@@ -400,6 +400,69 @@ export const governorAbi = [
     ],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "hasVoted",
+    inputs: [
+      {
+        name: "proposalId",
+        type: "uint256",
+      },
+      {
+        name: "account",
+        type: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "ProposalCreated",
+    inputs: [
+      {
+        name: "proposalId",
+        type: "uint256",
+      },
+      {
+        name: "proposer",
+        type: "address",
+      },
+      {
+        name: "targets",
+        type: "address[]",
+      },
+      {
+        name: "values",
+        type: "uint256[]",
+      },
+      {
+        name: "signatures",
+        type: "string[]",
+      },
+      {
+        name: "calldatas",
+        type: "bytes[]",
+      },
+      {
+        name: "startBlock",
+        type: "uint256",
+      },
+      {
+        name: "endBlock",
+        type: "uint256",
+      },
+      {
+        name: "description",
+        type: "string",
+      },
+    ],
+  },
 ] as const;
 
 export const governorWithVetterAbi = [
@@ -1709,6 +1772,40 @@ export const erc20VotesAbi = [
     ],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "getVotes",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "delegates",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
 ] as const;
 
 // ============================================================================
@@ -1938,6 +2035,27 @@ export const governorReadAbi = [
       {
         name: "",
         type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "hasVoted",
+    inputs: [
+      {
+        name: "proposalId",
+        type: "uint256",
+      },
+      {
+        name: "account",
+        type: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
       },
     ],
     stateMutability: "view",

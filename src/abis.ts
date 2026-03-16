@@ -37,6 +37,10 @@ export const GOVERNOR_ABI = [
   "function castVoteBySig(uint256 proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
   // Read: get votes at snapshot
   "function getVotes(address account, uint256 blockNumber) view returns (uint256)",
+  // Read: check if address has voted
+  "function hasVoted(uint256 proposalId, address account) view returns (bool)",
+  // Event: proposal creation (for event-based discovery)
+  "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)",
 ] as const;
 
 /**
@@ -191,6 +195,8 @@ export const MEMBER_ELECTION_GOVERNOR_ABI = [
  */
 export const ERC20_VOTES_ABI = [
   "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",
+  "function getVotes(address account) view returns (uint256)",
+  "function delegates(address account) view returns (address)",
 ] as const;
 
 /**

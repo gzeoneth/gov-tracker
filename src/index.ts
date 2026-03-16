@@ -451,9 +451,15 @@ export {
   readQuorum,
   readVotingPower,
   readGetVotes,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
   readNomineeElectionState,
   readMemberElectionState,
   readElectionCount,
+  readVotesUsed,
+  readIsContender,
+  readGovernorName,
 } from "./governance";
 export type { GovernorTarget, ReadContractParameters } from "./governance";
 

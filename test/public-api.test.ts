@@ -400,6 +400,19 @@ describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
     expect(names).toContain("delegates");
   });
 
+  it("governorAbi contains hasVoted and ProposalCreated event", () => {
+    const names = governorAbi.map((i: { name: string }) => i.name);
+    expect(names).toContain("hasVoted");
+    const events = governorAbi.filter((i: { type: string }) => i.type === "event");
+    const eventNames = events.map((i: { name: string }) => i.name);
+    expect(eventNames).toContain("ProposalCreated");
+  });
+
+  it("governorReadAbi contains hasVoted", () => {
+    const names = governorReadAbi.map((i: { name: string }) => i.name);
+    expect(names).toContain("hasVoted");
+  });
+
   it("exports curated read/write splits for governor", () => {
     // #then - read ABI contains only view/pure, write ABI has none
     expect(governorReadAbi.length).toBe(15);

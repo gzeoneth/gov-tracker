@@ -877,7 +877,7 @@ await signer.sendTransaction(tx2);
 const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
 const { target, votes } = decodeElectionVoteParams(encoded);
 
-// Check remaining vote balance and contender status (wagmi)
+// Check votes used and contender status (wagmi)
 import { readVotesUsed, readIsContender } from "@gzeoneth/gov-tracker";
 const { data: used } = useReadContract(readVotesUsed(proposalId, account));
 const { data: isContender } = useReadContract(readIsContender(proposalId, account));

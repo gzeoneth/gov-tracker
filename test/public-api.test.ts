@@ -334,30 +334,11 @@ describe("Public API: ABI Exports", () => {
 });
 
 describe("Public API: RPC Utilities", () => {
-  it("exports error classification functions", () => {
-    // #given - a non-error value and a revert error
-    const revertError = new Error("execution reverted");
-    const timeoutError = new Error("ETIMEDOUT");
-
-    // #then - revert errors are permanent (won't succeed on retry)
-    expect(isPermanentError(revertError)).toBe(true);
-    expect(isRetryableError(revertError)).toBe(false);
-
-    // #then - timeout errors are retryable
-    expect(isPermanentError(timeoutError)).toBe(false);
-    expect(isRetryableError(timeoutError)).toBe(true);
-  });
-
-  it("exports getErrorMessage for safe error extraction", () => {
-    // #then - extracts message from Error objects
-    expect(getErrorMessage(new Error("test"))).toBe("test");
-    // #then - converts non-Error values to string
-    expect(getErrorMessage("raw string")).toBe("raw string");
-    expect(getErrorMessage(42)).toBe("42");
-  });
-
-  it("exports queryWithRetry as a function", () => {
-    // #then - queryWithRetry should be a function
+  it("exports error classification and retry functions", () => {
+    // Smoke test — detailed behavior tested in test/utils.test.ts
+    expect(typeof isPermanentError).toBe("function");
+    expect(typeof isRetryableError).toBe("function");
+    expect(typeof getErrorMessage).toBe("function");
     expect(typeof queryWithRetry).toBe("function");
   });
 });

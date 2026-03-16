@@ -25,6 +25,8 @@ import {
   nomineeElectionGovernorReadAbi,
   memberElectionGovernorReadAbi,
 } from "../abis-json";
+import { resolveGovernorAddress } from "./write";
+import type { GovernorTarget } from "./write";
 
 /**
  * Shape compatible with wagmi's useReadContract parameters.
@@ -38,13 +40,7 @@ export interface ReadContractParameters {
   chainId?: number;
 }
 
-type GovernorAddress = "constitutional" | "non-constitutional" | `0x${string}`;
-
-function resolveGovernor(governor?: GovernorAddress): `0x${string}` {
-  if (!governor || governor === "constitutional") return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
-  if (governor === "non-constitutional") return ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR;
-  return governor;
-}
+type GovernorAddress = GovernorTarget | `0x${string}`;
 
 // ============================================================================
 // Governor reads
@@ -55,7 +51,7 @@ export function readProposalState(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "state",
     args: [BigInt(proposalId)],
@@ -68,7 +64,7 @@ export function readProposalVotes(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "proposalVotes",
     args: [BigInt(proposalId)],
@@ -81,7 +77,7 @@ export function readProposalSnapshot(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "proposalSnapshot",
     args: [BigInt(proposalId)],
@@ -94,7 +90,7 @@ export function readProposalDeadline(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "proposalDeadline",
     args: [BigInt(proposalId)],
@@ -107,7 +103,7 @@ export function readQuorum(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "quorum",
     args: [BigInt(blockNumber)],
@@ -139,7 +135,7 @@ export function readGetVotes(
   governor?: GovernorAddress
 ): ReadContractParameters {
   return {
-    address: resolveGovernor(governor),
+    address: resolveGovernorAddress(governor),
     abi: governorReadAbi,
     functionName: "getVotes",
     args: [account, BigInt(blockNumber)],

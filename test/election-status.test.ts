@@ -31,6 +31,11 @@ vi.mock("../src/utils/multicall", () => ({
 
 vi.mock("../src/election/contracts", () => ({
   getNomineeGovernor: vi.fn(),
+  getMemberGovernor: vi.fn(),
+}));
+
+vi.mock("../src/election/proposal-ids", () => ({
+  getElectionProposalIds: vi.fn(),
 }));
 
 // Import the module under test after mocking
@@ -39,11 +44,14 @@ import {
   determineElectionPhase,
   checkElectionStatus,
   hasVettingPeriod,
+  getElectionStatus,
 } from "../src/election/status";
 import { queryWithRetry } from "../src/utils/rpc-utils";
 import { getL1BlockNumberFromL2 } from "../src/utils/timing";
 import { multicall } from "../src/utils/multicall";
-import { getNomineeGovernor } from "../src/election/contracts";
+import { getNomineeGovernor, getMemberGovernor } from "../src/election/contracts";
+import { getElectionProposalIds } from "../src/election/proposal-ids";
+import type { ElectionConfig } from "../src/types";
 
 describe("election/status", () => {
   beforeEach(() => {
@@ -686,6 +694,212 @@ describe("election/status", () => {
       // #then
       expect(result.electionCount).toBe(0);
       expect(result.canCreateElection).toBe(true);
+    });
+  });
+
+  describe("getElectionStatus", () => {
+    const mockL2Provider = {} as any;
+
+    const testConfig: ElectionConfig = {
+      nomineeGovernorAddress: ("0x" + "aa".repeat(20)) as `0x${string}`,
+      memberGovernorAddress: ("0x" + "bb".repeat(20)) as `0x${string}`,
+      chainId: 421614,
+    };
+
+    function mockBaseElectionCalls() {
+      vi.mocked(queryWithRetry).mockImplementation((fn: () => Promise<unknown>) => fn());
+    }
+
+    function mockNominee(overrides: Record<string, unknown> = {}) {
+      const mock = {
+        electionIndexToCohort: vi.fn().mockResolvedValue(0),
+        state: vi.fn().mockResolvedValue(0),
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(0)),
+        ...overrides,
+      };
+      vi.mocked(getNomineeGovernor).mockReturnValue(mock as any);
+      return mock;
+    }
+
+    it("should return full ElectionProposalStatus for NOT_STARTED election", async () => {
+      // #given
+      mockBaseElectionCalls();
+      mockNominee();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: null,
+        memberProposalId: null,
+      });
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then
+      expect(result.phase).toBe("NOT_STARTED");
+      expect(result.electionIndex).toBe(0);
+      expect(result.nomineeProposalId).toBeNull();
+      expect(result.memberProposalId).toBeNull();
+      expect(result.compliantNomineeCount).toBe(0);
+      expect(result.targetNomineeCount).toBe(6);
+      expect(result.isInVettingPeriod).toBe(false);
+      expect(result.canProceedToMemberPhase).toBe(false);
+      expect(result.canExecuteMember).toBe(false);
+    });
+
+    it("should determine NOMINEE_SELECTION phase when nominee proposal is Active", async () => {
+      // #given
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: null,
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(1), // Active=1
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(3)),
+      });
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then
+      expect(result.phase).toBe("NOMINEE_SELECTION");
+      expect(result.nomineeProposalState).toBe("Active");
+      expect(result.compliantNomineeCount).toBe(3);
+    });
+
+    it("should determine COMPLETED phase when member proposal is Executed", async () => {
+      // #given
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: "0x5678",
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(7), // Executed=7
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(6)),
+      });
+      vi.mocked(getMemberGovernor).mockReturnValue({
+        state: vi.fn().mockResolvedValue(7), // Executed=7
+      } as any);
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then
+      expect(result.phase).toBe("COMPLETED");
+      expect(result.memberProposalState).toBe("Executed");
+    });
+
+    it("should determine VETTING_PERIOD when nominee Succeeded and within deadline", async () => {
+      // #given
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: null,
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(4), // Succeeded=4
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(6)),
+        proposalVettingDeadline: vi.fn().mockResolvedValue(BigNumber.from(2000)),
+      });
+      // L1 block number (1000) <= deadline (2000) → in vetting period
+      vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(BigNumber.from(1000));
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then
+      expect(result.phase).toBe("VETTING_PERIOD");
+      expect(result.nomineeProposalState).toBe("Succeeded");
+    });
+
+    it("should determine PENDING_EXECUTION when Succeeded and past vetting deadline", async () => {
+      // #given
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: null,
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(4), // Succeeded=4
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(6)),
+        proposalVettingDeadline: vi.fn().mockResolvedValue(BigNumber.from(500)),
+      });
+      // L1 block (1000) > deadline (500) → past vetting
+      vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(BigNumber.from(1000));
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then
+      expect(result.phase).toBe("PENDING_EXECUTION");
+    });
+
+    it("should handle governor without vetting period gracefully", async () => {
+      // #given
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: null,
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(4), // Succeeded=4
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(6)),
+        proposalVettingDeadline: vi.fn().mockRejectedValue(new Error("function not found")),
+      });
+      vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(BigNumber.from(1000));
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then — no vetting means Succeeded goes straight to PENDING_EXECUTION
+      expect(result.phase).toBe("PENDING_EXECUTION");
+    });
+
+    it("should handle member state revert for early-phase elections", async () => {
+      // #given — member proposal ID computed via hashProposal but not yet created on-chain
+      mockBaseElectionCalls();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: "0x1234",
+        memberProposalId: "0xComputedButNotOnChain",
+      });
+      mockNominee({
+        state: vi.fn().mockResolvedValue(0), // Pending=0 (contender submission)
+        compliantNomineeCount: vi.fn().mockResolvedValue(BigNumber.from(0)),
+      });
+      vi.mocked(getMemberGovernor).mockReturnValue({
+        state: vi.fn().mockRejectedValue(new Error("Governor: unknown proposal id")),
+      } as any);
+
+      // #when
+      const result = await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then — should not crash, memberProposalId nulled out
+      expect(result.memberProposalId).toBeNull();
+      expect(result.memberProposalState).toBeNull();
+      expect(result.phase).toBe("CONTENDER_SUBMISSION");
+    });
+
+    it("should pass config addresses to dependent functions", async () => {
+      // #given
+      mockBaseElectionCalls();
+      mockNominee();
+      vi.mocked(getElectionProposalIds).mockResolvedValue({
+        nomineeProposalId: null,
+        memberProposalId: null,
+      });
+
+      // #when
+      await getElectionStatus(mockL2Provider, 0, testConfig);
+
+      // #then - getElectionProposalIds should receive testnet addresses
+      expect(vi.mocked(getElectionProposalIds)).toHaveBeenCalledWith(
+        0,
+        mockL2Provider,
+        expect.objectContaining({
+          nomineeGovernorAddress: testConfig.nomineeGovernorAddress,
+          memberGovernorAddress: testConfig.memberGovernorAddress,
+        })
+      );
     });
   });
 });

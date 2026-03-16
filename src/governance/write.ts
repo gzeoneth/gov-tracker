@@ -30,7 +30,9 @@ export type GovernorTarget = "constitutional" | "non-constitutional";
 // Internals
 // ============================================================================
 
-function resolveGovernorAddress(governorAddressOrTarget?: string): `0x${string}` {
+export function resolveGovernorAddress(
+  governorAddressOrTarget?: GovernorTarget | string
+): `0x${string}` {
   if (!governorAddressOrTarget) return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
   if (governorAddressOrTarget === "constitutional") return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
   if (governorAddressOrTarget === "non-constitutional")

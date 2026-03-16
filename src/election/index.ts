@@ -40,6 +40,8 @@ export {
   checkElectionStatus,
   hasVettingPeriod,
   determineElectionPhase,
+  getElectionStatus,
+  getAllElectionStatuses,
 } from "./status";
 
 // Write actions (prepare-only)

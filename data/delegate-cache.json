@@ -1,0 +1,1394 @@
+{
+  "version": 1,
+  "generatedAt": "2026-03-17T14:54:36.025Z",
+  "snapshotBlock": 442770195,
+  "startBlock": 440000000,
+  "chainId": 42161,
+  "totalVotingPower": "228666660003708678643150109",
+  "totalSupply": "9999998977630224104158908096",
+  "delegates": [
+    {
+      "address": "0xb4c064f466931b8d0f637654c916e3f203c46f13",
+      "votingPower": "32625530897019796984083335",
+      "lastChangeBlock": 442429175,
+      "lastChangeTxHash": "0xeba15963f8a9396c49691d2487637a6340d723f0c3a6753df320ea671115f77f"
+    },
+    {
+      "address": "0xa5df0cf3f95c6cd97d998b9d990a86864095d9b0",
+      "votingPower": "16872365288056412823155996",
+      "lastChangeBlock": 442504024,
+      "lastChangeTxHash": "0xe7d0cf5f7c8f42c9f0e6f725b43eabbfc2c20028acd441ecafbd0a323e5c79f0"
+    },
+    {
+      "address": "0xc7782d8bfbe4219a63ed8773a7b67b1a9b645cfa",
+      "votingPower": "13537858018645441373639325",
+      "lastChangeBlock": 442565313,
+      "lastChangeTxHash": "0x1575ddf1e04b05e6c2864faa85fb8afa06e6ca2a5eeb323880c7f489a66c46bb"
+    },
+    {
+      "address": "0xb5b069370ef24bc67f114e185d185063ce3479f8",
+      "votingPower": "13353491722417964400325458",
+      "lastChangeBlock": 442126377,
+      "lastChangeTxHash": "0x29ec380cb27c2f9953dfd7cbdf092f2addc799974b84c67ddf9adcdbd492086b"
+    },
+    {
+      "address": "0x2e3bef6830ae84bb4225d318f9f61b6b88c147bf",
+      "votingPower": "12559142062734327945533886",
+      "lastChangeBlock": 442706875,
+      "lastChangeTxHash": "0xab17554cd887e83ee9940be3290f916f7d60ac0d73a254dc09ebab7496a0dc43"
+    },
+    {
+      "address": "0x11cd09a0c5b1dc674615783b0772a9bfd53e3a8f",
+      "votingPower": "12075244383498541277992349",
+      "lastChangeBlock": 442427358,
+      "lastChangeTxHash": "0x0f2e5d428eece027d18e1663db276af8ffa818e8ff4e59b779c1a9c6a215decb"
+    },
+    {
+      "address": "0x7a45ee0be5c4bdc938a5f00a2aef393f46502d26",
+      "votingPower": "10347409058432671831814728",
+      "lastChangeBlock": 441028293,
+      "lastChangeTxHash": "0xbbe16b8d27f0583d6247a01d5cf8f0eefd0eba131ede014db9f719f865a2f236"
+    },
+    {
+      "address": "0x2ef27b114917dd53f8633440a7c0328fef132e2f",
+      "votingPower": "10214964412417609031289119",
+      "lastChangeBlock": 441502376,
+      "lastChangeTxHash": "0x7294410838e9d8b0ba5180340014cbe6792a2046f545cac0ea54b2383c7bbd4a"
+    },
+    {
+      "address": "0x1b686ee8e31c5959d9f5bbd8122a58682788eead",
+      "votingPower": "9864741189210844853542508",
+      "lastChangeBlock": 442760498,
+      "lastChangeTxHash": "0xed54d0df347eabb98604bc365718a5b11c1579fe5d7c917045275e99589a3a70"
+    },
+    {
+      "address": "0xf92f185abd9e00f56cb11b0b709029633d1e37b4",
+      "votingPower": "9829757603977702336778202",
+      "lastChangeBlock": 442709491,
+      "lastChangeTxHash": "0xd7276c572cec6bc948041cae547415b4715223586685966625eca1d2a421d0f8"
+    },
+    {
+      "address": "0x839395e20bbb182fa440d08f850e6c7a8f6f0780",
+      "votingPower": "9623563581418173894447936",
+      "lastChangeBlock": 442472447,
+      "lastChangeTxHash": "0xe9f9c6860a6e1e0cd616e80ef15cde02a3f73fd3e14834afdc55711dbd41d260"
+    },
+    {
+      "address": "0xf4b0556b9b6f53e00a1fdd2b0478ce841991d8fa",
+      "votingPower": "8272873413132333670871323",
+      "lastChangeBlock": 442751437,
+      "lastChangeTxHash": "0x0d03e26e3f6d735da22d9f7bb94535cb4dae2d8a40e2e81f8428b63ac788fccc"
+    },
+    {
+      "address": "0x183d275ac4a046d549ad4dc89c41bff49d632fa3",
+      "votingPower": "8002819284077090616317117",
+      "lastChangeBlock": 440981559,
+      "lastChangeTxHash": "0x0459482767b409c265dc6c0a498f2ade57f5cb23b7a482ef1a83c6bb4a902b11"
+    },
+    {
+      "address": "0xababe91a907fadff921720c43abe4098e7245e99",
+      "votingPower": "7753453101373297810718398",
+      "lastChangeBlock": 442719355,
+      "lastChangeTxHash": "0x38b67c481a292b01b98c0af0a3aa27d9adecec0dbbdf28bc65e2cc0fab4c1191"
+    },
+    {
+      "address": "0xa6e8772af29b29b9202a073f8e36f447689beef6",
+      "votingPower": "6839218851077305416327283",
+      "lastChangeBlock": 442520083,
+      "lastChangeTxHash": "0x525dfa75c70a994b5f847c3209d4cddabd3ea0afd6f7bbed952493d8c358cb08"
+    },
+    {
+      "address": "0x8f73be66ca8c79382f72139be03746343bf5faa0",
+      "votingPower": "4528437272254419104745364",
+      "lastChangeBlock": 442560343,
+      "lastChangeTxHash": "0xc7d65f7a393b653aacfabed503ebc2cef776f08fbadd10dd831639e67b5e9437"
+    },
+    {
+      "address": "0x8a3e9846df0cdc723c06e4f0c642ffff82b54610",
+      "votingPower": "4517948930772781687732681",
+      "lastChangeBlock": 442487591,
+      "lastChangeTxHash": "0x839adb508a59740025f6b30eac656546726098fcbbe1a6fa82124217abb2836b"
+    },
+    {
+      "address": "0xd333bc5c9670c9ceb18f9a2cf02c6e86807a8227",
+      "votingPower": "4507644823607336399219068",
+      "lastChangeBlock": 442427456,
+      "lastChangeTxHash": "0x871dcd131f79289fb78462bec464c4fc2f878cbde258c1bc900a217165db4319"
+    },
+    {
+      "address": "0x0eb5b03c0303f2f47cd81d7be4275af8ed347576",
+      "votingPower": "3830065994446576209615721",
+      "lastChangeBlock": 442676872,
+      "lastChangeTxHash": "0xb93e99ab1c24aa584971964ba8f1b93f317c3a7d3c4ed3b4f3f7f977be3da687"
+    },
+    {
+      "address": "0x79c4213a328e3b4f1d87b4953c14759399db25e2",
+      "votingPower": "2960063175106618918799331",
+      "lastChangeBlock": 442110464,
+      "lastChangeTxHash": "0xcc4790502429511d58633c215a319332cf53a0fc71e58b92c7fb8e31dfc9f5ca"
+    },
+    {
+      "address": "0xad16ebe6ffc7d96624a380f394cd64395b0c6144",
+      "votingPower": "2882094531153448617490437",
+      "lastChangeBlock": 441997715,
+      "lastChangeTxHash": "0x968058d193f363a5472b79c98e2e8e1cea12ac805ff056823e223fb234587be8"
+    },
+    {
+      "address": "0xd4aa67f778bba2805bc122f18f3d61df59c7a542",
+      "votingPower": "2729168708924791776173222",
+      "lastChangeBlock": 442520356,
+      "lastChangeTxHash": "0x818d59ccdbcb68a3c11d11e8f54e45453923e5a72bbcbc910574f0be3106e9de"
+    },
+    {
+      "address": "0xe48c655276c23f1534ae2a87a2bf8a8a6585df70",
+      "votingPower": "2644199923165718654237243",
+      "lastChangeBlock": 441236512,
+      "lastChangeTxHash": "0x8670a7024bfdf7f8ec3140ef538fac987c90f4f5d662aea66f197f211bb6eeae"
+    },
+    {
+      "address": "0x4f685b29514eed0c9d929386e86d9cd81981118b",
+      "votingPower": "2552910281837622914622550",
+      "lastChangeBlock": 442648530,
+      "lastChangeTxHash": "0xb5759a05e6906236634f17e53968cec14bff6d2f96b70c41411e76e99dbfc008"
+    },
+    {
+      "address": "0x190473b3071946df65306989972706a4c006a561",
+      "votingPower": "2224978797620830365213434",
+      "lastChangeBlock": 442732333,
+      "lastChangeTxHash": "0xcb58c89cdef46dd6a231de822cf4ceb5a617c702b2f8ec050784bdeed4ff167b"
+    },
+    {
+      "address": "0x9808e45c613eba00ba18fb3d314dc4d4712c4a85",
+      "votingPower": "1702815726522542876557198",
+      "lastChangeBlock": 441235800,
+      "lastChangeTxHash": "0x30dce41e343bdb86740e5fb790d4e056a2e5bdd1b62b9a81430a1ac70ea39c70"
+    },
+    {
+      "address": "0x8326d18edfc50b4335113c33b25116ec268ff3fe",
+      "votingPower": "1320712718973127559107455",
+      "lastChangeBlock": 442765908,
+      "lastChangeTxHash": "0x979baaad4c4892785d306ca42e24776ca9509fa9b4e16ee40c9699bfdc923afe"
+    },
+    {
+      "address": "0x7b0befc5b043148cd7bd5cfeeef7bc63d28edec0",
+      "votingPower": "1283907441134477718262588",
+      "lastChangeBlock": 442765045,
+      "lastChangeTxHash": "0x3c03c2210eb444aba27a8475bd43432e6649666696f751a065ab160f005aa7e5"
+    },
+    {
+      "address": "0x5ab0fdc6f0ca9ea178c95ceccf944a4ce1aedddd",
+      "votingPower": "1255420285223829672668351",
+      "lastChangeBlock": 442504706,
+      "lastChangeTxHash": "0x46dfeff1a4c75cc163d419b3ca2531ef966df79f482e36bc114b25f1f3e14d8f"
+    },
+    {
+      "address": "0x683a4f9915d6216f73d6df50151725036bd26c02",
+      "votingPower": "839779463980113322486904",
+      "lastChangeBlock": 442385948,
+      "lastChangeTxHash": "0xb9edacdcaebf03210744b93661a4613af0f4536a98499712b9aa0e2a27fe36e3"
+    },
+    {
+      "address": "0xbbe98d590d7eb99f4a236587f2441826396053d3",
+      "votingPower": "816851316520325057216450",
+      "lastChangeBlock": 442764076,
+      "lastChangeTxHash": "0x2409ca689cdc7301d089f1490af7ce28f43c02bb2ef9d674f162df7a093742b3"
+    },
+    {
+      "address": "0xa7860e99e3ce0752d1ac53b974e309fff80277c6",
+      "votingPower": "406414447838212622301012",
+      "lastChangeBlock": 441237817,
+      "lastChangeTxHash": "0x707c4a829abef6c3adb5c742d41b802501f194a985eb0bc530d693c59e7da1ae"
+    },
+    {
+      "address": "0x7ae109a63ff4dc852e063a673b40bed85d22e585",
+      "votingPower": "402519224755023166844003",
+      "lastChangeBlock": 441640142,
+      "lastChangeTxHash": "0xa413ba98d5a00d9e0c3115e44cc678b83c203b10c16ed82d0a3ad9237b7f3632"
+    },
+    {
+      "address": "0x18bf1a97744539a348304e9d266aac7d446a1582",
+      "votingPower": "393690417102890257336227",
+      "lastChangeBlock": 442191977,
+      "lastChangeTxHash": "0x4aba2a37cb7850a7752a555da6ce8e4bf933ef711dd2ff10f766adcd9755ced7"
+    },
+    {
+      "address": "0x13bdae8c5f0fc40231f0e6a4ad70196f59138548",
+      "votingPower": "371361946451780137103893",
+      "lastChangeBlock": 441243481,
+      "lastChangeTxHash": "0x15d69c5ba8a2d44bab61ed811b2c77600522953e4e32c7ed7982c61f257e1669"
+    },
+    {
+      "address": "0x3d1846ea60001a3bc21438d76f3958422fe89adb",
+      "votingPower": "337888554772206837128853",
+      "lastChangeBlock": 441812715,
+      "lastChangeTxHash": "0xc0869e75b52821db9219fb21d8466d0d70908a182f3c8a88318e0f3e9d227cb1"
+    },
+    {
+      "address": "0x5318f07a3a20a2f8bb0ddf14f1dd58c517a76508",
+      "votingPower": "309293238231151747290937",
+      "lastChangeBlock": 441684309,
+      "lastChangeTxHash": "0xb51a07be34c5bc572829ba052f5869cddc9e8b7c90b2f5da5c82aa68f44fdd10"
+    },
+    {
+      "address": "0x3ef1b0db4d10d2e3ce06699c0bd4ef0aaf897614",
+      "votingPower": "255367526931005555916393",
+      "lastChangeBlock": 440142938,
+      "lastChangeTxHash": "0x7ce12dfec6ad3a7081191922382cb6f227bcd33c9e0ae4984f48b94e66111398"
+    },
+    {
+      "address": "0xf9551c66995ed3ff9bb05c9fd7ff148bd75dc99a",
+      "votingPower": "247237208840019673631199",
+      "lastChangeBlock": 440765588,
+      "lastChangeTxHash": "0x01ca12bdc7fc7f6d0db7a62fea5a93b62673c471968fb72100c101ae8b592b4e"
+    },
+    {
+      "address": "0xd035dfe329f35946edd486ce51b383133f6b2f5a",
+      "votingPower": "225051718531369489253108",
+      "lastChangeBlock": 441944835,
+      "lastChangeTxHash": "0xac1daf8fce88a50b9c69fe5bad138e6bdb1105355b219a810b404949bc5ecbf7"
+    },
+    {
+      "address": "0x6f9bb7e454f5b3eb2310343f0e99269dc2bb8a1d",
+      "votingPower": "205934286397187886992985",
+      "lastChangeBlock": 442399591,
+      "lastChangeTxHash": "0x616914b0be3573a895224d743bf61ecf1748e29a208af806e471fde121248aa1"
+    },
+    {
+      "address": "0x22aa1f4173b826451763ebfce22cf54a0603163c",
+      "votingPower": "199537994774431406867480",
+      "lastChangeBlock": 442478534,
+      "lastChangeTxHash": "0xd543ff39c961989ff43ec311b1de82554b4cfed147cd47dadab100301f083ead"
+    },
+    {
+      "address": "0x6a26afb01ff57e827079658238858d55774ca2d5",
+      "votingPower": "196125111247001003878362",
+      "lastChangeBlock": 441559700,
+      "lastChangeTxHash": "0x24b5330842a6dda2cb82269632cc25df75d58067f57f15c9a9f36ba092c69051"
+    },
+    {
+      "address": "0xe93d59cc0bcecfd4ac204827ef67c5266079e2b5",
+      "votingPower": "176072208861531999288045",
+      "lastChangeBlock": 440486054,
+      "lastChangeTxHash": "0x2d0ea06c7fc8f33db37abbc090bf483c28c07b66bc8a6ef88ed385a25f515ad4"
+    },
+    {
+      "address": "0x7f1156aa350982560653fed03ef0e285ef878b75",
+      "votingPower": "171217959391173402188224",
+      "lastChangeBlock": 440612704,
+      "lastChangeTxHash": "0x6d452913ff0ccdd874294f5b7aa50b9252c3919c08c329b36f1f06019c6fc5d3"
+    },
+    {
+      "address": "0x5162728cc4d7d111400056925a1b3df82308bee0",
+      "votingPower": "169192408512520591965046",
+      "lastChangeBlock": 440710726,
+      "lastChangeTxHash": "0x6846988d9da7dd2391399413d43a171da281e8c5dfcbb9432287e4440f408fa3"
+    },
+    {
+      "address": "0x067b9bbbbc42d2ab9b9ab6bb62646daf7f344a76",
+      "votingPower": "160984227661813740243301",
+      "lastChangeBlock": 440658457,
+      "lastChangeTxHash": "0x783fdb6c8636a021e3120882f02e8b3e757a728fd8e5ad211dd888beaa34fc7d"
+    },
+    {
+      "address": "0xd35629a2b7fb9f232fda6c29b72035a7dbafa3c1",
+      "votingPower": "157099773840813449717717",
+      "lastChangeBlock": 441386577,
+      "lastChangeTxHash": "0x6e45737ba5a134f39db4727197abee4382cc05ab9050e40bf5f8a4944fa37188"
+    },
+    {
+      "address": "0xea172676e4105e92cc52dbf45fd93b274ec96676",
+      "votingPower": "151614314523283258191095",
+      "lastChangeBlock": 442325183,
+      "lastChangeTxHash": "0x82db013975fbea3a7acd75e65a535a271a683b848dae2b295ed406e695dcecbf"
+    },
+    {
+      "address": "0x60201046ed5b6c660984b82a19205b573f5fc805",
+      "votingPower": "143876608744043862441660",
+      "lastChangeBlock": 441812678,
+      "lastChangeTxHash": "0xd4c4b621ebafb971676e72d0e4f065a3a914504774d308df9229c90bde3a9e24"
+    },
+    {
+      "address": "0x0610623d8e9ac26bac3e53b9144d6e46d60691d1",
+      "votingPower": "117269072871652014400663",
+      "lastChangeBlock": 442308792,
+      "lastChangeTxHash": "0xccf40ca1ef28cc9fb7878a87b1098285c03ecca869becb922457f58495f60bd4"
+    },
+    {
+      "address": "0xf3fe8c6c75be4afb2f8200fc77339abe4d7cff33",
+      "votingPower": "113235158871246720451468",
+      "lastChangeBlock": 442707622,
+      "lastChangeTxHash": "0x10e5c8863b91b6dd9bf2aa559cd39dad02815b049c1efde87b2e87fe6c46b895"
+    },
+    {
+      "address": "0x5b39c3907bd9db69b435a6cbf485915135ffffd6",
+      "votingPower": "111728401696599201172034",
+      "lastChangeBlock": 440789781,
+      "lastChangeTxHash": "0x777173c793a04a420f4e950c97eb5cc70fd2a9824726209cbc58beaa596acbb1"
+    },
+    {
+      "address": "0x70fb66bd5d308d4655cb637ed21d4058e33467d5",
+      "votingPower": "100883711667405569626005",
+      "lastChangeBlock": 441322329,
+      "lastChangeTxHash": "0x03f3f54a0ebc213dcc4a61c18d5f46cc3ab6102cc289557c9eea170eee385dbb"
+    },
+    {
+      "address": "0x0a9eeddaa65546ad35d3f0ac9e6f09575e4c9297",
+      "votingPower": "96843093912879529493440",
+      "lastChangeBlock": 442494452,
+      "lastChangeTxHash": "0x48379671d2496a12a1456a49882a7e55fa4e050ecc3bd74335f1e6929f3c63fb"
+    },
+    {
+      "address": "0x539629494be6b004d33d290e6243806750a3a2f4",
+      "votingPower": "90801161232932978193972",
+      "lastChangeBlock": 441956885,
+      "lastChangeTxHash": "0x5c4354d1c9a3a6248cdbf3ed0b79b866741e0e56b978e876f8eb2b218d573f7d"
+    },
+    {
+      "address": "0xc37b40abdb939635068d3c5f13e7faf686f03b65",
+      "votingPower": "90303556646642978920191",
+      "lastChangeBlock": 440881672,
+      "lastChangeTxHash": "0x21de2a325c25fe3f64adf0434994d9111f12fffb8a5e0e1d793554a63b390c8c"
+    },
+    {
+      "address": "0x070341aa5ed571f0fb2c4a5641409b1a46b4961b",
+      "votingPower": "88274530187943322628726",
+      "lastChangeBlock": 441387678,
+      "lastChangeTxHash": "0x82451ac8fd63af5f94bb7bf9eadf01d3077bda42a9078ea0517c0733986b1a1a"
+    },
+    {
+      "address": "0xffcdce3102ec97ec4032b2f162754b1e0d133acc",
+      "votingPower": "84794156786470021712563",
+      "lastChangeBlock": 440008234,
+      "lastChangeTxHash": "0xf5b65b1a1c3b606acc29fd2366d3cc3c5b93d3b6f320ec7215deaf413524720a"
+    },
+    {
+      "address": "0xc0c38e9601ebe707279727bf6292f67e719a475d",
+      "votingPower": "83307966239084570208961",
+      "lastChangeBlock": 441773073,
+      "lastChangeTxHash": "0x4bce663d90be9dcac40a00acd3f7da3cda53d0f06aafbcac9370876eeba87db4"
+    },
+    {
+      "address": "0x17296956b4e07ff8931e4ff4ea06709fab70b879",
+      "votingPower": "80464125667923082989098",
+      "lastChangeBlock": 442089767,
+      "lastChangeTxHash": "0x36ec5e5317c18c8fc0f9222fdde07cba021d546fba91f89d78b090b66c3b4366"
+    },
+    {
+      "address": "0xbec643bd5b7f5e9190617ca4187ef0455950c51c",
+      "votingPower": "66424665719020990862941",
+      "lastChangeBlock": 442374735,
+      "lastChangeTxHash": "0xd191d255c959aaeaa7bea2fbb35bb216032fbb54df5657551a2a553fe36cbebc"
+    },
+    {
+      "address": "0x62a43123fe71f9764f26554b3f5017627996816a",
+      "votingPower": "64874084235214475269154",
+      "lastChangeBlock": 440623792,
+      "lastChangeTxHash": "0xe16d2eafef294ce7a4b186c56629d8fceba47b412a15c1b226025a75487c929b"
+    },
+    {
+      "address": "0x054becf10c79afa4e60f75b187837be9fb83867d",
+      "votingPower": "61832098073201943381424",
+      "lastChangeBlock": 441706122,
+      "lastChangeTxHash": "0x28b971fdd8d0fc299b2eee48a868c9049e655c9b7902812d99eefd9a3d4ad26e"
+    },
+    {
+      "address": "0xf0ea58b65c82c48ce69f0abd68d178e7764c4ba2",
+      "votingPower": "60772858797790512533082",
+      "lastChangeBlock": 440228649,
+      "lastChangeTxHash": "0x79e2df728008b5d3ca0cf983f4313d0ce8fc242fd01acee0a475c520020b596f"
+    },
+    {
+      "address": "0xb9b8ef61b7851276b0239757a039d54a23804cbb",
+      "votingPower": "52459935363951391722362",
+      "lastChangeBlock": 441204277,
+      "lastChangeTxHash": "0xc3b3c916689c155a4ccef26a336afa42adb511ddf47002aa0f9d31e41b0b74f5"
+    },
+    {
+      "address": "0x72cb40a11781ff0149abb55a1adebe2407575030",
+      "votingPower": "43452401952326234025350",
+      "lastChangeBlock": 440113778,
+      "lastChangeTxHash": "0xacea18402f5664242dc4817eb4c39193bd8cff2a6152743bc4589ba33f96dd02"
+    },
+    {
+      "address": "0x1640e916e10610ba39aac5cd8a08acf3ccae1a4c",
+      "votingPower": "28662601145937784790988",
+      "lastChangeBlock": 442623486,
+      "lastChangeTxHash": "0x3f326ddb7d82a916c31484ec5a415a8e1c976b9ac9887bdad2cf30db978f7a21"
+    },
+    {
+      "address": "0xe8b384917ed2650f06406e7c7f87dd9df0080fd7",
+      "votingPower": "18222971447581115150740",
+      "lastChangeBlock": 440034252,
+      "lastChangeTxHash": "0x3e79e8e8d4fa98f61d2f05b6b055ecd250809d1baf5bd0469abeb3c1ffbde575"
+    },
+    {
+      "address": "0xce276223ef4d467c286e0a02ecb010d3220ea980",
+      "votingPower": "17115690225147870225816",
+      "lastChangeBlock": 440836352,
+      "lastChangeTxHash": "0x401510551caa6b759a9a28dcd4f9aba4f5434934993b2abaac96a91aac5e5ae4"
+    },
+    {
+      "address": "0x5be0fee0f748c1737793172d42c14e4810d2038e",
+      "votingPower": "11733332309181829675185",
+      "lastChangeBlock": 441852003,
+      "lastChangeTxHash": "0xaeeedc7dd660e0d2ddaa8eb96dee0966afbce7ad2cb0c050c2bf749f53f06f18"
+    },
+    {
+      "address": "0xf548a58db6d86d466acd00fc0f6de3b39ea129d7",
+      "votingPower": "10855107162080532533483",
+      "lastChangeBlock": 441022596,
+      "lastChangeTxHash": "0x4a4dca6c0e0995c3d47e49f6b98c5243831c3a6da5cd26353cb67e8626dccd67"
+    },
+    {
+      "address": "0x2621ef4828b7ca3187862cd71f57f52f514214f5",
+      "votingPower": "10770284662799680937860",
+      "lastChangeBlock": 442412540,
+      "lastChangeTxHash": "0x15395b7f70da21e7da1e045a5a36ba443e8e085c838ec7728170dec6bb706852"
+    },
+    {
+      "address": "0x3f75332e6d8a7cf9d55854b5a2fec768222eb003",
+      "votingPower": "9744169279778520398181",
+      "lastChangeBlock": 441052217,
+      "lastChangeTxHash": "0xbcc0a0b84f5b9ae9d22a5baf037f8da1c02b14c96c372cc2b4ae9858824c9727"
+    },
+    {
+      "address": "0x0bd27fac898a59680b9dc92bb7378df610825e8d",
+      "votingPower": "8353229054951855029787",
+      "lastChangeBlock": 440869625,
+      "lastChangeTxHash": "0xf147dfe79fbcd80cb1dc631d981a1feb23b654a82c8678bb7becb9083de920fb"
+    },
+    {
+      "address": "0x280dd857e0202987a383ddc4a9a84905b0c9cb1b",
+      "votingPower": "5027641306618751226954",
+      "lastChangeBlock": 442727832,
+      "lastChangeTxHash": "0x432cd6b0fa7137bc9bb71d0ac2787c66c1fcc848680f3da38f25a19632bd8c5f"
+    },
+    {
+      "address": "0xd011a7f76756d295be3e2ea180385efe15571053",
+      "votingPower": "5000000000000000000000",
+      "lastChangeBlock": 441603458,
+      "lastChangeTxHash": "0x96e894816b87f4ff03f1d83dc02504997a2936d51ef1abd5007d0172ec1ae939"
+    },
+    {
+      "address": "0x06ad51e6cc8aeafcc0aaf2df6dc7870d365dd8e1",
+      "votingPower": "4925096825303499016247",
+      "lastChangeBlock": 440555035,
+      "lastChangeTxHash": "0x6bda7da4d09b64f6fa1b64ddd028774c977c844d27de9ee2f4c40bb282ed626c"
+    },
+    {
+      "address": "0x4acd83fdee93be3cd84748595624855f85be5145",
+      "votingPower": "4061180980015380063673",
+      "lastChangeBlock": 440307926,
+      "lastChangeTxHash": "0x4e621c70066a7b41cc0978c4458dcc80ee2e2ff6874da5bf59bb62c5af4c4c70"
+    },
+    {
+      "address": "0xb5932a6b7d50a966aec6c74c97385412fb497540",
+      "votingPower": "3510077900334981235849",
+      "lastChangeBlock": 441316707,
+      "lastChangeTxHash": "0xd756004317e1b655706b67671cf9b6f0417caae9cf14f51911326ba8c4be1c6d"
+    },
+    {
+      "address": "0xc24c86767d4d838fbd847ec8bbf91ee201f77072",
+      "votingPower": "3484693618786324566689",
+      "lastChangeBlock": 441052217,
+      "lastChangeTxHash": "0xbcc0a0b84f5b9ae9d22a5baf037f8da1c02b14c96c372cc2b4ae9858824c9727"
+    },
+    {
+      "address": "0x2a724be1b63caec1c3ef95834fdd443c3347ee1d",
+      "votingPower": "2936768837949223215364",
+      "lastChangeBlock": 440511289,
+      "lastChangeTxHash": "0xb666c1da65cb09c8e3ea2ab8b3aa34ffa99a91ac8093bda0eebdf749b722b3f5"
+    },
+    {
+      "address": "0x33f6ee932cea603fafd6854827259be172c91da4",
+      "votingPower": "2852066846562139444780",
+      "lastChangeBlock": 442375717,
+      "lastChangeTxHash": "0x6d568577a3a2ab27d2bad4c0ea03693b16547b09a09920d29df22ef80b055785"
+    },
+    {
+      "address": "0xf14a11ebe485e758fda40dfeb9cd505011490b2f",
+      "votingPower": "2804101704018665577850",
+      "lastChangeBlock": 441495363,
+      "lastChangeTxHash": "0x4a379960b9dcc810b5e5186a692ee9364217de164fed5a59e560f83ef0676f17"
+    },
+    {
+      "address": "0xf7cf6a6affe47eeaa23f4ceadf18d04a90c9beab",
+      "votingPower": "2665857491208819798154",
+      "lastChangeBlock": 440985562,
+      "lastChangeTxHash": "0xa6f10181e3f4b4279995ab73b788fce727894366e2f683b1d8add571c41c2dbf"
+    },
+    {
+      "address": "0x880e265a5f7babd24281d6e7a2fcf41ddfb5b4b4",
+      "votingPower": "2552513372385606689752",
+      "lastChangeBlock": 442556530,
+      "lastChangeTxHash": "0xc629a6d08c09759dcc453d8e3c7f526d2afa6eb4fac1d179050fe9e437ad0948"
+    },
+    {
+      "address": "0xb843de66d048e87d986c6dda826a79e9a724d894",
+      "votingPower": "2478271912958071266917",
+      "lastChangeBlock": 442560949,
+      "lastChangeTxHash": "0x1438590766fbe51e5ac29b84da6a5655e958f18bfac865eb3225c22e0698c8ea"
+    },
+    {
+      "address": "0x75668f49e2e526720c06378d3e1667e3bfe0a890",
+      "votingPower": "2330037653331619463021",
+      "lastChangeBlock": 442390336,
+      "lastChangeTxHash": "0x48ce49f664904f1131abc3fabeb83278e8c35f4dca6ba4d2996ec36215892c41"
+    },
+    {
+      "address": "0xeab804590011d0650fcb6c4da1870c6e9ca062d1",
+      "votingPower": "2326261955059508615201",
+      "lastChangeBlock": 442478777,
+      "lastChangeTxHash": "0xfc7fa032f6800dda39b96f0c79385bb6971c0895f1852389732d39a7f11734b4"
+    },
+    {
+      "address": "0x968ad4e47826ef1b688bdbd90ded74bb66ca3575",
+      "votingPower": "1915008096904231863956",
+      "lastChangeBlock": 441015698,
+      "lastChangeTxHash": "0x6999bee62ce4599e8230631ef8f924adbe3c5a03586c6e3d9cfb8d3c58672ec9"
+    },
+    {
+      "address": "0x4847fad926dd9c390539643d61c953d9fecd52b2",
+      "votingPower": "1676264003024948026869",
+      "lastChangeBlock": 442081216,
+      "lastChangeTxHash": "0x1a3abfd9dffe6aff48134bd7038749ce36912aa38fbdd1baffb1d894958c564d"
+    },
+    {
+      "address": "0xdb6152636a8e18252f9ac4899e6ab5adca3d8012",
+      "votingPower": "1656853306582185211407",
+      "lastChangeBlock": 442743358,
+      "lastChangeTxHash": "0x538d52f113dcf8f6893a557751af121ed7c24b0ec0f7f616f825ca6716e2c23b"
+    },
+    {
+      "address": "0x6a5cc02b7da4ad7db68688b92836ad10e053b1fe",
+      "votingPower": "1647645738038152710768",
+      "lastChangeBlock": 440831376,
+      "lastChangeTxHash": "0x4f0d2bdc755917acac405af120abe309b10b5ebe1a938b62cf7b2474a90fe307"
+    },
+    {
+      "address": "0x12fea79122404634a03df7ce08e984e6c128fc21",
+      "votingPower": "1504197180183319457237",
+      "lastChangeBlock": 442008428,
+      "lastChangeTxHash": "0x4a625f40847d3853d737a17ef628539bb3fcb99bb403550c236e4b94bf622885"
+    },
+    {
+      "address": "0x75011de74f3235766df5273da96a9815cd5c3874",
+      "votingPower": "1476479353520730384028",
+      "lastChangeBlock": 440716234,
+      "lastChangeTxHash": "0x025a683186a4fa9d3f0e82580e4e01ec1762d0739ae77a80c5f92a2af5025244"
+    },
+    {
+      "address": "0x0d9bc244cc7b0ce599fb9039413fc86e372c829e",
+      "votingPower": "1395775106990916706510",
+      "lastChangeBlock": 440716901,
+      "lastChangeTxHash": "0x5230b5bdbefedb2ee23e343aebea29f03a40d35fd628baa20c6f0e477636dd2e"
+    },
+    {
+      "address": "0xf47d3355465cca3108687e53cc4783c000293dde",
+      "votingPower": "1276993394264078785996",
+      "lastChangeBlock": 442196020,
+      "lastChangeTxHash": "0xd4373093cb732c3e422d35bc1c02552eb89eba6caea488c62c6dea19a009fae5"
+    },
+    {
+      "address": "0xf31d17289bab108ebf6d85d2d3289aa32af7bff7",
+      "votingPower": "1247267387768627415495",
+      "lastChangeBlock": 442211304,
+      "lastChangeTxHash": "0xbca822fb189d7a415878934099029323d8688e552f747d090e8b0eae3f02e512"
+    },
+    {
+      "address": "0x7c22cd949433587be928afec5ead4f9ef15012a5",
+      "votingPower": "1193505637706095764929",
+      "lastChangeBlock": 441968742,
+      "lastChangeTxHash": "0xd622cbc9cb924aba963486fee94603d1c1983ed7b3b382fa604cb81264398f36"
+    },
+    {
+      "address": "0x63a13c11cb3c7c92994984ff04484dbf9168a8fb",
+      "votingPower": "1110915635985448740966",
+      "lastChangeBlock": 442474666,
+      "lastChangeTxHash": "0x29f95e2d759ec2e91e3c26a2ac4754d8c6b11fedb424853ebf36dcffa4631cb5"
+    },
+    {
+      "address": "0xce209502c6661b496c740ce44927bf3d12d9fa0f",
+      "votingPower": "1109795067604685149361",
+      "lastChangeBlock": 441059408,
+      "lastChangeTxHash": "0x1905f630ac37d64d1793e258bea6a7eddbb6e98eb1ee1942455e9f14b88935e2"
+    },
+    {
+      "address": "0x29dd95de05db9aaab50c2167174a07458da09ceb",
+      "votingPower": "1017868012285089028083",
+      "lastChangeBlock": 442205924,
+      "lastChangeTxHash": "0x4f6c5310c470e47de2678e9da794ba068b45fae8872214a36f0949582b367a19"
+    },
+    {
+      "address": "0xd9f0df0cb351e9d1dd946b08191ea48b8e767d82",
+      "votingPower": "1009987233490000000000",
+      "lastChangeBlock": 440547715,
+      "lastChangeTxHash": "0x3ecdcede468a043621b6cf2bf22f8d5054c935913c8d779773d2a57999a0f6f0"
+    },
+    {
+      "address": "0xb1fde667d3dafbc3a3ca0da1c03739ae0abf7596",
+      "votingPower": "968689081123576676000",
+      "lastChangeBlock": 441874657,
+      "lastChangeTxHash": "0x9dd77b9056055eec4b579fe66d0ec364a59448daec0c42934139c20dc7689e91"
+    },
+    {
+      "address": "0x2d3c27ffd4dd6d49b7cd7ec826987b122f133181",
+      "votingPower": "947151448610281077349",
+      "lastChangeBlock": 441704854,
+      "lastChangeTxHash": "0xd2e5705dc219dd9cecdd6dcb179b996aa550e235c89524795120e24b3a3ee51f"
+    },
+    {
+      "address": "0xd16828893039f372cf022605adc37f625cf85859",
+      "votingPower": "884123199559235525776",
+      "lastChangeBlock": 440088482,
+      "lastChangeTxHash": "0xffcbdbf553477dd1d5ddbcdd99ed27d068ac31d84013afdd95e580b42ff176eb"
+    },
+    {
+      "address": "0x509cac813fc99ace1acb65449fee80d465154581",
+      "votingPower": "864493168314621172537",
+      "lastChangeBlock": 442733489,
+      "lastChangeTxHash": "0x4311e8a1b3ac6757203ac4de9c1359f2f418a79d57a86ec55b0ea676cc285627"
+    },
+    {
+      "address": "0xac4b0882e822e86811ccae3773a29b0f9888b86e",
+      "votingPower": "858564621717305059602",
+      "lastChangeBlock": 442384158,
+      "lastChangeTxHash": "0xb9c11d7dcb81aa21a6b357abc2cae985bab0246077e34df4f94eca3973989205"
+    },
+    {
+      "address": "0xcafc58de1e6a071790efbb6b83b35397023e1544",
+      "votingPower": "847040239398141144813",
+      "lastChangeBlock": 442722934,
+      "lastChangeTxHash": "0x0a75c45eea050c189b5dba15adc937a08f6e28b994fa12f323fd4f9703e97b00"
+    },
+    {
+      "address": "0x4f0b32c35623dcd4f7e4e758c83f1ed7c7dcf80c",
+      "votingPower": "835157374192311724316",
+      "lastChangeBlock": 441308595,
+      "lastChangeTxHash": "0x3266528001acd351f3575ab694f05eef2d491f67d99b9e9b574d51579d3f1540"
+    },
+    {
+      "address": "0x1a9b3f6a0a3e6a715e047635a9b0f3775e82aa8f",
+      "votingPower": "668233704491521925801",
+      "lastChangeBlock": 441018032,
+      "lastChangeTxHash": "0x31f89e35384babef1ae67e1a59f53cf34136b0637ec098d483a65a082c2adb11"
+    },
+    {
+      "address": "0xe221199497ecf48efa70f1303dfa96c6a7076b40",
+      "votingPower": "667791144458613126066",
+      "lastChangeBlock": 442739921,
+      "lastChangeTxHash": "0x78692517f1b6a1d29f59dd2a0b3babd655744548ddee450cdffce0fa1b6ab914"
+    },
+    {
+      "address": "0x96231425d446c24680dee5bb2d514791c140db76",
+      "votingPower": "667730402743609539610",
+      "lastChangeBlock": 442243820,
+      "lastChangeTxHash": "0x2dcb528676095ff23e7b84af3b8e59bedf2fb8c769d5c6a1f37f86b9e9bb36ca"
+    },
+    {
+      "address": "0x6e558e4279d9be551d51050890041b656789c414",
+      "votingPower": "647895345793437237420",
+      "lastChangeBlock": 440694515,
+      "lastChangeTxHash": "0xacae34492ca61db112d5a79c57a080a4995b14550bd03d4b10a56ba513dc727e"
+    },
+    {
+      "address": "0x959593113f566086f1d66a88ce82e4479ebadede",
+      "votingPower": "638954278283563299233",
+      "lastChangeBlock": 442240818,
+      "lastChangeTxHash": "0xa490ce69cd9801e4c2a4b221884be8758b155495c4dfbbc7269c356d3aa4c64a"
+    },
+    {
+      "address": "0xdead95deaea1bd39a56beed872b00d802734963c",
+      "votingPower": "631966477751181127303",
+      "lastChangeBlock": 440926745,
+      "lastChangeTxHash": "0x7ca4c35269d5f08dee4d81a74be6a1b76cd0e3c0526746a43c56c54a7e54776d"
+    },
+    {
+      "address": "0x2ce7ee732583f0659720114d747c81293b39be91",
+      "votingPower": "626373971261620753072",
+      "lastChangeBlock": 441029202,
+      "lastChangeTxHash": "0x1d89bbbaaf1a3f01c82208680ebf307cb37a61010cf344a83dc0d93e20b6e700"
+    },
+    {
+      "address": "0x7e0305db11088ec12ab00b7d68f26ab31f722027",
+      "votingPower": "625000000000000000000",
+      "lastChangeBlock": 442570723,
+      "lastChangeTxHash": "0xd80097326ac5129447bc0196343a40e2ad950e257ad3c63f16b2eea3ec745621"
+    },
+    {
+      "address": "0x69ba7215747bf88d027e5a4d82a1dcc77c4480f3",
+      "votingPower": "624434703113858599251",
+      "lastChangeBlock": 440780518,
+      "lastChangeTxHash": "0x893f96968e71ef54a85ed7273852a69c204e847d800529bb157da46c1e79513e"
+    },
+    {
+      "address": "0x661ed0f836df63455e16b5a310ba76235dd7db8d",
+      "votingPower": "613450663333333333324",
+      "lastChangeBlock": 440393152,
+      "lastChangeTxHash": "0xe34dc30d867017993fb1c1f82320b7726c176699f466243d03992f3e0178c217"
+    },
+    {
+      "address": "0x3e2d62119bc9ad0b206f0a5f75d209eb173b970a",
+      "votingPower": "597371136290376762578",
+      "lastChangeBlock": 441315997,
+      "lastChangeTxHash": "0x07fa13593fee8e9846753f1b93d95d66b793bc4ec24aa33956e1100b85274337"
+    },
+    {
+      "address": "0x89f2225f4d6d9986603f6096dabf1a0eac7d8e95",
+      "votingPower": "597123183639561835143",
+      "lastChangeBlock": 440537390,
+      "lastChangeTxHash": "0x1a9caa64e5ba1f5c2665525ec4b67876123a31f3d11d8248ff8142c686284d8e"
+    },
+    {
+      "address": "0x4b9bd2ed0fbfc1574bb61db4230c04aab9b7ac6f",
+      "votingPower": "516458840507848196046",
+      "lastChangeBlock": 440696816,
+      "lastChangeTxHash": "0x2f880196d39866858b14d282822224b187c9fbb50f8e2701c8d50ff95a815bdc"
+    },
+    {
+      "address": "0x312af0e2cd5a1a38c0d748b732f6a8fb8c326aa4",
+      "votingPower": "504242176659345372097",
+      "lastChangeBlock": 440329093,
+      "lastChangeTxHash": "0xbd995f0b055e9be65e6f99b15d8a9f433180d0eee2a7577858e2a2427a1cc2be"
+    },
+    {
+      "address": "0xf9b1be6f2db3a84451ad1d79f40150835a5738a7",
+      "votingPower": "503720650120419452055",
+      "lastChangeBlock": 440406142,
+      "lastChangeTxHash": "0x63ce77ea4ba4b73458dbdda725baf841c18c0d8791dd261d8f3cc926ae06c0fd"
+    },
+    {
+      "address": "0xa7fa321fe7637bc2c24a69362b37f18168ab434c",
+      "votingPower": "494447132607888853599",
+      "lastChangeBlock": 441669914,
+      "lastChangeTxHash": "0x680665483dca0ad19fc3115c800bb2be7b230b02dcc871cd2db87df0f53247e9"
+    },
+    {
+      "address": "0xbbdb602c32730c2451b0820de1cdf839455541f6",
+      "votingPower": "493204005672306694383",
+      "lastChangeBlock": 441304880,
+      "lastChangeTxHash": "0x3823b41b149b7b42e96912ebecf713048c7a01acaef052943c7d7c3a063cb22a"
+    },
+    {
+      "address": "0x5254620489c9a32880598fe52544cf269cdd1297",
+      "votingPower": "479522198912726132030",
+      "lastChangeBlock": 441306613,
+      "lastChangeTxHash": "0x4bb793d07848c445105453586d681a5914e3edc61671a907f6ed02372d66129e"
+    },
+    {
+      "address": "0x7593848b5802ba3683782472e8d16db6cd16d5da",
+      "votingPower": "402099260731028685320",
+      "lastChangeBlock": 441303384,
+      "lastChangeTxHash": "0x7fc8cee2c2152ce83bb9c9dcce0adcd3fd5ee05b3953ae58a09400eef7a49975"
+    },
+    {
+      "address": "0xf5b26b2c81ea95a6e3aebd3ca07065e20bc93b7b",
+      "votingPower": "400963490487018304235",
+      "lastChangeBlock": 441313699,
+      "lastChangeTxHash": "0x54e58a8295336b1b10a8975d14df73f88dc2be4c5d070b091c174f289ec734c2"
+    },
+    {
+      "address": "0x1df2535cf0956abec21c4738534885d3849d6578",
+      "votingPower": "389768855298210477230",
+      "lastChangeBlock": 440394142,
+      "lastChangeTxHash": "0xba1f8561edd018f2ed1bcd73850e3e6df34fc4ba491733d8dde99a5920d2dd25"
+    },
+    {
+      "address": "0xc5d53e69db3f99d4623d461e977addc02f9e4406",
+      "votingPower": "374171752883542582110",
+      "lastChangeBlock": 440097745,
+      "lastChangeTxHash": "0x693eceb21e93aae7eb3f0bf09bda6b4928674bd762c98ac3a338777e8a45cef1"
+    },
+    {
+      "address": "0x9b0a4689ada9a272887514f22a57ca18aea6726a",
+      "votingPower": "345495820222649976334",
+      "lastChangeBlock": 442684610,
+      "lastChangeTxHash": "0x7dfc072bc8025a386193309bee750d1abb11debb2150d9a5f4dd97825de54e3a"
+    },
+    {
+      "address": "0xa37f104398d494b16343b1a6acbf8f121e0269af",
+      "votingPower": "344518881609456491860",
+      "lastChangeBlock": 441753975,
+      "lastChangeTxHash": "0x4e8604784712c32c6147a14cb499851657aba2fda42f177ff234f8d71134c7f5"
+    },
+    {
+      "address": "0x73ab49592f66080f305b92571ccde55108ca82da",
+      "votingPower": "342407207571090803068",
+      "lastChangeBlock": 442254602,
+      "lastChangeTxHash": "0x38fba79707250f0e42f27b884ddb4a6d1736e0785b63e7037bcfeab72a5aa9d0"
+    },
+    {
+      "address": "0x0b2e00f2f6d884748ee10aa78490c5668188f4b4",
+      "votingPower": "326391518564091366427",
+      "lastChangeBlock": 440569756,
+      "lastChangeTxHash": "0xb2f67b1dac28a921fe281e4e7e78be1145a90fa996b5bbc58a8738f841e4691c"
+    },
+    {
+      "address": "0xf7db737ea3cc6227f8b80052484c4d5a9afe29a5",
+      "votingPower": "323708233095520424909",
+      "lastChangeBlock": 442109412,
+      "lastChangeTxHash": "0x58ccccc4efec6223d883429a4a5bb0f5b094a55bd8bf739a69c35c215629dc24"
+    },
+    {
+      "address": "0xcee10da6b44b83b8f336faf006fe44612885b905",
+      "votingPower": "307709452761658832507",
+      "lastChangeBlock": 442626936,
+      "lastChangeTxHash": "0x917cf7fbce7ee4dc2a7a85187d454d22a959f55aaa30c64012fc225401e971fa"
+    },
+    {
+      "address": "0xecc3c0543b9b140d89ef2f049fb587cd0debd1f0",
+      "votingPower": "301923268370871338238",
+      "lastChangeBlock": 441719614,
+      "lastChangeTxHash": "0x95d0e85dbd9b1c65f7d7d0dd54671e295e6ae7f83d38027df229f01ea4e78ba1"
+    },
+    {
+      "address": "0x2515b754e606b9461fc90f9c5ab3f2df8767fbc0",
+      "votingPower": "285740288858966800837",
+      "lastChangeBlock": 440007821,
+      "lastChangeTxHash": "0xcff84784db55eb88e34b7fdaf0651dee505bd63a0e4449e35af559535be48222"
+    },
+    {
+      "address": "0x0a7f988b6cea3081eba2896c4f0793c19d2a775e",
+      "votingPower": "274367524026782439517",
+      "lastChangeBlock": 442157370,
+      "lastChangeTxHash": "0x52cc7e0af5d8c7625812fec22207171e3c04b9d1e34d819c3c5b7f49ed466abf"
+    },
+    {
+      "address": "0xb5776fe891f7ccad0d17eea37d1c6d475e7f0128",
+      "votingPower": "270257050635562948640",
+      "lastChangeBlock": 442702781,
+      "lastChangeTxHash": "0x2231b74a72bb40786b29d5dbd285ba829668df8aa6e425cbf1d3948fd19db627"
+    },
+    {
+      "address": "0x6d9f1a927cbcb5e2c28d13ca735bc6d6131406da",
+      "votingPower": "254357580534232293323",
+      "lastChangeBlock": 441126456,
+      "lastChangeTxHash": "0x8792995d4306502cc9393513f9d3527c248900647b3274e65e5c0e1389a84aa9"
+    },
+    {
+      "address": "0x79c47f59a4594c9a00b4770e8b9b873853807acf",
+      "votingPower": "225272945849137153374",
+      "lastChangeBlock": 441280046,
+      "lastChangeTxHash": "0xf89e0c2b4a6e42c8e40ef81d6046dcf309dd7dba74ae7d5609323c945e5fa0a8"
+    },
+    {
+      "address": "0x46b44c8f6f34d98f2fb43e3d1f905555a6af2aaa",
+      "votingPower": "223689045010288999106",
+      "lastChangeBlock": 442470544,
+      "lastChangeTxHash": "0x45c969df80cb5bbbe6de74c6293b70dca1c0a55f6eb27bfea22be846735c2664"
+    },
+    {
+      "address": "0xb4de4f427669ddaee6f1778d79ee28b83e29bf40",
+      "votingPower": "222698804345828297148",
+      "lastChangeBlock": 441274360,
+      "lastChangeTxHash": "0xd0acba956e931c55e9bd3fab5f3343214d167ee85bbc0a5938c0e37cd2c0911a"
+    },
+    {
+      "address": "0x0d998071eb7685bec3913a24d84dae65d840f777",
+      "votingPower": "218023334171494318567",
+      "lastChangeBlock": 440531225,
+      "lastChangeTxHash": "0xe9dddcd34005a712f46346611c4e606656c57623fe4ae34f62f045355e0a6a60"
+    },
+    {
+      "address": "0xd9e870dc35d087a32827688bd83c543bcce93978",
+      "votingPower": "213466299610169455115",
+      "lastChangeBlock": 441317988,
+      "lastChangeTxHash": "0x29e20878731bdae5e2af4e51b3e2d4605133b43055d89b312c383b17f4044b1c"
+    },
+    {
+      "address": "0x958706339c0ae38ed8dda07f22b82bcb8f13ace6",
+      "votingPower": "208758626835522227145",
+      "lastChangeBlock": 442393982,
+      "lastChangeTxHash": "0x7d64c0198edc36cb5ab2b755a9792e1f20c4feb0843e35a210f6b32805cde3a9"
+    },
+    {
+      "address": "0x5cf1ff12d5b6bd6a6ce694e95ca13b9700b29643",
+      "votingPower": "191623467131761349708",
+      "lastChangeBlock": 441272823,
+      "lastChangeTxHash": "0x777f146b1cdefef1a73ed2b4451fcd1123f4c78037a5ee54eaf0df1315965154"
+    },
+    {
+      "address": "0x8c0f33dacfa40e225c7ada0de2e3ee4d07d0751d",
+      "votingPower": "180717219896634716379",
+      "lastChangeBlock": 442163758,
+      "lastChangeTxHash": "0x573636134467b5f1376eb9deabdf703c490b1275775124d43be080e0871c9ffe"
+    },
+    {
+      "address": "0x530aef31073a40eff1251f8d5154f2444a29fe3e",
+      "votingPower": "167492024527342899077",
+      "lastChangeBlock": 441452621,
+      "lastChangeTxHash": "0x2e7fe45ce7547c1a1b25a43388c02a1587e51a44afba086eded4e9f84d4a1abc"
+    },
+    {
+      "address": "0x0f08d5c28c6cb4064b6383d164aaaf81cffa23e1",
+      "votingPower": "162076539758801150259",
+      "lastChangeBlock": 442737972,
+      "lastChangeTxHash": "0xb7fa3ba4849b3a6f8abcd9da2d03ac38884f4ef0ea05fe6bb34dd3eea0ae1eca"
+    },
+    {
+      "address": "0xc639dada9ba879dbd1640913dce6205bfc0e8caf",
+      "votingPower": "160690572081427590713",
+      "lastChangeBlock": 441283744,
+      "lastChangeTxHash": "0x77cc30fc223ef245dc5cb513b5d2f17dc94ce76fcf517aebea743b47be5838ca"
+    },
+    {
+      "address": "0x065f39ad0a4310e3901bc06eee456928a64eb8ec",
+      "votingPower": "150350537006768268752",
+      "lastChangeBlock": 440272094,
+      "lastChangeTxHash": "0x5a2ac592dee6babcbef1fdcde2552c7ad08a02c80f94dc9b82201ad68c289176"
+    },
+    {
+      "address": "0x9c4a871a8cd573f64500a3ccd6fc137a7e2bc572",
+      "votingPower": "147904280510094389819",
+      "lastChangeBlock": 440055254,
+      "lastChangeTxHash": "0x34b8751aa777f3e05040a334f5bc4472d4686480d059b1d40bfe1077d8db6c5d"
+    },
+    {
+      "address": "0xc5543b3a2973dd3b9d156376e1e8e7d0dcac3664",
+      "votingPower": "141386266487497598799",
+      "lastChangeBlock": 440143653,
+      "lastChangeTxHash": "0x5287489fd2280aec76436f6cebc0291b38c933d4e2b5b10d0cb4c0d43b1725cf"
+    },
+    {
+      "address": "0x43a8643e5c128a83ef2b57abd5b49da00824bad7",
+      "votingPower": "135178668867281219622",
+      "lastChangeBlock": 441871048,
+      "lastChangeTxHash": "0xdf3e27706eb2e91d2a2c1ebb55c9d34154ad349a8ed0c29c13e5494afa4d061b"
+    },
+    {
+      "address": "0xf4b4a39a96d28611d5f1c2111bdcd9b564855db7",
+      "votingPower": "121619684171995977668",
+      "lastChangeBlock": 441264368,
+      "lastChangeTxHash": "0xcbbba927364d97cedee51b47c7e5c6eea08785695d7ff885e2a3d4943630edf0"
+    },
+    {
+      "address": "0x0fa0d7fbaa9fb3c6d383eafbb1f07cf9b34bd0fb",
+      "votingPower": "119963614012293297422",
+      "lastChangeBlock": 441364457,
+      "lastChangeTxHash": "0xa90e6ba72b5a0e14b520b6c50c7d91e0d2fb93f6c251f818ea42d17ca1d1ab64"
+    },
+    {
+      "address": "0x8ac51dfe896d8d666b70ee748c70378c28a8ff94",
+      "votingPower": "116064317109483660410",
+      "lastChangeBlock": 441266541,
+      "lastChangeTxHash": "0x060e7456b45f97439c87e1900fe396f8a3949583c93b45e7c68156ec92eac0aa"
+    },
+    {
+      "address": "0xa4de93a26aaebf84886cab11b5fa39d96228f36b",
+      "votingPower": "113685229713989039607",
+      "lastChangeBlock": 441635783,
+      "lastChangeTxHash": "0xaa630f58973e4720f2fd440f458f7126b85c6cef96465eae9549af1234e91318"
+    },
+    {
+      "address": "0x3eae0b5e7dff6f96233cf56b1b87a5c39ecb08fb",
+      "votingPower": "102898343498643445119",
+      "lastChangeBlock": 441269763,
+      "lastChangeTxHash": "0x38f71f153dc078996bf1e9b93f43b3e191e8bd64d366e9ae173c3b375dd6b354"
+    },
+    {
+      "address": "0xe876a94ebaa0d8d2da4142766d8c803a7c1d8ed8",
+      "votingPower": "101581604385226436782",
+      "lastChangeBlock": 442321077,
+      "lastChangeTxHash": "0x10439c6ca94a23abab39eadd826e7c623766e6c2a87d0cfcb51a33991c05c015"
+    },
+    {
+      "address": "0xbb70129e065b65d38309e0d1be21e02cb9a115dc",
+      "votingPower": "101128835508580134544",
+      "lastChangeBlock": 440355545,
+      "lastChangeTxHash": "0x454672432e4d7e54032ebd0fae5f55dd8978d90acbf50480b341675fb0ba16b3"
+    },
+    {
+      "address": "0x5704cb0b4c8b0a32e0a6f1a00fb435580fc308d4",
+      "votingPower": "76643459733870302067",
+      "lastChangeBlock": 440365841,
+      "lastChangeTxHash": "0x11597e43a06b050b79e64da7edd26f90d3682f1bab266bfc1f5a797a249a1c0a"
+    },
+    {
+      "address": "0x724d37177b079e597951f6933a506b5c81ce505b",
+      "votingPower": "71324075450587990368",
+      "lastChangeBlock": 441455680,
+      "lastChangeTxHash": "0x935b0c9a94ffb748cc2faa6d287aadb24143fe6719969598c85169b39e7cfab3"
+    },
+    {
+      "address": "0x11c45ce75128d010625c1dc1a074ffffb4023254",
+      "votingPower": "70036502324920548187",
+      "lastChangeBlock": 441254537,
+      "lastChangeTxHash": "0x04dce104ddf324af109c163314ff30a58ca271c06a1553a928503096384363ae"
+    },
+    {
+      "address": "0x8aaad448a1fec285ff786ae226160e9a9bcbf8ca",
+      "votingPower": "68314981615667418283",
+      "lastChangeBlock": 441007939,
+      "lastChangeTxHash": "0x1222cf85ada107cf8bbe20464511cba1b480c310cc6d8ca1b1a32d9819809d06"
+    },
+    {
+      "address": "0xb4d1340303d89ccc48a19cdbdb5723aeceda933d",
+      "votingPower": "67642799848682792631",
+      "lastChangeBlock": 442290893,
+      "lastChangeTxHash": "0x3bf4d079b9ff59d1deb107bdab5b3ddabc37c16bad92aae80f3fbd4145fa9247"
+    },
+    {
+      "address": "0xe4a134f582586d4d71e81c3132284df0fe097a46",
+      "votingPower": "64632935136264360173",
+      "lastChangeBlock": 440617581,
+      "lastChangeTxHash": "0x5c1a96c0023daf396379d8b904267e9c671038c910d2ea2b6a97c06763c639fc"
+    },
+    {
+      "address": "0x8599992433a88dd0689dc8d4f124d1880271f141",
+      "votingPower": "64471118976558117364",
+      "lastChangeBlock": 441380032,
+      "lastChangeTxHash": "0xebdb1758a541434c5762ec096cbbe985e5a3375316de10ca063f47c1b33117e4"
+    },
+    {
+      "address": "0x47dacb54f67f05a68c5f19e40dc0dce604d88155",
+      "votingPower": "63763747626062444527",
+      "lastChangeBlock": 442141757,
+      "lastChangeTxHash": "0xacefac30628c064bc3585ae23e11725fc662ddd1d646233e29c36cc8b96813da"
+    },
+    {
+      "address": "0x308eb3dcc77391d02941944909dc85d23af03220",
+      "votingPower": "61546376317797997585",
+      "lastChangeBlock": 442586070,
+      "lastChangeTxHash": "0xb90f06443c9c67c518e7c3c4cdccf5de530636849137f9c00c37b52568943828"
+    },
+    {
+      "address": "0x2808b04baca6bc5bfd6e41ca83ece5416f87a950",
+      "votingPower": "60384169755247961024",
+      "lastChangeBlock": 441302886,
+      "lastChangeTxHash": "0x6c77371dd9271a9cb043b71df2722e324ad92305078908057897eb10fe42dc60"
+    },
+    {
+      "address": "0xd91613333480222fd60bcdfc9a2ef9886d7e83a4",
+      "votingPower": "55665274583420420907",
+      "lastChangeBlock": 442407649,
+      "lastChangeTxHash": "0xa614187e72ece1152e8ead1e9ebd0ec32b94f697f76cfd065a838a00838572ed"
+    },
+    {
+      "address": "0x24dc43d37852e8008a9934c519bb7483dee70cbe",
+      "votingPower": "55348818086662914016",
+      "lastChangeBlock": 440184933,
+      "lastChangeTxHash": "0x380cb6a31333063b965c58fec752a52b582f0bee662ccf5549403fa78c1eca19"
+    },
+    {
+      "address": "0x74c4aed579cd7bd50d503154380feee75c2fe6ca",
+      "votingPower": "54515830129334621993",
+      "lastChangeBlock": 442483154,
+      "lastChangeTxHash": "0x634fa116985748c66a6d670ce5b2a407446ec238d41f23753edea50e74d69227"
+    },
+    {
+      "address": "0xcc0d6193eb289b404b0d464e6ec18af21d370dd0",
+      "votingPower": "49800764229820110941",
+      "lastChangeBlock": 441773473,
+      "lastChangeTxHash": "0x45881484e1ccf347ecde846dfcf72f3987dc480b1d7f91420918644251c69d15"
+    },
+    {
+      "address": "0xaf7d765f3adc4fe76c2dd5d0bef4857a43b39519",
+      "votingPower": "45126863943895532865",
+      "lastChangeBlock": 441261686,
+      "lastChangeTxHash": "0xc72038095499beb01d152876e8a4340225eac5ff5b937c44bc02faa10203e75e"
+    },
+    {
+      "address": "0x0002cb48ce2afdc6e1e1ad9e06705ac1832cb14b",
+      "votingPower": "44137549304093177823",
+      "lastChangeBlock": 441936966,
+      "lastChangeTxHash": "0x77fbd4be47376b9edd6c734105b1c32e744cb081ad21d412e7f6ef20fb22ca14"
+    },
+    {
+      "address": "0x7d0ed73a92d3bb273ef43b4f7c2c0c7b3b3d183d",
+      "votingPower": "42183626949997974832",
+      "lastChangeBlock": 442164664,
+      "lastChangeTxHash": "0xf6a06fcfb9c89278feffa5005aaa4e747fa63ac5a1eda869d473abbcef9f21c8"
+    },
+    {
+      "address": "0xe3faa5953a2c5dab893a74f4e123685f928e9afb",
+      "votingPower": "40649293455442614348",
+      "lastChangeBlock": 441812678,
+      "lastChangeTxHash": "0xd4c4b621ebafb971676e72d0e4f065a3a914504774d308df9229c90bde3a9e24"
+    },
+    {
+      "address": "0x1508ef382d4f1f782e8121112214d8869fa30668",
+      "votingPower": "40564174882578530268",
+      "lastChangeBlock": 442672229,
+      "lastChangeTxHash": "0x35759f2de639ebf1642e93b6e1a8d18ed6ceb8a504a807b45ea927c7845e1fe6"
+    },
+    {
+      "address": "0x8b8362978dc46289b4b930d0c152089e09e5bebe",
+      "votingPower": "39161985971154360788",
+      "lastChangeBlock": 442494113,
+      "lastChangeTxHash": "0xcaa128517a1f5cf542c48a348203524caa2d9e2054b9d993c527048ddaaaa96b"
+    },
+    {
+      "address": "0x6d9798053f498451bec79c0397f7f95b079bdcd6",
+      "votingPower": "38968738640485141127",
+      "lastChangeBlock": 442747709,
+      "lastChangeTxHash": "0xdcdca21b9a15fe1e086c71c37ebc06127424f7b855a51c9ddd744185245eb3c7"
+    },
+    {
+      "address": "0xd6af7225c7c47c236df9623b47b7364b79d1f6ce",
+      "votingPower": "37541649594323506056",
+      "lastChangeBlock": 441296864,
+      "lastChangeTxHash": "0xf4825d7de727c104c3a494f484e8ee8aa9fd5d98c9043a822b431da824df7932"
+    },
+    {
+      "address": "0x169587502726c3437e10d8653d37bae3af19441e",
+      "votingPower": "36755432635905779500",
+      "lastChangeBlock": 441171825,
+      "lastChangeTxHash": "0xe54a59032b2414b427f9fbdbff5b8f3e10e271e88cdcc48385a422d444a70b12"
+    },
+    {
+      "address": "0x97ce8879b954265d789fb08a13320ca108c83923",
+      "votingPower": "36606279607034908992",
+      "lastChangeBlock": 441296047,
+      "lastChangeTxHash": "0xc15798dca2c03f8574bf585fe82f248aea8263012f87aa0fda43e73afd18f6a0"
+    },
+    {
+      "address": "0x3981b93357ce15c6080a8344666dbd8beb5ff8bf",
+      "votingPower": "35805380633429793207",
+      "lastChangeBlock": 441171895,
+      "lastChangeTxHash": "0xbc6712794f908fd455b27f5a19d9a31159b93e27aa3a90bed5cf5786e57f776a"
+    },
+    {
+      "address": "0x0e41ab0314cab8466621ec959b60e5c0b6d94ade",
+      "votingPower": "35000000000000000000",
+      "lastChangeBlock": 440701721,
+      "lastChangeTxHash": "0xc3457fabbe4d562f189a42a0d112399684952104ef63964aa88281364fddb033"
+    },
+    {
+      "address": "0xb138d7410ebc2ba0386dd0dff1e84411834ae7f5",
+      "votingPower": "31774964432717130440",
+      "lastChangeBlock": 441299913,
+      "lastChangeTxHash": "0x9804aad57aa1169af1ee1b38841c6f386b0f07baf63589bdeb1d2a8eaaad87ae"
+    },
+    {
+      "address": "0x361dfc991975a3e3280e723875e91117cefd20ef",
+      "votingPower": "30651159750063891819",
+      "lastChangeBlock": 440650283,
+      "lastChangeTxHash": "0xb6fdf866b386f16485c2461c240f2dba4c8e2aa4c2977db29856a4dc3639f294"
+    },
+    {
+      "address": "0xd8c84eac995150662cc052e6ac76ec184fcf1122",
+      "votingPower": "30628277049899713089",
+      "lastChangeBlock": 442450734,
+      "lastChangeTxHash": "0x92f28f94a4228801f4a8dc417bc970ecb4c78bed637bf6426db8392d25b1dfc9"
+    },
+    {
+      "address": "0xe00bf13be44c7b91a9ecd247b3c3cae66bd734f8",
+      "votingPower": "25203347761588009639",
+      "lastChangeBlock": 441391123,
+      "lastChangeTxHash": "0xe6f94a3d2627b16153403b4c0356396776e886b08224d0bcbae8711414c398e5"
+    },
+    {
+      "address": "0xc31bd8a6cfcaacec6f26f7120ddd81f680047195",
+      "votingPower": "23826615783424444464",
+      "lastChangeBlock": 440374909,
+      "lastChangeTxHash": "0x419e711b512fceee06e0ef20abeb6bfdc924aad8c7ea5ebb0bfa1a9ee0a79355"
+    },
+    {
+      "address": "0x2df292af809fd693d94c7d17e36be352e15bb98a",
+      "votingPower": "23643394381576584085",
+      "lastChangeBlock": 442133611,
+      "lastChangeTxHash": "0x584c9ba6808f2eba71ab4de39a34bf26413eabd21876c90f0e4e9041c4e895ac"
+    },
+    {
+      "address": "0x36a099a905718b2eff70c503fff9a2f67c644589",
+      "votingPower": "23612556556029088286",
+      "lastChangeBlock": 440219542,
+      "lastChangeTxHash": "0x507d269826fc5d8d97c52d2470589454d004e9e201f8e3841a0121f4956f9891"
+    },
+    {
+      "address": "0xbb8c7cce32f6d353fd49836d54f16f39319c5b3c",
+      "votingPower": "23584192104615108684",
+      "lastChangeBlock": 441170672,
+      "lastChangeTxHash": "0x0bf403e87aac44210218663789a860751b62927b93b402f990779cef3b6eb539"
+    },
+    {
+      "address": "0x7a8541148054a92d61714621e9d01d68a0ad9d86",
+      "votingPower": "23231563435334772104",
+      "lastChangeBlock": 441168715,
+      "lastChangeTxHash": "0x7fe7970f23e29c1d59c8c1c002c7d93a20061922ecc92648adcaaba58a2cc7f9"
+    },
+    {
+      "address": "0xa151bc6c9c6309df36f3948773aca078b70629bb",
+      "votingPower": "23129920688699400801",
+      "lastChangeBlock": 441169528,
+      "lastChangeTxHash": "0x30ec2ba148bd4f46a4d49dd3c169eb777b8a667129acc366989315ddd3cfae02"
+    },
+    {
+      "address": "0x3ae5f83668b75328446c649b6ab342ac46d73b3c",
+      "votingPower": "22739961470310712104",
+      "lastChangeBlock": 440027778,
+      "lastChangeTxHash": "0x074497819b648460791fd2d08184d45a1af0b2c0ec0964da77672a27b8356766"
+    },
+    {
+      "address": "0x28adbc67d550f47860d3b7d27e9059b168db38ad",
+      "votingPower": "22624316595599450163",
+      "lastChangeBlock": 441927837,
+      "lastChangeTxHash": "0x5480828c34a89289679680e7f878c27602f7d1a6d638bab57fe8db42d2eba27f"
+    },
+    {
+      "address": "0x2897958f27ef55067e39afd882f2f5695d266e98",
+      "votingPower": "22000267747192322657",
+      "lastChangeBlock": 441033027,
+      "lastChangeTxHash": "0x0377f47347916fd5193ef10cd9db2caa4e570bdbaf20ffa9b1b4dda3d92337f4"
+    },
+    {
+      "address": "0x49455ac4947f4bdafde952337a4755b16996053d",
+      "votingPower": "20812396088807404983",
+      "lastChangeBlock": 442324167,
+      "lastChangeTxHash": "0xc4a99546640defd24e27f99f0cd0a04da9f37e9bc4139a25cc8ca340bfa5d822"
+    },
+    {
+      "address": "0x89725cadc9b6e8adbbeb5483ab56129b472531dc",
+      "votingPower": "20403303915899559191",
+      "lastChangeBlock": 441365711,
+      "lastChangeTxHash": "0x82f284c669ada0a3cd9c9960bd7cc5d2c1233e7d33b08da3a4afb189bb42c3a0"
+    },
+    {
+      "address": "0xe38289e820ce74e4d161131ec9ec3c3651a54455",
+      "votingPower": "20194381120000000000",
+      "lastChangeBlock": 441421410,
+      "lastChangeTxHash": "0x62344a733b87b75a4a4d93cd225cc5d34c3b782ce4b27dbcb8db27d97e06aafc"
+    },
+    {
+      "address": "0x14191de23052e51fdb0de0dee555af5dcc9c23a6",
+      "votingPower": "20000052388315067794",
+      "lastChangeBlock": 441036407,
+      "lastChangeTxHash": "0xae272463a4b5468f5aed859381d7367e700e282ddc5e3631dea4ffdd9efe5507"
+    },
+    {
+      "address": "0x4b2249f08df569ca99cf1c49eeb763655d563174",
+      "votingPower": "20000037073479821931",
+      "lastChangeBlock": 441043618,
+      "lastChangeTxHash": "0xaf3ea843c11045f48aff47bf2a6ffab25ec22e95a3db3f3dc6bf6a90e24e9391"
+    },
+    {
+      "address": "0x0ba6ef145274859bdee4241277288949fc06cb7b",
+      "votingPower": "20000028247726913063",
+      "lastChangeBlock": 441034012,
+      "lastChangeTxHash": "0x010c46595a98631ecd420f5e362d82eb51ef415eebdbdc14b172d363094f58ea"
+    },
+    {
+      "address": "0x3a741a28200644af206e954ad7105b479deb15d3",
+      "votingPower": "20000011148245171801",
+      "lastChangeBlock": 441034854,
+      "lastChangeTxHash": "0x09179e46d82ab83dec817259c18cab2509beb58a0e85dae5b09b3e7e3af1184e"
+    },
+    {
+      "address": "0xc615306f94c58603d36e0316f05bfa6e08ff9674",
+      "votingPower": "20000000000000000001",
+      "lastChangeBlock": 441034332,
+      "lastChangeTxHash": "0x4c8554d43fe728bf19bfa2f368c36ee53050216fb9b8bb0a25e62dfc9a8af87f"
+    },
+    {
+      "address": "0xec2e68b5941a96009be8210229225b1fcc81a992",
+      "votingPower": "20000000000000000000",
+      "lastChangeBlock": 441035929,
+      "lastChangeTxHash": "0x357cb5620548ee80842813a56b4b0907dfad183324c74e51410b35d940f8faa1"
+    },
+    {
+      "address": "0xba351939d13425bb8b3d0c436a35bb42511b67d8",
+      "votingPower": "19602192951480321782",
+      "lastChangeBlock": 440656713,
+      "lastChangeTxHash": "0x198ca26d9284ab6c4e3a0b0c241cf4bf9fa0b114d345bbed336087a665345cae"
+    },
+    {
+      "address": "0xfb630887df214d352672e4301aae7163753fe749",
+      "votingPower": "19565156533697043698",
+      "lastChangeBlock": 441228586,
+      "lastChangeTxHash": "0x19441cbd1a6eb59b29d0caef7285b47246c24df7db37c3ae1cd23b7fe48f1b83"
+    },
+    {
+      "address": "0x62298e04a3a8424fe10072387aa83343d43a5d9f",
+      "votingPower": "18437790912432560240",
+      "lastChangeBlock": 441561724,
+      "lastChangeTxHash": "0xef82e0ba7b18ba869efef62216a1ca61233262ae60d1f9bb2a0e11fe6afd6fff"
+    },
+    {
+      "address": "0x2b1aef40a181cd7c33c58d6238cd90949794c54b",
+      "votingPower": "18289231937792072161",
+      "lastChangeBlock": 442684921,
+      "lastChangeTxHash": "0x516e6045a42f64d9e13d9bd1e0afb72a29cd12b709955e969cdb5e754358cba3"
+    },
+    {
+      "address": "0x1cea3b02f8a0ee6bbc4ad1eab08c2df9f701e614",
+      "votingPower": "18022473925489450255",
+      "lastChangeBlock": 441170309,
+      "lastChangeTxHash": "0xbbe12dc2867f7bceb55c7f85b7745fe56bd8375c523505a04a6c9e8ee1c4c253"
+    },
+    {
+      "address": "0xb5e27b203b30c0dafc2745cf85d173eca518c9fb",
+      "votingPower": "17126091214012298496",
+      "lastChangeBlock": 440425800,
+      "lastChangeTxHash": "0xf6d7a864e14632c854637b5ccf2342748430fddb4caa6c07bdc3ad7d95880266"
+    },
+    {
+      "address": "0x8c2191a962d7a3d7f04770fb1852428e353f1932",
+      "votingPower": "16170058408579520974",
+      "lastChangeBlock": 441170904,
+      "lastChangeTxHash": "0xfb4e0d03716f3aab56e5c8d7006e41c43c91416dead07c7ec01b150a7e7bb4b7"
+    },
+    {
+      "address": "0xef00f5daed2e4f052a6ad7a9fbc3e4b5789e7170",
+      "votingPower": "14841382826540617178",
+      "lastChangeBlock": 441728534,
+      "lastChangeTxHash": "0xa5200313031bdc93830eeaddf3616129cbb29d20f0deae61c4112f50e533b3f9"
+    },
+    {
+      "address": "0x74245fbe682ef3c4470131992424b89392f7bbf7",
+      "votingPower": "12388968991155325172",
+      "lastChangeBlock": 442140704,
+      "lastChangeTxHash": "0x42abe84614ca715f4f3c69d1dc24f3c1c4d4a674ad1180b7f829bc90886f511a"
+    },
+    {
+      "address": "0x131cb1b7b95ebe45b05c7b838bc0a9046060c7f5",
+      "votingPower": "12143548652765402263",
+      "lastChangeBlock": 440360113,
+      "lastChangeTxHash": "0x3645ddc0a9653768449aefcb3889345251a62891fc7c377e5eb154471c7582ce"
+    },
+    {
+      "address": "0x3a92e9760bc6caf8e67aab162ff045d2cb927f1e",
+      "votingPower": "10754317025845420339",
+      "lastChangeBlock": 441537827,
+      "lastChangeTxHash": "0x49ba6690d904aa7ca0cf6b6ce032d2281f543dbd14bcbda90621aba4f98712ea"
+    },
+    {
+      "address": "0x0966345d33c1e0fe0f90f9ad5a1992a16a9d2ae3",
+      "votingPower": "10740279668246859727",
+      "lastChangeBlock": 441364292,
+      "lastChangeTxHash": "0x477eec6abcdfb381b3fd2469d4b29111fd24eff956533c36b021823929b9732d"
+    },
+    {
+      "address": "0xbcb21304efeddc3f3915d6ef34f36c0fead9424e",
+      "votingPower": "10703072291213592509",
+      "lastChangeBlock": 442576953,
+      "lastChangeTxHash": "0x39fa64585ba308d1f7d0c7232dccb0efa696090bb0c89897021e69b5f0d875fb"
+    },
+    {
+      "address": "0xb96df517a0ebf38b323e88dfedfa29bcf4fc8bd0",
+      "votingPower": "10176730647080319836",
+      "lastChangeBlock": 440016436,
+      "lastChangeTxHash": "0x53cf6107d7ecb88660e3c80bcc0dd85d1a1107e7e6e040e328a2945f544938c3"
+    },
+    {
+      "address": "0xb4e11cba2f383772d34a14ccfac08446c118c168",
+      "votingPower": "10118499873566311457",
+      "lastChangeBlock": 441290284,
+      "lastChangeTxHash": "0x881e1330409923ea96c2ede41cddf80b7b39538cb52f5789b28ec3418e3e2e05"
+    },
+    {
+      "address": "0x0302f3434dbdee9d3faf680cba8a2bae6b34a83c",
+      "votingPower": "10028954445466323031",
+      "lastChangeBlock": 440346937,
+      "lastChangeTxHash": "0xb16ef3b965a639c81be7ee32e7f6c5d18cc79ed9792b2e2cde7bef68535e2384"
+    },
+    {
+      "address": "0xdbf011726e5670ab4d9f344f45ee55a45cb50a0b",
+      "votingPower": "10025876341850490896",
+      "lastChangeBlock": 440400643,
+      "lastChangeTxHash": "0x8e500aabfe99af2ba5d4918f43c3c243127233ad5d2e0afa66af901992ce1ba0"
+    }
+  ],
+  "stats": {
+    "totalDelegates": 230
+  }
+}

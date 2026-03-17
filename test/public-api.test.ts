@@ -400,11 +400,13 @@ describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
   });
 
   it("exports erc20VotesAbi", () => {
-    expect(erc20VotesAbi).toHaveLength(3);
+    expect(erc20VotesAbi).toHaveLength(5);
     const names = erc20VotesAbi.map((i: { name: string }) => i.name);
     expect(names).toContain("getPastVotes");
     expect(names).toContain("getVotes");
     expect(names).toContain("delegates");
+    expect(names).toContain("totalSupply");
+    expect(names).toContain("DelegateVotesChanged");
   });
 
   it("governorAbi contains hasVoted and ProposalCreated event", () => {

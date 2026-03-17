@@ -1817,6 +1817,39 @@ export const erc20VotesAbi = [
     ],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "totalSupply",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "DelegateVotesChanged",
+    inputs: [
+      {
+        name: "delegate",
+        type: "address",
+        indexed: true,
+      },
+      {
+        name: "previousBalance",
+        type: "uint256",
+        indexed: false,
+      },
+      {
+        name: "newBalance",
+        type: "uint256",
+        indexed: false,
+      },
+    ],
+  },
 ] as const;
 
 // ============================================================================

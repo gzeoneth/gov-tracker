@@ -232,7 +232,7 @@ export interface ElectionStatus {
  *   memberGovernorAddress: "0x...",
  *   chainId: 421614, // Arbitrum Sepolia
  * };
- * const result = await getElectionStatus(l2Provider, l1Provider, 0, testnetConfig);
+ * const result = await getElectionStatus(l2Provider, 0, testnetConfig);
  * ```
  */
 export interface ElectionConfig {

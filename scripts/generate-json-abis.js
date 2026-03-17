@@ -29,6 +29,7 @@ function cleanAbiItem(item) {
     });
   else if (item.type === "function") clean.outputs = [];
   if (item.stateMutability) clean.stateMutability = item.stateMutability;
+  else if (item.type === "function") clean.stateMutability = "nonpayable";
   return clean;
 }
 

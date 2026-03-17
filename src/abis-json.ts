@@ -245,6 +245,7 @@ export const governorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -294,6 +295,7 @@ export const governorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -318,6 +320,7 @@ export const governorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -346,6 +349,7 @@ export const governorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -378,6 +382,7 @@ export const governorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -768,6 +773,7 @@ export const timelockAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -799,6 +805,7 @@ export const timelockAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -1052,6 +1059,7 @@ export const nomineeElectionGovernorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -1327,6 +1335,7 @@ export const nomineeElectionGovernorAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -1355,6 +1364,7 @@ export const nomineeElectionGovernorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -1685,6 +1695,7 @@ export const memberElectionGovernorAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2090,6 +2101,7 @@ export const governorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2139,6 +2151,7 @@ export const governorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2163,6 +2176,7 @@ export const governorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2191,6 +2205,7 @@ export const governorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2223,6 +2238,7 @@ export const governorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
 ] as const;
 
@@ -2588,6 +2604,7 @@ export const nomineeElectionGovernorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2603,6 +2620,7 @@ export const nomineeElectionGovernorWriteAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -2631,6 +2649,7 @@ export const nomineeElectionGovernorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
 ] as const;
 
@@ -2862,6 +2881,7 @@ export const memberElectionGovernorWriteAbi = [
         type: "uint256",
       },
     ],
+    stateMutability: "nonpayable",
   },
 ] as const;
 
@@ -3130,6 +3150,7 @@ export const timelockWriteAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -3161,5 +3182,6 @@ export const timelockWriteAbi = [
       },
     ],
     outputs: [],
+    stateMutability: "nonpayable",
   },
 ] as const;

@@ -368,7 +368,7 @@ async function safeTrack(txHash: string) {
     return { success: true, results: await tracker.trackByTxHash(txHash) };
   } catch (error) {
     // Errors auto-saved to checkpoint; queryIncompleteCheckpoints will include them
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 ```
@@ -462,7 +462,7 @@ async function simulateWithTenderly(txHash: string) {
       console.log(`  Gas Used: ${result.gas_used}`);
       console.log(`  Simulation: https://dashboard.tenderly.co/simulator/${result.id}`);
     } catch (error) {
-      console.error(`  Simulation failed:`, error.message);
+      console.error(`  Simulation failed:`, (error as Error).message);
     }
   }
 }
@@ -876,9 +876,13 @@ await signer.sendTransaction(tx2);
 // Encode/decode vote params manually
 const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
 const { target, votes } = decodeElectionVoteParams(encoded);
+```
 
-// Check votes used and contender status (wagmi)
+### Query Vote Status (wagmi)
+
+```typescript
 import { readVotesUsed, readIsContender } from "@gzeoneth/gov-tracker";
+
 const { data: used } = useReadContract(readVotesUsed(proposalId, account));
 const { data: isContender } = useReadContract(readIsContender(proposalId, account));
 ```

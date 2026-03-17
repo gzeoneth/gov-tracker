@@ -374,7 +374,14 @@ describe("Public API: JSON ABI Exports (wagmi/viem)", () => {
     expect(governorAbi.length).toBeGreaterThan(0);
     expect(typeof governorAbi[0]).toBe("object");
     // #then - should have standard JSON ABI fields
-    const stateFunc = governorAbi.find((item: { name?: string }) => item.name === "state") as any;
+    const stateFunc = governorAbi.find((item: { name?: string }) => item.name === "state") as
+      | {
+          type: string;
+          stateMutability?: string;
+          inputs: readonly { type: string }[];
+          name: string;
+        }
+      | undefined;
     expect(stateFunc).toBeDefined();
     expect(stateFunc!.type).toBe("function");
     expect(stateFunc!.stateMutability).toBe("view");

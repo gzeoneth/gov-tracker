@@ -15,6 +15,8 @@ import {
   filterDelegatesByMinPower,
   filterDelegatesByAddress,
   validateDelegateCache,
+  getBundledDelegateCachePath,
+  loadBundledDelegateCache,
 } from "../src/delegates/cache";
 import type { DelegateCache, DelegateInfo } from "../src/types/delegates";
 
@@ -281,6 +283,51 @@ describe("Delegate Cache Module", () => {
 
       // #when / #then
       expect(validateDelegateCache(invalid)).toBe(false);
+    });
+  });
+
+  describe("getBundledDelegateCachePath", () => {
+    it("should return a path when delegate-cache.json exists", () => {
+      // #given - the file was generated during setup
+
+      // #when
+      const cachePath = getBundledDelegateCachePath();
+
+      // #then
+      expect(cachePath).toBeDefined();
+      expect(cachePath).toContain("delegate-cache.json");
+    });
+  });
+
+  describe("loadBundledDelegateCache", () => {
+    it("should load and validate the bundled cache", () => {
+      // #given - data/delegate-cache.json exists
+
+      // #when
+      const cache = loadBundledDelegateCache();
+
+      // #then
+      expect(cache.version).toBe(1);
+      expect(cache.chainId).toBe(42161);
+      expect(cache.delegates.length).toBeGreaterThan(0);
+      expect(cache.stats.totalDelegates).toBe(cache.delegates.length);
+      expect(typeof cache.snapshotBlock).toBe("number");
+      expect(typeof cache.totalVotingPower).toBe("string");
+      expect(typeof cache.totalSupply).toBe("string");
+    });
+
+    it("should return delegates sorted by voting power descending", () => {
+      // #given
+      const cache = loadBundledDelegateCache();
+
+      // #when - check first few delegates
+      for (let i = 1; i < Math.min(cache.delegates.length, 10); i++) {
+        const prev = ethers.BigNumber.from(cache.delegates[i - 1].votingPower);
+        const curr = ethers.BigNumber.from(cache.delegates[i].votingPower);
+
+        // #then
+        expect(prev.gte(curr)).toBe(true);
+      }
     });
   });
 });

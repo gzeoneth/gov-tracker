@@ -6,6 +6,9 @@
  *
  * Uses adaptive chunking to handle event-dense periods (e.g., ARB airdrop)
  * where even moderate block ranges exceed RPC log limits.
+ *
+ * Processes events into a Map per-chunk to avoid OOM on full genesis builds
+ * (~millions of events over 370M+ blocks).
  */
 
 import { ethers } from "ethers";
@@ -53,21 +56,46 @@ function isLogLimitError(error: unknown): boolean {
 }
 
 /**
- * Scan logs with adaptive chunk sizing.
- * Halves chunk size on log limit errors, doubles back after consecutive successes.
+ * Process a batch of DelegateVotesChanged logs into the delegate map.
+ * Later events overwrite earlier ones (Map dedup). Zero-balance removes entry.
  */
-async function scanLogsAdaptive(
+function processLogs(logs: ethers.providers.Log[], delegateMap: Map<string, DelegateInfo>): void {
+  for (const eventLog of logs) {
+    const parsed = erc20VotesInterface.parseLog(eventLog);
+    const delegate = parsed.args[0] as string;
+    const newBalance = (parsed.args[2] as ethers.BigNumber).toString();
+    const key = delegate.toLowerCase();
+
+    if (ethers.BigNumber.from(newBalance).isZero()) {
+      delegateMap.delete(key);
+    } else {
+      delegateMap.set(key, {
+        address: delegate.toLowerCase() as `0x${string}`,
+        votingPower: newBalance,
+        lastChangeBlock: eventLog.blockNumber,
+        lastChangeTxHash: eventLog.transactionHash,
+      });
+    }
+  }
+}
+
+/**
+ * Scan logs with adaptive chunk sizing, processing each chunk into the map
+ * immediately to avoid accumulating millions of raw logs in memory.
+ */
+async function scanAndProcessAdaptive(
   provider: ethers.providers.Provider,
   address: string,
   topic: string,
   fromBlock: number,
   toBlock: number,
+  delegateMap: Map<string, DelegateInfo>,
   onProgress?: (pct: number, block: number) => void
-): Promise<ethers.providers.Log[]> {
-  const allLogs: ethers.providers.Log[] = [];
+): Promise<number> {
   let chunkSize = DEFAULT_CHUNK_SIZE;
   let consecutiveSuccesses = 0;
   let cursor = fromBlock;
+  let totalEvents = 0;
   const totalBlocks = toBlock - fromBlock + 1;
 
   while (cursor <= toBlock) {
@@ -83,13 +111,13 @@ async function scanLogsAdaptive(
         })
       );
 
-      allLogs.push(...logs);
+      processLogs(logs, delegateMap);
+      totalEvents += logs.length;
       log("  chunk %d-%d: %d logs (chunkSize=%d)", cursor, end, logs.length, chunkSize);
 
       cursor = end + 1;
       consecutiveSuccesses++;
 
-      // Grow chunk size back after consecutive successes
       if (consecutiveSuccesses >= SUCCESSES_BEFORE_GROW && chunkSize < DEFAULT_CHUNK_SIZE) {
         chunkSize = Math.min(chunkSize * 2, DEFAULT_CHUNK_SIZE);
         consecutiveSuccesses = 0;
@@ -109,13 +137,13 @@ async function scanLogsAdaptive(
         chunkSize = Math.max(Math.floor(chunkSize / 2), MIN_CHUNK_SIZE);
         consecutiveSuccesses = 0;
         log("  log limit exceeded, reducing chunk size to %d", chunkSize);
-        continue; // retry same cursor with smaller chunk
+        continue;
       }
       throw err;
     }
   }
 
-  return allLogs;
+  return totalEvents;
 }
 
 /**
@@ -160,17 +188,6 @@ export async function buildDelegateCache(
     currentBlock - startBlock + 1
   );
 
-  const allLogs = await scanLogsAdaptive(
-    provider,
-    tokenAddress,
-    EVENT_TOPICS.DELEGATE_VOTES_CHANGED,
-    startBlock,
-    currentBlock,
-    onProgress
-  );
-
-  log("found %d events total", allLogs.length);
-
   const delegateMap = new Map<string, DelegateInfo>();
 
   // Seed from existing cache if incremental (not when startBlock is explicitly overridden)
@@ -181,24 +198,17 @@ export async function buildDelegateCache(
     }
   }
 
-  // Process events — later events overwrite earlier ones (Map dedup)
-  for (const eventLog of allLogs) {
-    const parsed = erc20VotesInterface.parseLog(eventLog);
-    const delegate = parsed.args[0] as string;
-    const newBalance = (parsed.args[2] as ethers.BigNumber).toString();
-    const key = delegate.toLowerCase();
+  const totalEvents = await scanAndProcessAdaptive(
+    provider,
+    tokenAddress,
+    EVENT_TOPICS.DELEGATE_VOTES_CHANGED,
+    startBlock,
+    currentBlock,
+    delegateMap,
+    onProgress
+  );
 
-    if (ethers.BigNumber.from(newBalance).isZero()) {
-      delegateMap.delete(key);
-    } else {
-      delegateMap.set(key, {
-        address: delegate.toLowerCase() as `0x${string}`,
-        votingPower: newBalance,
-        lastChangeBlock: eventLog.blockNumber,
-        lastChangeTxHash: eventLog.transactionHash,
-      });
-    }
-  }
+  log("processed %d events, %d unique delegates in map", totalEvents, delegateMap.size);
 
   // Filter excluded addresses
   for (const addr of EXCLUDED_DELEGATE_ADDRESSES) {

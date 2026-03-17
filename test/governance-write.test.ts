@@ -85,7 +85,7 @@ describe("governance/write", () => {
     it("should accept explicit governor address", () => {
       const customAddr = "0x" + "ff".repeat(20);
       const tx = prepareCastVote("12345", VOTE_SUPPORT.FOR, customAddr);
-      expect(tx.to).toBe(customAddr);
+      expect(tx.to.toLowerCase()).toBe(customAddr.toLowerCase());
     });
 
     it("should use castVote function selector", () => {

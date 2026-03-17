@@ -11,7 +11,7 @@
  * - castVoteWithReasonAndParams(proposalId, support, reason, params)
  */
 
-import { BigNumber } from "ethers";
+import { ethers, BigNumber } from "ethers";
 import { ADDRESSES, CHAIN_IDS, VOTE_SUPPORT } from "../constants";
 import type { VoteSupport } from "../constants";
 import { governorInterface } from "../abis";
@@ -37,7 +37,7 @@ export function resolveGovernorAddress(
   if (governorAddressOrTarget === "constitutional") return ADDRESSES.CONSTITUTIONAL_GOVERNOR;
   if (governorAddressOrTarget === "non-constitutional")
     return ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR;
-  return governorAddressOrTarget as `0x${string}`;
+  return ethers.utils.getAddress(governorAddressOrTarget) as `0x${string}`;
 }
 
 function supportLabel(support: VoteSupport): string {

@@ -209,7 +209,8 @@ const readyStage = findExecutableStage(result.stages);
 if (readyStage) {
   const prep = await tracker.prepareTransaction(readyStage);
   if (prep.success) {
-    const tx = await signer.sendTransaction(prep.prepared);
+    const { to, data, value } = prep.prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
   }
 }
@@ -223,8 +224,9 @@ import { findAllExecutableStages } from "@gzeoneth/gov-tracker";
 for (const stage of findAllExecutableStages(result.stages)) {
   const prep = await tracker.prepareTransaction(stage);
   if (prep.success) {
+    const { to, data, value } = prep.prepared;
     const signer = stage.chain === "ethereum" ? l1Signer : l2Signer;
-    await signer.sendTransaction(prep.prepared);
+    await signer.sendTransaction({ to, data, value });
   }
 }
 ```
@@ -710,7 +712,8 @@ const status = await checkElectionStatus(l2Provider, l1Provider);
 if (status.canCreateElection) {
   const { transaction, electionIndex } = prepareElectionCreation(status);
   console.log(`Creating election #${electionIndex}`);
-  const tx = await signer.sendTransaction(transaction);
+  const { to, data, value } = transaction;
+  const tx = await signer.sendTransaction({ to, data, value });
   await tx.wait();
 }
 
@@ -721,7 +724,8 @@ const election = await tracker.trackElection(0);
 if (election.canProceedToMemberPhase) {
   const prepared = await prepareMemberElectionTrigger(election, l2Provider);
   if (prepared) {
-    const tx = await signer.sendTransaction(prepared);
+    const { to, data, value } = prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
     console.log("Member election triggered");
   }
@@ -731,7 +735,8 @@ if (election.canProceedToMemberPhase) {
 if (election.canExecuteMember) {
   const prepared = await prepareMemberElectionExecution(election, l2Provider);
   if (prepared) {
-    const tx = await signer.sendTransaction(prepared);
+    const { to, data, value } = prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
     console.log("New Security Council members installed");
   }
@@ -779,7 +784,7 @@ import { prepareCastVote, prepareCastVoteWithReason, VOTE_SUPPORT } from "@gzeon
 
 // Simple for vote on constitutional governor
 const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
-await signer.sendTransaction(tx);
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
 
 // Vote against with reason on treasury governor
 const tx2 = prepareCastVoteWithReason(
@@ -788,7 +793,7 @@ const tx2 = prepareCastVoteWithReason(
   "Insufficient specification for treasury spend",
   "non-constitutional"
 );
-await signer.sendTransaction(tx2);
+await signer.sendTransaction({ to: tx2.to, data: tx2.data, value: tx2.value });
 ```
 
 ### Read Proposal Data (wagmi)
@@ -852,7 +857,7 @@ const signature = await signer._signTypedData(
 
 // Step 2: Submit
 const tx = reg.buildTransaction(signature);
-await signer.sendTransaction(tx);
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
 ```
 
 ### Vote in Election
@@ -867,11 +872,11 @@ import {
 
 // Vote for a contender in nominee phase
 const tx = prepareNomineeElectionVote(proposalId, contenderAddress, votesInWei);
-await signer.sendTransaction(tx);
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
 
 // Vote for a nominee in member phase
 const tx2 = prepareMemberElectionVote(proposalId, nomineeAddress, votesInWei);
-await signer.sendTransaction(tx2);
+await signer.sendTransaction({ to: tx2.to, data: tx2.data, value: tx2.value });
 
 // Encode/decode vote params manually
 const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
@@ -915,7 +920,8 @@ import { prepareExecuteTimelock } from "@gzeoneth/gov-tracker";
 // Auto-detects single vs batch from on-chain CallScheduled events
 const prep = await prepareExecuteTimelock(timelockAddress, operationId, salt, provider);
 if (prep.success) {
-  await signer.sendTransaction(prep.prepared);
+  const { to, data, value } = prep.prepared;
+  await signer.sendTransaction({ to, data, value });
 }
 ```
 

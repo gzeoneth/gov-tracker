@@ -118,7 +118,7 @@ export function getAddContenderTypedData(
       name: governorName,
       version: "1",
       chainId,
-      verifyingContract: governorAddress as `0x${string}`,
+      verifyingContract: ethers.utils.getAddress(governorAddress) as `0x${string}`,
     },
     types: {
       AddContenderMessage: [{ name: "proposalId", type: "uint256" }],
@@ -152,7 +152,7 @@ export function prepareAddContender(
   ]);
 
   return {
-    to: governorAddress as `0x${string}`,
+    to: ethers.utils.getAddress(governorAddress) as `0x${string}`,
     data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
@@ -223,7 +223,7 @@ export function prepareNomineeElectionVote(
   );
 
   return {
-    to: governorAddress as `0x${string}`,
+    to: ethers.utils.getAddress(governorAddress) as `0x${string}`,
     data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),
@@ -261,7 +261,7 @@ export function prepareMemberElectionVote(
   );
 
   return {
-    to: governorAddress as `0x${string}`,
+    to: ethers.utils.getAddress(governorAddress) as `0x${string}`,
     data: calldata as `0x${string}`,
     value: "0",
     chain: chainIdToChain(chainId),

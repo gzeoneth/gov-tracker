@@ -109,7 +109,7 @@ describe("election/write", () => {
 
       const result = getAddContenderTypedData("TestGovernor", "99", customAddr, customChainId);
 
-      expect(result.domain.verifyingContract).toBe(customAddr);
+      expect(result.domain.verifyingContract.toLowerCase()).toBe(customAddr.toLowerCase());
       expect(result.domain.chainId).toBe(customChainId);
     });
   });
@@ -244,7 +244,7 @@ describe("election/write", () => {
         customAddr
       );
 
-      expect(tx.to).toBe(customAddr);
+      expect(tx.to.toLowerCase()).toBe(customAddr.toLowerCase());
     });
 
     it("should encode vote params correctly", () => {

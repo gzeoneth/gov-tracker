@@ -660,6 +660,26 @@ describe("Public API: Read helpers (wagmi useReadContract)", () => {
     const params = readGovernorName(custom);
     expect(params.address).toBe(custom);
   });
+
+  it("read helpers accept custom chainId for testnet deployments", () => {
+    const sepolia = 421614;
+    expect(readProposalState("1", undefined, sepolia).chainId).toBe(sepolia);
+    expect(readProposalVotes("1", undefined, sepolia).chainId).toBe(sepolia);
+    expect(readQuorum(100, undefined, sepolia).chainId).toBe(sepolia);
+    expect(readHasVoted("1", "0x" + "aa".repeat(20), undefined, sepolia).chainId).toBe(sepolia);
+    expect(readGetVotes("0x" + "aa".repeat(20), 100, undefined, sepolia).chainId).toBe(sepolia);
+    expect(readCurrentVotingPower("0x" + "aa".repeat(20), undefined, sepolia).chainId).toBe(
+      sepolia
+    );
+    expect(readDelegate("0x" + "aa".repeat(20), undefined, sepolia).chainId).toBe(sepolia);
+    expect(readElectionCount(undefined, sepolia).chainId).toBe(sepolia);
+    expect(readGovernorName(undefined, sepolia).chainId).toBe(sepolia);
+  });
+
+  it("read helpers default to ARB_ONE when chainId omitted", () => {
+    expect(readProposalState("1").chainId).toBe(CHAIN_IDS.ARB_ONE);
+    expect(readElectionCount().chainId).toBe(CHAIN_IDS.ARB_ONE);
+  });
 });
 
 describe("Public API: ProposalStateValue type guard", () => {

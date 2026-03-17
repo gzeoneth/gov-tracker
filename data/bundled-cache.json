@@ -11001,7 +11001,7 @@
   },
   "discovery:watermarks": {
     "version": 1,
-    "createdAt": 1768710381976,
+    "createdAt": 1773751089846,
     "input": {
       "type": "discovery",
       "id": "watermarks"
@@ -11009,29 +11009,29 @@
     "lastProcessedStage": null,
     "lastProcessedBlock": {
       "l1": 0,
-      "l2": 422534765
+      "l2": 442737386
     },
     "cachedData": {
       "discoveryWatermarks": {
-        "constitutionalGovernor": 422534765,
-        "nonConstitutionalGovernor": 422534765,
-        "electionNomineeGovernor": 422534765,
-        "electionMemberGovernor": 422534765,
-        "l2ConstitutionalTimelock": 422534765,
-        "l2NonConstitutionalTimelock": 422534765
+        "constitutionalGovernor": 442737386,
+        "nonConstitutionalGovernor": 442737386,
+        "electionNomineeGovernor": 442737386,
+        "electionMemberGovernor": 442737386,
+        "l2ConstitutionalTimelock": 442737386,
+        "l2NonConstitutionalTimelock": 442737386
       },
       "watermarkHashes": {
-        "electionNomineeGovernor": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f",
-        "l2ConstitutionalTimelock": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f",
-        "l2NonConstitutionalTimelock": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f",
-        "constitutionalGovernor": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f",
-        "electionMemberGovernor": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f",
-        "nonConstitutionalGovernor": "0xa6704a51d3d26ac42e70e2581b7485b9def0d15fd339183245d325ebcd1b2e9f"
+        "electionNomineeGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
+        "l2ConstitutionalTimelock": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
+        "l2NonConstitutionalTimelock": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
+        "constitutionalGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
+        "electionMemberGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
+        "nonConstitutionalGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5"
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768710381976
+      "lastTrackedAt": 1773751089846
     }
   },
   "tx:0x38d5327a65a7d8f6b88d6907d3a4f547e400bbe96e2b7d46825dc66111eec521:op:0x200d9087a25543aa4626755531511b3b70d8e271754ea39a4a6d0b11769b6455": {
@@ -32612,7 +32612,7 @@
   },
   "election:5": {
     "version": 1,
-    "createdAt": 1768710533856,
+    "createdAt": 1773751096308,
     "input": {
       "type": "election",
       "electionIndex": 5
@@ -32625,8 +32625,340 @@
     "cachedData": {
       "electionStatus": {
         "electionIndex": 5,
-        "phase": "NOT_STARTED",
+        "phase": "CONTENDER_SUBMISSION",
         "cohort": 1,
+        "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600",
+        "memberProposalId": null,
+        "nomineeProposalState": "Pending",
+        "memberProposalState": null,
+        "compliantNomineeCount": 0,
+        "targetNomineeCount": 6,
+        "vettingDeadline": null,
+        "isInVettingPeriod": false,
+        "canProceedToMemberPhase": false,
+        "canExecuteMember": false,
+        "stages": [
+          {
+            "type": "CREATE_ELECTION",
+            "status": "COMPLETED",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [
+              {
+                "hash": "0xf9da8f849edeb9ffc59a58c8179fa2e54b16baaf05ae829361185ae2a26ec45f",
+                "blockNumber": 442040361,
+                "chain": "arb1",
+                "chainId": 42161
+              }
+            ],
+            "data": {
+              "electionIndex": 5,
+              "cohort": 1,
+              "startTimestamp": 0,
+              "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600"
+            },
+            "executable": false
+          },
+          {
+            "type": "NOMINEE_ELECTION",
+            "status": "PENDING",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [],
+            "data": {
+              "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600",
+              "proposalState": "Pending",
+              "contenderCount": 0,
+              "compliantNomineeCount": 0,
+              "targetNomineeCount": 6
+            },
+            "executable": false
+          },
+          {
+            "type": "NOMINEE_VETTING",
+            "status": "NOT_STARTED",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          },
+          {
+            "type": "MEMBER_ELECTION",
+            "status": "NOT_STARTED",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          },
+          {
+            "type": "L2_TIMELOCK",
+            "status": "NOT_STARTED",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          },
+          {
+            "type": "L2_TO_L1_MESSAGE",
+            "status": "NOT_STARTED",
+            "chain": "arb1",
+            "chainId": 42161,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          },
+          {
+            "type": "L1_TIMELOCK",
+            "status": "NOT_STARTED",
+            "chain": "ethereum",
+            "chainId": 1,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          },
+          {
+            "type": "RETRYABLE_EXECUTED",
+            "status": "NOT_STARTED",
+            "chain": "ethereum",
+            "chainId": 1,
+            "transactions": [],
+            "data": {},
+            "executable": false
+          }
+        ],
+        "creationTxHash": "0xf9da8f849edeb9ffc59a58c8179fa2e54b16baaf05ae829361185ae2a26ec45f"
+      }
+    },
+    "metadata": {
+      "errorCount": 0,
+      "lastTrackedAt": 1773751096308
+    }
+  },
+  "tx:0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a": {
+    "version": 1,
+    "createdAt": 1773751092953,
+    "input": {
+      "type": "governor",
+      "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
+      "proposalId": "112177996398925212273579485756315626637025938627124330171390356044681347897430",
+      "creationTxHash": "0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a"
+    },
+    "lastProcessedStage": "PROPOSAL_QUEUED",
+    "lastProcessedBlock": {
+      "l1": 0,
+      "l2": 0,
+      "nova": 0
+    },
+    "cachedData": {
+      "completedStages": [
+        {
+          "type": "PROPOSAL_CREATED",
+          "status": "COMPLETED",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [
+            {
+              "hash": "0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a",
+              "blockNumber": 435258091,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1771882585
+            }
+          ],
+          "data": {
+            "proposalType": "CONSTITUTIONAL",
+            "proposalId": "112177996398925212273579485756315626637025938627124330171390356044681347897430",
+            "proposer": "0xb5B069370Ef24BC67F114e185D185063CE3479f8",
+            "description": "# [Constitutional] DVP Quorum & Proposal Cancellation\n# 1. Abstract\n\nThe ArbitrumDAO recently [expressed strong interest](https://snapshot.box/#/s:arbitrumfoundation.eth/proposal/0xc5f06144fa92aaff99e0e44482ab6f7a3f6486dfb6c854d16271399ffcf895e6) in moving towards a delegated voting power(DVP)-based quorum model with the parameters now finalized in an [offchain vote](https://snapshot.box/#/s:arbitrumfoundation.eth/proposal/0x3ac48360cb2cf6f921e391a97416a53c8ca442e3a621a9f7bb406719a8f8034d). Consequently, this upgrade, if implemented, will define quorum as:\n\n`Quorum = min{max quorum, max{ɑ*DVP, baseline quorum}}`\nwhere **ɑ**, **baseline quorum**, and **max quorum** are constants.\n\nUpdates to the quorum computation model will also be reflected in the ArbitrumDAO Constitution - executing this proposal will update the onchain constitution hash given the adjusted text.\n\nLastly, this proposal payload also includes an upgrade to enable onchain proposal cancellation in the Arbitrum Core Governor and Arbitrum Treasury Governor contracts.\n\nAll changes have been audited by Trail of Bits and the audit report (also covering the combined proposal payload) can be found [here](https://docs.arbitrum.io/assets/files/2026.02-offchain-arbitrum-quorum-changes-with-feb-extension-security-review-b3121ca12b4ea645f83ea8357c242d64.pdf).\n\n# [](#2-Motivation-amp-Context \"2-Motivation-amp-Context\")2. Motivation & Context\n\nAs it stands, the ArbitrumDAO quorum is computed based on the total voteable supply, which has no relationship to the tokens registered to vote. This proposal introduces a better approach by basing quorum on delegated voting power (DVP) - a metric that more directly represents the amount of ARB participating in governance and available for voting.\n\nAll of the relevant context and motivation around this change may be found in previously published posts on this topic. The [first report](https://forum.arbitrum.foundation/t/dvp-quorum-for-arbitrumdao/29996) focuses on the rationale for the change, the historical performance of quorum, and the security implications of this upgrade. The [second report](https://forum.arbitrum.foundation/t/dvp-quorum-for-arbitrumdao/29996/27?u=amanwithwings) is a comparative analysis of quorum across other large DAOs, as well as shareholder voting in public companies, aimed at presenting insights into ArbitrumDAO’s position relative to comparable systems. The motivation around this update is captured in the [initial temperature check](https://forum.arbitrum.foundation/t/constitutional-aip-dvp-quorum/30053).\n\nSecondly, in order to improve the proposal process, ArbitrumDAO previously [funded](https://www.tally.xyz/gov/arbitrum/proposal/105661716969503353468484651547476341487744471176330694566006767279895911370354?govId=eip155:42161:0x789fC99093B09aD01C34DC7251D0C89ce743e5a4) Tally to implement onchain proposal cancellation in Arbitrum Core Governor and Arbitrum Treasury Governor contracts. This upgrade allows the proposer to cancel their proposal during the 3-day *pending period* before voting commences. Onchain proposal cancellation reduces friction in the governance process by allowing proposers to withdraw proposals that contain errors, outdated parameters, or that need revision based on delegate feedback received after submission - without requiring the DAO to spend time and attention voting down a proposal that the proposer themselves no longer supports.\n\n# [](#Specification \"Specification\")3. Specification\n\n## [](#311-Definition---DVP \"311-Definition---DVP\")3.1.1 Definition - DVP\n\nThis AIP proposes upgrading to the following quorum computation logic:\n\n`Quorum = min{max quorum, max{ɑ*DVP, baseline quorum}}`\nwhere ɑ, baseline quorum, and max quorum are constants.\n\n## [](#312-How-the-Formula-Works---DVP \"312-How-the-Formula-Works---DVP\")3.1.2 How the Formula Works - DVP\n\nThe proposed formula works as follows:\n\n* When ɑ\\*DVP is lower than baseline quorum, baseline quorum applies.\n* When ɑ\\* DVP is higher than baseline quorum and lower than max quorum, ɑ\\* DVP applies.\n* When ɑ\\*DVP is higher than max quorum, max quorum applies.\n\nIn short, baseline quorum and max quorum form fixed lower and upper bounds for quorum.\n\n## [](#313-Proposed-Parameters---DVP \"313-Proposed-Parameters---DVP\")3.1.3 Proposed Parameters - DVP\n\nWe suggest the following parameters:\n\n**For constitutional proposals**:\n\n* {ɑ = 0.5; baseline quorum = 150m ARB; max quorum = 450m ARB}\n\n**For non-constitutional proposals**:\n\n* {ɑ = 0.4; baseline quorum = 100m ARB; max quorum = 300m ARB}\n\n## [](#314-Implementation---DVP \"314-Implementation---DVP\")3.1.4 Implementation - DVP\n\nThis upgrade will introduce the following changes to the ARB token contract and the governor contracts:\n\n**ARB Token contract upgrade**\n\nThe ARB token contract will be upgraded to keep a running total of DVP, updated upon each delegation change and token transfer.\n\n1. What is tracked:\n   Total DVP = sum of balances of all accounts with a non-zero delegation at a given block.\n2. Initialization process:\n   To initialize the running total, an estimate of the total DVP must be provided as part of the upgrade proposal. A followup proposal can correct any error in the initial DVP estimate if needed. This doesn’t change user balances or individual delegate voting power, only the aggregate DVP.\n3. Query interface:\n   getTotalDelegation() to obtain the latest value.\n   getTotalDelegationAt(uint256 blockNumber) to obtain historical value at a snapshot block.\n\n**Governor contract update**\n\n1. The DAO governor contracts (Core Governor and Treasury Governor) will be upgraded to use the new total DVP metric. This replaces current percentage calculations with DVP-based thresholds.\n2. Use getTotalDelegation() from the token contract for quorum calculation.\n\n## [](#321-Implementation---Proposal-Cancellation \"321-Implementation---Proposal-Cancellation\")3.2.1 Implementation - Proposal Cancellation\n\nThis proposal will upgrade the Core Governor and Treasury Governor contracts to implement a cancel() function. The function may only be invoked by the proposal creator during the *pending period* - the three day window after a proposal is posted onchain and before voting begins.\n\n# [](#4-Rationale \"4-Rationale\")4. Rationale\n\n## [](#i-Participation-threshold-ɑ \"i-Participation-threshold-ɑ\")(i) Participation threshold (ɑ)\n\nFor non-constitutional proposals, our recommendation of ɑ = 0.4 ensures continuity with the current non-constitutional quorum. At the current DVP of 348.61m ARB, non-constitutional quorum will equate to 139.4m ARB, which is very close to its current value of 145.56m ARB.\n\nFor constitutional proposals, our recommendation for an ɑ value of 0.5 aims at creating a safer buffer between voter turnout and quorum while retaining a high voter turnout. Most large DAOs operate with quorum thresholds well below fifty percent of delegated voting power, and corporate and legislative systems rarely employ supermajority quorum requirements. As concluded by [research report #2](https://forum.arbitrum.foundation/t/dvp-quorum-for-arbitrumdao/29996/27?u=amanwithwings), when quorum is expressed as a percentage of DVP, its value at ArbitrumDAO (~62% of DVP) is roughly double that of the next highest DAO benchmarked. Even after the proposed upgrade, ArbitrumDAO’s quorum would remain higher than all comparable DAOs reviewed by the report.\n\n## [](#ii-Baseline-Quorum \"ii-Baseline-Quorum\")(ii) Baseline Quorum\n\nHistorical participation data of ArbitrumDAO [provides strong support](https://forum.arbitrum.foundation/t/dvp-quorum-for-arbitrumdao/29996#p-73888-changing-quorum-threshold-computation-6) for the baseline quorum values proposed. Over the last two years, the average quorum for non-constitutional proposals amounted to ~104m ARB, which motivates our recommendation of a 100m ARB baseline for non-constitutional proposals. For constitutional proposals, the average quorum, excluding periods in which quorum was structurally difficult to reach, falls around 156m ARB, motivating our recommendation of a 150m ARB baseline. These values preserve continuity with observed voting behavior while creating a sufficiently large lower bound for quorum.\n\nNote that baseline quorum values will not apply until DVP drops below a certain threshold. For the constitutional baseline quorum to apply, DVP would need to drop below 300m ARB. At all values of delegation below this threshold, a constitutional proposal will require a quorum of 150m ARB. For the non-constitutional baseline quorum to apply, DVP would need to drop below 250m ARB.\n\n## [](#iii-Maximum-Quorum \"iii-Maximum-Quorum\")(iii) Maximum Quorum\n\nThe implementation also includes an explicit smart contract setting to configure a maximum value of constitutional and non-constitutional quorum. This is a static parameter that can be updated through a DAO vote if needed. A maximum quorum of 450m ARB for constitutional proposals and 300m ARB for non-constitutional proposals are proposed. These values are fully consistent with the current maximum quorum values (where they are defined as 3% and 4.5% of the maximum voteable token supply) and as such aim to retain the status quo on the upper bound. For additional context, DVP would need to go over 750m ARB for the non-constitutional max quorum to be triggered and to over 900m ARB for the constitutional max quorum to be triggered.\n\nGoing forward, these thresholds may further act as checkpoints for the DAO to reconsider the DVP-quorum model’s performance in a high-DVP scenario.\n\n# [](#5-ArbitrumDAO-Constitution-Adjustments \"5-ArbitrumDAO-Constitution-Adjustments\")5. ArbitrumDAO Constitution Adjustments\n\nDue to the upgrade’s nature, the following updates will be made to the Definitions and DAO Proposals and Voting Procedures sections of the ArbitrumDAO Constitution, in order to reflect the new way quorum is calculated. The constitution hash will be updated as a part of this proposal payload.\n\n## Change 1: Definitions\n\n### [](#Old-Text \"Old-Text\")Old Text\n\nDefinitions:\n\n* AIP: An Arbitrum Improvement Proposal\n* ArbitrumDAO-governed chains: The Arbitrum One and Arbitrum Nova chains and any additional chains authorized by the ArbitrumDAO\n* DAO Treasury: All $ARB tokens held in a governance smart contract governed directly by the ArbitrumDAO and/or the Security Council of The Arbitrum Foundation via on-chain voting mechanisms.\n* Governed Chains: Any ArbitrumDAO-approved chains that are governed by the $ARB token\n* Non-Governed Chains: Any ArbitrumDAO-approved chains that are not governed by the $ARB token\n* Votable Tokens: All $ARB tokens in existence, excluding any tokens held by The Arbitrum Foundation and any unclaimed airdrops\n\n### New Text\n\nDefinitions:\n\n* AIP: An Arbitrum Improvement Proposal\n* ArbitrumDAO-governed chains: The Arbitrum One and Arbitrum Nova chains and any additional chains authorized by the ArbitrumDAO\n* DAO Treasury: All $ARB tokens held in a governance smart contract governed directly by the ArbitrumDAO and/or the Security Council of The Arbitrum Foundation via on-chain voting mechanisms\n* Delegated Votable Tokens: The number of all Votable Tokens that have been delegated and eligible to vote on AIPs\n* Governed Chains: Any ArbitrumDAO-approved chains that are governed by the $ARB token\n* Non-Governed Chains: Any ArbitrumDAO-approved chains that are not governed by the $ARB token\n* Votable Tokens: All $ARB tokens in existence, excluding any tokens held by The Arbitrum Foundation and any unclaimed airdrops\n\n## Change 2: DAO Proposals and Voting Procedures\n\n### Old Text\n\nPhase 3: DAO votes on AIP, on Arbitrum One (14-16 days): During this Phase 3, the ArbitrumDAO will be able to vote directly on-chain on a submitted AIP.\n\nAn AIP passes if the following 2 conditions are met:\n\na. More Votable Tokens have casted votes \"in favor\" than have casted votes \"against\" (\"Threshold 1\"); and\n\nb. In the case of a:\n\n* Constitutional AIP, at least 4.5% of all Votable Tokens have casted votes either \"in favor\" or \"abstain\"; or\n* Non-Constitutional AIP, at least 3% of all Votable Tokens have casted votes either \"in favor\" or \"abstain\" (collectively, \"Threshold 2\").\n\n### New Text\n\nPhase 3: DAO votes on AIP, on Arbitrum One (14-16 days): During this Phase 3, the ArbitrumDAO will be able to vote directly on-chain on a submitted AIP.\n\nAn AIP passes if the following 2 conditions are met:\n\na. More Votable Tokens have cast votes \"in favor\" than have cast votes \"against\" (\"Threshold 1\"); and\n\nb. (\"Threshold 2\") In the case of a:\n\n* Constitutional AIP, at least a number of all Delegated Votable Tokens have cast votes either \"in favor\" or \"abstain\", determined in accordance with the below formula:\n\n1. If the product of 0.5 and the Delegated Votable Tokens (\"Preliminary Constitutional    Quorum Value\") is less than 150,000,000, then 150,000,000 applies; or\n2. If the Preliminary Constitutional Quorum Value is greater than 150,000,000, but less than 450,000,000, then the Preliminary Constitutional Quorum Value applies; or\n3. If the Preliminary Constitutional Quorum Value is greater than 450,000,000, then 450,000,000 applies.\n\n* Non-Constitutional AIP, at least a number of all Delegated Votable Tokens have cast votes either \"in favor\" or \"abstain\", determined in accordance with the below formula:\n\n1. If the product of 0.4 and the Delegated Votable Tokens (\"Preliminary Non-Constitutional Quorum Value\") is less than 100,000,000, then 100,000,000 applies; or\n2. If the Preliminary Non-Constitutional Quorum Value is greater than 100,000,000, but less than 300,000,000, then the Preliminary Non-Constitutional Quorum Value applies; or\n3. If the Preliminary Non-Constitutional Quorum Value is greater than 300,000,000, then 300,000,000 applies.\n\n## Change 3: Fixing Minor Typos\n\n### Old Text\n\nA Non-Constitutional AIP is one that is not considered a \"Constitutional AIP\" including:\n\n* Funding: Requests funds/grants or otherwise propose how to spend or allocate funds from the DAO Treasury and, so long as The Arbitrum Foundation exists, the Administrative Budget Wallet as defined in the The Arbitrum Foundation’s Amended & Restated Bylaws\n\n### New Text\n\nA Non-Constitutional AIP is one that is not considered a \"Constitutional AIP\" including:\n\n* Funding: Requests funds/grants or otherwise propose how to spend or allocate funds from the DAO Treasury and, so long as The Arbitrum Foundation exists, the Administrative Budget Wallet as defined in The Arbitrum Foundation’s Amended & Restated Bylaws\n\n### Old Text\n\nSecurity Council members may only be removed prior to the end of their terms under two conditions:\n\n* At least 10% of all Votable Tokens have casted votes either \"in favor\" of removal or \"abstain\", and at least 5/6 (83.33%) of all casted votes are \"in favor\" of removal; or\n\n### New Text\n\nSecurity Council members may only be removed prior to the end of their terms under two conditions:\n\n* At least 10% of all Votable Tokens have cast votes either \"in favor\" of removal or \"abstain\", and at least 5/6 (83.33%) of all cast votes are \"in favor\" of removal; or",
+            "startBlock": "24543913",
+            "endBlock": "24644713",
+            "targetCount": 1,
+            "targets": [
+              "0x0000000000000000000000000000000000000064"
+            ],
+            "values": [
+              "0"
+            ],
+            "signatures": [
+              ""
+            ],
+            "calldatas": [
+              "0x928c169a000000000000000000000000e6841d92b0c345144506576ec13ecf5103ac7f49000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000005448f2a0bb000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000005575a1202bdeb87fb924e3fd1901a3212c7fd42a35c39915ed94cec7697d6716000000000000000000000000000000000000000000000000000000000003f4800000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001800000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000841cff79cd000000000000000000000000bea14c43ee8324b764d699b4e1b5dd9d1f1825c900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004b147f40c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000a4bca8c7b50000000000000000000000001d62ffeb72e4c360ccbbacf7c965153b002604170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002437f66aa7263080bed3962d0476fa84fbb32ab81dfff1244e2b145f9864da24353b2f3b05000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            ]
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1771882585
+          }
+        },
+        {
+          "type": "VOTING_ACTIVE",
+          "status": "COMPLETED",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [],
+          "data": {
+            "forVotes": "247894293.890469564044508341 ARB",
+            "forVotesRaw": "247894293890469564044508341",
+            "againstVotes": "362596.8639146394075596 ARB",
+            "againstVotesRaw": "362596863914639407559600",
+            "abstainVotes": "8652.850962443319447736 ARB",
+            "abstainVotesRaw": "8652850962443319447736",
+            "quorum": "218847660.430855376404666453 ARB",
+            "quorumRaw": "218847660430855376404666453",
+            "quorumReached": true,
+            "deadline": "24644713",
+            "wasExtended": false,
+            "extensionPossible": false,
+            "hasVettingPeriod": false,
+            "isVettingActive": false,
+            "proposalState": "Queued"
+          },
+          "executable": false
+        },
+        {
+          "type": "PROPOSAL_QUEUED",
+          "status": "COMPLETED",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [
+            {
+              "hash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209",
+              "blockNumber": 441173481,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1773359037,
+              "description": "queued"
+            }
+          ],
+          "data": {
+            "proposalState": "Queued",
+            "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
+            "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
+            "eta": 1774050237,
+            "callCount": 1,
+            "callScheduledData": [
+              {
+                "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
+                "index": "0",
+                "target": "0x0000000000000000000000000000000000000064",
+                "value": "0",
+                "data": "0x928c169a000000000000000000000000e6841d92b0c345144506576ec13ecf5103ac7f49000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000005448f2a0bb000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000005575a1202bdeb87fb924e3fd1901a3212c7fd42a35c39915ed94cec7697d6716000000000000000000000000000000000000000000000000000000000003f4800000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001800000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000841cff79cd000000000000000000000000bea14c43ee8324b764d699b4e1b5dd9d1f1825c900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004b147f40c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000a4bca8c7b50000000000000000000000001d62ffeb72e4c360ccbbacf7c965153b002604170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002437f66aa7263080bed3962d0476fa84fbb32ab81dfff1244e2b145f9864da24353b2f3b05000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "delay": "691200",
+                "blockNumber": 441173481,
+                "txHash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209",
+                "logIndex": 0,
+                "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0"
+              }
+            ]
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1773359037,
+            "eta": 1774050237
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "errorCount": 0,
+      "lastTrackedAt": 1773751092953,
+      "timelockOpKey": "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209:op:0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822"
+    }
+  },
+  "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209:op:0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822": {
+    "version": 1,
+    "createdAt": 1773751092953,
+    "input": {
+      "type": "timelock",
+      "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
+      "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
+      "scheduledTxHash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209"
+    },
+    "lastProcessedStage": "L2_TIMELOCK",
+    "lastProcessedBlock": {
+      "l1": 0,
+      "l2": 0,
+      "nova": 0
+    },
+    "cachedData": {
+      "completedStages": [
+        {
+          "type": "L2_TIMELOCK",
+          "status": "PENDING",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [
+            {
+              "hash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209",
+              "blockNumber": 441173481,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1773359037,
+              "description": "queued"
+            }
+          ],
+          "data": {
+            "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
+            "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
+            "state": "PENDING",
+            "eta": 1774050237,
+            "callScheduledData": [
+              {
+                "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
+                "index": "0",
+                "target": "0x0000000000000000000000000000000000000064",
+                "value": "0",
+                "data": "0x928c169a000000000000000000000000e6841d92b0c345144506576ec13ecf5103ac7f49000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000005448f2a0bb000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000005575a1202bdeb87fb924e3fd1901a3212c7fd42a35c39915ed94cec7697d6716000000000000000000000000000000000000000000000000000000000003f4800000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001800000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000841cff79cd000000000000000000000000bea14c43ee8324b764d699b4e1b5dd9d1f1825c900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004b147f40c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000a4bca8c7b50000000000000000000000001d62ffeb72e4c360ccbbacf7c965153b002604170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002437f66aa7263080bed3962d0476fa84fbb32ab81dfff1244e2b145f9864da24353b2f3b05000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "delay": "691200",
+                "blockNumber": 441173481,
+                "txHash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209",
+                "logIndex": 0,
+                "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0"
+              }
+            ],
+            "salt": "0x91358c50193c96dfca27651b5f09476dbc4090f4240c18e37bc91f84eaf14c89",
+            "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "isBatchOperation": true,
+            "waitingForDelay": true
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1773359037,
+            "eta": 1774050237,
+            "delaySeconds": 299148
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "errorCount": 0,
+      "lastTrackedAt": 1773751092953,
+      "sourceCheckpoint": "tx:0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a"
+    }
+  },
+  "election:6": {
+    "version": 1,
+    "createdAt": 1773751097392,
+    "input": {
+      "type": "election",
+      "electionIndex": 6
+    },
+    "lastProcessedStage": null,
+    "lastProcessedBlock": {
+      "l1": 0,
+      "l2": 0
+    },
+    "cachedData": {
+      "electionStatus": {
+        "electionIndex": 6,
+        "phase": "NOT_STARTED",
+        "cohort": 0,
         "nomineeProposalId": null,
         "memberProposalId": null,
         "nomineeProposalState": null,
@@ -32645,8 +32977,8 @@
             "chainId": 42161,
             "transactions": [],
             "data": {
-              "electionIndex": 5,
-              "cohort": 1,
+              "electionIndex": 6,
+              "cohort": 0,
               "startTimestamp": 0,
               "reason": "Election not yet created"
             },
@@ -32720,7 +33052,7 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1768710533856
+      "lastTrackedAt": 1773751097392
     }
   }
 }

@@ -417,7 +417,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "1".repeat(40),
+            to: ("0x" + "1".repeat(40)) as `0x${string}`,
             data: "0xabcd",
             value: "0",
             chain: "arb1",
@@ -497,7 +497,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "1".repeat(40),
+            to: ("0x" + "1".repeat(40)) as `0x${string}`,
             data: "0x1234",
             value: "0",
             chain: "ethereum",
@@ -543,7 +543,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "1".repeat(40),
+            to: ("0x" + "1".repeat(40)) as `0x${string}`,
             data: "0x1234",
             value: "0",
             chain: "ethereum",
@@ -656,7 +656,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "2".repeat(40),
+            to: ("0x" + "2".repeat(40)) as `0x${string}`,
             data: "0x5678",
             value: "0",
             chain: "arb1",
@@ -700,7 +700,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "2".repeat(40),
+            to: ("0x" + "2".repeat(40)) as `0x${string}`,
             data: "0x5678",
             value: "0",
             chain: "arb1",
@@ -779,7 +779,7 @@ describe("Tracker Execute Module", () => {
         const successResult: PrepareResult = {
           success: true,
           prepared: {
-            to: "0x" + "2".repeat(40),
+            to: ("0x" + "2".repeat(40)) as `0x${string}`,
             data: "0x5678",
             value: "0",
             chain: "nova",

@@ -414,6 +414,214 @@ interface MemberElectionDetails {
 
 ---
 
+### Governance Vote Preparation
+
+Prepare-only functions for voting on Core/Treasury Governor proposals:
+
+```typescript
+import {
+  prepareCastVote,
+  prepareCastVoteWithReason,
+  prepareCastVoteWithReasonAndParams,
+  VOTE_SUPPORT,
+} from "@gzeoneth/gov-tracker";
+
+// Simple vote
+const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
+await signer.sendTransaction(tx);
+
+// Vote with reason
+const tx2 = prepareCastVoteWithReason(proposalId, VOTE_SUPPORT.AGAINST, "Insufficient detail");
+
+// Vote with custom params
+const tx3 = prepareCastVoteWithReasonAndParams(proposalId, VOTE_SUPPORT.FOR, "reason", params);
+```
+
+**Governor shorthand**: Pass `"constitutional"` or `"non-constitutional"` instead of full addresses.
+
+**`VOTE_SUPPORT`** constants: `AGAINST` (0), `FOR` (1), `ABSTAIN` (2).
+
+---
+
+### Election Write Actions
+
+Prepare-only functions for election participation:
+
+```typescript
+import {
+  encodeElectionVoteParams,
+  getAddContenderTypedData,
+  prepareContenderRegistration,
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
+} from "@gzeoneth/gov-tracker";
+
+// Encode vote params (address + votes)
+const params = encodeElectionVoteParams(contenderAddress, votesInWei);
+
+// Contender registration (two-phase: sign → submit)
+const reg = prepareContenderRegistration(governorName, proposalId);
+const signature = await signer._signTypedData(
+  reg.typedData.domain,
+  reg.typedData.types,
+  reg.typedData.message
+);
+const tx = reg.buildTransaction(signature);
+await signer.sendTransaction(tx);
+
+// Vote in nominee election
+const tx2 = prepareNomineeElectionVote(proposalId, targetAddress, votesInWei);
+
+// Vote in member election
+const tx3 = prepareMemberElectionVote(proposalId, targetAddress, votesInWei);
+```
+
+---
+
+### Election Status
+
+Query election status without the full tracking pipeline:
+
+```typescript
+import { getElectionStatus, getAllElectionStatuses, ElectionConfig } from "@gzeoneth/gov-tracker";
+
+// Single election status
+const status = await getElectionStatus(l2Provider, 0);
+console.log(status.phase, status.cohort, status.canProceedToMemberPhase);
+
+// All elections in parallel
+const all = await getAllElectionStatuses(l2Provider);
+
+// Custom deployment (testnet/fork)
+const config: ElectionConfig = {
+  nomineeGovernorAddress: "0x...",
+  memberGovernorAddress: "0x...",
+  tokenAddress: "0x...",
+  chainId: 421614,
+};
+const status2 = await getElectionStatus(l2Provider, 0, config);
+```
+
+---
+
+### Read Helpers (wagmi/viem)
+
+Pure functions returning `{ address, abi, functionName, args }` for `useReadContract` / `useReadContracts` (multicall):
+
+```typescript
+import { readProposalState, readVotingPower, readElectionCount } from "@gzeoneth/gov-tracker";
+
+// Single read
+const { data } = useReadContract(readProposalState(proposalId));
+
+// Batched reads (multicall)
+const { data } = useReadContracts({
+  contracts: delegates.map(d => readVotingPower(d, snapshotBlock)),
+});
+```
+
+| Function | Description |
+|----------|-------------|
+| `readProposalState(id, governor?)` | Governor proposal state |
+| `readProposalVotes(id, governor?)` | For/against/abstain vote counts |
+| `readProposalSnapshot(id, governor?)` | Snapshot block number |
+| `readProposalDeadline(id, governor?)` | Voting deadline block |
+| `readQuorum(blockNumber, governor?)` | Quorum at block |
+| `readVotingPower(account, block, token?)` | Voting power at block via `getPastVotes` |
+| `readCurrentVotingPower(account, token?)` | Current voting power via `getVotes` (no block number needed) |
+| `readGetVotes(account, block, governor?)` | Votes via governor `getVotes` |
+| `readHasVoted(id, account, governor?)` | Check if address has voted on proposal |
+| `readDelegate(account, token?)` | Resolve who an address delegates to |
+| `readNomineeElectionState(id, governor?)` | Nominee election proposal state |
+| `readMemberElectionState(id, governor?)` | Member election proposal state |
+| `readElectionCount(governor?)` | Total election count |
+| `readVotesUsed(id, account, governor?)` | Election vote balance used |
+| `readIsContender(id, account, governor?)` | Check if address is registered contender |
+| `readGovernorName(governor?)` | Governor name (needed for EIP-712 typed data) |
+
+---
+
+### ABI Exports
+
+ABIs are exported in two formats:
+
+**Human-readable** (ethers v5, abitype): `GOVERNOR_ABI`, `TIMELOCK_ABI`, etc.
+
+**JSON** (wagmi/viem type inference): `governorAbi`, `timelockAbi`, etc.
+
+**Curated subsets** (for large ABIs exceeding viem type inference limits):
+
+| Export | Description |
+|--------|-------------|
+| `governorReadAbi` / `governorWriteAbi` | Governor read/write splits |
+| `nomineeElectionGovernorReadAbi` / `nomineeElectionGovernorWriteAbi` | Nominee election splits |
+| `memberElectionGovernorReadAbi` / `memberElectionGovernorWriteAbi` | Member election splits |
+| `timelockReadAbi` / `timelockWriteAbi` | Timelock splits |
+
+---
+
+### Proposal State Constants
+
+```typescript
+import { PROPOSAL_STATE, PROPOSAL_STATE_MAP, PROPOSAL_STATE_LABEL, isProposalState } from "@gzeoneth/gov-tracker";
+
+PROPOSAL_STATE.PENDING    // 0
+PROPOSAL_STATE.ACTIVE     // 1
+PROPOSAL_STATE.EXECUTED   // 7
+
+PROPOSAL_STATE_MAP[4]     // "Succeeded" (PascalCase)
+PROPOSAL_STATE_LABEL[4]   // "succeeded" (lowercase)
+
+// Type guard for exhaustive switch
+if (isProposalState(value)) {
+  // value is ProposalStateValue (0 | 1 | ... | 7)
+}
+```
+
+---
+
+### Standalone Timelock Execution
+
+Execute a timelock operation without the full tracking pipeline:
+
+```typescript
+import { prepareExecuteTimelock } from "@gzeoneth/gov-tracker";
+
+const prep = await prepareExecuteTimelock(timelockAddress, operationId, salt, provider);
+if (prep.success) {
+  await signer.sendTransaction(prep.prepared);
+}
+```
+
+Sync variants for consumers that already have operation params:
+
+```typescript
+import { prepareTimelockExecuteCalldata, prepareTimelockBatchCalldata } from "@gzeoneth/gov-tracker";
+
+// Single operation
+const tx = prepareTimelockExecuteCalldata(timelockAddress, { target, value, data, predecessor, salt }, operationId);
+
+// Batch operation
+const batchTx = prepareTimelockBatchCalldata(timelockAddress, { targets, values, payloads, predecessor, salt }, operationId);
+```
+
+---
+
+### Event Query API
+
+Query `ProposalCreated` events without the full tracking pipeline:
+
+```typescript
+import { queryProposalCreatedEvents } from "@gzeoneth/gov-tracker";
+
+const proposals = await queryProposalCreatedEvents(provider, governorAddress, fromBlock, toBlock);
+for (const p of proposals) {
+  console.log(p.proposalId, p.creationTxHash);
+}
+```
+
+---
+
 ### Checkpoint Deduplication
 
 Both governance proposals and elections can create "child" timelock operations that may be discovered and tracked separately. The deduplication helpers identify and manage these relationships.
@@ -597,11 +805,15 @@ interface DeduplicationStats {
 | `getTxUrl(hash, chain)` | Get explorer URL for tx |
 | `getStageTransactionUrl(stage)` | Get URL for stage tx |
 
-### Error Utilities
+### Error & RPC Utilities
 
 | Function | Description |
 |----------|-------------|
 | `isGasEstimationError(error)` | Check if error is gas estimation failure |
+| `isPermanentError(error)` | Check if error is permanent (revert, non-existent function) |
+| `isRetryableError(error)` | Check if error is transient (rate limit, timeout) |
+| `getErrorMessage(error)` | Extract error message from unknown error type |
+| `queryWithRetry(fn)` | Retry RPC calls with exponential backoff |
 
 ### Security Council Utilities
 
@@ -658,6 +870,7 @@ ADDRESSES.NOVA_OUTBOX                      // L1 outbox for Nova
 ADDRESSES.ARB_SYS                          // ArbSys precompile
 ADDRESSES.ARB_RETRYABLE_TX                 // Retryable tx precompile
 ADDRESSES.RETRYABLE_TICKET_MAGIC           // Retryable ticket detection
+ADDRESSES.ARB_TOKEN                        // ARB governance token
 ```
 
 ### `TIMING`

@@ -1,13 +1,22 @@
 import { ethers, BigNumber } from "ethers";
-import { ADDRESSES } from "../constants";
+import { ADDRESSES, MAINNET_ELECTION_CONFIG, proposalStateToString } from "../constants";
 import { formatDuration } from "../utils/formatters";
 import { queryWithRetry } from "../utils/rpc-utils";
-import { CohortType, ElectionPhase, ElectionStatus, ProposalState } from "../types";
+import {
+  CohortType,
+  ElectionConfig,
+  ElectionPhase,
+  ElectionProposalStatus,
+  ElectionStatus,
+  ProposalState,
+} from "../types";
+import { TIMING } from "../constants";
 import { getL1BlockNumberFromL2 } from "../utils/timing";
 import { loggers } from "../utils/logger";
 import { nomineeElectionGovernorInterface } from "../abis";
-import { getNomineeGovernor } from "./contracts";
+import { getNomineeGovernor, getMemberGovernor } from "./contracts";
 import { multicall, buildCallInput } from "../utils/multicall";
+import { getElectionProposalIds } from "./proposal-ids";
 
 const log = loggers.election;
 
@@ -160,4 +169,141 @@ export async function hasVettingPeriod(
   } catch {
     return false;
   }
+}
+
+/**
+ * Full status + phase lookup for a specific election.
+ *
+ * Returns a complete `ElectionProposalStatus` with all fields populated from
+ * on-chain data: proposal states, compliant nominee count, vetting deadline,
+ * cohort, and derived phase. Replaces the pattern of calling multiple SDK
+ * functions and manually assembling the result.
+ *
+ * The returned `ElectionProposalStatus.stages` field is not populated (use
+ * the full tracking pipeline via `ProposalStageTracker.trackElection()` for
+ * stage-level tracking).
+ *
+ * @param l2Provider - L2 provider (also used for L1 block number via ArbSys)
+ * @param electionIndex - The election index to check (0-based)
+ * @param config - Deployment config with contract addresses (defaults to mainnet)
+ */
+export async function getElectionStatus(
+  l2Provider: ethers.providers.Provider,
+  electionIndex: number,
+  config: ElectionConfig = MAINNET_ELECTION_CONFIG
+): Promise<ElectionProposalStatus> {
+  const { nomineeGovernorAddress, memberGovernorAddress } = config;
+
+  const nominee = getNomineeGovernor(nomineeGovernorAddress, l2Provider);
+
+  const [proposalIds, cohortRaw] = await Promise.all([
+    getElectionProposalIds(electionIndex, l2Provider, {
+      nomineeGovernorAddress,
+      memberGovernorAddress,
+    }),
+    queryWithRetry<number>(() => nominee.electionIndexToCohort(electionIndex)),
+  ]);
+
+  const { nomineeProposalId } = proposalIds;
+  let { memberProposalId } = proposalIds;
+  const cohort = cohortRaw as CohortType;
+
+  let nomineeProposalState: ProposalState | null = null;
+  let memberProposalState: ProposalState | null = null;
+  let isInVettingPeriod = false;
+  let vettingDeadline: number | null = null;
+  let compliantNomineeCount = 0;
+
+  if (nomineeProposalId) {
+    const [stateNum, compliantCount] = await Promise.all([
+      queryWithRetry<number>(() => nominee.state(nomineeProposalId)),
+      queryWithRetry<BigNumber>(() => nominee.compliantNomineeCount(nomineeProposalId)).catch(() =>
+        BigNumber.from(0)
+      ),
+    ]);
+
+    nomineeProposalState = proposalStateToString(stateNum);
+    compliantNomineeCount = compliantCount.toNumber();
+
+    if (nomineeProposalState === "Succeeded") {
+      try {
+        const deadline = await queryWithRetry<BigNumber>(() =>
+          nominee.proposalVettingDeadline(nomineeProposalId)
+        );
+        vettingDeadline = deadline.toNumber();
+        const l1BlockNumber = await getL1BlockNumberFromL2(l2Provider);
+        isInVettingPeriod = l1BlockNumber.lte(deadline);
+      } catch {
+        // No vetting period on this governor
+      }
+    }
+  }
+
+  if (memberProposalId) {
+    const member = getMemberGovernor(memberGovernorAddress, l2Provider);
+    try {
+      const stateNum = await queryWithRetry<number>(() => member.state(memberProposalId));
+      memberProposalState = proposalStateToString(stateNum);
+    } catch {
+      memberProposalId = null;
+    }
+  }
+
+  const phase = determineElectionPhase(
+    nomineeProposalState,
+    memberProposalId,
+    memberProposalState,
+    isInVettingPeriod
+  );
+
+  const canProceedToMemberPhase =
+    nomineeProposalState === "Succeeded" &&
+    !isInVettingPeriod &&
+    compliantNomineeCount >= TIMING.SECURITY_COUNCIL_TARGET_NOMINEES &&
+    !memberProposalId;
+
+  const canExecuteMember = memberProposalState === "Succeeded" || memberProposalState === "Queued";
+
+  return {
+    electionIndex,
+    phase,
+    cohort,
+    nomineeProposalId,
+    memberProposalId,
+    nomineeProposalState,
+    memberProposalState,
+    compliantNomineeCount,
+    targetNomineeCount: TIMING.SECURITY_COUNCIL_TARGET_NOMINEES,
+    vettingDeadline,
+    isInVettingPeriod,
+    canProceedToMemberPhase,
+    canExecuteMember,
+  };
+}
+
+/**
+ * Batch fetch status for all elections.
+ *
+ * Fetches the election count once, then queries each election in parallel
+ * via `getElectionStatus`. Individual failures are logged and skipped.
+ *
+ * @param l2Provider - L2 provider
+ * @param config - Deployment config (defaults to mainnet)
+ */
+export async function getAllElectionStatuses(
+  l2Provider: ethers.providers.Provider,
+  config: ElectionConfig = MAINNET_ELECTION_CONFIG
+): Promise<ElectionProposalStatus[]> {
+  const count = await getElectionCount(l2Provider, config.nomineeGovernorAddress);
+
+  const results = await Promise.all(
+    Array.from({ length: count }, (_, i) =>
+      getElectionStatus(l2Provider, i, config).catch((err) => {
+        log("Failed to fetch election %d: %s", i, err instanceof Error ? err.message : err);
+        return null;
+      })
+    )
+  );
+
+  return results.filter((r): r is ElectionProposalStatus => r !== null);
 }

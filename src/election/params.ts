@@ -4,12 +4,8 @@ import { queryWithRetry } from "../utils/rpc-utils";
 import { proposalCreatedInterface, governorInterface } from "../abis";
 import { saltFromDescription } from "../utils/salt-computation";
 import { loggers } from "../utils/logger";
-import {
-  ElectionProposalStatus,
-  ElectionStatus,
-  PreparedTransaction,
-  ProposalCreatedEventArgs,
-} from "../types";
+import { ElectionProposalStatus, ElectionStatus, PreparedTransaction } from "../types";
+import { parseProposalCreatedRaw } from "../discovery/governor-discovery";
 import { getNomineeGovernor, getMemberGovernor, getLogQueryBlockRange } from "./contracts";
 import { computeElectionProposalId, getElectionProposalId } from "./proposal-ids";
 
@@ -43,21 +39,16 @@ async function findProposalCreatedParams(
   );
 
   for (const eventLog of logs) {
-    try {
-      const parsed = proposalCreatedInterface.parseLog(eventLog);
-      const args = parsed.args as unknown as ProposalCreatedEventArgs;
-      if (args.proposalId.toString() === proposalId) {
-        log("Found ProposalCreated event for proposal %s", proposalId);
-        return {
-          targets: args.targets,
-          values: parsed.args[3], // `values` collides with ethers.js internals
-          calldatas: args.calldatas,
-          description: args.description,
-          descriptionHash: saltFromDescription(args.description),
-        };
-      }
-    } catch {
-      continue;
+    const parsed = parseProposalCreatedRaw(eventLog);
+    if (parsed && parsed.proposalId === proposalId) {
+      log("Found ProposalCreated event for proposal %s", proposalId);
+      return {
+        targets: parsed.targets,
+        values: parsed.values,
+        calldatas: parsed.calldatas,
+        description: parsed.description,
+        descriptionHash: saltFromDescription(parsed.description),
+      };
     }
   }
 
@@ -78,8 +69,8 @@ export function buildExecuteTransaction(
   ]);
 
   return {
-    to: governorAddress,
-    data: calldata,
+    to: governorAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
     value: "0",
     chain: "arb1",
     chainId: 42161,
@@ -147,8 +138,8 @@ export function prepareElectionCreation(
 
   return {
     transaction: {
-      to: nomineeGovernorAddress,
-      data: calldata,
+      to: nomineeGovernorAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: "0",
       chain: "arb1",
       chainId: 42161,

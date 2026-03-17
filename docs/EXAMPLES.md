@@ -209,7 +209,8 @@ const readyStage = findExecutableStage(result.stages);
 if (readyStage) {
   const prep = await tracker.prepareTransaction(readyStage);
   if (prep.success) {
-    const tx = await signer.sendTransaction(prep.prepared);
+    const { to, data, value } = prep.prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
   }
 }
@@ -223,8 +224,9 @@ import { findAllExecutableStages } from "@gzeoneth/gov-tracker";
 for (const stage of findAllExecutableStages(result.stages)) {
   const prep = await tracker.prepareTransaction(stage);
   if (prep.success) {
+    const { to, data, value } = prep.prepared;
     const signer = stage.chain === "ethereum" ? l1Signer : l2Signer;
-    await signer.sendTransaction(prep.prepared);
+    await signer.sendTransaction({ to, data, value });
   }
 }
 ```
@@ -368,7 +370,7 @@ async function safeTrack(txHash: string) {
     return { success: true, results: await tracker.trackByTxHash(txHash) };
   } catch (error) {
     // Errors auto-saved to checkpoint; queryIncompleteCheckpoints will include them
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 }
 ```
@@ -462,7 +464,7 @@ async function simulateWithTenderly(txHash: string) {
       console.log(`  Gas Used: ${result.gas_used}`);
       console.log(`  Simulation: https://dashboard.tenderly.co/simulator/${result.id}`);
     } catch (error) {
-      console.error(`  Simulation failed:`, error.message);
+      console.error(`  Simulation failed:`, (error as Error).message);
     }
   }
 }
@@ -710,7 +712,8 @@ const status = await checkElectionStatus(l2Provider, l1Provider);
 if (status.canCreateElection) {
   const { transaction, electionIndex } = prepareElectionCreation(status);
   console.log(`Creating election #${electionIndex}`);
-  const tx = await signer.sendTransaction(transaction);
+  const { to, data, value } = transaction;
+  const tx = await signer.sendTransaction({ to, data, value });
   await tx.wait();
 }
 
@@ -721,7 +724,8 @@ const election = await tracker.trackElection(0);
 if (election.canProceedToMemberPhase) {
   const prepared = await prepareMemberElectionTrigger(election, l2Provider);
   if (prepared) {
-    const tx = await signer.sendTransaction(prepared);
+    const { to, data, value } = prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
     console.log("Member election triggered");
   }
@@ -731,7 +735,8 @@ if (election.canProceedToMemberPhase) {
 if (election.canExecuteMember) {
   const prepared = await prepareMemberElectionExecution(election, l2Provider);
   if (prepared) {
-    const tx = await signer.sendTransaction(prepared);
+    const { to, data, value } = prepared;
+    const tx = await signer.sendTransaction({ to, data, value });
     await tx.wait();
     console.log("New Security Council members installed");
   }
@@ -766,4 +771,181 @@ async function monitorElections() {
 
 // Run every 5 minutes
 setInterval(monitorElections, 5 * 60 * 1000);
+```
+
+---
+
+## Governance Voting
+
+### Cast a Vote
+
+```typescript
+import { prepareCastVote, prepareCastVoteWithReason, VOTE_SUPPORT } from "@gzeoneth/gov-tracker";
+
+// Simple for vote on constitutional governor
+const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+
+// Vote against with reason on treasury governor
+const tx2 = prepareCastVoteWithReason(
+  proposalId,
+  VOTE_SUPPORT.AGAINST,
+  "Insufficient specification for treasury spend",
+  "non-constitutional"
+);
+await signer.sendTransaction({ to: tx2.to, data: tx2.data, value: tx2.value });
+```
+
+### Read Proposal Data (wagmi)
+
+```typescript
+import {
+  readProposalState,
+  readProposalVotes,
+  readVotingPower,
+  readQuorum,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
+} from "@gzeoneth/gov-tracker";
+
+// Single read
+const { data: state } = useReadContract(readProposalState(proposalId));
+
+// Batch reads via multicall
+const { data } = useReadContracts({
+  contracts: [
+    readProposalVotes(proposalId),
+    readQuorum(snapshotBlock),
+    ...delegates.map(d => readVotingPower(d, snapshotBlock)),
+  ],
+});
+
+// Check which delegates have not voted (multicall batch)
+const { data: voteStatus } = useReadContracts({
+  contracts: delegates.map(d => readHasVoted(proposalId, d)),
+});
+
+// Live voting power (no block number needed)
+const { data: power } = useReadContract(readCurrentVotingPower(account));
+
+// Resolve delegate
+const { data: delegatee } = useReadContract(readDelegate(account));
+```
+
+---
+
+## Election Participation
+
+### Register as Contender
+
+```typescript
+import { prepareContenderRegistration, readGovernorName } from "@gzeoneth/gov-tracker";
+
+// Fetch governor name for EIP-712 (wagmi)
+const { data: governorName } = useReadContract(readGovernorName());
+
+// Two-phase: sign typed data, then submit transaction
+const reg = prepareContenderRegistration(governorName, proposalId);
+
+// Step 1: Sign (ethers v5)
+const signature = await signer._signTypedData(
+  reg.typedData.domain,
+  reg.typedData.types,
+  reg.typedData.message
+);
+
+// Step 2: Submit
+const tx = reg.buildTransaction(signature);
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+```
+
+### Vote in Election
+
+```typescript
+import {
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
+  encodeElectionVoteParams,
+  decodeElectionVoteParams,
+} from "@gzeoneth/gov-tracker";
+
+// Vote for a contender in nominee phase
+const tx = prepareNomineeElectionVote(proposalId, contenderAddress, votesInWei);
+await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+
+// Vote for a nominee in member phase
+const tx2 = prepareMemberElectionVote(proposalId, nomineeAddress, votesInWei);
+await signer.sendTransaction({ to: tx2.to, data: tx2.data, value: tx2.value });
+
+// Encode/decode vote params manually
+const encoded = encodeElectionVoteParams(targetAddress, votesInWei);
+const { target, votes } = decodeElectionVoteParams(encoded);
+```
+
+### Query Vote Status (wagmi)
+
+```typescript
+import { readVotesUsed, readIsContender } from "@gzeoneth/gov-tracker";
+
+const { data: used } = useReadContract(readVotesUsed(proposalId, account));
+const { data: isContender } = useReadContract(readIsContender(proposalId, account));
+```
+
+### Query Election Status
+
+```typescript
+import { getElectionStatus, getAllElectionStatuses } from "@gzeoneth/gov-tracker";
+
+// Single election
+const status = await getElectionStatus(l2Provider, 0);
+console.log(`Phase: ${status.phase}, Cohort: ${status.cohort}`);
+console.log(`Compliant nominees: ${status.compliantNomineeCount}`);
+console.log(`Can proceed to member: ${status.canProceedToMemberPhase}`);
+
+// All elections at once
+const all = await getAllElectionStatuses(l2Provider);
+const active = all.filter(e => e.phase !== "COMPLETED");
+```
+
+---
+
+## Standalone Timelock Execution
+
+Execute a timelock operation without tracking the full proposal lifecycle:
+
+```typescript
+import { prepareExecuteTimelock } from "@gzeoneth/gov-tracker";
+
+// Auto-detects single vs batch from on-chain CallScheduled events
+const prep = await prepareExecuteTimelock(timelockAddress, operationId, salt, provider);
+if (prep.success) {
+  const { to, data, value } = prep.prepared;
+  await signer.sendTransaction({ to, data, value });
+}
+```
+
+---
+
+## ABI Usage with wagmi/viem
+
+```typescript
+import { governorReadAbi, timelockWriteAbi } from "@gzeoneth/gov-tracker";
+
+// Full type inference with useReadContract
+const { data } = useReadContract({
+  address: governorAddress,
+  abi: governorReadAbi,
+  functionName: "state", // TypeScript auto-completes
+  args: [proposalId],
+});
+
+// Write with useWriteContract
+const { writeContract } = useWriteContract();
+writeContract({
+  address: timelockAddress,
+  abi: timelockWriteAbi,
+  functionName: "execute",
+  args: [target, value, data, predecessor, salt],
+});
 ```

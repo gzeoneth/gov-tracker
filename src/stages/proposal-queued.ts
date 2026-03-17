@@ -182,8 +182,8 @@ export async function prepareGovernorQueue(
   return {
     success: true,
     prepared: {
-      to: governorAddress,
-      data: calldata,
+      to: governorAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: "0",
       chain: "arb1",
       chainId: 42161,

@@ -166,9 +166,13 @@ export async function getProposalState(
 }
 
 /**
- * Parse ProposalCreated event data
+ * Parse raw ProposalCreated event args from a log entry.
+ *
+ * Returns the unmodified event data (no description truncation).
+ * Used internally by parseProposalCreatedEvent and election/params
+ * to avoid duplicating the ethers parseLog + args[3] workaround.
  */
-export function parseProposalCreatedEvent(log: ethers.providers.Log): ProposalData | null {
+export function parseProposalCreatedRaw(log: ethers.providers.Log): ProposalData | null {
   try {
     const parsed = proposalCreatedInterface.parseLog(log);
     // Cast through unknown required due to ethers' Result type structure
@@ -183,13 +187,24 @@ export function parseProposalCreatedEvent(log: ethers.providers.Log): ProposalDa
       calldatas: args.calldatas,
       startBlock: args.startBlock,
       endBlock: args.endBlock,
-      description: truncateDescription(args.description),
+      description: args.description,
       creationBlock: log.blockNumber,
       creationTxHash: log.transactionHash,
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * Parse ProposalCreated event data (with description truncation for display safety)
+ */
+export function parseProposalCreatedEvent(log: ethers.providers.Log): ProposalData | null {
+  const result = parseProposalCreatedRaw(log);
+  if (result) {
+    result.description = truncateDescription(result.description);
+  }
+  return result;
 }
 
 /**
@@ -438,4 +453,33 @@ export async function discoverProposalByTxHash(
         creationBlock: receipt.blockNumber,
       }
     : null;
+}
+
+/**
+ * Query all ProposalCreated events from a governor in a block range.
+ *
+ * Simpler alternative to the full tracking pipeline for consumers
+ * that just need raw proposal data.
+ *
+ * @param provider - L2 provider
+ * @param governorAddress - Governor contract address
+ * @param fromBlock - Start block (default: governance deployment block)
+ * @param toBlock - End block (default: latest)
+ */
+export async function queryProposalCreatedEvents(
+  provider: ethers.providers.Provider,
+  governorAddress: string,
+  fromBlock: number = GOVERNANCE_START_BLOCKS.L2,
+  toBlock?: number
+): Promise<ProposalData[]> {
+  const resolvedTo = toBlock ?? (await getCurrentBlockInfo(provider)).blockNumber;
+
+  const result = await searchLogsInChunks(provider, {
+    address: governorAddress,
+    topics: [EVENT_TOPICS.PROPOSAL_CREATED],
+    fromBlock,
+    toBlock: resolvedTo,
+  });
+
+  return result.logs.map(parseProposalCreatedEvent).filter((d): d is ProposalData => d !== null);
 }

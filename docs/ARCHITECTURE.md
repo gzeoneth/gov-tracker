@@ -24,7 +24,8 @@ src/
 │   ├── checkpoint-helpers.ts  # Checkpoint utilities
 │   └── bundled-cache.ts # Bundled cache extraction utilities
 ├── stages/              # Individual stage implementations
-├── election/            # Security Council election tracking (7 files)
+├── election/            # Security Council election tracking (8 files)
+├── governance/          # Governance vote preparation + wagmi read helpers
 ├── calldata/            # Calldata decoding and signature lookup
 ├── simulation/          # Simulation data preparation (Tenderly, etc.)
 ├── discovery/           # Governor & timelock introspection
@@ -155,6 +156,27 @@ L1: Outbox.execute() → L1 Timelock → creates retryables
                           ↓
 L2 (Arb1/Nova): ArbRetryableTx.redeem()
 ```
+
+---
+
+## Write Actions (Prepare-Only)
+
+All write-action modules follow the same pattern: encode transaction calldata and return a `PreparedTransaction`, but never execute. The caller handles signing and sending.
+
+### Modules
+
+| Module | Functions | Target Contracts |
+|--------|-----------|------------------|
+| `governance/write.ts` | `prepareCastVote`, `prepareCastVoteWithReason`, `prepareCastVoteWithReasonAndParams` | Core/Treasury Governor |
+| `governance/read.ts` | `readProposalState`, `readProposalVotes`, `readVotingPower`, etc. | Core/Treasury Governor, ARB token |
+| `election/write.ts` | `prepareAddContender`, `prepareContenderRegistration`, `prepareNomineeElectionVote`, `prepareMemberElectionVote` | Election Governors |
+| `election/params.ts` | `prepareElectionCreation`, `prepareMemberElectionTrigger`, `prepareMemberElectionExecution` | Election Governors |
+| `stages/timelock.ts` | `prepareTimelockOperation`, `prepareTimelockBatch`, `prepareTimelockStage`, `prepareExecuteTimelock` | L2/L1 Timelocks |
+| `stages/proposal-queued.ts` | `prepareGovernorQueue` | Core/Treasury Governor |
+
+### Chain derivation
+
+Write-action functions that accept a `chainId` parameter derive the `chain` field via `chainIdToChain(chainId)` rather than hardcoding it. Functions without a `chainId` parameter (e.g., `prepareElectionCreation`, `prepareGovernorQueue`) use `chain: "arb1"` and `chainId: 42161` inline since they are Arbitrum One-specific.
 
 ---
 

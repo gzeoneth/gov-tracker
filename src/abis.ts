@@ -30,7 +30,18 @@ export const GOVERNOR_ABI = [
   // Queue and execute functions
   "function queue(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) returns (uint256)",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
-];
+  // Voting functions
+  "function castVote(uint256 proposalId, uint8 support) returns (uint256)",
+  "function castVoteWithReason(uint256 proposalId, uint8 support, string reason) returns (uint256)",
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function castVoteBySig(uint256 proposalId, uint8 support, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
+  // Read: get votes at snapshot
+  "function getVotes(address account, uint256 blockNumber) view returns (uint256)",
+  // Read: check if address has voted
+  "function hasVoted(uint256 proposalId, address account) view returns (bool)",
+  // Event: proposal creation (for event-based discovery)
+  "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)",
+] as const;
 
 /**
  * Governor with vetter ABI (Security Council specific)
@@ -39,7 +50,7 @@ export const GOVERNOR_WITH_VETTER_ABI = [
   "function proposalVettingDeadline(uint256 proposalId) view returns (uint256)",
   "function vetter() view returns (address)",
   "function excludedNominee(uint256 proposalId, address) view returns (bool)",
-];
+] as const;
 
 /**
  * Timelock contract ABI (full interface for read and execution)
@@ -61,7 +72,7 @@ export const TIMELOCK_ABI = [
   // Events for log parsing
   "event CallScheduled(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)",
   "event CallExecuted(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data)",
-];
+] as const;
 
 /**
  * Security Council Manager ABI (minimal required interface)
@@ -73,14 +84,14 @@ export const SECURITY_COUNCIL_MANAGER_ABI = [
   "function updateNonce() view returns (uint256)",
   "function getScheduleUpdateInnerData(uint256 nonce) view returns (address[], bytes)",
   "function generateSalt(address[] newMembers, uint256 nonce) pure returns (bytes32)",
-];
+] as const;
 
 /**
  * Inbox contract ABI for retryable submission fee calculation
  */
 export const INBOX_ABI = [
   "function calculateRetryableSubmissionFee(uint256 dataLength, uint256 baseFee) view returns (uint256)",
-];
+] as const;
 
 /**
  * ArbSys precompile ABI (includes L2ToL1Tx event for message tracking)
@@ -144,12 +155,18 @@ export const NOMINEE_ELECTION_GOVERNOR_ABI = [
   "function votesReceived(uint256 proposalId, address contender) view returns (uint256)",
   "function isExcluded(uint256 proposalId, address nominee) view returns (bool)",
   "function quorum(uint256 blockNumber) view returns (uint256)",
+  // Write actions
+  "function name() view returns (string)",
+  "function addContender(uint256 proposalId, bytes signature) external",
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function isContender(uint256 proposalId, address possibleContender) view returns (bool)",
+  "function votesUsed(uint256 proposalId, address account) view returns (uint256)",
   // Events
   "event ContenderAdded(uint256 indexed proposalId, address indexed contender)",
   "event NewNominee(uint256 indexed proposalId, address indexed nominee)",
   "event NomineeExcluded(uint256 indexed proposalId, address indexed nominee)",
   "event VoteCastForContender(uint256 indexed proposalId, address indexed voter, address indexed contender, uint256 votes, uint256 totalUsedVotes, uint256 usableVotes)",
-];
+] as const;
 
 /**
  * SecurityCouncilMemberElectionGovernor ABI
@@ -166,9 +183,21 @@ export const MEMBER_ELECTION_GOVERNOR_ABI = [
   "function topNominees(uint256 proposalId) view returns (address[])",
   "function fullWeightVotingDeadline(uint256 proposalId) view returns (uint256)",
   "function fullWeightDuration() view returns (uint256)",
+  // Write actions
+  "function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params) returns (uint256)",
+  "function votesUsed(uint256 proposalId, address account) view returns (uint256)",
   // Events
   "event VoteCastForNominee(address indexed voter, uint256 indexed proposalId, address indexed nominee, uint256 votes, uint256 weight, uint256 totalUsedVotes, uint256 usableVotes, uint256 weightReceived)",
-];
+] as const;
+
+/**
+ * ERC20Votes ABI (for reading voting power at snapshot blocks)
+ */
+export const ERC20_VOTES_ABI = [
+  "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",
+  "function getVotes(address account) view returns (uint256)",
+  "function delegates(address account) view returns (address)",
+] as const;
 
 /**
  * ProposalCreated event signature for parsing

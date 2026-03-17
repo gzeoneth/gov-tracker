@@ -98,7 +98,7 @@ src/
 │   ├── timelock.ts         # Stages 4 & 6: L2/L1 timelock delays
 │   ├── l2-to-l1-message.ts # Stage 5: Cross-chain message
 │   └── retryables.ts       # Stage 7: Retryable ticket redemption
-├── election/               # Security Council election tracking (7 files)
+├── election/               # Security Council election tracking (8 files)
 │   ├── index.ts            # Module exports (public API)
 │   ├── contracts.ts        # Election governor contract factories
 │   ├── proposal-ids.ts     # Proposal ID computation, caching, and lookup
@@ -106,6 +106,10 @@ src/
 │   ├── participants.ts     # Contenders, nominees, and vote tracking
 │   ├── details.ts          # Detailed election information
 │   └── status.ts           # Election status and phase determination
+├── governance/             # Governance proposal vote preparation
+│   ├── index.ts            # Module exports (public API)
+│   ├── read.ts             # Read helpers for wagmi useReadContract
+│   └── write.ts            # Vote transaction preparation (castVote variants)
 ├── calldata/               # Calldata decoding module
 ├── simulation/             # Simulation data preparation
 ├── discovery/              # Governor and timelock introspection

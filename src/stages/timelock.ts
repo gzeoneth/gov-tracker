@@ -10,11 +10,13 @@ import { ethers, BigNumber } from "ethers";
 import {
   Chain,
   chainToChainId,
+  chainIdToChain,
   TrackedStage,
   TimelockStageData,
   TimelockState,
   CallScheduledData,
   OperationState,
+  PreparedTransaction,
   PrepareResult,
   PrepareOptions,
   TimelockParams,
@@ -32,7 +34,7 @@ import {
 import { validateSalt, validateSaltBatch } from "../utils/operation-id";
 import { computeL2TimelockSalt, computeL1TimelockSalt } from "../utils/salt-computation";
 import { INBOX_ABI, timelockInterface } from "../abis";
-import { ADDRESSES, BLOCK_TIMES, EVENT_TOPICS } from "../constants";
+import { ADDRESSES, BLOCK_TIMES, CHAIN_IDS, EVENT_TOPICS } from "../constants";
 import { getChain, addressEquals, compareBigNumbers } from "../utils/chain";
 import {
   getBlockTimestamp,
@@ -711,8 +713,8 @@ export async function prepareTimelockOperation(
   return {
     success: true,
     prepared: {
-      to: timelockAddress,
-      data: calldata,
+      to: timelockAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: executionValue.toString(),
       chain,
       chainId: chainToChainId(chain),
@@ -788,8 +790,8 @@ export async function prepareTimelockBatch(
   return {
     success: true,
     prepared: {
-      to: timelockAddress,
-      data: calldata,
+      to: timelockAddress as `0x${string}`,
+      data: calldata as `0x${string}`,
       value: totalValue.toString(),
       chain,
       chainId: chainToChainId(chain),
@@ -878,4 +880,177 @@ export async function prepareTimelockStage(
     provider,
     options
   );
+}
+
+/**
+ * Standalone timelock execution preparation.
+ *
+ * Unlike `prepareTimelockStage` (which requires a `TrackedStage` from the
+ * tracking pipeline), this function queries the chain directly given only
+ * an address, operation ID, and salt.
+ *
+ * @param timelockAddress - The timelock contract address
+ * @param operationId - The bytes32 operation ID
+ * @param salt - The bytes32 salt used when the operation was scheduled
+ * @param provider - Provider for the chain where the timelock is deployed
+ * @param options - Standard prepare options plus optional fromBlock hint
+ */
+export async function prepareExecuteTimelock(
+  timelockAddress: string,
+  operationId: string,
+  salt: string,
+  provider: ethers.providers.Provider,
+  options: PrepareOptions & { fromBlock?: number } = {}
+): Promise<PrepareResult> {
+  logExecution("prepareExecuteTimelock %s on %s", operationId, timelockAddress);
+
+  const operationState = await getTimelockOperationState(timelockAddress, operationId, provider);
+
+  if (!operationState.isOperation) {
+    return failPrepare(`Operation ${operationId} not found on timelock ${timelockAddress}`);
+  }
+
+  if (!options.prepareCompleted && !operationState.isReady) {
+    return failPrepare(
+      `Operation ${operationId} is not ready for execution (state: ${operationState.state})`
+    );
+  }
+
+  const timelockState = await getTimelockState(timelockAddress, operationId, provider, {
+    fromBlock: options.fromBlock ?? 0,
+    skipExecutedSearch: true,
+    contractState: operationState,
+  });
+
+  const allData = collectAllScheduledData(timelockState);
+  if (allData.length === 0) {
+    return failPrepare(`No CallScheduled events found for operation ${operationId}`);
+  }
+
+  const sorted = [...allData].sort((a, b) => compareBigNumbers(a.index, b.index));
+  const predecessor = options.predecessor ?? sorted[0].predecessor ?? ethers.constants.HashZero;
+
+  const targets = sorted.map((d) => d.target);
+  const values = sorted.map((d) => d.value);
+  const payloads = sorted.map((d) => d.data);
+
+  const stageData: TimelockStageData = {
+    operationId,
+    timelockAddress,
+    salt,
+    predecessor,
+    callScheduledData: serializeCallScheduledDataArray(sorted),
+  };
+
+  const isBatch = validateSaltBatch(operationId, {
+    targets,
+    values,
+    payloads,
+    predecessor,
+    salt,
+  });
+
+  if (isBatch) {
+    return prepareTimelockBatch(
+      timelockAddress,
+      { targets, values, payloads, predecessor, salt: "" },
+      operationId,
+      stageData,
+      provider,
+      { ...options, salt }
+    );
+  }
+
+  const isSingle = validateSalt(operationId, {
+    target: targets[0],
+    value: values[0],
+    data: payloads[0],
+    predecessor,
+    salt,
+  });
+
+  if (!isSingle) {
+    return saltValidationError(operationId, salt);
+  }
+
+  return prepareTimelockOperation(
+    timelockAddress,
+    { target: targets[0], value: values[0], data: payloads[0], predecessor, salt: "" },
+    operationId,
+    stageData,
+    provider,
+    { ...options, salt }
+  );
+}
+
+/**
+ * Pure calldata encoding for timelock execution — no provider needed.
+ *
+ * Use this when the consumer already has operation params from the tracking
+ * pipeline and just needs the encoded transaction. Analogous to
+ * `prepareCastVote` but for timelocks.
+ *
+ * @param timelockAddress - The timelock contract address
+ * @param params - Single operation params (target, value, data, predecessor, salt)
+ * @param operationId - The bytes32 operation ID (included in result metadata)
+ * @param chainId - Chain ID (default: 42161)
+ */
+export function prepareTimelockExecuteCalldata(
+  timelockAddress: string,
+  params: TimelockParams,
+  operationId: string,
+  chainId: number = CHAIN_IDS.ARB_ONE
+): PreparedTransaction {
+  const calldata = timelockInterface.encodeFunctionData("execute", [
+    params.target,
+    params.value,
+    params.data,
+    params.predecessor,
+    params.salt,
+  ]);
+
+  return {
+    to: timelockAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
+    value: params.value.toString(),
+    chain: chainIdToChain(chainId),
+    chainId,
+    description: `execute() on timelock`,
+    operationId,
+  };
+}
+
+/**
+ * Pure calldata encoding for batch timelock execution — no provider needed.
+ *
+ * @param timelockAddress - The timelock contract address
+ * @param params - Batch operation params (targets, values, payloads, predecessor, salt)
+ * @param operationId - The bytes32 operation ID
+ * @param chainId - Chain ID (default: 42161)
+ */
+export function prepareTimelockBatchCalldata(
+  timelockAddress: string,
+  params: TimelockBatchParams,
+  operationId: string,
+  chainId: number = CHAIN_IDS.ARB_ONE
+): PreparedTransaction {
+  const calldata = timelockInterface.encodeFunctionData("executeBatch", [
+    params.targets,
+    params.values,
+    params.payloads,
+    params.predecessor,
+    params.salt,
+  ]);
+
+  const totalValue = params.values.reduce((acc, v) => acc.add(v), BigNumber.from(0));
+
+  return {
+    to: timelockAddress as `0x${string}`,
+    data: calldata as `0x${string}`,
+    value: totalValue.toString(),
+    chain: chainIdToChain(chainId),
+    chainId,
+    description: `executeBatch() on timelock`,
+    operationId,
+  };
 }

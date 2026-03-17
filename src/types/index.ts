@@ -114,6 +114,7 @@ export {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
+  ElectionConfig,
   ElectionCheckResult,
   // Detailed election participant types
   ElectionContender,

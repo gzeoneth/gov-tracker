@@ -61,6 +61,9 @@ export const ADDRESSES = {
   // L1ArbitrumTimelock magic address for retryable ticket detection
   // When a timelock operation's target is this address, the call is a retryable ticket
   RETRYABLE_TICKET_MAGIC: "0xa723C008e76E379c55599D2E4d93879BeaFDa79C",
+
+  // ARB governance token
+  ARB_TOKEN: "0x912CE59144191C1204E64559FE8253a0e49E6548",
 } as const;
 
 /**
@@ -139,6 +142,16 @@ export const DEFAULT_RPC_URLS = {
   ETHEREUM: "https://eth.drpc.org",
   ARB_ONE: "https://arb1.arbitrum.io/rpc",
   NOVA: "https://nova.arbitrum.io/rpc",
+} as const;
+
+/**
+ * Pre-configured ElectionConfig for Arbitrum One mainnet.
+ */
+export const MAINNET_ELECTION_CONFIG = {
+  nomineeGovernorAddress: ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  memberGovernorAddress: ADDRESSES.ELECTION_MEMBER_GOVERNOR,
+  tokenAddress: ADDRESSES.ARB_TOKEN,
+  chainId: CHAIN_IDS.ARB_ONE,
 } as const;
 
 // Event Topics (Pre-computed keccak256 hashes)
@@ -401,6 +414,48 @@ export const PROPOSAL_STATE = {
   EXPIRED: 6,
   EXECUTED: 7,
 } as const;
+
+/**
+ * Numeric proposal state value type (0-7) for exhaustive switch checking.
+ */
+export type ProposalStateValue = (typeof PROPOSAL_STATE)[keyof typeof PROPOSAL_STATE];
+
+/**
+ * Type guard — narrows `number` to `ProposalStateValue` (0-7).
+ */
+export function isProposalState(n: number): n is ProposalStateValue {
+  return n >= 0 && n <= 7 && Number.isInteger(n);
+}
+
+/**
+ * Lowercase proposal state labels, keyed by numeric state.
+ *
+ * Same as PROPOSAL_STATE_MAP but lowercase — matches the convention
+ * used by most governance UIs.
+ */
+export const PROPOSAL_STATE_LABEL: Record<number, string> = {
+  0: "pending",
+  1: "active",
+  2: "canceled",
+  3: "defeated",
+  4: "succeeded",
+  5: "queued",
+  6: "expired",
+  7: "executed",
+};
+
+/**
+ * OpenZeppelin Governor vote support values (Governor.CountingSimple)
+ *
+ * @see https://docs.openzeppelin.com/contracts/4.x/api/governance#IGovernor-COUNTING_MODE--
+ */
+export const VOTE_SUPPORT = {
+  AGAINST: 0,
+  FOR: 1,
+  ABSTAIN: 2,
+} as const;
+
+export type VoteSupport = (typeof VOTE_SUPPORT)[keyof typeof VOTE_SUPPORT];
 
 /**
  * Convert proposal state number to human-readable string

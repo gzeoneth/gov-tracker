@@ -115,6 +115,7 @@ export type {
   ElectionPhase,
   ElectionProposalStatus,
   ElectionStatus,
+  ElectionConfig,
   ElectionCheckResult,
   // Election participant types
   ElectionContender,
@@ -159,7 +160,47 @@ export {
   TIMELOCK_SELECTORS,
   isElectionGovernor,
   buildDefaultTargets,
+  VOTE_SUPPORT,
+  PROPOSAL_STATE,
+  PROPOSAL_STATE_MAP,
+  PROPOSAL_STATE_LABEL,
+  isProposalState,
+  MAINNET_ELECTION_CONFIG,
 } from "./constants";
+export type { VoteSupport, ProposalStateValue } from "./constants";
+
+// ABIs — human-readable format (ethers v5 compatible, `as const` for abitype)
+export {
+  GOVERNOR_ABI,
+  GOVERNOR_WITH_VETTER_ABI,
+  TIMELOCK_ABI,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  MEMBER_ELECTION_GOVERNOR_ABI,
+  SECURITY_COUNCIL_MANAGER_ABI,
+  ERC20_VOTES_ABI,
+} from "./abis";
+
+// ABIs — JSON format for wagmi/viem (full useReadContract/useWriteContract type inference)
+export {
+  // Full ABIs
+  governorAbi,
+  governorWithVetterAbi,
+  timelockAbi,
+  securityCouncilManagerAbi,
+  inboxAbi,
+  nomineeElectionGovernorAbi,
+  memberElectionGovernorAbi,
+  erc20VotesAbi,
+  // Curated read/write subsets (use when full ABI exceeds viem type inference limits)
+  governorReadAbi,
+  governorWriteAbi,
+  nomineeElectionGovernorReadAbi,
+  nomineeElectionGovernorWriteAbi,
+  memberElectionGovernorReadAbi,
+  memberElectionGovernorWriteAbi,
+  timelockReadAbi,
+  timelockWriteAbi,
+} from "./abis-json";
 
 // Stage utilities
 export {
@@ -193,6 +234,7 @@ export {
   getTimelockAddress,
   getProposalState,
   discoverProposalByTxHash,
+  queryProposalCreatedEvents,
 } from "./discovery/governor-discovery";
 export type { DiscoveredProposal } from "./discovery/governor-discovery";
 
@@ -244,6 +286,8 @@ export type { DecodedTimelockSchedule } from "./utils/salt-computation";
 
 // Operation ID utilities
 export {
+  hashOperation,
+  hashOperationBatch,
   validateSalt,
   validateSaltBatch,
   computeAndValidateOperationHash,
@@ -259,6 +303,9 @@ export {
   prepareTimelockOperation,
   prepareTimelockBatch,
   prepareTimelockStage,
+  prepareExecuteTimelock,
+  prepareTimelockExecuteCalldata,
+  prepareTimelockBatchCalldata,
   calculateRetryableExecutionValue,
   calculateBatchRetryableValues,
 } from "./stages/timelock";
@@ -304,12 +351,18 @@ export {
 } from "./utils/stage-metadata";
 export type { StageMetadata } from "./utils/stage-metadata";
 
-// Address utilities
-export { addressEquals, isAddressIn, getChain } from "./utils/chain";
+// Chain and address utilities
+export { addressEquals, isAddressIn, getChain, compareBigNumbers } from "./utils/chain";
 export { chainIdToChain, chainToChainId, getChainDisplayName } from "./types";
 
-// Error classification
-export { isGasEstimationError } from "./utils/rpc-utils";
+// Error classification and RPC utilities
+export {
+  isGasEstimationError,
+  isPermanentError,
+  isRetryableError,
+  getErrorMessage,
+  queryWithRetry,
+} from "./utils/rpc-utils";
 
 // Security utilities
 export {
@@ -344,6 +397,9 @@ export {
   getElectionCount,
   checkElectionStatus,
   hasVettingPeriod,
+  determineElectionPhase,
+  getElectionStatus,
+  getAllElectionStatuses,
   // Election tracking utilities
   getElectionIndexForProposalId,
   // Election proposal IDs
@@ -363,8 +419,49 @@ export {
   // Election details serialization
   serializeNomineeDetails,
   serializeMemberDetails,
+  // Election write actions (prepare-only)
+  encodeElectionVoteParams,
+  decodeElectionVoteParams,
+  getAddContenderTypedData,
+  prepareAddContender,
+  prepareContenderRegistration,
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
 } from "./election";
-export type { PreparedElectionCreation, ElectionProposalParams } from "./election";
+export type {
+  PreparedElectionCreation,
+  ElectionProposalParams,
+  AddContenderTypedData,
+  PreparedContenderRegistration,
+} from "./election";
+
+// ============================================================================
+// TIER 5b: Governance Write Actions
+// ============================================================================
+
+export {
+  prepareCastVote,
+  prepareCastVoteWithReason,
+  prepareCastVoteWithReasonAndParams,
+  // Read helpers (wagmi useReadContract / useReadContracts compatible)
+  readProposalState,
+  readProposalVotes,
+  readProposalSnapshot,
+  readProposalDeadline,
+  readQuorum,
+  readVotingPower,
+  readGetVotes,
+  readHasVoted,
+  readCurrentVotingPower,
+  readDelegate,
+  readNomineeElectionState,
+  readMemberElectionState,
+  readElectionCount,
+  readVotesUsed,
+  readIsContender,
+  readGovernorName,
+} from "./governance";
+export type { GovernorTarget, ReadContractParameters } from "./governance";
 
 // Checkpoint deduplication helpers
 export {

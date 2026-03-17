@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Governance vote preparation** - Prepare-only functions for voting on Core/Treasury Governor proposals:
+  - `prepareCastVote(proposalId, support)` - Simple vote (For/Against/Abstain)
+  - `prepareCastVoteWithReason(proposalId, support, reason)` - Vote with on-chain reason
+  - `prepareCastVoteWithReasonAndParams(proposalId, support, reason, params)` - Vote with custom params
+  - `VOTE_SUPPORT` enum: `AGAINST` (0), `FOR` (1), `ABSTAIN` (2)
+  - Governor shorthand: pass `"constitutional"` or `"non-constitutional"` instead of addresses
+- **Operation ID hashing (public)** - `hashOperation()` and `hashOperationBatch()` now exported from public API (previously internal-only)
+- **Governor ABI additions** - Added `castVote`, `castVoteWithReason`, `castVoteWithReasonAndParams`, `castVoteBySig`, `getVotes`, `hasVoted`, `ProposalCreated` event to `GOVERNOR_ABI`
+- **ERC20Votes ABI additions** - Added `getVotes(address)` (current voting power without block number) and `delegates(address)` to `ERC20_VOTES_ABI`
+- **Election write actions** - Prepare-only functions for election participation (contender registration, vote casting):
+  - `encodeElectionVoteParams()` / `decodeElectionVoteParams()` - ABI encode/decode `(address, uint256)` vote params
+  - `getAddContenderTypedData()` - Build EIP-712 typed data for contender registration signing
+  - `prepareAddContender()` - Prepare `addContender(proposalId, signature)` transaction
+  - `prepareContenderRegistration()` - Two-phase API: returns typed data for signing + `buildTransaction(signature)` for submission
+  - `prepareNomineeElectionVote()` / `prepareMemberElectionVote()` - Prepare `castVoteWithReasonAndParams` transactions
+  - Types: `AddContenderTypedData`, `PreparedContenderRegistration`
+- **ABI exports** - All governance ABIs now publicly exported in two formats: human-readable `as const` (`GOVERNOR_ABI`, `TIMELOCK_ABI`, etc.) for ethers v5 and abitype, and JSON `as const` (`governorAbi`, `timelockAbi`, etc.) for wagmi/viem `useReadContract`/`useWriteContract` type inference. Curated read/write subsets (`governorReadAbi`, `governorWriteAbi`, `nomineeElectionGovernorReadAbi`, etc.) for large ABIs that exceed viem's type inference limits
+- **Standalone timelock execution** - `prepareExecuteTimelock(timelockAddress, operationId, salt, provider)` prepares a timelock `execute`/`executeBatch` transaction without requiring the full tracking pipeline. Auto-detects single vs batch operations from on-chain `CallScheduled` events
+- **Sync timelock calldata prep** - `prepareTimelockExecuteCalldata()` and `prepareTimelockBatchCalldata()` encode timelock execution calldata without a provider, for consumers that already have operation params from tracking
+- **Proposal state constants** - `PROPOSAL_STATE` (numeric enum: `PENDING=0` through `EXECUTED=7`), `PROPOSAL_STATE_MAP` (PascalCase reverse lookup), and `PROPOSAL_STATE_LABEL` (lowercase reverse lookup) now exported for consumers tracking proposal lifecycle
+- **ARB_TOKEN address** - `ADDRESSES.ARB_TOKEN` (`0x912C...6548`) exported — the last governance address consumers had to hardcode locally
+- **RPC utilities (public)** - `queryWithRetry`, `isPermanentError`, `isRetryableError`, `getErrorMessage` now exported for consumers building retry logic around the SDK
+- **Read helpers for wagmi** - Pure functions returning `{ address, abi, functionName, args }` for `useReadContract` / `useReadContracts` (multicall). Abstracts contract knowledge entirely:
+  - Governor: `readProposalState`, `readProposalVotes`, `readProposalSnapshot`, `readProposalDeadline`, `readQuorum`, `readGetVotes`, `readHasVoted`
+  - Token: `readVotingPower` (at block), `readCurrentVotingPower` (live), `readDelegate`
+  - Election: `readNomineeElectionState`, `readMemberElectionState`, `readElectionCount`, `readVotesUsed`, `readIsContender`, `readGovernorName`
+- **Event query API** - `queryProposalCreatedEvents(provider, governorAddress, fromBlock, toBlock?)` returns `ProposalData[]` without the full tracking pipeline
+- **ProposalStateValue type** - Numeric union type (`0 | 1 | ... | 7`) derived from `PROPOSAL_STATE`, with `isProposalState()` type guard for exhaustive switch checking
+- **Election deployment config** - `ElectionConfig` type bundles `nomineeGovernorAddress`, `memberGovernorAddress`, `tokenAddress`, and `chainId` for testnet/fork deployments. `MAINNET_ELECTION_CONFIG` preset for Arbitrum One mainnet
+- **`getElectionStatus(l2Provider, electionIndex, config?)`** — Returns full `ElectionProposalStatus` (phase, cohort, compliantNomineeCount, vettingDeadline, canProceedToMemberPhase, canExecuteMember) in one call. Fetches election-specific cohort via `electionIndexToCohort`
+- **`getAllElectionStatuses(l2Provider, config?)`** — Batch-fetch status for all elections in parallel
+- **`determineElectionPhase` public export** — Pure function for state-to-phase mapping now exported at top level (was only re-exported from election module)
+- **BigNumber sorting** - `compareBigNumbers` exported for sorting `CallScheduledData` arrays by index
 - **Public provider access** - `l2Provider`, `l1Provider`, and `novaProvider` are now publicly accessible as readonly properties on `ProposalStageTracker`
 - **Stage merging utilities** - Helpers for combining stages from multiple checkpoints into a unified timeline:
   - `mergeStages(primary, secondary)` - Merge stages with intelligent deduplication (prefers higher status)
@@ -32,10 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trimFromStage(checkpoint, stageIndex)` - Trim checkpoint stages for re-tracking scenarios
 - `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
 - `loadWatermarks()` / `LoadedWatermarks` - Access discovery watermarks from cache
-- `getReceiptOrNull()` / `getErrorMessage()` - Shared RPC and error utilities
+- `getErrorMessage()` - Shared error message extraction utility
 
 ### Fixed
 
+- **PreparedTransaction typed hex fields** - `to` and `data` are now typed as `` `0x${string}` `` instead of `string`, eliminating consumer-side casts for wagmi/viem integration
+- **AddContenderTypedData wagmi compatibility** - `message.proposalId` is now `bigint` (was `string`), matching wagmi's `useSignTypedData` expectation. `domain.verifyingContract` is now `` `0x${string}` ``
+- **AddContenderTypedData compatibility** - `types.AddContenderMessage` field changed from `readonly` tuple with literal types to `Array<{ name: string; type: string }>`, fixing assignability errors with ethers v5 `signer._signTypedData()` and ethers v6 `signer.signTypedData()`
+- **PreparedTransaction chain/chainId consistency** - Write-action functions that accept `chainId` now derive `chain` via `chainIdToChain(chainId)` instead of hardcoding `"arb1"`, preventing misrouted transactions when targeting non-42161 deployments
 - **BigNumber overflow** - Use `.gt()`/`.lt()` instead of `.toNumber()` for CallScheduled index sorting
 - **Discovery errors** - Provider errors during watermark verification now return `isValid: false`
 - **Decode errors** - `decodeRetryableTicket()`, `prepareTimelockSimulation()`, `convertScheduleToExecute()` return null on failure instead of throwing
@@ -62,6 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Internal TUI utilities `getAllFoldableKeys` and `toggleFoldKey` from public exports
+- Unused `erc20VotesInterface` export (only the ABI array `ERC20_VOTES_ABI` is needed)
 
 ## [0.4.0] - 2026-01-19
 

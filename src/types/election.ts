@@ -219,6 +219,30 @@ export interface ElectionStatus {
 }
 
 /**
+ * Deployment configuration for election contracts.
+ *
+ * Bundles all contract addresses and chainId for a specific deployment
+ * (mainnet, testnet, fork). Pass to election functions instead of
+ * individual address overrides.
+ *
+ * @example Testnet deployment
+ * ```typescript
+ * const testnetConfig: ElectionConfig = {
+ *   nomineeGovernorAddress: "0x...",
+ *   memberGovernorAddress: "0x...",
+ *   chainId: 421614, // Arbitrum Sepolia
+ * };
+ * const result = await getElectionStatus(l2Provider, 0, testnetConfig);
+ * ```
+ */
+export interface ElectionConfig {
+  nomineeGovernorAddress: `0x${string}`;
+  memberGovernorAddress: `0x${string}`;
+  tokenAddress?: `0x${string}`;
+  chainId: number;
+}
+
+/**
  * Result of checking Security Council election status
  */
 export interface ElectionCheckResult {

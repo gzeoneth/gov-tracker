@@ -307,7 +307,7 @@ describe("Delegate Cache Module", () => {
       const cache = loadBundledDelegateCache();
 
       // #then
-      expect(cache.version).toBe(1);
+      expect(cache.version).toBe(2);
       expect(cache.chainId).toBe(42161);
       expect(cache.delegates.length).toBeGreaterThan(0);
       expect(cache.stats.totalDelegates).toBe(cache.delegates.length);

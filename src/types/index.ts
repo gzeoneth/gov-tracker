@@ -144,7 +144,13 @@ export {
 } from "./calldata";
 
 // Delegate types
-export { DelegateInfo, DelegateCache, DelegateNotVoted, DelegateCacheStats } from "./delegates";
+export {
+  DelegateInfo,
+  CompactDelegateInfo,
+  DelegateCache,
+  DelegateNotVoted,
+  DelegateCacheStats,
+} from "./delegates";
 
 // Simulation data types
 export {

@@ -11,7 +11,13 @@ export interface DelegateInfo {
   /** Voting power in wei as decimal string */
   votingPower: string;
   lastChangeBlock: number;
-  lastChangeTxHash?: string;
+}
+
+/** Compact on-disk representation of DelegateInfo (v2 cache format) */
+export interface CompactDelegateInfo {
+  a: string;
+  vp: string;
+  b: number;
 }
 
 /** Bundled delegate cache (shipped in package + CLI output) */

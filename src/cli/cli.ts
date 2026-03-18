@@ -1153,7 +1153,7 @@ program
 
     const { ethers: ethersLib } = await import("ethers");
     const { buildDelegateCache } = await import("../delegates/indexer");
-    const { validateDelegateCache } = await import("../delegates/cache");
+    const { validateDelegateCache, serializeDelegateCache } = await import("../delegates/cache");
     const { ADDRESSES, DEFAULT_MIN_VOTING_POWER, DEFAULT_RPC_URLS } = await import("../constants");
 
     const l2Rpc = opts.l2Rpc || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
@@ -1213,7 +1213,7 @@ program
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const json = JSON.stringify(cache, null, 2);
+    const json = JSON.stringify(serializeDelegateCache(cache), null, 2);
     fs.writeFileSync(opts.output, json);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

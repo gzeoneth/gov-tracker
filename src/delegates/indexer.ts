@@ -29,7 +29,7 @@ import {
 
 const log = loggers.delegates;
 
-const DELEGATE_CACHE_VERSION = 1;
+import { DELEGATE_CACHE_VERSION } from "./cache";
 const DEFAULT_CHUNK_SIZE = 1_000_000;
 const MIN_CHUNK_SIZE = 1_000;
 const DELAY_BETWEEN_CHUNKS = 100;
@@ -73,7 +73,6 @@ function processLogs(logs: ethers.providers.Log[], delegateMap: Map<string, Dele
         address: delegate.toLowerCase() as `0x${string}`,
         votingPower: newBalance,
         lastChangeBlock: eventLog.blockNumber,
-        lastChangeTxHash: eventLog.transactionHash,
       });
     }
   }

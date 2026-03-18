@@ -11,6 +11,8 @@ export {
   extractDelegates,
   getDelegateCacheStats,
   validateDelegateCache,
+  serializeDelegateCache,
+  DELEGATE_CACHE_VERSION,
 } from "./cache";
 
 // Query helpers (sync, operate on loaded cache)

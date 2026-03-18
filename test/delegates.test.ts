@@ -15,6 +15,7 @@ import {
   filterDelegatesByMinPower,
   filterDelegatesByAddress,
   validateDelegateCache,
+  serializeDelegateCache,
   getBundledDelegateCachePath,
   loadBundledDelegateCache,
 } from "../src/delegates/cache";
@@ -226,11 +227,18 @@ describe("Delegate Cache Module", () => {
   });
 
   describe("validateDelegateCache", () => {
-    it("should accept a valid cache", () => {
-      // #given
+    it("should accept a valid compact cache and expand delegates", () => {
+      // #given — simulate JSON.parse output (compact keys)
+      const raw = serializeDelegateCache(CACHE);
 
-      // #when / #then
-      expect(validateDelegateCache(CACHE)).toBe(true);
+      // #when
+      const valid = validateDelegateCache(raw);
+
+      // #then — validates and expands compact delegates in-place
+      expect(valid).toBe(true);
+      const expanded = raw as unknown as DelegateCache;
+      expect(expanded.delegates[0].address).toBe(CACHE.delegates[0].address);
+      expect(expanded.delegates[0].votingPower).toBe(CACHE.delegates[0].votingPower);
     });
 
     it("should reject null", () => {
@@ -243,7 +251,7 @@ describe("Delegate Cache Module", () => {
 
     it("should reject missing version", () => {
       // #given
-      const invalid = { ...CACHE } as Record<string, unknown>;
+      const invalid = { ...serializeDelegateCache(CACHE) } as Record<string, unknown>;
       delete invalid.version;
 
       // #when / #then
@@ -252,7 +260,7 @@ describe("Delegate Cache Module", () => {
 
     it("should reject missing delegates array", () => {
       // #given
-      const invalid = { ...CACHE, delegates: "not-array" };
+      const invalid = { ...serializeDelegateCache(CACHE), delegates: "not-array" };
 
       // #when / #then
       expect(validateDelegateCache(invalid)).toBe(false);
@@ -260,7 +268,7 @@ describe("Delegate Cache Module", () => {
 
     it("should reject invalid stats", () => {
       // #given
-      const invalid = { ...CACHE, stats: null };
+      const invalid = { ...serializeDelegateCache(CACHE), stats: null };
 
       // #when / #then
       expect(validateDelegateCache(invalid)).toBe(false);
@@ -268,17 +276,17 @@ describe("Delegate Cache Module", () => {
 
     it("should accept empty delegates array", () => {
       // #given
-      const empty = makeCache([]);
+      const empty = serializeDelegateCache(makeCache([]));
 
       // #when / #then
       expect(validateDelegateCache(empty)).toBe(true);
     });
 
     it("should reject delegates with invalid first entry", () => {
-      // #given
+      // #given — compact keys but wrong types
       const invalid = {
-        ...CACHE,
-        delegates: [{ address: 123, votingPower: "100", lastChangeBlock: 1 }],
+        ...serializeDelegateCache(CACHE),
+        delegates: [{ a: 123, vp: "100", b: 1 }],
       };
 
       // #when / #then
@@ -307,7 +315,7 @@ describe("Delegate Cache Module", () => {
       const cache = loadBundledDelegateCache();
 
       // #then
-      expect(cache.version).toBe(2);
+      expect(cache.version).toBe(1);
       expect(cache.chainId).toBe(42161);
       expect(cache.delegates.length).toBeGreaterThan(0);
       expect(cache.stats.totalDelegates).toBe(cache.delegates.length);

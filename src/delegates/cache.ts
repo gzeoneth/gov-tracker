@@ -9,39 +9,20 @@ import * as fs from "fs";
 import * as path from "path";
 import { ethers } from "ethers";
 import { safeJsonParse } from "../utils/sanitize";
-import type {
-  CompactDelegateInfo,
-  DelegateCache,
-  DelegateCacheStats,
-  DelegateInfo,
-} from "../types/delegates";
+import type { DelegateCache, DelegateCacheStats, DelegateInfo } from "../types/delegates";
 
-export const DELEGATE_CACHE_VERSION = 2;
+export const DELEGATE_CACHE_VERSION = 1;
 
 const rankLookupCache = new WeakMap<DelegateCache, Map<string, number>>();
 
-function deserializeDelegate(d: CompactDelegateInfo): DelegateInfo {
-  return {
-    address: d.a as `0x${string}`,
-    votingPower: d.vp,
-    lastChangeBlock: d.b,
-  };
-}
-
-function serializeDelegate(d: DelegateInfo): CompactDelegateInfo {
+function serializeDelegate(d: DelegateInfo): { a: string; vp: string; b: number } {
   return { a: d.address, vp: d.votingPower, b: d.lastChangeBlock };
 }
 
-function isCompactFormat(d: unknown): d is CompactDelegateInfo {
-  if (typeof d !== "object" || d === null) return false;
-  const obj = d as Record<string, unknown>;
-  return typeof obj.a === "string" && typeof obj.vp === "string" && typeof obj.b === "number";
+function deserializeDelegate(d: { a: string; vp: string; b: number }): DelegateInfo {
+  return { address: d.a as `0x${string}`, votingPower: d.vp, lastChangeBlock: d.b };
 }
 
-/**
- * Serialize a DelegateCache for disk storage using compact keys.
- * Produces v2 format: delegates use {a, vp, b} instead of full names.
- */
 export function serializeDelegateCache(cache: DelegateCache): Record<string, unknown> {
   return {
     version: DELEGATE_CACHE_VERSION,
@@ -166,8 +147,7 @@ export function filterDelegatesByAddress(
 
 /**
  * Runtime validation that an unknown value is a valid DelegateCache.
- * Accepts both v1 (verbose keys) and v2 (compact keys) delegate formats.
- * If the data contains compact delegates, they are expanded in-place.
+ * Expects compact delegate keys ({a, vp, b}) and expands them in-place.
  */
 export function validateDelegateCache(data: unknown): data is DelegateCache {
   if (data === null || typeof data !== "object") return false;
@@ -187,20 +167,12 @@ export function validateDelegateCache(data: unknown): data is DelegateCache {
   if (typeof (stats as Record<string, unknown>).totalDelegates !== "number") return false;
 
   if (obj.delegates.length > 0) {
-    const first = obj.delegates[0];
-    if (isCompactFormat(first)) {
-      // v2 compact format — expand in place
-      obj.delegates = (obj.delegates as CompactDelegateInfo[]).map(deserializeDelegate);
-    } else {
-      const f = first as Record<string, unknown>;
-      if (typeof f.address !== "string") return false;
-      if (typeof f.votingPower !== "string") return false;
-      if (typeof f.lastChangeBlock !== "number") return false;
-      // Strip lastChangeTxHash from v1 entries if present
-      for (const d of obj.delegates as Record<string, unknown>[]) {
-        delete d.lastChangeTxHash;
-      }
-    }
+    const first = obj.delegates[0] as Record<string, unknown>;
+    if (typeof first.a !== "string" || typeof first.vp !== "string" || typeof first.b !== "number")
+      return false;
+    obj.delegates = (obj.delegates as { a: string; vp: string; b: number }[]).map(
+      deserializeDelegate
+    );
   }
 
   return true;

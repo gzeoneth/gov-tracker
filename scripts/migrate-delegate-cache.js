@@ -42,7 +42,7 @@ if (!("address" in first)) {
 
 const migrated = {
   ...raw,
-  version: 2,
+  version: 1,
   delegates: raw.delegates.map((d) => ({
     a: d.address,
     vp: d.votingPower,

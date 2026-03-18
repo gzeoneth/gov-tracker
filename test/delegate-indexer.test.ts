@@ -122,7 +122,7 @@ describe("Delegate Indexer", () => {
       });
 
       // #then
-      expect(cache.version).toBe(2);
+      expect(cache.version).toBe(1);
       expect(cache.snapshotBlock).toBe(500);
       expect(cache.chainId).toBe(42161);
       expect(cache.delegates).toHaveLength(2);

@@ -13,14 +13,13 @@ export interface DelegateInfo {
   lastChangeBlock: number;
 }
 
-/** Compact on-disk representation of DelegateInfo (v2 cache format) */
-export interface CompactDelegateInfo {
-  a: string;
-  vp: string;
-  b: number;
-}
-
-/** Bundled delegate cache (shipped in package + CLI output) */
+/**
+ * Bundled delegate cache (shipped in package + CLI output).
+ *
+ * Only includes addresses with ≥10 ARB delegated voting power
+ * (configurable via DEFAULT_MIN_VOTING_POWER / --min-power flag).
+ * On-disk format uses compact keys ({a, vp, b}); deserialized at load time.
+ */
 export interface DelegateCache {
   version: number;
   /** ISO timestamp */

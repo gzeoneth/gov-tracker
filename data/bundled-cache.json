@@ -11001,7 +11001,7 @@
   },
   "discovery:watermarks": {
     "version": 1,
-    "createdAt": 1773751089846,
+    "createdAt": 1774378522517,
     "input": {
       "type": "discovery",
       "id": "watermarks"
@@ -11009,29 +11009,29 @@
     "lastProcessedStage": null,
     "lastProcessedBlock": {
       "l1": 0,
-      "l2": 442737386
+      "l2": 445247912
     },
     "cachedData": {
       "discoveryWatermarks": {
-        "constitutionalGovernor": 442737386,
-        "nonConstitutionalGovernor": 442737386,
-        "electionNomineeGovernor": 442737386,
-        "electionMemberGovernor": 442737386,
-        "l2ConstitutionalTimelock": 442737386,
-        "l2NonConstitutionalTimelock": 442737386
+        "constitutionalGovernor": 445247912,
+        "nonConstitutionalGovernor": 445247912,
+        "electionNomineeGovernor": 445247912,
+        "electionMemberGovernor": 445247912,
+        "l2ConstitutionalTimelock": 445247912,
+        "l2NonConstitutionalTimelock": 445247912
       },
       "watermarkHashes": {
-        "electionNomineeGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
-        "l2ConstitutionalTimelock": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
-        "l2NonConstitutionalTimelock": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
-        "constitutionalGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
-        "electionMemberGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5",
-        "nonConstitutionalGovernor": "0xe769e9749f6f5670082c3d172e9cc63fb0db9697d10c0d151512104f67efb1b5"
+        "electionNomineeGovernor": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd",
+        "l2ConstitutionalTimelock": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd",
+        "l2NonConstitutionalTimelock": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd",
+        "constitutionalGovernor": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd",
+        "electionMemberGovernor": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd",
+        "nonConstitutionalGovernor": "0xf417fc46851578e9228022ceb43a413a7c5171ea4a3b8cf3c8f2d63fc5e04efd"
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1773751089846
+      "lastTrackedAt": 1774378522517
     }
   },
   "tx:0x38d5327a65a7d8f6b88d6907d3a4f547e400bbe96e2b7d46825dc66111eec521:op:0x200d9087a25543aa4626755531511b3b70d8e271754ea39a4a6d0b11769b6455": {
@@ -32612,7 +32612,7 @@
   },
   "election:5": {
     "version": 1,
-    "createdAt": 1773751096308,
+    "createdAt": 1774378525162,
     "input": {
       "type": "election",
       "electionIndex": 5
@@ -32625,11 +32625,11 @@
     "cachedData": {
       "electionStatus": {
         "electionIndex": 5,
-        "phase": "CONTENDER_SUBMISSION",
+        "phase": "NOMINEE_SELECTION",
         "cohort": 1,
         "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600",
         "memberProposalId": null,
-        "nomineeProposalState": "Pending",
+        "nomineeProposalState": "Active",
         "memberProposalState": null,
         "compliantNomineeCount": 0,
         "targetNomineeCount": 6,
@@ -32667,7 +32667,7 @@
             "transactions": [],
             "data": {
               "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600",
-              "proposalState": "Pending",
+              "proposalState": "Active",
               "contenderCount": 0,
               "compliantNomineeCount": 0,
               "targetNomineeCount": 6
@@ -32734,7 +32734,7 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1773751096308
+      "lastTrackedAt": 1774378525162
     }
   },
   "tx:0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a": {
@@ -32944,7 +32944,7 @@
   },
   "election:6": {
     "version": 1,
-    "createdAt": 1773751097392,
+    "createdAt": 1774378526266,
     "input": {
       "type": "election",
       "electionIndex": 6
@@ -33052,7 +33052,30 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1773751097392
+      "lastTrackedAt": 1774378526266
+    }
+  },
+  "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209": {
+    "version": 1,
+    "createdAt": 1774378522528,
+    "input": {
+      "type": "governor",
+      "governorAddress": "",
+      "proposalId": "",
+      "creationTxHash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209"
+    },
+    "lastProcessedStage": null,
+    "lastProcessedBlock": {
+      "l1": 0,
+      "l2": 0,
+      "nova": 0
+    },
+    "cachedData": {
+      "completedStages": []
+    },
+    "metadata": {
+      "errorCount": 0,
+      "lastTrackedAt": 1774378522528
     }
   }
 }

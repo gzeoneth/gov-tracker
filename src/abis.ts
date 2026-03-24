@@ -197,6 +197,8 @@ export const ERC20_VOTES_ABI = [
   "function getPastVotes(address account, uint256 blockNumber) view returns (uint256)",
   "function getVotes(address account) view returns (uint256)",
   "function delegates(address account) view returns (address)",
+  "function totalSupply() view returns (uint256)",
+  "event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance)",
 ] as const;
 
 /**
@@ -234,3 +236,4 @@ export const nomineeElectionGovernorInterface = new ethers.utils.Interface(
 export const memberElectionGovernorInterface = new ethers.utils.Interface(
   MEMBER_ELECTION_GOVERNOR_ABI
 );
+export const erc20VotesInterface = new ethers.utils.Interface(ERC20_VOTES_ABI);

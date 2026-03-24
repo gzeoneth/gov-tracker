@@ -577,3 +577,36 @@ export {
 
 export { WATERMARKS_KEY, loadWatermarks } from "./tracker/discovery";
 export type { LoadedWatermarks } from "./tracker/discovery";
+
+// ============================================================================
+// TIER 10: Delegate Indexing & Query
+// ============================================================================
+
+export {
+  // Cache access (sync)
+  loadBundledDelegateCache,
+  extractDelegates,
+  getDelegateCacheStats,
+  validateDelegateCache,
+  // Query helpers (sync)
+  getTopDelegates,
+  getDelegateRankInfo,
+  filterDelegatesByMinPower,
+  filterDelegatesByAddress,
+  // Live queries (async)
+  queryDelegatesNotVoted,
+  queryDelegateVotingPowers,
+  // Indexer
+  buildDelegateCache,
+} from "./delegates";
+export type { QueryDelegatesNotVotedOptions, BuildDelegateCacheOptions } from "./delegates";
+
+// Delegate types (re-exported from types/index.ts)
+export type { DelegateInfo, DelegateCache, DelegateNotVoted, DelegateCacheStats } from "./types";
+
+// Delegate constants
+export {
+  DELEGATE_START_BLOCK,
+  EXCLUDED_DELEGATE_ADDRESSES,
+  DEFAULT_MIN_VOTING_POWER,
+} from "./constants";

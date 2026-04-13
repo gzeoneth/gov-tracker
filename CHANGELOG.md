@@ -7,8 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-13
+
 ### Added
 
+- **Delegate Indexing & Query module** (`src/delegates/`) - Cache, query, and live lookups for ARB delegates. Upstreams ~900 LOC from `tally-zero` into the SDK.
+  - Cache access (sync, no RPC): `loadBundledDelegateCache()`, `extractDelegates()`, `getDelegateCacheStats()`, `validateDelegateCache()` type guard, `serializeDelegateCache()`, `getBundledDelegateCachePath()`, `DELEGATE_CACHE_VERSION`
+  - Query helpers (sync): `getTopDelegates(cache, limit?)`, `getDelegateRankInfo(cache, address)` (O(1) rank + voting power via WeakMap), `filterDelegatesByMinPower()`, `filterDelegatesByAddress()`
+  - Live queries (async): `queryDelegatesNotVoted(provider, proposalId, governor, options?)` — multicall-batched `hasVoted` checks for top delegates. `queryDelegateVotingPowers(provider, addresses, tokenAddress?)` — multicall-batched `getVotes()`
+  - Indexer: `buildDelegateCache(provider, options?)` — adaptive-chunked scan of `DelegateVotesChanged`, halving on RPC log-limit errors and recovering after consecutive successes. Streams events per-chunk to avoid OOM on full genesis builds. Options: `existingCache`, `force`, `startBlock`, `minVotingPower` (default 10 ARB), `tokenAddress`, `onProgress`
+  - Types: `DelegateInfo`, `DelegateCache`, `DelegateCacheStats`, `DelegateNotVoted`, `BuildDelegateCacheOptions`, `QueryDelegatesNotVotedOptions`
+  - Constants: `DELEGATE_START_BLOCK`, `EXCLUDED_DELEGATE_ADDRESSES`, `DEFAULT_MIN_VOTING_POWER`
+  - ERC20Votes ABI additions: `totalSupply()` and `DelegateVotesChanged` event. New `DELEGATE_VOTES_CHANGED` topic in `EVENT_TOPICS`
+  - Bundled cache: `data/delegate-cache.json` exported at `@gzeoneth/gov-tracker/delegate-cache.json`
+- **CLI: `delegates` subcommand** - `gov-tracker delegates [--force] [--start-block N] [--output path] [--min-power wei] [--token-address 0x...]` builds/updates delegate cache from live RPC. Scripts: `cache:delegates`, `cache:delegates:force`
 - **Governance vote preparation** - Prepare-only functions for voting on Core/Treasury Governor proposals:
   - `prepareCastVote(proposalId, support)` - Simple vote (For/Against/Abstain)
   - `prepareCastVoteWithReason(proposalId, support, reason)` - Vote with on-chain reason
@@ -17,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Governor shorthand: pass `"constitutional"` or `"non-constitutional"` instead of addresses
 - **Operation ID hashing (public)** - `hashOperation()` and `hashOperationBatch()` now exported from public API (previously internal-only)
 - **Governor ABI additions** - Added `castVote`, `castVoteWithReason`, `castVoteWithReasonAndParams`, `castVoteBySig`, `getVotes`, `hasVoted`, `ProposalCreated` event to `GOVERNOR_ABI`
-- **ERC20Votes ABI additions** - Added `getVotes(address)` (current voting power without block number) and `delegates(address)` to `ERC20_VOTES_ABI`
+- **ERC20Votes ABI read helpers** - Added `getVotes(address)` (current voting power without block number) and `delegates(address)` to `ERC20_VOTES_ABI`
 - **Election write actions** - Prepare-only functions for election participation (contender registration, vote casting):
   - `encodeElectionVoteParams()` / `decodeElectionVoteParams()` - ABI encode/decode `(address, uint256)` vote params
   - `getAddContenderTypedData()` - Build EIP-712 typed data for contender registration signing
@@ -60,12 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `getWatermarksFromCache()` - Get discovery watermarks from cache
   - `getVotingDataFromStages()` - Extract typed vote data from stages
   - `extractTimelockLinkFromStages()` - Extract TimelockLink from completed stages
-- `getAllStageMetadata()` - Memoized function returning `Record<StageType, StageMetadata>` for all stage types
-- `ALL_STAGE_TYPES` - Constant array of all stage types in pipeline order
-- `trimFromStage(checkpoint, stageIndex)` - Trim checkpoint stages for re-tracking scenarios
-- `getLifecyclePhase(stages)` - Returns human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
-- `loadWatermarks()` / `LoadedWatermarks` - Access discovery watermarks from cache
-- `getErrorMessage()` - Shared error message extraction utility
+- **Stage metadata helpers** - `getAllStageMetadata()` returns a memoized `Record<StageType, StageMetadata>`; `ALL_STAGE_TYPES` constant exposes stage types in pipeline order
+- **Checkpoint re-tracking** - `trimFromStage(checkpoint, stageIndex)` trims stages for re-tracking scenarios
+- **Lifecycle phase helper** - `getLifecyclePhase(stages)` returns a human-readable `LifecyclePhase`: `voting`, `queued`, `l2_delay`, `bridging`, `l1_delay`, `finalizing`, `executed`, `failed`, `unknown`
+- **Watermark access** - `loadWatermarks()` / `LoadedWatermarks` type expose discovery watermarks from cache
+- **Error utility** - `getErrorMessage()` shared error-message extraction utility now exported
 
 ### Fixed
 
@@ -90,6 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Robustness** - `Promise.allSettled` for watermark verification; graceful fallback for Arbitrum network detection
 - **Type safety** - `RetryableSimulationData.l2Chain` changed to `L2Chain | "unknown"`
 - **Code consolidation** - Time constants centralized in `TIMING` object; address comparison uses shared utilities
+- **Scripts** - `cache:generate` is now incremental by default; `cache:generate:force` rebuilds from scratch (was a single `--force` script before). Refreshed bundled proposal cache
 
 ### Refactored
 
@@ -298,7 +310,8 @@ Initial release with 7-stage governance tracking across Ethereum L1, Arbitrum On
 
 ---
 
-[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/gzeoneth/gov-tracker/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/gzeoneth/gov-tracker/compare/v0.2.0...v0.2.1

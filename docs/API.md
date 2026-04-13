@@ -622,6 +622,117 @@ for (const p of proposals) {
 
 ---
 
+### Delegate Indexing & Query
+
+Indexed ARB delegate registry for governance tooling — ranked list of delegates by voting power, with helpers for cache access, filtering, and live on-chain queries.
+
+#### Cache Access (sync, no RPC)
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `loadBundledDelegateCache()` | `DelegateCache` | Load & validate bundled cache; throws if missing/invalid |
+| `getBundledDelegateCachePath()` | `string \| undefined` | Path to `delegate-cache.json` on disk (checks dist/src layouts) |
+| `extractDelegates(cache)` | `DelegateInfo[]` | Extract sorted delegate list |
+| `getDelegateCacheStats(cache)` | `DelegateCacheStats` | Summary stats for display |
+| `validateDelegateCache(data)` | `data is DelegateCache` | Type guard (also deserializes compact on-disk format) |
+| `serializeDelegateCache(cache)` | `Record<string, unknown>` | Convert to disk format (compact keys) |
+
+```typescript
+import { loadBundledDelegateCache, getDelegateCacheStats } from "@gzeoneth/gov-tracker";
+
+const cache = loadBundledDelegateCache();
+const stats = getDelegateCacheStats(cache);
+console.log(`${stats.totalDelegates} delegates, snapshot @ block ${stats.snapshotBlock}`);
+```
+
+#### Query Helpers (sync)
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `getTopDelegates(cache, limit?)` | `DelegateInfo[]` | Top N delegates (list is already sorted desc by power) |
+| `getDelegateRankInfo(cache, address)` | `{ rank, votingPower } \| undefined` | O(1) rank + power lookup via WeakMap-cached index |
+| `filterDelegatesByMinPower(delegates, minWei)` | `DelegateInfo[]` | Filter by voting power threshold (wei string) |
+| `filterDelegatesByAddress(delegates, substring)` | `DelegateInfo[]` | Case-insensitive address substring filter |
+
+#### Live Queries (async, requires provider)
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `queryDelegatesNotVoted(provider, proposalId, governor, options?)` | `Promise<DelegateNotVoted[]>` | Multicall-batched `hasVoted()` checks for top delegates on an active proposal |
+| `queryDelegateVotingPowers(provider, addresses, tokenAddress?)` | `Promise<Map<string, string>>` | Multicall-batched `getVotes()` — returns `lowercaseAddress → weiString` |
+
+`QueryDelegatesNotVotedOptions`:
+
+```typescript
+{
+  cache?: DelegateCache;       // Default: loads bundled cache
+  limit?: number;              // Max results (default: 5)
+  maxDelegatesToCheck?: number; // Top N to inspect (default: 100)
+  batchSize?: number;          // Calls per multicall batch (default: 20)
+}
+```
+
+```typescript
+import { queryDelegatesNotVoted } from "@gzeoneth/gov-tracker";
+
+const notVoted = await queryDelegatesNotVoted(l2Provider, proposalId, "constitutional", {
+  limit: 10,
+  maxDelegatesToCheck: 100,
+});
+for (const d of notVoted) {
+  console.log(`#${d.rank} ${d.address} — ${d.votingPower} wei`);
+}
+```
+
+#### Indexer (async)
+
+Build or refresh the cache by scanning `DelegateVotesChanged` events with adaptive chunking that halves on RPC log-limit errors and recovers after consecutive successes. Events are streamed per-chunk to avoid OOM on genesis-wide scans.
+
+```typescript
+import { buildDelegateCache } from "@gzeoneth/gov-tracker";
+
+const cache = await buildDelegateCache(l2Provider, {
+  existingCache,              // Seed from prior cache (incremental)
+  force: false,               // Rescan from genesis
+  startBlock: 70_000_000,     // Override start (default: DELEGATE_START_BLOCK)
+  minVotingPower: "10...",    // Wei threshold (default: 10 ARB)
+  tokenAddress: ADDRESSES.ARB_TOKEN,
+  onProgress: (pct, block) => console.log(`${pct.toFixed(1)}% — block ${block}`),
+});
+```
+
+**Types:**
+
+```typescript
+interface DelegateInfo {
+  address: `0x${string}`;
+  votingPower: string;        // wei as decimal string
+  lastChangeBlock: number;
+}
+
+interface DelegateCache {
+  version: number;
+  generatedAt: string;        // ISO timestamp
+  snapshotBlock: number;      // latest indexed block
+  startBlock: number;
+  chainId: number;
+  totalVotingPower: string;   // wei
+  totalSupply: string;        // ARB token total supply (wei)
+  delegates: DelegateInfo[];  // sorted desc by votingPower
+  stats: { totalDelegates: number };
+}
+
+interface DelegateNotVoted {
+  address: `0x${string}`;
+  votingPower: string;
+  rank: number;               // 1-indexed
+}
+```
+
+**Constants:** `DELEGATE_START_BLOCK`, `EXCLUDED_DELEGATE_ADDRESSES`, `DEFAULT_MIN_VOTING_POWER`, `DELEGATE_CACHE_VERSION`.
+
+---
+
 ### Checkpoint Deduplication
 
 Both governance proposals and elections can create "child" timelock operations that may be discovered and tracked separately. The deduplication helpers identify and manage these relationships.

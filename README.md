@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/gzeoneth/gov-tracker/graph/badge.svg?token=2WVH8Z82TE)](https://codecov.io/gh/gzeoneth/gov-tracker)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Track and execute Arbitrum DAO governance proposal lifecycle stages and Security Council elections.
+Track and execute Arbitrum DAO governance proposal lifecycle stages, Security Council elections, and delegate participation.
 
 ## Installation
 
@@ -55,6 +55,76 @@ if (readyStage) {
 
 Statuses: `NOT_STARTED`, `PENDING`, `READY`, `COMPLETED`, `FAILED`, `SKIPPED`
 
+## Voting & Write Actions
+
+Prepare-only functions return `PreparedTransaction` objects — `{ to, data, value, chain, chainId, description }` plus optional `operationId` / `hashValidation` — and you always sign and send yourself.
+
+```typescript
+import { ethers } from "ethers";
+import {
+  prepareCastVote,
+  prepareCastVoteWithReason,
+  VOTE_SUPPORT,
+  prepareNomineeElectionVote,
+  prepareContenderRegistration,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  ADDRESSES,
+} from "@gzeoneth/gov-tracker";
+
+// Governor proposal vote
+const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
+await signer.sendTransaction(tx);
+
+// Vote with on-chain reason
+const tx2 = prepareCastVoteWithReason(proposalId, VOTE_SUPPORT.AGAINST, "Insufficient detail");
+
+// Security Council nominee vote (castVoteWithReasonAndParams)
+const tx3 = prepareNomineeElectionVote(proposalId, nomineeAddress, votes);
+
+// Contender registration (two-phase: sign EIP-712 typed data, then submit)
+// governorName MUST match the governor's on-chain name() value (EIP-712 domain)
+const governor = new ethers.Contract(
+  ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  l2Provider
+);
+const governorName: string = await governor.name();
+const { typedData, buildTransaction } = prepareContenderRegistration(governorName, proposalId);
+const signature = await signer._signTypedData(typedData.domain, typedData.types, typedData.message);
+await signer.sendTransaction(buildTransaction(signature));
+```
+
+See [API Reference](./docs/API.md#governance-vote-preparation) and [Examples](./docs/EXAMPLES.md#voting) for details.
+
+## Delegates
+
+Indexed ARB delegate registry with cached voting power and live queries:
+
+```typescript
+import {
+  loadBundledDelegateCache,
+  getTopDelegates,
+  getDelegateRankInfo,
+  queryDelegatesNotVoted,
+} from "@gzeoneth/gov-tracker";
+
+// Load bundled cache (sync, no RPC)
+const cache = loadBundledDelegateCache();
+const top10 = getTopDelegates(cache, 10);
+
+// O(1) rank lookup
+const info = getDelegateRankInfo(cache, "0x1234...");
+console.log(`Rank ${info?.rank}, voting power ${info?.votingPower}`);
+
+// Live: find top delegates who haven't voted yet on an active proposal
+const notVoted = await queryDelegatesNotVoted(l2Provider, proposalId, "constitutional", {
+  limit: 10,
+  maxDelegatesToCheck: 100,
+});
+```
+
+Build or refresh the cache via CLI: `npx @gzeoneth/gov-tracker delegates`.
+
 ## CLI
 
 ```bash
@@ -93,6 +163,12 @@ npx @gzeoneth/gov-tracker ui
 
 # Track election creation tx (auto-switches to election view)
 npx @gzeoneth/gov-tracker track 0x82a0baf3...
+
+# Build or refresh delegate cache from live RPC
+npx @gzeoneth/gov-tracker delegates                          # Incremental update
+npx @gzeoneth/gov-tracker delegates --force                  # Rebuild from genesis
+npx @gzeoneth/gov-tracker delegates --min-power 1000 \
+  --output ./my-delegates.json                               # Custom filters/output
 ```
 
 **Shorthands:** `-v` (verbose), `-p` (prepare), `-w` (write), `-i` (inspect)

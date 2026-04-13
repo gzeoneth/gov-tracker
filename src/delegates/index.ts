@@ -8,6 +8,7 @@
 // Cache access (sync, no RPC)
 export {
   loadBundledDelegateCache,
+  getBundledDelegateCachePath,
   extractDelegates,
   getDelegateCacheStats,
   validateDelegateCache,

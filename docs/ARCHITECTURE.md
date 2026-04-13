@@ -26,6 +26,7 @@ src/
 ├── stages/              # Individual stage implementations
 ├── election/            # Security Council election tracking (8 files)
 ├── governance/          # Governance vote preparation + wagmi read helpers
+├── delegates/           # Delegate indexing (cache/indexer/queries) + bundled cache
 ├── calldata/            # Calldata decoding and signature lookup
 ├── simulation/          # Simulation data preparation (Tenderly, etc.)
 ├── discovery/           # Governor & timelock introspection
@@ -177,6 +178,26 @@ All write-action modules follow the same pattern: encode transaction calldata an
 ### Chain derivation
 
 Write-action functions that accept a `chainId` parameter derive the `chain` field via `chainIdToChain(chainId)` rather than hardcoding it. Functions without a `chainId` parameter (e.g., `prepareElectionCreation`, `prepareGovernorQueue`) use `chain: "arb1"` and `chainId: 42161` inline since they are Arbitrum One-specific.
+
+---
+
+## Delegate Module
+
+The `src/delegates/` module provides three layers for ARB delegate tooling:
+
+| Layer | File | Responsibilities |
+|-------|------|------------------|
+| Cache access (sync) | `cache.ts` | Load/validate bundled cache, serialize for disk, filter/rank helpers, O(1) rank lookup via WeakMap |
+| Indexer (async) | `indexer.ts` | Scan `DelegateVotesChanged` with adaptive chunking, stream events per-chunk to avoid OOM |
+| Live queries (async) | `queries.ts` | Multicall-batched `hasVoted()` / `getVotes()` against the ARB token + governor contracts |
+
+### Adaptive Chunking
+
+The indexer's `fetchLogsWithAdaptiveChunking` helper halves the chunk size on RPC log-limit errors and grows it back after N consecutive successes. This lets the same code work against both high-capacity providers (Alchemy, Infura) and throttled public endpoints.
+
+### Cache Shape
+
+`delegate-cache.json` is bundled in the package (`@gzeoneth/gov-tracker/delegate-cache.json`). On disk it uses compact keys; `validateDelegateCache()` deserializes into the canonical `DelegateCache` shape. `getDelegateRankInfo()` builds a lazy `Map<address, rank>` keyed by the cache object (WeakMap), so consecutive lookups are O(1) without mutating the cache.
 
 ---
 

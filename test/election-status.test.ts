@@ -236,9 +236,9 @@ describe("election/status", () => {
       expect(result).toBe("PENDING_EXECUTION");
     });
 
-    it("should return VETTING_PERIOD when in vetting period", () => {
-      // #given
-      const nomineeProposalState: ProposalState = "Active";
+    it("should return VETTING_PERIOD when nominee succeeded and still in vetting", () => {
+      // #given — vetting only applies after nominee voting ends (Succeeded)
+      const nomineeProposalState: ProposalState = "Succeeded";
       const memberProposalId: string | null = null;
       const memberProposalState: ProposalState | null = null;
       const isInVettingPeriod = true;
@@ -253,6 +253,25 @@ describe("election/status", () => {
 
       // #then
       expect(result).toBe("VETTING_PERIOD");
+    });
+
+    it("should return NOMINEE_SELECTION even when vetting flag is true if still Active", () => {
+      // #given — Active means voting is ongoing, vetting flag is irrelevant
+      const nomineeProposalState: ProposalState = "Active";
+      const memberProposalId: string | null = null;
+      const memberProposalState: ProposalState | null = null;
+      const isInVettingPeriod = true;
+
+      // #when
+      const result = determineElectionPhase(
+        nomineeProposalState,
+        memberProposalId,
+        memberProposalState,
+        isInVettingPeriod
+      );
+
+      // #then
+      expect(result).toBe("NOMINEE_SELECTION");
     });
 
     it("should return NOMINEE_SELECTION when nominee proposal is Active", () => {

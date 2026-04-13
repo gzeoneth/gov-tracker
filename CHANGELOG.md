@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AddContenderTypedData wagmi compatibility** - `message.proposalId` is now `bigint` (was `string`), matching wagmi's `useSignTypedData` expectation. `domain.verifyingContract` is now `` `0x${string}` ``
 - **AddContenderTypedData compatibility** - `types.AddContenderMessage` field changed from `readonly` tuple with literal types to `Array<{ name: string; type: string }>`, fixing assignability errors with ethers v5 `signer._signTypedData()` and ethers v6 `signer.signTypedData()`
 - **PreparedTransaction chain/chainId consistency** - Write-action functions that accept `chainId` now derive `chain` via `chainIdToChain(chainId)` instead of hardcoding `"arb1"`, preventing misrouted transactions when targeting non-42161 deployments
+- **Election phase priority** - `determineElectionPhase` returned `VETTING_PERIOD` instead of `NOMINEE_SELECTION` when the nominee proposal was `Active` with the vetting flag set. The vetting (compliance check) phase only applies after nominee voting ends (`Succeeded`), not during active voting. Correct order: Contender Submission → Nominee Selection → Compliance Check → Member Election
 - **BigNumber overflow** - Use `.gt()`/`.lt()` instead of `.toNumber()` for CallScheduled index sorting
 - **Discovery errors** - Provider errors during watermark verification now return `isValid: false`
 - **Decode errors** - `decodeRetryableTicket()`, `prepareTimelockSimulation()`, `convertScheduleToExecute()` return null on failure instead of throwing

@@ -585,9 +585,12 @@ export type { LoadedWatermarks } from "./tracker/discovery";
 export {
   // Cache access (sync)
   loadBundledDelegateCache,
+  getBundledDelegateCachePath,
   extractDelegates,
   getDelegateCacheStats,
   validateDelegateCache,
+  serializeDelegateCache,
+  DELEGATE_CACHE_VERSION,
   // Query helpers (sync)
   getTopDelegates,
   getDelegateRankInfo,

@@ -949,3 +949,168 @@ writeContract({
   args: [target, value, data, predecessor, salt],
 });
 ```
+
+---
+
+## Voting
+
+### Cast a Vote on a Governor Proposal
+
+```typescript
+import {
+  prepareCastVote,
+  prepareCastVoteWithReason,
+  VOTE_SUPPORT,
+} from "@gzeoneth/gov-tracker";
+
+// Simple vote — governor shorthand avoids address lookup
+const tx = prepareCastVote(proposalId, VOTE_SUPPORT.FOR, "constitutional");
+await signer.sendTransaction(tx);
+
+// Vote with on-chain reason (stored in event data)
+const tx2 = prepareCastVoteWithReason(
+  proposalId,
+  VOTE_SUPPORT.AGAINST,
+  "Parameter too aggressive; prefer staged rollout.",
+  "non-constitutional"
+);
+await signer.sendTransaction(tx2);
+```
+
+`VOTE_SUPPORT`: `AGAINST` (0), `FOR` (1), `ABSTAIN` (2).
+
+### Register as a Contender and Vote in an Election
+
+```typescript
+import { ethers } from "ethers";
+import {
+  prepareContenderRegistration,
+  prepareNomineeElectionVote,
+  prepareMemberElectionVote,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  ADDRESSES,
+} from "@gzeoneth/gov-tracker";
+
+// 1. Register as contender (two-phase: sign EIP-712 typed data, then submit)
+// The first argument MUST be the nominee governor's on-chain name() value —
+// it is used as the EIP-712 domain name, so signatures will be rejected if
+// it doesn't match exactly.
+const governor = new ethers.Contract(
+  ADDRESSES.ELECTION_NOMINEE_GOVERNOR,
+  NOMINEE_ELECTION_GOVERNOR_ABI,
+  l2Provider
+);
+const governorName: string = await governor.name();
+
+const { typedData, buildTransaction } = prepareContenderRegistration(
+  governorName,
+  nomineeProposalId
+);
+const signature = await signer._signTypedData(
+  typedData.domain,
+  typedData.types,
+  typedData.message
+);
+await signer.sendTransaction(buildTransaction(signature));
+
+// 2. Vote in nominee phase — directs your ARB toward a contender
+const nomineeVote = prepareNomineeElectionVote(
+  nomineeProposalId,
+  contenderAddress,
+  votesToAllocate, // BigNumber or decimal string
+  "Supporting for technical expertise"
+);
+await signer.sendTransaction(nomineeVote);
+
+// 3. Vote in member phase — ranks final nominees
+const memberVote = prepareMemberElectionVote(memberProposalId, nomineeAddress, votes);
+await signer.sendTransaction(memberVote);
+```
+
+---
+
+## Delegates
+
+### Top Delegates (Sync, No RPC)
+
+```typescript
+import {
+  loadBundledDelegateCache,
+  getTopDelegates,
+  getDelegateCacheStats,
+} from "@gzeoneth/gov-tracker";
+import { ethers } from "ethers";
+
+const cache = loadBundledDelegateCache();
+const stats = getDelegateCacheStats(cache);
+console.log(`Snapshot @ block ${stats.snapshotBlock} — ${stats.totalDelegates} delegates`);
+
+const top10 = getTopDelegates(cache, 10);
+for (const [i, d] of top10.entries()) {
+  const arb = ethers.utils.formatUnits(d.votingPower, 18);
+  console.log(`#${i + 1} ${d.address} — ${Number(arb).toLocaleString()} ARB`);
+}
+```
+
+### Rank Lookup (O(1))
+
+```typescript
+import { loadBundledDelegateCache, getDelegateRankInfo } from "@gzeoneth/gov-tracker";
+
+const cache = loadBundledDelegateCache();
+const info = getDelegateRankInfo(cache, "0x1234...");
+if (info) {
+  console.log(`Rank #${info.rank}, voting power ${info.votingPower} wei`);
+} else {
+  console.log("Address is not a delegate in the current snapshot");
+}
+```
+
+### Find Top Delegates Who Haven't Voted
+
+```typescript
+import { queryDelegatesNotVoted } from "@gzeoneth/gov-tracker";
+
+// Surfaces the largest wallets that still need to vote on an active proposal
+const notVoted = await queryDelegatesNotVoted(
+  l2Provider,
+  proposalId,
+  "constitutional",
+  { limit: 5, maxDelegatesToCheck: 100 }
+);
+for (const d of notVoted) {
+  console.log(`#${d.rank} ${d.address} — ${d.votingPower} wei`);
+}
+```
+
+### Live Voting Power Batch
+
+```typescript
+import { queryDelegateVotingPowers } from "@gzeoneth/gov-tracker";
+
+const addresses = ["0xabc...", "0xdef...", "0x123..."];
+const powers = await queryDelegateVotingPowers(l2Provider, addresses);
+for (const [addr, wei] of powers) {
+  console.log(`${addr}: ${wei} wei`);
+}
+```
+
+### Build or Refresh the Delegate Cache
+
+Use incremental mode in CI; full rebuild only when switching networks or on cache corruption.
+
+```typescript
+import { buildDelegateCache, loadBundledDelegateCache } from "@gzeoneth/gov-tracker";
+import fs from "node:fs/promises";
+
+// Incremental from bundled cache (fast — resumes from snapshotBlock)
+const existing = loadBundledDelegateCache();
+const updated = await buildDelegateCache(l2Provider, {
+  existingCache: existing,
+  onProgress: (pct, block) => process.stdout.write(`\r${pct.toFixed(1)}% — ${block}`),
+});
+
+await fs.writeFile("./delegate-cache.json", JSON.stringify(updated));
+```
+
+CLI equivalent: `npx @gzeoneth/gov-tracker delegates` (incremental) or `--force` (full rebuild from genesis, requires high-throughput RPC).

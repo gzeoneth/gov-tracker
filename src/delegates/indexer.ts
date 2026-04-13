@@ -13,8 +13,7 @@
 
 import { ethers } from "ethers";
 import type { DelegateCache, DelegateInfo } from "../types/delegates";
-import { queryWithRetry, getErrorMessage } from "../utils/rpc-utils";
-import { delay } from "../utils/rpc-utils";
+import { queryWithRetry, getErrorMessage, delay } from "../utils/rpc-utils";
 import { compareBigNumbers } from "../utils/chain";
 import { loggers } from "../utils/logger";
 import { erc20VotesInterface } from "../abis";
@@ -26,10 +25,10 @@ import {
   EXCLUDED_DELEGATE_ADDRESSES,
   EVENT_TOPICS,
 } from "../constants";
+import { DELEGATE_CACHE_VERSION } from "./cache";
 
 const log = loggers.delegates;
 
-import { DELEGATE_CACHE_VERSION } from "./cache";
 const DEFAULT_CHUNK_SIZE = 1_000_000;
 const MIN_CHUNK_SIZE = 1_000;
 const DELAY_BETWEEN_CHUNKS = 100;

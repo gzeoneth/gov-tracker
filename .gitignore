@@ -27,12 +27,13 @@ npm-debug.log*
 # Test coverage
 coverage/
 coverage-merged/
+coverage-fork/
+junit.xml
 
 # Environment
 .env
 .env.local
 .env.*.local
-coverage-fork/
 
 # opensrc - source code for packages
 opensrc/

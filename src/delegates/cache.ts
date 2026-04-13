@@ -50,10 +50,6 @@ function getRankMap(cache: DelegateCache): Map<string, number> {
 }
 
 /**
- * Load the bundled delegate cache shipped with the package.
- * Returns the parsed DelegateCache object.
- */
-/**
  * Get the path to the bundled delegate cache shipped with the package.
  * Tries multiple candidate paths to support dist/ and src/ layouts.
  */

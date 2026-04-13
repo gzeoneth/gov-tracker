@@ -18,7 +18,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./bundled-cache.json": "./dist/data/bundled-cache.json"
+    "./bundled-cache.json": "./dist/data/bundled-cache.json",
+    "./delegate-cache.json": "./dist/data/delegate-cache.json"
   },
   "bin": {
     "gov-tracker": "dist/cli/cli.js"
@@ -49,7 +50,9 @@
     "cli:track": "ts-node src/cli/cli.ts track",
     "cli:election": "ts-node src/cli/cli.ts election",
     "cache:generate": "ts-node src/cli/cli.ts --cache ./data/bundled-cache.json --concurrency 3",
-    "cache:generate:force": "ts-node src/cli/cli.ts --cache ./data/bundled-cache.json --concurrency 3 --force"
+    "cache:generate:force": "ts-node src/cli/cli.ts --cache ./data/bundled-cache.json --concurrency 3 --force",
+    "cache:delegates": "ts-node src/cli/cli.ts delegates --output ./data/delegate-cache.json",
+    "cache:delegates:force": "ts-node src/cli/cli.ts delegates --output ./data/delegate-cache.json --force"
   },
   "lint-staged": {
     "*.ts": [

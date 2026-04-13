@@ -195,6 +195,9 @@ export const EVENT_TOPICS = {
   SECURITY_COUNCIL_COHORT_REPLACED: ethers.utils.id(
     "SecurityCouncilCohortReplaced(address[],address[])"
   ),
+
+  // Delegate voting power
+  DELEGATE_VOTES_CHANGED: ethers.utils.id("DelegateVotesChanged(address,uint256,uint256)"),
 } as const;
 
 // Timing Constants
@@ -380,6 +383,19 @@ export const GOVERNANCE_START_BLOCKS = {
   /** Nova governance deployment block (same timeframe as L2) */
   NOVA: 1_000_000,
 } as const;
+
+// ============================================================================
+// Delegate Indexing Constants
+// ============================================================================
+
+/** Block where ARB token governance started on Arbitrum One */
+export const DELEGATE_START_BLOCK = 70_398_215;
+
+/** System addresses excluded from delegate rankings */
+export const EXCLUDED_DELEGATE_ADDRESSES = ["0x00000000000000000000000000000000000A4B86"] as const;
+
+/** Default minimum voting power threshold (10 ARB in wei) */
+export const DEFAULT_MIN_VOTING_POWER = "10000000000000000000";
 
 // Governor State Mapping
 

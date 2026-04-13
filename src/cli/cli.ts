@@ -1128,4 +1128,99 @@ program
     }
   });
 
+// ============================================================================
+// Delegates Command - Build delegate voting power cache
+// ============================================================================
+
+program
+  .command("delegates")
+  .description("Build or update delegate voting power cache")
+  .addOption(rpcOptions[0]) // --l2-rpc
+  .addOption(verboseOption)
+  .option("--force", "Full rebuild from genesis")
+  .option("--start-block <block>", "Custom start block")
+  .option(
+    "--output <path>",
+    "Output file path",
+    path.join(process.cwd(), "data", "delegate-cache.json")
+  )
+  .option("--min-power <arb>", "Minimum voting power in ARB", "10")
+  .option("--token-address <addr>", "Token contract address")
+  .action(async (opts) => {
+    if (opts.verbose) {
+      debug.enable("gov-tracker:*");
+    }
+
+    const { ethers: ethersLib } = await import("ethers");
+    const { buildDelegateCache } = await import("../delegates/indexer");
+    const { validateDelegateCache, serializeDelegateCache } = await import("../delegates/cache");
+    const { ADDRESSES, DEFAULT_MIN_VOTING_POWER, DEFAULT_RPC_URLS } = await import("../constants");
+
+    const l2Rpc = opts.l2Rpc || process.env.ARB1_RPC || DEFAULT_RPC_URLS.ARB_ONE;
+    if (!opts.l2Rpc && !process.env.ARB1_RPC) {
+      console.log("Warning: No --l2-rpc or ARB1_RPC env var set. Using public RPC.");
+    }
+
+    const provider = new ethersLib.providers.StaticJsonRpcProvider(l2Rpc);
+    const tokenAddress = opts.tokenAddress || ADDRESSES.ARB_TOKEN;
+
+    // Convert --min-power from ARB to wei
+    const minPowerArb = parseFloat(opts.minPower);
+    const minVotingPower =
+      minPowerArb >= 0 && !isNaN(minPowerArb)
+        ? ethersLib.utils.parseEther(String(minPowerArb)).toString()
+        : DEFAULT_MIN_VOTING_POWER;
+
+    // Load existing cache for incremental updates
+    let existingCache = undefined;
+    if (!opts.force && fs.existsSync(opts.output)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(opts.output, "utf8"));
+        if (validateDelegateCache(raw)) {
+          existingCache = raw;
+          console.log(
+            `Incremental update from block ${raw.snapshotBlock} (${raw.stats.totalDelegates} delegates)`
+          );
+        }
+      } catch {
+        console.log("Could not load existing cache, starting fresh");
+      }
+    }
+
+    const startBlock = opts.startBlock ? parseInt(opts.startBlock, 10) : undefined;
+
+    console.log(
+      opts.force
+        ? "Building delegate cache from genesis..."
+        : existingCache
+          ? "Updating delegate cache..."
+          : "Building delegate cache..."
+    );
+
+    const startTime = Date.now();
+
+    const cache = await buildDelegateCache(provider, {
+      existingCache,
+      force: !!opts.force,
+      startBlock,
+      minVotingPower,
+      tokenAddress,
+    });
+
+    // Ensure output directory exists
+    const outputDir = path.dirname(opts.output);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const json = JSON.stringify(serializeDelegateCache(cache), null, 2);
+    fs.writeFileSync(opts.output, json);
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const sizeKb = (Buffer.byteLength(json) / 1024).toFixed(0);
+    console.log(
+      `Done in ${elapsed}s: ${cache.stats.totalDelegates} delegates at block ${cache.snapshotBlock} (${sizeKb} KB)`
+    );
+  });
+
 program.parse();

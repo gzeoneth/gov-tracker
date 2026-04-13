@@ -17,6 +17,10 @@ permissions:
   id-token: write
   contents: write
 
+# Global environment to handle Node deprecation warnings
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -31,6 +35,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+          check-latest: true # Ensures we don't use a corrupted cached version
       - run: yarn install --frozen-lockfile
       - run: yarn lint && yarn format:check
       - run: yarn build
@@ -47,7 +52,13 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: yarn
-      - run: npm i -g npm@^11.5.1
+          check-latest: true # Ensures we don't use a corrupted cached version
+
+      - name: Update npm via Corepack
+        run: |
+          corepack enable
+          corepack prepare npm@11.5.1 --activate
+
       - run: yarn install --frozen-lockfile
       - run: yarn build
 

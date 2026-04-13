@@ -90,9 +90,11 @@ describe.skipIf(shouldSkipRpc())(
       const result2 = results2[0];
       const time2 = Date.now() - start2;
 
-      // #then - second track is fast (< 100ms) with identical results
+      // #then - second track is dramatically faster (>10x) with identical results.
+      // Use a relative threshold so the assertion is robust to V8 coverage instrumentation,
+      // which slows absolute timing by orders of magnitude but preserves relative speedup.
       console.log(`Second track: ${time2}ms (speedup: ${(time1 / time2).toFixed(0)}x)`);
-      expect(time2).toBeLessThan(100);
+      expect(time2).toBeLessThan(time1 / 10);
       expect(result2.isComplete).toBe(true);
       expect(result2.stages.length).toBe(result1.stages.length);
 

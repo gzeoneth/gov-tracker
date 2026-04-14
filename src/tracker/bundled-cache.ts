@@ -26,7 +26,7 @@ import type {
   VotingActiveData,
   ProposalState,
 } from "../types";
-import { findStage } from "../stages/utils";
+import { deriveProposalState, findStage, mergeStages, normalizeTimeline } from "../stages/utils";
 import { isElectionKey, isTimelockOpKey, isDiscoveryKey } from "./checkpoint-helpers";
 
 /**
@@ -95,14 +95,30 @@ export function extractProposals(cache: BundledCache): ExtractedProposal[] {
     if (isElectionKey(key) || isTimelockOpKey(key) || isDiscoveryKey(key)) continue;
 
     const input = checkpoint.input as GovernorTrackingInput;
-    const stages = checkpoint.cachedData?.completedStages ?? [];
+    const parentStages = checkpoint.cachedData?.completedStages ?? [];
+
+    // Merge linked timelock stages so consumers see the full lifecycle. Under
+    // modular caching the parent stores only the 3 governor stages
+    // (PROPOSAL_CREATED, VOTING_ACTIVE, PROPOSAL_QUEUED) and the timelock
+    // stages live in a separate checkpoint referenced via metadata.timelockOpKey.
+    // Without this merge the list view would freeze at "Queued" forever.
+    const timelockOpKey = checkpoint.metadata?.timelockOpKey;
+    const linkedStages =
+      typeof timelockOpKey === "string"
+        ? (cache[timelockOpKey]?.cachedData?.completedStages ?? [])
+        : [];
+    const stages =
+      linkedStages.length > 0
+        ? normalizeTimeline(mergeStages(parentStages, linkedStages))
+        : parentStages;
 
     const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
     const votingStage = findStage(stages, "VOTING_ACTIVE");
 
     const timelockLink = extractTimelockLinkFromStages(stages);
     const votingData = votingStage?.data as VotingActiveData | undefined;
-    const currentState = votingData?.proposalState as ProposalState | undefined;
+    const snapshotState = votingData?.proposalState as ProposalState | undefined;
+    const currentState = deriveProposalState(stages, snapshotState);
 
     results.push({
       cacheKey: key,

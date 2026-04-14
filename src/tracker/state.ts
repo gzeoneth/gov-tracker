@@ -35,6 +35,7 @@ import {
   updateStageInList,
   areAllStagesComplete,
   deserializeCallScheduledDataArray,
+  deriveProposalState,
   TrackingPath,
   splitStages,
   hasTimelockProgress,
@@ -320,8 +321,10 @@ export const getIsElection = (ctx: TrackingState) => {
   return type ? isElectionProposal(type) : false;
 };
 
-export const getProposalState = (ctx: TrackingState) =>
-  stageData(ctx, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined;
+export const getProposalState = (ctx: TrackingState): ProposalState | undefined => {
+  const snapshot = stageData(ctx, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined;
+  return deriveProposalState(ctx.stages, snapshot);
+};
 
 export function getVotingEndBlock(ctx: TrackingState): number | undefined {
   const data = stageData(ctx, "VOTING_ACTIVE");

@@ -13,6 +13,7 @@ import {
   getStageData,
   OperationState,
   PrepareResult,
+  ProposalState,
   SerializedCallScheduledData,
   StageStatus,
   StageType,
@@ -522,6 +523,44 @@ export function isConstitutional(governorOrTimelockAddress: string): boolean {
     ADDRESSES.CONSTITUTIONAL_GOVERNOR,
     ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   ]);
+}
+
+/**
+ * Derive the OZ Governor `ProposalState` from a list of tracked stages.
+ *
+ * The `VOTING_ACTIVE` stage captures `proposalState` as a snapshot when voting
+ * ends — so it freezes at `"Queued"` once the proposal is queued and never
+ * advances to `"Executed"` even after the timelock finishes. This helper
+ * supersedes that snapshot for post-voting progression by reading the actual
+ * stage statuses.
+ *
+ * The caller should pass the merged stage set (parent + linked timelock) so
+ * that the full lifecycle is visible.
+ *
+ * @param stages - Merged tracked stages (parent + any linked timelock stages)
+ * @param fallback - State to return when stages can't determine the phase yet
+ *                   (typically the voting snapshot). Used for pre-queue phases
+ *                   (`Pending` / `Active`) which live only in the voting data.
+ * @returns The best-known `ProposalState` or the fallback.
+ */
+export function deriveProposalState(
+  stages: TrackedStage[],
+  fallback?: ProposalState
+): ProposalState | undefined {
+  if (stages.length === 0) return fallback;
+
+  const byType = new Map(stages.map((s) => [s.type, s]));
+  const statusOf = (t: StageType) => byType.get(t)?.status;
+  const isSuccess = (t: StageType) => isStageSuccess(statusOf(t));
+
+  if (isSuccess("RETRYABLE_EXECUTED")) return "Executed";
+  if (isSuccess("L2_TIMELOCK") && statusOf("L2_TO_L1_MESSAGE") === "SKIPPED") return "Executed";
+  if (stages.some((s) => s.status === "CANCELED")) return "Canceled";
+  if (statusOf("VOTING_ACTIVE") === "FAILED") return "Defeated";
+  if (isSuccess("PROPOSAL_QUEUED")) return "Queued";
+  if (isSuccess("VOTING_ACTIVE")) return "Succeeded";
+
+  return fallback;
 }
 
 /** Timelock stage types (consolidated stages that require execution) */

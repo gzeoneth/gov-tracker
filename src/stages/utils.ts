@@ -528,26 +528,22 @@ export function isConstitutional(governorOrTimelockAddress: string): boolean {
 /**
  * Derive the OZ Governor `ProposalState` from a list of tracked stages.
  *
- * The `VOTING_ACTIVE` stage captures `proposalState` as a snapshot when voting
- * ends — so it freezes at `"Queued"` once the proposal is queued and never
- * advances to `"Executed"` even after the timelock finishes. This helper
- * supersedes that snapshot for post-voting progression by reading the actual
- * stage statuses.
+ * The `VOTING_ACTIVE` stage caches `proposalState` as a snapshot at vote-end,
+ * so it freezes at `"Queued"` after queue and never advances to `"Executed"`.
+ * This helper supersedes that snapshot for post-voting progression by reading
+ * stage statuses; the snapshot is still consulted for pre-queue phases
+ * (`Pending` / `Active`) where stages alone don't say enough.
  *
- * The caller should pass the merged stage set (parent + linked timelock) so
- * that the full lifecycle is visible.
- *
- * @param stages - Merged tracked stages (parent + any linked timelock stages)
- * @param fallback - State to return when stages can't determine the phase yet
- *                   (typically the voting snapshot). Used for pre-queue phases
- *                   (`Pending` / `Active`) which live only in the voting data.
- * @returns The best-known `ProposalState` or the fallback.
+ * Callers should pass the merged stage set (parent + linked timelock) so the
+ * full lifecycle is visible.
  */
-export function deriveProposalState(
-  stages: TrackedStage[],
-  fallback?: ProposalState
-): ProposalState | undefined {
-  if (stages.length === 0) return fallback;
+export function deriveProposalState(stages: TrackedStage[]): ProposalState | undefined {
+  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
+  const snapshot = votingStage
+    ? (getStageData(votingStage, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined)
+    : undefined;
+
+  if (stages.length === 0) return snapshot;
 
   const byType = new Map(stages.map((s) => [s.type, s]));
   const statusOf = (t: StageType) => byType.get(t)?.status;
@@ -560,7 +556,7 @@ export function deriveProposalState(
   if (isSuccess("PROPOSAL_QUEUED")) return "Queued";
   if (isSuccess("VOTING_ACTIVE")) return "Succeeded";
 
-  return fallback;
+  return snapshot;
 }
 
 /** Timelock stage types (consolidated stages that require execution) */

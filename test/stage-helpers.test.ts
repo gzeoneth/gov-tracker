@@ -27,7 +27,13 @@ import {
 } from "../src/stages/utils";
 import * as timelockDiscovery from "../src/discovery/timelock-discovery";
 import { StageBuilder } from "../src/stages/builder";
-import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
+import type {
+  CallScheduledData,
+  SerializedCallScheduledData,
+  StageStatus,
+  StageType,
+  TimelockState,
+} from "../src/types";
 
 describe("Serialization Utilities", () => {
   describe("serialize", () => {
@@ -875,8 +881,8 @@ describe("findL1OperationIdFromTx", () => {
 });
 
 describe("deriveProposalState", () => {
-  const stage = (type: string, status: string) =>
-    new StageBuilder(type as never, "arb1", status as never).build();
+  const stage = (type: StageType, status: StageStatus) =>
+    new StageBuilder(type, "arb1", status).build();
 
   it("should return Executed when RETRYABLE_EXECUTED is COMPLETED", () => {
     // #given - full constitutional lifecycle, all stages done
@@ -957,17 +963,20 @@ describe("deriveProposalState", () => {
     expect(deriveProposalState(stages)).toBe("Canceled");
   });
 
-  it("should return the fallback when stages can't determine state", () => {
-    // #given - only pre-voting stage recorded; pass Active snapshot as fallback
-    const stages = [stage("PROPOSAL_CREATED", "COMPLETED")];
+  it("should fall back to the VOTING_ACTIVE snapshot when stages can't determine state", () => {
+    // #given - voting in progress; snapshot on the stage says "Active"
+    const votingActive = new StageBuilder("VOTING_ACTIVE", "arb1", "PENDING")
+      .data({ proposalState: "Active" })
+      .build();
+    const stages = [stage("PROPOSAL_CREATED", "COMPLETED"), votingActive];
 
     // #when / #then
-    expect(deriveProposalState(stages, "Active")).toBe("Active");
+    expect(deriveProposalState(stages)).toBe("Active");
   });
 
-  it("should return the fallback for an empty stage list", () => {
+  it("should return undefined for an empty stage list", () => {
     // #given - no stages yet
     // #when / #then
-    expect(deriveProposalState([], "Pending")).toBe("Pending");
+    expect(deriveProposalState([])).toBeUndefined();
   });
 });

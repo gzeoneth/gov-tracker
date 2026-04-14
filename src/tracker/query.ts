@@ -161,9 +161,7 @@ export async function queryIncompleteCheckpoints(
       continue;
     }
 
-    // Skip if too old. Anchor to the immutable on-chain time of the checkpoint's
-    // first stage (proposal creation / timelock schedule), not `createdAt` which
-    // is refreshed on every cache save and therefore never trips the gate.
+    // Age relative to immutable on-chain stage time, not mutable `createdAt`.
     const anchor = getCheckpointAnchorTime(checkpoint);
     if (anchor !== null && now - anchor > maxAgeMs) {
       continue;
@@ -174,12 +172,7 @@ export async function queryIncompleteCheckpoints(
       continue;
     }
 
-    // Modular parent terminator: a governor parent checkpoint with no timelock
-    // stages of its own (post-modular-split) is classified incomplete while
-    // PROPOSAL_QUEUED=COMPLETED. In that state the real lifecycle lives in the
-    // linked timelock checkpoint referenced via metadata.timelockOpKey. If that
-    // linked checkpoint is itself complete, the whole proposal is finished —
-    // skip the parent instead of re-tracking it forever on every rebuilder run.
+    // Modular parent is effectively done once its linked timelock is.
     const timelockOpKey = checkpoint.metadata?.timelockOpKey;
     if (checkpoint.input.type === "governor" && typeof timelockOpKey === "string") {
       const linked = checkpointsByKey.get(timelockOpKey);

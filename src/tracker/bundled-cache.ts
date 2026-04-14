@@ -26,7 +26,13 @@ import type {
   VotingActiveData,
   ProposalState,
 } from "../types";
-import { deriveProposalState, findStage, mergeStages, normalizeTimeline } from "../stages/utils";
+import {
+  areAllStagesComplete,
+  deriveProposalState,
+  findStage,
+  mergeStages,
+  normalizeTimeline,
+} from "../stages/utils";
 import { isElectionKey, isTimelockOpKey, isDiscoveryKey } from "./checkpoint-helpers";
 
 /**
@@ -97,11 +103,8 @@ export function extractProposals(cache: BundledCache): ExtractedProposal[] {
     const input = checkpoint.input as GovernorTrackingInput;
     const parentStages = checkpoint.cachedData?.completedStages ?? [];
 
-    // Merge linked timelock stages so consumers see the full lifecycle. Under
-    // modular caching the parent stores only the 3 governor stages
-    // (PROPOSAL_CREATED, VOTING_ACTIVE, PROPOSAL_QUEUED) and the timelock
-    // stages live in a separate checkpoint referenced via metadata.timelockOpKey.
-    // Without this merge the list view would freeze at "Queued" forever.
+    // Modular parents store only governor stages; pull timelock stages from the
+    // linked checkpoint so consumers see the full 7-stage lifecycle.
     const timelockOpKey = checkpoint.metadata?.timelockOpKey;
     const linkedStages =
       typeof timelockOpKey === "string"
@@ -113,12 +116,6 @@ export function extractProposals(cache: BundledCache): ExtractedProposal[] {
         : parentStages;
 
     const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
-    const votingStage = findStage(stages, "VOTING_ACTIVE");
-
-    const timelockLink = extractTimelockLinkFromStages(stages);
-    const votingData = votingStage?.data as VotingActiveData | undefined;
-    const snapshotState = votingData?.proposalState as ProposalState | undefined;
-    const currentState = deriveProposalState(stages, snapshotState);
 
     results.push({
       cacheKey: key,
@@ -126,9 +123,9 @@ export function extractProposals(cache: BundledCache): ExtractedProposal[] {
       governorAddress: input.governorAddress,
       creationTxHash: input.creationTxHash,
       stages,
-      isComplete: stages.length > 0 && stages.every((s) => isTerminal(s.status)),
-      timelockLink,
-      currentState,
+      isComplete: stages.length > 0 && areAllStagesComplete(stages),
+      timelockLink: extractTimelockLinkFromStages(stages),
+      currentState: deriveProposalState(stages),
       operationId: (queuedStage?.data as ProposalQueuedData | undefined)?.operationId,
     });
   }
@@ -156,7 +153,7 @@ export function extractTimelockOps(cache: BundledCache): ExtractedTimelockOp[] {
       operationId: input.operationId,
       scheduledTxHash: input.scheduledTxHash,
       stages,
-      isComplete: stages.length > 0 && stages.every((s) => isTerminal(s.status)),
+      isComplete: stages.length > 0 && areAllStagesComplete(stages),
     });
   }
 
@@ -285,8 +282,4 @@ export function getVotingDataFromStages(stages: TrackedStage[]): VotingActiveDat
     return null;
   }
   return votingStage.data as VotingActiveData;
-}
-
-function isTerminal(status: string | undefined): boolean {
-  return status === "COMPLETED" || status === "SKIPPED" || status === "FAILED";
 }

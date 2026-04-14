@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Modular governor parent re-tracking** - `isCheckpointComplete()` now returns `false` for a governor parent checkpoint whose `PROPOSAL_QUEUED` stage is `COMPLETED` but which holds no timelock stages (the modular-caching layout). Previously such parents were classified complete, causing `queryIncompleteCheckpoints()` (and therefore the bundled-cache rebuilder) to skip them forever — the linked timelock checkpoint could stay frozen in `PENDING` for weeks and a stale orphan checkpoint was written under the queue tx hash during each rebuild attempt. Parents whose lifecycle ended without queueing (e.g. `VOTING_ACTIVE=FAILED`) are still treated as complete.
+- **Modular parent zombie retrack** - `queryIncompleteCheckpoints()` now cross-references a governor parent's `metadata.timelockOpKey` against its linked timelock checkpoint: if the linked checkpoint exists and is itself complete, the parent is skipped. Without this gate the previous fix would have surfaced every already-executed modular parent on every rebuilder run because `createdAt` is refreshed on each save (the 60-day age gate never trips). Measured against the current bundled cache, this prevents 68 of 69 modular parents from being zombie-retracked; only the one genuinely pending proposal remains in the retrack set.
 
 ## [0.5.0] - 2026-04-13
 

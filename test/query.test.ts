@@ -165,6 +165,74 @@ describe("Tracker Query Module", () => {
       expect(result[0].key).toBe("tx:0x0e065");
     });
 
+    it("should skip modular governor parent when linked timelock checkpoint is complete", async () => {
+      // #given - a modular parent whose PROPOSAL_QUEUED=COMPLETED so it looks
+      // "incomplete" by the modular-parent guard, but its linked timelock
+      // checkpoint has fully executed. Without cross-referencing the linked
+      // checkpoint, the rebuilder would re-track this parent forever because
+      // `createdAt` is refreshed on every save (60-day age gate never trips).
+      const timelockKey = "tx:0x" + "9".repeat(64) + ":op:0x" + "a".repeat(64);
+      const parent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: timelockKey,
+        },
+      });
+      const linkedComplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createStage("L2_TIMELOCK", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+      await cache.set("tx:0xparent", parent);
+      await cache.set(timelockKey, linkedComplete);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent is skipped because the linked timelock is done
+      expect(result).toHaveLength(0);
+    });
+
+    it("should still return modular governor parent when linked timelock is pending", async () => {
+      // #given - same shape as above but linked timelock still has PENDING stage
+      const timelockKey = "tx:0x" + "9".repeat(64) + ":op:0x" + "b".repeat(64);
+      const parent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: timelockKey,
+        },
+      });
+      const linkedPending = createCheckpoint({
+        inputType: "timelock",
+        stages: [createStage("L2_TIMELOCK", "PENDING")],
+      });
+      await cache.set("tx:0xparent", parent);
+      await cache.set(timelockKey, linkedPending);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent surfaces for re-tracking so pending timelock can advance
+      const parentResult = result.find((r) => r.key === "tx:0xparent");
+      expect(parentResult).toBeDefined();
+    });
+
     it("should skip checkpoints with failed voting", async () => {
       const failedVoting = createCheckpoint({
         stages: [

@@ -111,6 +111,16 @@ export async function queryIncompleteCheckpoints(
   // Load all checkpoints in parallel (single pass over cache)
   const checkpointResults = await Promise.all(keys.map((key) => getCheckpoint(cache, key)));
 
+  // Index every checkpoint by key so we can cross-reference linked timelock
+  // checkpoints without another cache round-trip.
+  const checkpointsByKey = new Map<string, TrackingCheckpoint>();
+  for (let i = 0; i < keys.length; i++) {
+    const checkpoint = checkpointResults[i];
+    if (checkpoint) {
+      checkpointsByKey.set(keys[i], checkpoint);
+    }
+  }
+
   // Build key-checkpoint pairs for incomplete checkpoints, extract SC nonces from all
   const allScNonces: BigNumber[] = [];
   const incompleteCheckpoints: Array<{
@@ -119,10 +129,7 @@ export async function queryIncompleteCheckpoints(
     scNonce: BigNumber | null;
   }> = [];
 
-  for (let i = 0; i < keys.length; i++) {
-    const checkpoint = checkpointResults[i];
-    if (!checkpoint) continue;
-
+  for (const [key, checkpoint] of checkpointsByKey) {
     // Extract SC nonce from all checkpoints (needed for highestScNonce calculation)
     const scNonce = extractScNonceFromCheckpoint(checkpoint);
     if (scNonce) {
@@ -131,7 +138,7 @@ export async function queryIncompleteCheckpoints(
 
     // Only store incomplete checkpoints for filtering
     if (!isCheckpointComplete(checkpoint)) {
-      incompleteCheckpoints.push({ key: keys[i], checkpoint, scNonce });
+      incompleteCheckpoints.push({ key, checkpoint, scNonce });
     }
   }
 
@@ -162,6 +169,20 @@ export async function queryIncompleteCheckpoints(
     // Skip SC operations with lower nonces (superseded by higher nonce)
     if (scNonce && highestScNonce && scNonce.lt(highestScNonce)) {
       continue;
+    }
+
+    // Modular parent terminator: a governor parent checkpoint with no timelock
+    // stages of its own (post-modular-split) is classified incomplete while
+    // PROPOSAL_QUEUED=COMPLETED. In that state the real lifecycle lives in the
+    // linked timelock checkpoint referenced via metadata.timelockOpKey. If that
+    // linked checkpoint is itself complete, the whole proposal is finished —
+    // skip the parent instead of re-tracking it forever on every rebuilder run.
+    const timelockOpKey = checkpoint.metadata?.timelockOpKey;
+    if (checkpoint.input.type === "governor" && typeof timelockOpKey === "string") {
+      const linked = checkpointsByKey.get(timelockOpKey);
+      if (linked && isCheckpointComplete(linked)) {
+        continue;
+      }
     }
 
     results.push({ key, checkpoint });

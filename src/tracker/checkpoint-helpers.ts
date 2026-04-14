@@ -6,7 +6,7 @@
  */
 
 import type { TrackingCheckpoint, TrackerStats } from "../types";
-import { areAllStagesComplete } from "../stages/utils";
+import { areAllStagesComplete, isTimelockPathStage } from "../stages/utils";
 import { isElectionGovernor } from "../constants";
 import { isGasEstimationError } from "../utils/rpc-utils";
 
@@ -67,7 +67,26 @@ export function isCheckpointComplete(checkpoint: TrackingCheckpoint): boolean {
   }
 
   const stages = checkpoint.cachedData?.completedStages ?? [];
-  return stages.length > 0 && areAllStagesComplete(stages);
+  if (stages.length === 0 || !areAllStagesComplete(stages)) {
+    return false;
+  }
+
+  // Modular parent guard: a governor parent checkpoint stores only parent
+  // stages (PROPOSAL_CREATED, VOTING_ACTIVE, PROPOSAL_QUEUED). If
+  // PROPOSAL_QUEUED is COMPLETED, the proposal was queued successfully —
+  // timelock execution must follow. Unless the checkpoint also carries
+  // timelock stages (legacy combined view), the parent alone is NOT complete;
+  // tracking continues in the linked timelock checkpoint referenced by
+  // `metadata.timelockOpKey`. Without this guard, rebuilders that call
+  // `queryIncompleteCheckpoints` skip queued proposals forever.
+  if (inputType === "governor") {
+    const queuedStage = stages.find((s) => s.type === "PROPOSAL_QUEUED");
+    if (queuedStage?.status === "COMPLETED" && !stages.some((s) => isTimelockPathStage(s.type))) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**

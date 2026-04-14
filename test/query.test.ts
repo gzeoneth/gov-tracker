@@ -138,6 +138,33 @@ describe("Tracker Query Module", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("should include modular governor parent with PROPOSAL_QUEUED completed but no timelock stages", async () => {
+      // #given - a modular parent checkpoint (3 parent stages only) whose linked
+      // timelock checkpoint has not finished. The rebuilder must re-track this so
+      // pending L2/L1 timelock stages advance. Pre-fix, `isCheckpointComplete`
+      // returned true here and the rebuilder silently skipped the proposal forever.
+      const modularParent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: "tx:0x" + "9".repeat(64) + ":op:0x" + "a".repeat(64),
+        },
+      });
+      await cache.set("tx:0x0e065", modularParent);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent is classified incomplete so rebuilder re-tracks it
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe("tx:0x0e065");
+    });
+
     it("should skip checkpoints with failed voting", async () => {
       const failedVoting = createCheckpoint({
         stages: [

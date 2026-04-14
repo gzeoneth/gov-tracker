@@ -311,6 +311,64 @@ describe("Tracker Query Module", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("should age out based on on-chain stage timestamp even when createdAt is fresh", async () => {
+      // #given - the real-world scenario: `saveModularCheckpoints` refreshes
+      // `createdAt = Date.now()` on every re-track, so pre-fix the age gate
+      // never tripped for proposals that perpetually looked incomplete.
+      // The fix anchors to the first stage's on-chain timestamp, which is
+      // immutable. Here the proposal was created 90 days ago on-chain but
+      // the cache was rewritten 1 minute ago.
+      const proposalCreatedStage = createStage("PROPOSAL_CREATED", "COMPLETED");
+      proposalCreatedStage.transactions = [
+        {
+          hash: "0xaaaa",
+          blockNumber: 1,
+          chain: "arb1",
+          chainId: 42161,
+          timestamp: Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000),
+        },
+      ];
+      const votingStage = createStage("VOTING_ACTIVE", "PENDING");
+      const freshlyResavedOld = createCheckpoint({
+        stages: [proposalCreatedStage, votingStage],
+        createdAt: Date.now() - 60 * 1000,
+      });
+      await cache.set("tx:0x111", freshlyResavedOld);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache, { maxAgeDays: 60 });
+
+      // #then - aged out by on-chain anchor, not misled by fresh createdAt
+      expect(result).toHaveLength(0);
+    });
+
+    it("should keep a recent on-chain checkpoint even when createdAt is ancient", async () => {
+      // #given - inverse: on-chain 10 days ago but createdAt somehow ancient.
+      // On-chain anchor wins; this is still within the 60-day window.
+      const proposalCreatedStage = createStage("PROPOSAL_CREATED", "COMPLETED");
+      proposalCreatedStage.transactions = [
+        {
+          hash: "0xbbbb",
+          blockNumber: 2,
+          chain: "arb1",
+          chainId: 42161,
+          timestamp: Math.floor((Date.now() - 10 * 24 * 60 * 60 * 1000) / 1000),
+        },
+      ];
+      const votingStage = createStage("VOTING_ACTIVE", "PENDING");
+      const recent = createCheckpoint({
+        stages: [proposalCreatedStage, votingStage],
+        createdAt: Date.now() - 90 * 24 * 60 * 60 * 1000,
+      });
+      await cache.set("tx:0x111", recent);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache, { maxAgeDays: 60 });
+
+      // #then - on-chain anchor (10d) within window → surfaced
+      expect(result).toHaveLength(1);
+    });
+
     it("should include checkpoints within maxAgeDays", async () => {
       // Must have non-terminal stage to be considered incomplete
       const recent = createCheckpoint({

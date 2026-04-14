@@ -15,6 +15,7 @@ import {
   isElectionKey,
   parseElectionKey,
   computeCacheStats,
+  getCheckpointAnchorTime,
 } from "./checkpoint-helpers";
 import { getHighestScNonce } from "../discovery/security-council";
 
@@ -160,9 +161,11 @@ export async function queryIncompleteCheckpoints(
       continue;
     }
 
-    // Skip if too old
-    const createdAt = checkpoint.createdAt ?? 0;
-    if (createdAt > 0 && now - createdAt > maxAgeMs) {
+    // Skip if too old. Anchor to the immutable on-chain time of the checkpoint's
+    // first stage (proposal creation / timelock schedule), not `createdAt` which
+    // is refreshed on every cache save and therefore never trips the gate.
+    const anchor = getCheckpointAnchorTime(checkpoint);
+    if (anchor !== null && now - anchor > maxAgeMs) {
       continue;
     }
 

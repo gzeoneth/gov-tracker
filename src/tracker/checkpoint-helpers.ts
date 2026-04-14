@@ -97,6 +97,30 @@ export function getCheckpointErrorCount(checkpoint: TrackingCheckpoint): number 
 }
 
 /**
+ * Get the on-chain anchor time for a checkpoint, in Unix **milliseconds**.
+ *
+ * Prefers the immutable timestamp of the checkpoint's first stage (proposal
+ * creation block / timelock schedule block / election creation block) over
+ * the mutable `checkpoint.createdAt`, which `saveModularCheckpoints` refreshes
+ * on every save. Falls back to `createdAt` when no stage timestamp is
+ * available (legacy / partial checkpoints).
+ *
+ * Used by `queryIncompleteCheckpoints` so the `maxAgeDays` gate measures the
+ * age of the underlying governance event, not the age of the last cache
+ * write.
+ */
+export function getCheckpointAnchorTime(checkpoint: TrackingCheckpoint): number | null {
+  const stages = checkpoint.cachedData?.completedStages ?? [];
+  for (const stage of stages) {
+    const tsSec = stage.transactions?.[0]?.timestamp ?? stage.timing?.startedAt;
+    if (typeof tsSec === "number" && tsSec > 0) {
+      return tsSec * 1000;
+    }
+  }
+  return checkpoint.createdAt && checkpoint.createdAt > 0 ? checkpoint.createdAt : null;
+}
+
+/**
  * Cache key format utilities
  */
 export const ELECTION_KEY_PREFIX = "election:";

@@ -6,7 +6,7 @@
  */
 
 import type { TrackingCheckpoint, TrackerStats } from "../types";
-import { areAllStagesComplete } from "../stages/utils";
+import { areAllStagesComplete, findStage, isTimelockPathStage } from "../stages/utils";
 import { isElectionGovernor } from "../constants";
 import { isGasEstimationError } from "../utils/rpc-utils";
 
@@ -67,7 +67,20 @@ export function isCheckpointComplete(checkpoint: TrackingCheckpoint): boolean {
   }
 
   const stages = checkpoint.cachedData?.completedStages ?? [];
-  return stages.length > 0 && areAllStagesComplete(stages);
+  if (stages.length === 0 || !areAllStagesComplete(stages)) {
+    return false;
+  }
+
+  // A governor parent with PROPOSAL_QUEUED=COMPLETED but no timelock stages is
+  // the modular-caching layout — the lifecycle continues in metadata.timelockOpKey.
+  if (inputType === "governor") {
+    const queuedStage = findStage(stages, "PROPOSAL_QUEUED");
+    if (queuedStage?.status === "COMPLETED" && !stages.some((s) => isTimelockPathStage(s.type))) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -75,6 +88,30 @@ export function isCheckpointComplete(checkpoint: TrackingCheckpoint): boolean {
  */
 export function getCheckpointErrorCount(checkpoint: TrackingCheckpoint): number {
   return checkpoint.metadata?.errorCount ?? 0;
+}
+
+/**
+ * Get the on-chain anchor time for a checkpoint, in Unix **milliseconds**.
+ *
+ * Prefers the immutable timestamp of the checkpoint's first stage (proposal
+ * creation block / timelock schedule block / election creation block) over
+ * the mutable `checkpoint.createdAt`, which `saveModularCheckpoints` refreshes
+ * on every save. Falls back to `createdAt` when no stage timestamp is
+ * available (legacy / partial checkpoints).
+ *
+ * Used by `queryIncompleteCheckpoints` so the `maxAgeDays` gate measures the
+ * age of the underlying governance event, not the age of the last cache
+ * write.
+ */
+export function getCheckpointAnchorTime(checkpoint: TrackingCheckpoint): number | null {
+  const stages = checkpoint.cachedData?.completedStages ?? [];
+  for (const stage of stages) {
+    const tsSec = stage.transactions?.[0]?.timestamp ?? stage.timing?.startedAt;
+    if (typeof tsSec === "number" && tsSec > 0) {
+      return tsSec * 1000;
+    }
+  }
+  return checkpoint.createdAt && checkpoint.createdAt > 0 ? checkpoint.createdAt : null;
 }
 
 /**

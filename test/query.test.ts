@@ -138,6 +138,101 @@ describe("Tracker Query Module", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("should include modular governor parent with PROPOSAL_QUEUED completed but no timelock stages", async () => {
+      // #given - a modular parent checkpoint (3 parent stages only) whose linked
+      // timelock checkpoint has not finished. The rebuilder must re-track this so
+      // pending L2/L1 timelock stages advance. Pre-fix, `isCheckpointComplete`
+      // returned true here and the rebuilder silently skipped the proposal forever.
+      const modularParent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: "tx:0x" + "9".repeat(64) + ":op:0x" + "a".repeat(64),
+        },
+      });
+      await cache.set("tx:0x0e065", modularParent);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent is classified incomplete so rebuilder re-tracks it
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe("tx:0x0e065");
+    });
+
+    it("should skip modular governor parent when linked timelock checkpoint is complete", async () => {
+      // #given - a modular parent whose PROPOSAL_QUEUED=COMPLETED so it looks
+      // "incomplete" by the modular-parent guard, but its linked timelock
+      // checkpoint has fully executed. Without cross-referencing the linked
+      // checkpoint, the rebuilder would re-track this parent forever because
+      // `createdAt` is refreshed on every save (60-day age gate never trips).
+      const timelockKey = "tx:0x" + "9".repeat(64) + ":op:0x" + "a".repeat(64);
+      const parent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: timelockKey,
+        },
+      });
+      const linkedComplete = createCheckpoint({
+        inputType: "timelock",
+        stages: [
+          createStage("L2_TIMELOCK", "COMPLETED"),
+          createStage("L2_TO_L1_MESSAGE", "COMPLETED"),
+          createStage("L1_TIMELOCK", "COMPLETED"),
+          createStage("RETRYABLE_EXECUTED", "COMPLETED"),
+        ],
+      });
+      await cache.set("tx:0xparent", parent);
+      await cache.set(timelockKey, linkedComplete);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent is skipped because the linked timelock is done
+      expect(result).toHaveLength(0);
+    });
+
+    it("should still return modular governor parent when linked timelock is pending", async () => {
+      // #given - same shape as above but linked timelock still has PENDING stage
+      const timelockKey = "tx:0x" + "9".repeat(64) + ":op:0x" + "b".repeat(64);
+      const parent = createCheckpoint({
+        stages: [
+          createStage("PROPOSAL_CREATED", "COMPLETED"),
+          createStage("VOTING_ACTIVE", "COMPLETED"),
+          createStage("PROPOSAL_QUEUED", "COMPLETED"),
+        ],
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: timelockKey,
+        },
+      });
+      const linkedPending = createCheckpoint({
+        inputType: "timelock",
+        stages: [createStage("L2_TIMELOCK", "PENDING")],
+      });
+      await cache.set("tx:0xparent", parent);
+      await cache.set(timelockKey, linkedPending);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache);
+
+      // #then - parent surfaces for re-tracking so pending timelock can advance
+      const parentResult = result.find((r) => r.key === "tx:0xparent");
+      expect(parentResult).toBeDefined();
+    });
+
     it("should skip checkpoints with failed voting", async () => {
       const failedVoting = createCheckpoint({
         stages: [
@@ -214,6 +309,64 @@ describe("Tracker Query Module", () => {
 
       const result = await queryIncompleteCheckpoints(cache, { maxAgeDays: 60 });
       expect(result).toHaveLength(0);
+    });
+
+    it("should age out based on on-chain stage timestamp even when createdAt is fresh", async () => {
+      // #given - the real-world scenario: `saveModularCheckpoints` refreshes
+      // `createdAt = Date.now()` on every re-track, so pre-fix the age gate
+      // never tripped for proposals that perpetually looked incomplete.
+      // The fix anchors to the first stage's on-chain timestamp, which is
+      // immutable. Here the proposal was created 90 days ago on-chain but
+      // the cache was rewritten 1 minute ago.
+      const proposalCreatedStage = createStage("PROPOSAL_CREATED", "COMPLETED");
+      proposalCreatedStage.transactions = [
+        {
+          hash: "0xaaaa",
+          blockNumber: 1,
+          chain: "arb1",
+          chainId: 42161,
+          timestamp: Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000),
+        },
+      ];
+      const votingStage = createStage("VOTING_ACTIVE", "PENDING");
+      const freshlyResavedOld = createCheckpoint({
+        stages: [proposalCreatedStage, votingStage],
+        createdAt: Date.now() - 60 * 1000,
+      });
+      await cache.set("tx:0x111", freshlyResavedOld);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache, { maxAgeDays: 60 });
+
+      // #then - aged out by on-chain anchor, not misled by fresh createdAt
+      expect(result).toHaveLength(0);
+    });
+
+    it("should keep a recent on-chain checkpoint even when createdAt is ancient", async () => {
+      // #given - inverse: on-chain 10 days ago but createdAt somehow ancient.
+      // On-chain anchor wins; this is still within the 60-day window.
+      const proposalCreatedStage = createStage("PROPOSAL_CREATED", "COMPLETED");
+      proposalCreatedStage.transactions = [
+        {
+          hash: "0xbbbb",
+          blockNumber: 2,
+          chain: "arb1",
+          chainId: 42161,
+          timestamp: Math.floor((Date.now() - 10 * 24 * 60 * 60 * 1000) / 1000),
+        },
+      ];
+      const votingStage = createStage("VOTING_ACTIVE", "PENDING");
+      const recent = createCheckpoint({
+        stages: [proposalCreatedStage, votingStage],
+        createdAt: Date.now() - 90 * 24 * 60 * 60 * 1000,
+      });
+      await cache.set("tx:0x111", recent);
+
+      // #when
+      const result = await queryIncompleteCheckpoints(cache, { maxAgeDays: 60 });
+
+      // #then - on-chain anchor (10d) within window → surfaced
+      expect(result).toHaveLength(1);
     });
 
     it("should include checkpoints within maxAgeDays", async () => {

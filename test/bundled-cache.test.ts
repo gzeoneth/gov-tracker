@@ -117,7 +117,145 @@ describe("Bundled Cache Extraction Utilities", () => {
       expect(proposals[0].stages).toHaveLength(3);
       expect(proposals[0].isComplete).toBe(true);
       expect(proposals[0].operationId).toBe("0xOperationId");
-      expect(proposals[0].currentState).toBe("Succeeded");
+      // Derived from PROPOSAL_QUEUED=COMPLETED, supersedes the (stale) voting snapshot
+      expect(proposals[0].currentState).toBe("Queued");
+    });
+
+    it("should merge linked timelock stages and derive Executed state", () => {
+      // #given - a modular parent checkpoint (3 governor stages) whose linked
+      // timelock checkpoint holds the 4 timelock stages all COMPLETED.
+      // Without merging, consumers see only 3 stages and currentState freezes
+      // at "Queued". This is the tally-zero list-view bug.
+      const proposalCreated = new StageBuilder("PROPOSAL_CREATED", "arb1", "COMPLETED")
+        .data({ proposer: "0xProposer", description: "T", startBlock: "100", endBlock: "200" })
+        .tx("0xCreateTx", 100, "arb1", 42161)
+        .build();
+      const votingActive = new StageBuilder("VOTING_ACTIVE", "arb1", "COMPLETED")
+        .data({ proposalState: "Queued" })
+        .build();
+      const proposalQueued = new StageBuilder("PROPOSAL_QUEUED", "arb1", "COMPLETED")
+        .data({ timelockAddress: "0xTimelock", operationId: "0xOpId", eta: 1700000000 })
+        .tx("0xQueueTx", 300, "arb1", 42161)
+        .build();
+
+      const l2Timelock = new StageBuilder("L2_TIMELOCK", "arb1", "COMPLETED").build();
+      const l2ToL1 = new StageBuilder("L2_TO_L1_MESSAGE", "arb1", "COMPLETED").build();
+      const l1Timelock = new StageBuilder("L1_TIMELOCK", "ethereum", "COMPLETED").build();
+      const retryables = new StageBuilder("RETRYABLE_EXECUTED", "arb1", "COMPLETED").build();
+
+      const input: GovernorTrackingInput = {
+        type: "governor",
+        governorAddress: "0xGovernor",
+        proposalId: "11217799",
+        creationTxHash: "0xCreateTx",
+      };
+      const timelockInput: TimelockTrackingInput = {
+        type: "timelock",
+        timelockAddress: "0xTimelock",
+        operationId: "0xOpId",
+        scheduledTxHash: "0xQueueTx",
+      };
+
+      const parent = createMockCheckpoint(input, [proposalCreated, votingActive, proposalQueued]);
+      parent.metadata = {
+        errorCount: 0,
+        lastTrackedAt: Date.now(),
+        timelockOpKey: "tx:0xQueueTx:op:0xOpId",
+      };
+
+      const cache: BundledCache = {
+        "tx:0xCreateTx": parent,
+        "tx:0xQueueTx:op:0xOpId": createMockCheckpoint(timelockInput, [
+          l2Timelock,
+          l2ToL1,
+          l1Timelock,
+          retryables,
+        ]),
+      };
+
+      // #when
+      const proposals = extractProposals(cache);
+
+      // #then - full 7-stage lifecycle surfaces with derived Executed state
+      expect(proposals).toHaveLength(1);
+      expect(proposals[0].stages).toHaveLength(7);
+      expect(proposals[0].stages.map((s) => s.type)).toEqual([
+        "PROPOSAL_CREATED",
+        "VOTING_ACTIVE",
+        "PROPOSAL_QUEUED",
+        "L2_TIMELOCK",
+        "L2_TO_L1_MESSAGE",
+        "L1_TIMELOCK",
+        "RETRYABLE_EXECUTED",
+      ]);
+      expect(proposals[0].currentState).toBe("Executed");
+      expect(proposals[0].isComplete).toBe(true);
+    });
+
+    it("should surface Queued when linked timelock stages are still pending", () => {
+      // #given - modular parent with linked timelock mid-flight (L2 still PENDING)
+      const proposalCreated = new StageBuilder("PROPOSAL_CREATED", "arb1", "COMPLETED").build();
+      const votingActive = new StageBuilder("VOTING_ACTIVE", "arb1", "COMPLETED")
+        .data({ proposalState: "Queued" })
+        .build();
+      const proposalQueued = new StageBuilder("PROPOSAL_QUEUED", "arb1", "COMPLETED")
+        .data({ timelockAddress: "0xTL", operationId: "0xOp", eta: 1700000000 })
+        .build();
+      const l2Pending = new StageBuilder("L2_TIMELOCK", "arb1", "PENDING").build();
+
+      const input: GovernorTrackingInput = {
+        type: "governor",
+        governorAddress: "0xGov",
+        proposalId: "1",
+        creationTxHash: "0xC",
+      };
+      const tlInput: TimelockTrackingInput = {
+        type: "timelock",
+        timelockAddress: "0xTL",
+        operationId: "0xOp",
+        scheduledTxHash: "0xC",
+      };
+      const parent = createMockCheckpoint(input, [proposalCreated, votingActive, proposalQueued]);
+      parent.metadata = {
+        errorCount: 0,
+        lastTrackedAt: Date.now(),
+        timelockOpKey: "tx:0xC:op:0xOp",
+      };
+
+      const cache: BundledCache = {
+        "tx:0xC": parent,
+        "tx:0xC:op:0xOp": createMockCheckpoint(tlInput, [l2Pending]),
+      };
+
+      // #when
+      const proposals = extractProposals(cache);
+
+      // #then - merged, state Queued (derived from PROPOSAL_QUEUED=COMPLETED), incomplete
+      expect(proposals[0].stages).toHaveLength(4);
+      expect(proposals[0].currentState).toBe("Queued");
+      expect(proposals[0].isComplete).toBe(false);
+    });
+
+    it("should fall back to parent-only stages when no linked timelock checkpoint exists", () => {
+      // #given - a modular parent whose timelockOpKey points at a key not in cache
+      const proposalCreated = new StageBuilder("PROPOSAL_CREATED", "arb1", "COMPLETED").build();
+      const input: GovernorTrackingInput = {
+        type: "governor",
+        governorAddress: "0xG",
+        proposalId: "1",
+        creationTxHash: "0xC",
+      };
+      const parent = createMockCheckpoint(input, [proposalCreated]);
+      parent.metadata = {
+        errorCount: 0,
+        lastTrackedAt: Date.now(),
+        timelockOpKey: "tx:0xMissing:op:0xGone",
+      };
+      const cache: BundledCache = { "tx:0xC": parent };
+
+      // #when / #then - no crash, parent-only stages
+      const proposals = extractProposals(cache);
+      expect(proposals[0].stages).toHaveLength(1);
     });
 
     it("should filter out election checkpoints", () => {

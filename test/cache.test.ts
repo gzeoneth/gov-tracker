@@ -802,6 +802,101 @@ describe("Cache State Module", () => {
       expect(isCheckpointComplete(checkpoint)).toBe(false);
     });
 
+    it("should return false for modular governor parent with PROPOSAL_QUEUED completed but no timelock stages", () => {
+      // #given - a modular governor parent checkpoint (3 parent stages only) where
+      // PROPOSAL_QUEUED=COMPLETED. The timelock execution lives in a linked checkpoint
+      // referenced via metadata.timelockOpKey and has not finished yet.
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "123",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "2".repeat(64),
+        },
+        lastProcessedStage: "PROPOSAL_QUEUED",
+        lastProcessedBlock: { l1: 100, l2: 200 },
+        cachedData: {
+          completedStages: [
+            {
+              type: "PROPOSAL_CREATED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "VOTING_ACTIVE",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "PROPOSAL_QUEUED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+          ],
+        },
+        metadata: {
+          errorCount: 0,
+          lastTrackedAt: Date.now(),
+          timelockOpKey: "tx:0x" + "9".repeat(64) + ":op:0x" + "a".repeat(64),
+        },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then - parent alone is NOT complete; tracking continues in linked timelock
+      expect(isCheckpointComplete(checkpoint)).toBe(false);
+    });
+
+    it("should return true for governor parent where PROPOSAL_QUEUED did not reach COMPLETED", () => {
+      // #given - a parent checkpoint where voting failed. All terminal stages, none COMPLETED
+      // for PROPOSAL_QUEUED, so the proposal lifecycle ended without needing timelock work.
+      const checkpoint = {
+        version: 1,
+        createdAt: Date.now(),
+        input: {
+          type: "governor",
+          proposalId: "123",
+          governorAddress: "0x" + "1".repeat(40),
+          creationTxHash: "0x" + "2".repeat(64),
+        },
+        lastProcessedStage: "VOTING_ACTIVE",
+        lastProcessedBlock: { l1: 100, l2: 200 },
+        cachedData: {
+          completedStages: [
+            {
+              type: "PROPOSAL_CREATED",
+              status: "COMPLETED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+            {
+              type: "VOTING_ACTIVE",
+              status: "FAILED",
+              chain: "arb1",
+              chainId: 42161,
+              transactions: [],
+              data: {},
+            },
+          ],
+        },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      } as unknown as TrackingCheckpoint;
+
+      // #when / #then - defeated proposals are terminal without timelock follow-up
+      expect(isCheckpointComplete(checkpoint)).toBe(true);
+    });
+
     it("should return false for governor checkpoint with no stages", () => {
       // #given - a governor checkpoint with empty stages
       const checkpoint: TrackingCheckpoint = {

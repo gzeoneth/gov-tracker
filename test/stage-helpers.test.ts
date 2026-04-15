@@ -22,11 +22,18 @@ import {
   validateStageForBulkPrepare,
   validateStageForSimpleBulk,
   calculateTimelockEta,
+  deriveProposalState,
   searchAndCompleteTimelockExecution,
 } from "../src/stages/utils";
 import * as timelockDiscovery from "../src/discovery/timelock-discovery";
 import { StageBuilder } from "../src/stages/builder";
-import type { CallScheduledData, SerializedCallScheduledData, TimelockState } from "../src/types";
+import type {
+  CallScheduledData,
+  SerializedCallScheduledData,
+  StageStatus,
+  StageType,
+  TimelockState,
+} from "../src/types";
 
 describe("Serialization Utilities", () => {
   describe("serialize", () => {
@@ -870,5 +877,106 @@ describe("findL1OperationIdFromTx", () => {
     expect(result.l1OperationId).toBeNull();
     expect(result.l1ScheduleTxHash).toBe(outboxTxHash);
     expect(result.l1ScheduleBlock).toBe(outboxTxBlock);
+  });
+});
+
+describe("deriveProposalState", () => {
+  const stage = (type: StageType, status: StageStatus) =>
+    new StageBuilder(type, "arb1", status).build();
+
+  it("should return Executed when RETRYABLE_EXECUTED is COMPLETED", () => {
+    // #given - full constitutional lifecycle, all stages done
+    const stages = [
+      stage("PROPOSAL_CREATED", "COMPLETED"),
+      stage("VOTING_ACTIVE", "COMPLETED"),
+      stage("PROPOSAL_QUEUED", "COMPLETED"),
+      stage("L2_TIMELOCK", "COMPLETED"),
+      stage("L2_TO_L1_MESSAGE", "COMPLETED"),
+      stage("L1_TIMELOCK", "COMPLETED"),
+      stage("RETRYABLE_EXECUTED", "COMPLETED"),
+    ];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Executed");
+  });
+
+  it("should return Executed for L2-only when L2_TO_L1_MESSAGE is SKIPPED", () => {
+    // #given - non-constitutional flow: L2 timelock done, remaining skipped
+    const stages = [
+      stage("PROPOSAL_CREATED", "COMPLETED"),
+      stage("VOTING_ACTIVE", "COMPLETED"),
+      stage("PROPOSAL_QUEUED", "COMPLETED"),
+      stage("L2_TIMELOCK", "COMPLETED"),
+      stage("L2_TO_L1_MESSAGE", "SKIPPED"),
+    ];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Executed");
+  });
+
+  it("should return Queued when PROPOSAL_QUEUED is COMPLETED but timelock still pending", () => {
+    // #given - the modular-parent scenario: 3 parent stages done, L2 timelock pending
+    const stages = [
+      stage("PROPOSAL_CREATED", "COMPLETED"),
+      stage("VOTING_ACTIVE", "COMPLETED"),
+      stage("PROPOSAL_QUEUED", "COMPLETED"),
+      stage("L2_TIMELOCK", "PENDING"),
+    ];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Queued");
+  });
+
+  it("should return Queued for parent-only checkpoint with PROPOSAL_QUEUED COMPLETED", () => {
+    // #given - modular parent before linked timelock merge (tally-zero list-view case)
+    const stages = [
+      stage("PROPOSAL_CREATED", "COMPLETED"),
+      stage("VOTING_ACTIVE", "COMPLETED"),
+      stage("PROPOSAL_QUEUED", "COMPLETED"),
+    ];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Queued");
+  });
+
+  it("should return Succeeded when voting passed but not yet queued", () => {
+    // #given - vote succeeded, proposal not yet queued by anyone
+    const stages = [stage("PROPOSAL_CREATED", "COMPLETED"), stage("VOTING_ACTIVE", "COMPLETED")];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Succeeded");
+  });
+
+  it("should return Defeated when VOTING_ACTIVE failed", () => {
+    // #given - voting ended with proposal defeated
+    const stages = [stage("PROPOSAL_CREATED", "COMPLETED"), stage("VOTING_ACTIVE", "FAILED")];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Defeated");
+  });
+
+  it("should return Canceled when any stage is CANCELED", () => {
+    // #given - proposal canceled mid-flight
+    const stages = [stage("PROPOSAL_CREATED", "COMPLETED"), stage("VOTING_ACTIVE", "CANCELED")];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Canceled");
+  });
+
+  it("should fall back to the VOTING_ACTIVE snapshot when stages can't determine state", () => {
+    // #given - voting in progress; snapshot on the stage says "Active"
+    const votingActive = new StageBuilder("VOTING_ACTIVE", "arb1", "PENDING")
+      .data({ proposalState: "Active" })
+      .build();
+    const stages = [stage("PROPOSAL_CREATED", "COMPLETED"), votingActive];
+
+    // #when / #then
+    expect(deriveProposalState(stages)).toBe("Active");
+  });
+
+  it("should return undefined for an empty stage list", () => {
+    // #given - no stages yet
+    // #when / #then
+    expect(deriveProposalState([])).toBeUndefined();
   });
 });

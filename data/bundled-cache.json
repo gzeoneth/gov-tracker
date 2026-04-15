@@ -11001,7 +11001,7 @@
   },
   "discovery:watermarks": {
     "version": 1,
-    "createdAt": 1776080385165,
+    "createdAt": 1776192162040,
     "input": {
       "type": "discovery",
       "id": "watermarks"
@@ -11009,29 +11009,29 @@
     "lastProcessedStage": null,
     "lastProcessedBlock": {
       "l1": 0,
-      "l2": 452049101
+      "l2": 452495060
     },
     "cachedData": {
       "discoveryWatermarks": {
-        "constitutionalGovernor": 452049101,
-        "nonConstitutionalGovernor": 452049101,
-        "electionNomineeGovernor": 452049101,
-        "electionMemberGovernor": 452049101,
-        "l2ConstitutionalTimelock": 452049101,
-        "l2NonConstitutionalTimelock": 452049101
+        "constitutionalGovernor": 452495060,
+        "nonConstitutionalGovernor": 452495060,
+        "electionNomineeGovernor": 452495060,
+        "electionMemberGovernor": 452495060,
+        "l2ConstitutionalTimelock": 452495060,
+        "l2NonConstitutionalTimelock": 452495060
       },
       "watermarkHashes": {
-        "electionNomineeGovernor": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391",
-        "l2ConstitutionalTimelock": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391",
-        "l2NonConstitutionalTimelock": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391",
-        "constitutionalGovernor": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391",
-        "electionMemberGovernor": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391",
-        "nonConstitutionalGovernor": "0xc4a67530007a83d3bad6f14dd7be15bf11d629cf6c126603a23eee409f050391"
+        "electionNomineeGovernor": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b",
+        "l2ConstitutionalTimelock": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b",
+        "l2NonConstitutionalTimelock": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b",
+        "constitutionalGovernor": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b",
+        "electionMemberGovernor": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b",
+        "nonConstitutionalGovernor": "0x1b5adcdd1feda5cb4e8dc064a08e6ee5b3b2b46a1f53052cf2b88732687d018b"
       }
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1776080385165
+      "lastTrackedAt": 1776192162040
     }
   },
   "tx:0x38d5327a65a7d8f6b88d6907d3a4f547e400bbe96e2b7d46825dc66111eec521:op:0x200d9087a25543aa4626755531511b3b70d8e271754ea39a4a6d0b11769b6455": {
@@ -32612,7 +32612,7 @@
   },
   "election:5": {
     "version": 1,
-    "createdAt": 1776080396318,
+    "createdAt": 1776192174130,
     "input": {
       "type": "election",
       "electionIndex": 5
@@ -32690,7 +32690,7 @@
             "data": {
               "nomineeProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600",
               "vettingDeadline": 24864349,
-              "currentL1Block": 24870609,
+              "currentL1Block": 24879899,
               "compliantNomineeCount": 11,
               "memberProposalId": "76823177191117641227374269617453449569686658579636857569082048420555574753600"
             },
@@ -32752,12 +32752,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1776080396318
+      "lastTrackedAt": 1776192174130
     }
   },
   "tx:0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a": {
     "version": 1,
-    "createdAt": 1773751092953,
+    "createdAt": 1776192169691,
     "input": {
       "type": "governor",
       "governorAddress": "0xf07DeD9dC292157749B6Fd268E37DF6EA38395B9",
@@ -32884,20 +32884,20 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1773751092953,
+      "lastTrackedAt": 1776192169691,
       "timelockOpKey": "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209:op:0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822"
     }
   },
   "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209:op:0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822": {
     "version": 1,
-    "createdAt": 1773751092953,
+    "createdAt": 1776192169691,
     "input": {
       "type": "timelock",
       "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
       "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
       "scheduledTxHash": "0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209"
     },
-    "lastProcessedStage": "L2_TIMELOCK",
+    "lastProcessedStage": "RETRYABLE_EXECUTED",
     "lastProcessedBlock": {
       "l1": 0,
       "l2": 0,
@@ -32907,7 +32907,7 @@
       "completedStages": [
         {
           "type": "L2_TIMELOCK",
-          "status": "PENDING",
+          "status": "COMPLETED",
           "chain": "arb1",
           "chainId": 42161,
           "transactions": [
@@ -32918,12 +32918,20 @@
               "chainId": 42161,
               "timestamp": 1773359037,
               "description": "queued"
+            },
+            {
+              "hash": "0x0c65326d9c8b423eb490a3576373ef9b2d3b0bf4244a4f18c8dfaa5b1e1d73e3",
+              "blockNumber": 443934954,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774050388,
+              "description": "executed"
             }
           ],
           "data": {
             "operationId": "0x5c474dae43fe17cba718831183694ba22bfeda0c15b308cad4492e09214e8822",
             "timelockAddress": "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
-            "state": "PENDING",
+            "state": "DONE",
             "eta": 1774050237,
             "callScheduledData": [
               {
@@ -32942,27 +32950,278 @@
             ],
             "salt": "0x91358c50193c96dfca27651b5f09476dbc4090f4240c18e37bc91f84eaf14c89",
             "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "isBatchOperation": true,
-            "waitingForDelay": true
+            "isBatchOperation": true
           },
           "executable": false,
           "timing": {
-            "startedAt": 1773359037,
-            "eta": 1774050237,
-            "delaySeconds": 299148
+            "startedAt": 1773359037
+          }
+        },
+        {
+          "type": "L2_TO_L1_MESSAGE",
+          "status": "COMPLETED",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [
+            {
+              "hash": "0x0c65326d9c8b423eb490a3576373ef9b2d3b0bf4244a4f18c8dfaa5b1e1d73e3",
+              "blockNumber": 443934954,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774050388,
+              "description": "L2 sent"
+            },
+            {
+              "hash": "0xd248af42209dc444ec6caa86ee3fc864269af89d60f03331459f0f7572ff3ae5",
+              "blockNumber": 24748554,
+              "chain": "ethereum",
+              "chainId": 1,
+              "timestamp": 1774610339,
+              "description": "L1 confirmed"
+            }
+          ],
+          "data": {
+            "messageCount": 1,
+            "l2Block": 443934954,
+            "l2TxHash": "0x0c65326d9c8b423eb490a3576373ef9b2d3b0bf4244a4f18c8dfaa5b1e1d73e3",
+            "messagePositions": [
+              "159622"
+            ],
+            "hasMultipleMessages": false,
+            "l2ToL1TxEvent": [
+              "0x34d45e99f7D8c45ed05B5cA72D54bbD1fb3F98f0",
+              "0xE6841D92B0C345144506576eC13ECf5103aC7f49",
+              {
+                "type": "BigNumber",
+                "hex": "0x3ce38d0f4508614fb30339473592d3bb35701db30b20684a7b5278a793158cc4"
+              },
+              {
+                "type": "BigNumber",
+                "hex": "0x026f86"
+              },
+              {
+                "type": "BigNumber",
+                "hex": "0x1a75e8ea"
+              },
+              {
+                "type": "BigNumber",
+                "hex": "0x0178ec87"
+              },
+              {
+                "type": "BigNumber",
+                "hex": "0x69bddc54"
+              },
+              {
+                "type": "BigNumber",
+                "hex": "0x00"
+              },
+              "0x8f2a0bb000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000005575a1202bdeb87fb924e3fd1901a3212c7fd42a35c39915ed94cec7697d6716000000000000000000000000000000000000000000000000000000000003f4800000000000000000000000000000000000000000000000000000000000000002000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c000000000000000000000000a723c008e76e379c55599d2e4d93879beafda79c0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000001800000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000841cff79cd000000000000000000000000bea14c43ee8324b764d699b4e1b5dd9d1f1825c900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004b147f40c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000a4bca8c7b50000000000000000000000001d62ffeb72e4c360ccbbacf7c965153b002604170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002437f66aa7263080bed3962d0476fa84fbb32ab81dfff1244e2b145f9864da24353b2f3b050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            ],
+            "status": "EXECUTED",
+            "messageDetails": [
+              {
+                "index": 0,
+                "status": "EXECUTED"
+              }
+            ],
+            "firstExecutableBlock": 24747905,
+            "currentL1Block": 24879899,
+            "cachedSendProps": {
+              "sendRootSize": "160194",
+              "sendRootHash": "0xec98cdbd5391d654c6a930dd2e132b40ebbdba18cc012d094b20490c2b8628a7"
+            }
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1774050388
+          }
+        },
+        {
+          "type": "L1_TIMELOCK",
+          "status": "COMPLETED",
+          "chain": "ethereum",
+          "chainId": 1,
+          "transactions": [
+            {
+              "hash": "0xd248af42209dc444ec6caa86ee3fc864269af89d60f03331459f0f7572ff3ae5",
+              "blockNumber": 24748554,
+              "chain": "ethereum",
+              "chainId": 1,
+              "timestamp": 1774610339,
+              "description": "queued"
+            },
+            {
+              "hash": "0x5d269d6738d197b71d4b905969f4535e3d378ca33c53bac4a0f0e31ecaad8ee1",
+              "blockNumber": 24770077,
+              "chain": "ethereum",
+              "chainId": 1,
+              "timestamp": 1774869575,
+              "description": "executed"
+            }
+          ],
+          "data": {
+            "operationId": "0xc29956ea0a37b2c27b1e3e786c10af7e3aceef8f15a17f6a1b0797ee383e74b0",
+            "timelockAddress": "0xE6841D92B0C345144506576eC13ECf5103aC7f49",
+            "state": "DONE",
+            "eta": 1774869539,
+            "callScheduledData": [
+              {
+                "operationId": "0xc29956ea0a37b2c27b1e3e786c10af7e3aceef8f15a17f6a1b0797ee383e74b0",
+                "index": "0",
+                "target": "0xa723C008e76E379c55599D2E4d93879BeaFDa79C",
+                "value": "0",
+                "data": "0x0000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000841cff79cd000000000000000000000000bea14c43ee8324b764d699b4e1b5dd9d1f1825c900000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004b147f40c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "delay": "259200",
+                "blockNumber": 24748554,
+                "txHash": "0xd248af42209dc444ec6caa86ee3fc864269af89d60f03331459f0f7572ff3ae5",
+                "logIndex": 189,
+                "timelockAddress": "0xE6841D92B0C345144506576eC13ECf5103aC7f49"
+              },
+              {
+                "operationId": "0xc29956ea0a37b2c27b1e3e786c10af7e3aceef8f15a17f6a1b0797ee383e74b0",
+                "index": "1",
+                "target": "0xa723C008e76E379c55599D2E4d93879BeaFDa79C",
+                "value": "0",
+                "data": "0x0000000000000000000000004dbd4fc535ac27206064b68ffcf827b0a60bab3f000000000000000000000000cf57572261c7c2bcf21ffd220ea7d1a27d40a82700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000a4bca8c7b50000000000000000000000001d62ffeb72e4c360ccbbacf7c965153b002604170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002437f66aa7263080bed3962d0476fa84fbb32ab81dfff1244e2b145f9864da24353b2f3b050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "delay": "259200",
+                "blockNumber": 24748554,
+                "txHash": "0xd248af42209dc444ec6caa86ee3fc864269af89d60f03331459f0f7572ff3ae5",
+                "logIndex": 190,
+                "timelockAddress": "0xE6841D92B0C345144506576eC13ECf5103aC7f49"
+              }
+            ],
+            "salt": "0x5575a1202bdeb87fb924e3fd1901a3212c7fd42a35c39915ed94cec7697d6716",
+            "predecessor": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "isBatchOperation": true
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1774610339
+          }
+        },
+        {
+          "type": "RETRYABLE_EXECUTED",
+          "status": "COMPLETED",
+          "chain": "arb1",
+          "chainId": 42161,
+          "transactions": [
+            {
+              "hash": "0x5d269d6738d197b71d4b905969f4535e3d378ca33c53bac4a0f0e31ecaad8ee1",
+              "blockNumber": 24770077,
+              "chain": "ethereum",
+              "chainId": 1,
+              "timestamp": 1774869575,
+              "logIndex": 0,
+              "description": "L1 executed"
+            },
+            {
+              "hash": "0x7cd90494d29b00ab87500aa4403f9c0f404cbc0803e208cbb4fdbeaf9d8f80cc",
+              "blockNumber": 0,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774869575,
+              "logIndex": 1,
+              "targetChain": "arb1",
+              "targetChainId": 42161,
+              "description": "arb1 created"
+            },
+            {
+              "hash": "0xc0849b8e022130cd8f9aed14d32935da6fcfc27b3ae5fc540f94974908968c47",
+              "blockNumber": 0,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774869575,
+              "logIndex": 2,
+              "targetChain": "arb1",
+              "targetChainId": 42161,
+              "description": "arb1 created"
+            },
+            {
+              "hash": "0xe7d8582f70ed8f2aea014c5de13cbbeabe7c128707e25fa01cae9db781846038",
+              "blockNumber": 447212499,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774870191,
+              "logIndex": 3,
+              "targetChain": "arb1",
+              "targetChainId": 42161,
+              "description": "arb1 redeemed"
+            },
+            {
+              "hash": "0xb44c92cb9337fccda4235dd5c162b96e59871743754d8a158837bd1c0a3e2eb6",
+              "blockNumber": 447212526,
+              "chain": "arb1",
+              "chainId": 42161,
+              "timestamp": 1774870197,
+              "logIndex": 4,
+              "targetChain": "arb1",
+              "targetChainId": 42161,
+              "description": "arb1 redeemed"
+            }
+          ],
+          "data": {
+            "ticketCount": 2,
+            "targetChains": [
+              "arb1"
+            ],
+            "targetChainIds": [
+              42161
+            ],
+            "creationDetails": [
+              {
+                "index": 0,
+                "targetChain": "arb1",
+                "targetChainId": 42161,
+                "l2TxHash": "0x7cd90494d29b00ab87500aa4403f9c0f404cbc0803e208cbb4fdbeaf9d8f80cc"
+              },
+              {
+                "index": 1,
+                "targetChain": "arb1",
+                "targetChainId": 42161,
+                "l2TxHash": "0xc0849b8e022130cd8f9aed14d32935da6fcfc27b3ae5fc540f94974908968c47"
+              }
+            ],
+            "redemptionDetails": [
+              {
+                "index": 0,
+                "targetChain": "arb1",
+                "targetChainId": 42161,
+                "status": "REDEEMED",
+                "l2TxHash": "0xe7d8582f70ed8f2aea014c5de13cbbeabe7c128707e25fa01cae9db781846038"
+              },
+              {
+                "index": 1,
+                "targetChain": "arb1",
+                "targetChainId": 42161,
+                "status": "REDEEMED",
+                "l2TxHash": "0xb44c92cb9337fccda4235dd5c162b96e59871743754d8a158837bd1c0a3e2eb6"
+              }
+            ],
+            "redeemedCount": 2,
+            "pendingCount": 0,
+            "statuses": [
+              "REDEEMED",
+              "REDEEMED"
+            ]
+          },
+          "executable": false,
+          "timing": {
+            "startedAt": 1774869575
           }
         }
       ]
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1773751092953,
+      "lastTrackedAt": 1776192169691,
       "sourceCheckpoint": "tx:0x0e065032993b9a99a1a34bd4ac08ab5945b7058f26973c90c86c37bf4ef2295a"
     }
   },
   "election:6": {
     "version": 1,
-    "createdAt": 1776080397356,
+    "createdAt": 1776192175052,
     "input": {
       "type": "election",
       "electionIndex": 6
@@ -33070,12 +33329,12 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1776080397356
+      "lastTrackedAt": 1776192175052
     }
   },
   "tx:0x9c3cd6a7c50c4e5fb04f90e94725debb9d145e552a7e0e0ed691beac8be19209": {
     "version": 1,
-    "createdAt": 1776080391435,
+    "createdAt": 1776192162043,
     "input": {
       "type": "governor",
       "governorAddress": "",
@@ -33093,7 +33352,7 @@
     },
     "metadata": {
       "errorCount": 0,
-      "lastTrackedAt": 1776080391435
+      "lastTrackedAt": 1776192162043
     }
   }
 }

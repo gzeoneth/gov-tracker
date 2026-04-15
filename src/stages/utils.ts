@@ -13,6 +13,7 @@ import {
   getStageData,
   OperationState,
   PrepareResult,
+  ProposalState,
   SerializedCallScheduledData,
   StageStatus,
   StageType,
@@ -522,6 +523,40 @@ export function isConstitutional(governorOrTimelockAddress: string): boolean {
     ADDRESSES.CONSTITUTIONAL_GOVERNOR,
     ADDRESSES.L2_CONSTITUTIONAL_TIMELOCK,
   ]);
+}
+
+/**
+ * Derive the OZ Governor `ProposalState` from a list of tracked stages.
+ *
+ * The `VOTING_ACTIVE` stage caches `proposalState` as a snapshot at vote-end,
+ * so it freezes at `"Queued"` after queue and never advances to `"Executed"`.
+ * This helper supersedes that snapshot for post-voting progression by reading
+ * stage statuses; the snapshot is still consulted for pre-queue phases
+ * (`Pending` / `Active`) where stages alone don't say enough.
+ *
+ * Callers should pass the merged stage set (parent + linked timelock) so the
+ * full lifecycle is visible.
+ */
+export function deriveProposalState(stages: TrackedStage[]): ProposalState | undefined {
+  const votingStage = stages.find((s) => s.type === "VOTING_ACTIVE");
+  const snapshot = votingStage
+    ? (getStageData(votingStage, "VOTING_ACTIVE")?.proposalState as ProposalState | undefined)
+    : undefined;
+
+  if (stages.length === 0) return snapshot;
+
+  const byType = new Map(stages.map((s) => [s.type, s]));
+  const statusOf = (t: StageType) => byType.get(t)?.status;
+  const isSuccess = (t: StageType) => isStageSuccess(statusOf(t));
+
+  if (isSuccess("RETRYABLE_EXECUTED")) return "Executed";
+  if (isSuccess("L2_TIMELOCK") && statusOf("L2_TO_L1_MESSAGE") === "SKIPPED") return "Executed";
+  if (stages.some((s) => s.status === "CANCELED")) return "Canceled";
+  if (statusOf("VOTING_ACTIVE") === "FAILED") return "Defeated";
+  if (isSuccess("PROPOSAL_QUEUED")) return "Queued";
+  if (isSuccess("VOTING_ACTIVE")) return "Succeeded";
+
+  return snapshot;
 }
 
 /** Timelock stage types (consolidated stages that require execution) */

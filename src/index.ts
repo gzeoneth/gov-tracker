@@ -211,6 +211,7 @@ export {
   getLifecyclePhase,
   getCurrentStage,
   areAllStagesComplete,
+  isStageSetComplete,
   extractOperationId,
   isTimelockStage,
   isConstitutional,

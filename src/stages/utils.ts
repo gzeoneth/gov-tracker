@@ -357,6 +357,17 @@ export function areAllStagesComplete(stages: TrackedStage[]): boolean {
 }
 
 /**
+ * Check whether a stage set represents a fully completed pipeline.
+ *
+ * Unlike `areAllStagesComplete`, a missing or empty array is NOT complete:
+ * `[].every()` is vacuously true, so callers gating on "the pipeline finished"
+ * must also assert that at least one stage exists.
+ */
+export function isStageSetComplete(stages: TrackedStage[] | undefined): boolean {
+  return !!stages && stages.length > 0 && areAllStagesComplete(stages);
+}
+
+/**
  * Find first READY stage that's executable
  */
 export function findExecutableStage(stages: TrackedStage[]): TrackedStage | null {

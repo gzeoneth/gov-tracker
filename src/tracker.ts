@@ -56,7 +56,7 @@ import {
 import type { SerializableNomineeDetails, SerializableMemberDetails } from "./types";
 import { discoverProposalByTxHash } from "./discovery/governor-discovery";
 import { findCallScheduledByTxHash } from "./discovery/timelock-discovery";
-import { findStage } from "./stages/utils";
+import { findStage, isStageSetComplete } from "./stages/utils";
 
 const { tracker: logTracker, discovery: logDiscovery } = loggers;
 
@@ -1231,10 +1231,14 @@ export class ProposalStageTracker {
 
     const cacheKey = `election:${electionIndex}`;
 
-    // Check cache first for completed elections (skip RPC calls)
+    // Check cache first for fully completed elections (skip RPC calls).
+    // The election phase reaches COMPLETED when the member proposal executes on
+    // L2, ~10 days before the cross-chain timelock stages (L2_TO_L1_MESSAGE →
+    // RETRYABLE_EXECUTED) finish. Gating on phase alone freezes a mid-pipeline
+    // checkpoint forever, so also require every stage to be terminal.
     if (this.cache) {
       const cached = await this.getElectionCheckpoint(electionIndex);
-      if (cached && cached.status.phase === "COMPLETED") {
+      if (cached?.status.phase === "COMPLETED" && isStageSetComplete(cached.status.stages)) {
         logTracker("returning cached COMPLETED election %d (0 RPC calls)", electionIndex);
         return cached.status;
       }

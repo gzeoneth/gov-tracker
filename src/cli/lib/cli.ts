@@ -45,6 +45,7 @@ import {
   getStageData,
   invalidateBlockInfoCache,
   ElectionProposalStatus,
+  isStageSetComplete,
 } from "../../index";
 import { getErrorMessage } from "../../utils/rpc-utils";
 import { withScope } from "../../utils/logger";
@@ -571,10 +572,12 @@ export function formatElectionResult(election: ElectionProposalStatus): string {
   const cohortName = getCohortName(election.cohort);
   const phaseName = election.phase.replace(/_/g, " ");
 
+  const isComplete = isStageSetComplete(election.stages);
+
   lines.push(`[Election #${election.electionIndex}]`);
   lines.push(`Phase: ${phaseName}`);
   lines.push(`Cohort: ${cohortName}`);
-  lines.push(`Complete: ${election.phase === "COMPLETED"}`);
+  lines.push(`Complete: ${isComplete}`);
   lines.push(`Stages: ${election.stages?.length ?? 0}`);
   lines.push("");
 

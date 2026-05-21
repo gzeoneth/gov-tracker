@@ -94,6 +94,9 @@ function createVotingData(
 describe("Voting Stage Tracking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: voting already started (current L1 block beyond any startBlock
+    // used in these tests). Individual tests override for pre-start scenarios.
+    vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(ethers.BigNumber.from(10_000_000));
   });
 
   afterEach(() => {
@@ -102,14 +105,16 @@ describe("Voting Stage Tracking", () => {
 
   describe("trackVotingStage", () => {
     it("should return NOT_STARTED when voting has not begun", async () => {
-      // #given - current block is before voting start block
-      const currentBlock = 1000;
-      const startBlock = 2000; // Future block
+      // #given - current L1 block is before voting start block
+      const currentL2Block = 1_000_000;
+      const currentL1Block = 1000;
+      const startBlock = 2000; // Future L1 block
 
       vi.mocked(getCurrentBlockInfo).mockResolvedValue({
-        blockNumber: currentBlock,
+        blockNumber: currentL2Block,
         timestamp: Math.floor(Date.now() / 1000),
       });
+      vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(ethers.BigNumber.from(currentL1Block));
 
       vi.mocked(calculateRemainingSeconds).mockReturnValue(600); // 10 minutes
 
@@ -505,6 +510,44 @@ describe("Voting Stage Tracking", () => {
 
       // #then - stage should be NOT_STARTED
       expect(result.stage.status).toBe("NOT_STARTED");
+    });
+
+    it("should short-circuit to NOT_STARTED when L1 block is pre-start but L2 block is past it (regression)", async () => {
+      // #given - Arbitrum governor proposal just created. startBlock/endBlock are
+      // L1 block numbers (~25M range), while current L2 block is ~454M. If the
+      // stage compared startBlock against the L2 block by mistake, it would
+      // think voting has started, then call governor.quorum(startBlock) which
+      // reverts with "Checkpoints: block not yet mined".
+      const currentL2Block = 454_531_665;
+      const currentL1Block = 24_922_379;
+      const startBlockL1 = 24_943_772; // future L1 block
+      const endBlockL1 = 25_044_572;
+
+      vi.mocked(getCurrentBlockInfo).mockResolvedValue({
+        blockNumber: currentL2Block,
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+      vi.mocked(getL1BlockNumberFromL2).mockResolvedValue(ethers.BigNumber.from(currentL1Block));
+      vi.mocked(calculateRemainingSeconds).mockReturnValue(300_000);
+
+      const proposalData = createProposalData(startBlockL1, endBlockL1);
+
+      // #when - tracking voting stage for a freshly-created proposal
+      const result = await trackVotingStage(
+        ADDRESSES.NON_CONSTITUTIONAL_GOVERNOR,
+        "86654545843645364200491220873325841239317939837732580673532485559601859962180",
+        proposalData,
+        mockProvider
+      );
+
+      // #then - stage should be NOT_STARTED without touching getVotingData
+      expect(result.stage.status).toBe("NOT_STARTED");
+      expect(result.votingData).toBeNull();
+      expect(vi.mocked(getVotingData)).not.toHaveBeenCalled();
+      expect(vi.mocked(getProposalState)).not.toHaveBeenCalled();
+      // currentBlock reported in stage data reflects L1 space (not L2)
+      expect(result.stage.data.currentBlock).toBe(String(currentL1Block));
+      expect(result.stage.data.startBlock).toBe(String(startBlockL1));
     });
 
     it("should handle Pending proposal state after startBlock passed", async () => {

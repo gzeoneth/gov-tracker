@@ -37,17 +37,24 @@ export async function trackVotingStage(
 }> {
   const builder = new StageBuilder("VOTING_ACTIVE", "arb1");
 
-  // Get current block info
-  const { blockNumber: currentBlock, timestamp: currentTimestamp } =
-    await getCurrentBlockInfo(provider);
+  // Get current block info (L2) and current L1 block in parallel.
+  // Arbitrum governors anchor proposal.startBlock/endBlock to L1 block numbers
+  // (via ArbSys), so gating "voting not started" must compare against L1.
+  const [{ timestamp: currentTimestamp }, currentL1BlockBN] = await Promise.all([
+    getCurrentBlockInfo(provider),
+    getL1BlockNumberFromL2(provider),
+  ]);
+  const currentL1Block = currentL1BlockBN.toNumber();
 
   // Check if voting has started
-  if (proposalData.startBlock.gt(currentBlock)) {
-    // Voting not started yet
+  if (proposalData.startBlock.gt(currentL1Block)) {
+    // Voting not started yet — short-circuit before calling the governor's
+    // quorum(startBlock), which reverts with "Checkpoints: block not yet mined"
+    // while startBlock is a future L1 block.
     const remainingSeconds = calculateRemainingSeconds(
       proposalData.startBlock.toNumber(),
-      currentBlock,
-      BLOCK_TIMES.L2
+      currentL1Block,
+      BLOCK_TIMES.L1
     );
 
     builder
@@ -55,7 +62,7 @@ export async function trackVotingStage(
       .timing({ startedAt: currentTimestamp, eta: currentTimestamp + remainingSeconds })
       .data({
         startBlock: proposalData.startBlock.toString(),
-        currentBlock: currentBlock.toString(),
+        currentBlock: currentL1Block.toString(),
       });
 
     return { stage: builder.build(), votingData: null };
@@ -113,10 +120,11 @@ export async function trackVotingStage(
   builder.data({ proposalState });
 
   if (proposalState === "Active") {
+    // votingData.deadline is an L1 block number (governor clock is L1).
     const remainingSeconds = calculateRemainingSeconds(
       votingData.deadline.toNumber(),
-      currentBlock,
-      BLOCK_TIMES.L2
+      currentL1Block,
+      BLOCK_TIMES.L1
     );
     builder.status("PENDING").timing({
       startedAt: currentTimestamp,

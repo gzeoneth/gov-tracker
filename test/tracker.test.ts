@@ -18,6 +18,7 @@ import * as dotenv from "dotenv";
 
 import {
   createMockCache,
+  createTestStage,
   shouldSkipRpc,
   createRpcTestSuite,
   CONSTITUTIONAL_GOVERNOR_FULL_ROUNDTRIP,
@@ -37,6 +38,7 @@ import {
   TimelockBatchParams,
   TrackingResult,
   TrackedStage,
+  StageStatus,
   StageTransaction,
   TrackingCheckpoint,
   ElectionProposalStatus,
@@ -960,6 +962,90 @@ describe("trackElection Cache Behavior (Mocked)", () => {
       expect(result).toBeDefined();
       expect(result?.status.phase).toBe("COMPLETED");
       expect(result?.status.electionIndex).toBe(2);
+    });
+  });
+
+  describe("trackElection cache resume", () => {
+    const electionStages = (l2ToL1Status: StageStatus): TrackedStage[] => [
+      createTestStage("CREATE_ELECTION", "COMPLETED"),
+      createTestStage("NOMINEE_ELECTION", "COMPLETED"),
+      createTestStage("NOMINEE_VETTING", "COMPLETED"),
+      createTestStage("MEMBER_ELECTION", "COMPLETED"),
+      createTestStage("L2_TIMELOCK", "COMPLETED"),
+      createTestStage("L2_TO_L1_MESSAGE", l2ToL1Status),
+      createTestStage("L1_TIMELOCK", l2ToL1Status === "COMPLETED" ? "COMPLETED" : "NOT_STARTED"),
+      createTestStage(
+        "RETRYABLE_EXECUTED",
+        l2ToL1Status === "COMPLETED" ? "COMPLETED" : "NOT_STARTED"
+      ),
+    ];
+
+    const cacheElection = (
+      cache: ReturnType<typeof createMockCache>,
+      stages: TrackedStage[]
+    ): Promise<void> => {
+      const status: ElectionProposalStatus = {
+        electionIndex: 5,
+        phase: "COMPLETED",
+        cohort: 1,
+        nomineeProposalId: "0x1234",
+        nomineeProposalState: "Executed",
+        memberProposalId: "0xabcd",
+        memberProposalState: "Executed",
+        compliantNomineeCount: 6,
+        targetNomineeCount: 6,
+        isInVettingPeriod: false,
+        vettingDeadline: null,
+        canProceedToMemberPhase: false,
+        canExecuteMember: false,
+        stages,
+      };
+      return cache.set("election:5", {
+        version: 1,
+        createdAt: Date.now(),
+        input: { type: "election", electionIndex: 5 },
+        lastProcessedStage: null,
+        lastProcessedBlock: { l1: 0, l2: 0 },
+        cachedData: { electionStatus: status },
+        metadata: { errorCount: 0, lastTrackedAt: Date.now() },
+      });
+    };
+
+    it("should not short-circuit a COMPLETED-phase election whose timelock stages are incomplete", async () => {
+      // #given - election reached phase COMPLETED (member proposal executed on
+      // L2) but the cross-chain timelock stages are still in flight, exactly as
+      // a checkpoint frozen mid-pipeline would look
+      const mockCache = createMockCache();
+      await cacheElection(mockCache, electionStages("PENDING"));
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when / #then - must re-track instead of returning the stale checkpoint;
+      // with mock providers re-tracking throws, proving the short-circuit was bypassed
+      await expect(tracker.trackElection(5)).rejects.toThrow();
+    });
+
+    it("should short-circuit when phase is COMPLETED and all stages are complete", async () => {
+      // #given - election fully complete: every stage terminal
+      const mockCache = createMockCache();
+      await cacheElection(mockCache, electionStages("COMPLETED"));
+
+      const tracker = createTracker({
+        l1Provider: mockL1Provider,
+        l2Provider: mockL2Provider,
+        cache: mockCache,
+      });
+
+      // #when - tracking the fully-complete election
+      const result = await tracker.trackElection(5);
+
+      // #then - returns cached status with no RPC calls
+      expect(result.phase).toBe("COMPLETED");
+      expect(result.electionIndex).toBe(5);
     });
   });
 
